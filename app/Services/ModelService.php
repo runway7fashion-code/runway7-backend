@@ -1,0 +1,199 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Event;
+use App\Models\Show;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+
+class ModelService
+{
+    /**
+     * Crear una modelo completa: usuario + perfil + asignación opcional a evento.
+     */
+    public function createModel(array $userData, array $profileData, ?int $eventId = null, ?string $castingTime = null): User
+    {
+        return DB::transaction(function () use ($userData, $profileData, $eventId, $castingTime) {
+            $user = User::create([
+                'first_name' => $userData['first_name'],
+                'last_name'  => $userData['last_name'],
+                'email'      => $userData['email'],
+                'phone'      => $userData['phone'] ?? null,
+                'password'   => bcrypt('runway7'),
+                'role'       => 'model',
+                'status'     => 'active',
+            ]);
+
+            $user->modelProfile()->create($profileData);
+
+            if ($eventId) {
+                $this->assignToEvent($user, $eventId, $castingTime);
+            }
+
+            return $user->load('modelProfile');
+        });
+    }
+
+    /**
+     * Actualizar datos de una modelo.
+     */
+    public function updateModel(User $user, array $userData, array $profileData): User
+    {
+        return DB::transaction(function () use ($user, $userData, $profileData) {
+            $user->update(collect($userData)->except('password')->toArray());
+
+            $user->modelProfile()->updateOrCreate(
+                ['user_id' => $user->id],
+                $profileData
+            );
+
+            return $user->fresh('modelProfile');
+        });
+    }
+
+    /**
+     * Asignar modelo a un evento con casting slot opcional.
+     * Auto-asigna participation_number basado en model_number_start del evento.
+     */
+    public function assignToEvent(User $user, int $eventId, ?string $castingTime = null): void
+    {
+        $event = Event::findOrFail($eventId);
+
+        if ($event->models()->where('model_id', $user->id)->exists()) {
+            throw new \Exception('La modelo ya está asignada a este evento.');
+        }
+
+        // Auto-asignar número de participación: base + cantidad de modelos ya asignadas
+        $currentCount = $event->models()->count();
+        $participationNumber = ($event->model_number_start ?? 1) + $currentCount;
+
+        $pivotData = [
+            'status'               => 'invited',
+            'participation_number' => $participationNumber,
+        ];
+
+        if ($castingTime) {
+            $pivotData['casting_time']   = $castingTime;
+            $pivotData['casting_status'] = 'scheduled';
+
+            $castingDay = $event->eventDays()->where('type', 'casting')->first();
+            if ($castingDay) {
+                $slot = $castingDay->castingSlots()->where('time', $castingTime)->first();
+                if ($slot) {
+                    $slot->increment('booked');
+                }
+            }
+        }
+
+        $event->models()->attach($user->id, $pivotData);
+    }
+
+    /**
+     * Quitar modelo de un evento (libera casting slot y la remueve de los shows).
+     */
+    public function removeFromEvent(User $user, int $eventId): void
+    {
+        $event = Event::findOrFail($eventId);
+
+        DB::transaction(function () use ($event, $user) {
+            $pivot = $event->models()->where('model_id', $user->id)->first();
+
+            if ($pivot && $pivot->pivot->casting_time) {
+                $castingDay = $event->eventDays()->where('type', 'casting')->first();
+                if ($castingDay) {
+                    $slot = $castingDay->castingSlots()->where('time', $pivot->pivot->casting_time)->first();
+                    if ($slot && $slot->booked > 0) {
+                        $slot->decrement('booked');
+                    }
+                }
+            }
+
+            $showIds = Show::whereIn('event_day_id', $event->eventDays()->pluck('id'))->pluck('id');
+            DB::table('show_model')->where('model_id', $user->id)->whereIn('show_id', $showIds)->delete();
+
+            $event->models()->detach($user->id);
+        });
+    }
+
+    /**
+     * Subir una foto al comp card (posición 1-4).
+     */
+    public function uploadCompCardPhoto(User $user, int $position, $file): string
+    {
+        if (!in_array($position, [1, 2, 3, 4])) {
+            throw new \InvalidArgumentException('Posición inválida. Debe ser 1, 2, 3 o 4.');
+        }
+
+        $field    = "photo_{$position}";
+        $profile  = $user->modelProfile;
+
+        // Eliminar foto anterior si existe
+        if ($profile->$field) {
+            Storage::disk('public')->delete($profile->$field);
+        }
+
+        $path = $file->store("models/{$user->id}/compcard", 'public');
+        $profile->update([$field => $path]);
+
+        // Actualizar estado compcard_completed
+        $fresh = $profile->fresh();
+        $profile->update(['compcard_completed' => $fresh->isCompCardComplete()]);
+
+        return $path;
+    }
+
+    /**
+     * Eliminar foto de comp card (posición 1-4).
+     */
+    public function deleteCompCardPhoto(User $user, int $position): void
+    {
+        if (!in_array($position, [1, 2, 3, 4])) {
+            throw new \InvalidArgumentException('Posición inválida. Debe ser 1, 2, 3 o 4.');
+        }
+
+        $field   = "photo_{$position}";
+        $profile = $user->modelProfile;
+
+        if ($profile->$field) {
+            Storage::disk('public')->delete($profile->$field);
+            $profile->update([$field => null, 'compcard_completed' => false]);
+        }
+    }
+
+    /**
+     * Subir foto de perfil del usuario.
+     */
+    public function uploadProfilePicture(User $user, $file): string
+    {
+        if ($user->profile_picture) {
+            Storage::disk('public')->delete($user->profile_picture);
+        }
+
+        $path = $file->store("models/{$user->id}", 'public');
+        $user->update(['profile_picture' => $path]);
+
+        return $path;
+    }
+
+    /**
+     * Eliminar foto de perfil del usuario.
+     */
+    public function deleteProfilePicture(User $user): void
+    {
+        if ($user->profile_picture) {
+            Storage::disk('public')->delete($user->profile_picture);
+            $user->update(['profile_picture' => null]);
+        }
+    }
+
+    /**
+     * Enviar email de bienvenida a la modelo.
+     * TODO: Implementar con Mailgun.
+     */
+    public function sendWelcomeEmail(User $user): void
+    {
+        // Mail::to($user->email)->send(new ModelWelcomeMail($user));
+    }
+}
