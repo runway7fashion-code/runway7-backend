@@ -15,6 +15,7 @@ class EnsureUserIsInternal
         'tickets_manager',
         'marketing',
         'public_relations',
+        'sales',
     ];
 
     public function handle(Request $request, Closure $next): Response

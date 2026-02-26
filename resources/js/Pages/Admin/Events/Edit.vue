@@ -26,6 +26,10 @@ const form = useForm({
         start_time: d.start_time ?? '',
         end_time: d.end_time ?? '',
         description: d.description ?? '',
+        casting_start: '08:00',
+        casting_end: '23:00',
+        casting_interval: 30,
+        casting_capacity: 50,
         shows: d.shows ?? [],
         has_assigned_shows: (d.shows ?? []).some(s => s.designers_count > 0),
     })),
@@ -47,6 +51,10 @@ function addDay() {
         start_time: '',
         end_time: '',
         description: '',
+        casting_start: '08:00',
+        casting_end: '23:00',
+        casting_interval: 30,
+        casting_capacity: 50,
         shows: [],
         has_assigned_shows: false,
     });
@@ -209,6 +217,34 @@ function submit() {
                                         :title="day.has_assigned_shows ? 'No se puede eliminar: tiene shows con diseñadores asignados' : 'Eliminar día'"
                                         class="text-red-400 hover:text-red-600 text-xl disabled:opacity-30 disabled:cursor-not-allowed"
                                     >×</button>
+                                </div>
+                            </div>
+
+                            <!-- Casting extra fields -->
+                            <div v-if="day.type === 'casting'" class="mt-3 pt-3 border-t border-yellow-200 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div>
+                                    <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Inicio casting</label>
+                                    <input v-model="day.casting_start" type="time"
+                                        class="w-full border border-yellow-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400/30" />
+                                </div>
+                                <div>
+                                    <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Fin casting</label>
+                                    <input v-model="day.casting_end" type="time"
+                                        class="w-full border border-yellow-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400/30" />
+                                </div>
+                                <div>
+                                    <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Intervalo (min)</label>
+                                    <select v-model="day.casting_interval"
+                                        class="w-full border border-yellow-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400/30">
+                                        <option :value="15">15 min</option>
+                                        <option :value="30">30 min</option>
+                                        <option :value="60">60 min</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Cap. por slot</label>
+                                    <input v-model.number="day.casting_capacity" type="number" min="1"
+                                        class="w-full border border-yellow-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400/30" />
                                 </div>
                             </div>
 

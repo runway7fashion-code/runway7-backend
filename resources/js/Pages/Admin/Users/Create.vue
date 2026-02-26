@@ -14,7 +14,7 @@ const form = useForm({
     phone: '',
     password: '',
     password_confirmation: '',
-    role: 'designer',
+    role: 'admin',
     status: 'pending',
     profile: {},
 });
@@ -27,8 +27,8 @@ const allRoles = computed(() => {
         attendee: 'Asistentes / Público',
     };
     for (const [cat, roles] of Object.entries(props.roleCategories)) {
-        // Las modelos se crean desde /admin/models (módulo dedicado)
-        const filtered = roles.filter(r => r !== 'model');
+        // Modelos y diseñadores se crean desde sus módulos dedicados
+        const filtered = roles.filter(r => !['model', 'designer'].includes(r));
         if (!filtered.length) continue;
         list.push({ type: 'group', label: labels[cat] });
         filtered.forEach(r => list.push({ type: 'option', value: r, label: formatRole(r) }));
@@ -40,10 +40,9 @@ function formatRole(r) {
     return r.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
-const showDesignerFields = computed(() => form.role === 'designer');
 const showPressFields = computed(() => form.role === 'press');
 const showSponsorFields = computed(() => form.role === 'sponsor');
-const showProfileSection = computed(() => ['designer', 'press', 'sponsor'].includes(form.role));
+const showProfileSection = computed(() => ['press', 'sponsor'].includes(form.role));
 
 function submit() {
     form.post('/admin/users');
@@ -132,38 +131,6 @@ function submit() {
                         Perfil de
                         <span class="capitalize">{{ form.role === 'tickets_manager' ? 'Tickets Manager' : form.role }}</span>
                     </h4>
-
-                    <!-- Designer fields -->
-                    <template v-if="showDesignerFields">
-                        <div class="grid grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Nombre de marca *</label>
-                                <input v-model="form.profile.brand_name" type="text" class="input" />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Colección</label>
-                                <input v-model="form.profile.collection_name" type="text" class="input" />
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5">País</label>
-                                <input v-model="form.profile.country" type="text" class="input" />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Instagram</label>
-                                <input v-model="form.profile.instagram" type="text" class="input" placeholder="@marca" />
-                            </div>
-                        </div>
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Sitio web</label>
-                            <input v-model="form.profile.website" type="url" class="input" placeholder="https://" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Bio</label>
-                            <textarea v-model="form.profile.bio" rows="3" class="input resize-none"></textarea>
-                        </div>
-                    </template>
 
                     <!-- Press fields -->
                     <template v-if="showPressFields">

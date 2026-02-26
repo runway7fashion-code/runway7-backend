@@ -193,6 +193,7 @@ class EventService
                 if (isset($dayData['id'])) {
                     $day = EventDay::find($dayData['id']);
                     if ($day) {
+                        $oldType = $day->type;
                         $day->update([
                             'label'       => $dayData['label'],
                             'type'        => $dayData['type'],
@@ -201,6 +202,17 @@ class EventService
                             'description' => $dayData['description'] ?? null,
                             'order'       => $index,
                         ]);
+
+                        if ($dayData['type'] === 'casting'
+                            && isset($dayData['casting_start'], $dayData['casting_end'], $dayData['casting_interval'])) {
+                            $this->generateCastingSlots(
+                                $day,
+                                $dayData['casting_start'],
+                                $dayData['casting_end'],
+                                (int) $dayData['casting_interval'],
+                                (int) ($dayData['casting_capacity'] ?? 50)
+                            );
+                        }
                     }
                 } else {
                     $newDay = $event->eventDays()->create([

@@ -46,10 +46,10 @@ function formatRole(r) {
 }
 
 const isModel = computed(() => form.role === 'model');
-const showDesignerFields = computed(() => form.role === 'designer');
+const isDesigner = computed(() => form.role === 'designer');
 const showPressFields = computed(() => form.role === 'press');
 const showSponsorFields = computed(() => form.role === 'sponsor');
-const showProfileSection = computed(() => ['designer', 'press', 'sponsor'].includes(form.role));
+const showProfileSection = computed(() => ['press', 'sponsor'].includes(form.role));
 
 function submit() {
     form.post(`/admin/users/${props.user.id}`);
@@ -135,22 +135,24 @@ function submit() {
                     </div>
                 </div>
 
-                <!-- Perfil dinámico (diseñadores, prensa, sponsors) -->
+                <!-- Banner: diseñador tiene módulo dedicado -->
+                <div v-if="isDesigner" class="bg-amber-50 border border-amber-200 rounded-xl p-5 flex items-start gap-3">
+                    <svg class="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                    </svg>
+                    <div>
+                        <p class="text-sm font-semibold text-amber-800">Este usuario es un diseñador</p>
+                        <p class="text-sm text-amber-700 mt-1">El perfil completo (marca, paquete, materiales, displays, asistentes) se gestiona desde el modulo de Diseñadores.</p>
+                        <Link :href="`/admin/designers/${user.id}/edit`"
+                            class="inline-block mt-2 text-sm font-medium text-amber-700 underline hover:text-amber-900">
+                            Ir al perfil de diseñador →
+                        </Link>
+                    </div>
+                </div>
+
+                <!-- Perfil dinámico (prensa, sponsors) -->
                 <div v-if="showProfileSection" class="bg-white rounded-xl border border-gray-200 p-6">
                     <h4 class="font-semibold text-gray-900 mb-5">Perfil <span class="capitalize">{{ form.role }}</span></h4>
-
-                    <template v-if="showDesignerFields">
-                        <div class="grid grid-cols-2 gap-4 mb-4">
-                            <div><label class="block text-sm font-medium text-gray-700 mb-1.5">Marca *</label><input v-model="form.profile.brand_name" type="text" class="input" /></div>
-                            <div><label class="block text-sm font-medium text-gray-700 mb-1.5">Colección</label><input v-model="form.profile.collection_name" type="text" class="input" /></div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4 mb-4">
-                            <div><label class="block text-sm font-medium text-gray-700 mb-1.5">País</label><input v-model="form.profile.country" type="text" class="input" /></div>
-                            <div><label class="block text-sm font-medium text-gray-700 mb-1.5">Instagram</label><input v-model="form.profile.instagram" type="text" class="input" /></div>
-                        </div>
-                        <div class="mb-4"><label class="block text-sm font-medium text-gray-700 mb-1.5">Sitio web</label><input v-model="form.profile.website" type="url" class="input" placeholder="https://" /></div>
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1.5">Bio</label><textarea v-model="form.profile.bio" rows="3" class="input resize-none"></textarea></div>
-                    </template>
 
                     <template v-if="showPressFields">
                         <div class="grid grid-cols-2 gap-4 mb-4">

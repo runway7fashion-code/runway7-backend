@@ -1,0 +1,740 @@
+<script setup>
+import AdminLayout from '@/Layouts/AdminLayout.vue';
+import { Link, useForm, router } from '@inertiajs/vue3';
+import { ref, computed, watch } from 'vue';
+
+const props = defineProps({
+    designer:   Object,
+    events:     Array,
+    categories: Array,
+    packages:   Array,
+    salesReps:  Array,
+});
+
+const activeTab = ref(1);
+const profile   = props.designer.designer_profile;
+
+const form = useForm({
+    first_name:      props.designer.first_name  ?? '',
+    last_name:       props.designer.last_name   ?? '',
+    email:           props.designer.email       ?? '',
+    phone:           props.designer.phone       ?? '',
+    brand_name:      profile?.brand_name        ?? '',
+    collection_name: profile?.collection_name   ?? '',
+    category_id:     profile?.category_id       ?? '',
+    sales_rep_id:    profile?.sales_rep_id      ?? '',
+    country:         profile?.country           ?? '',
+    bio:             profile?.bio               ?? '',
+    tracking_link:   profile?.tracking_link     ?? '',
+    skype:           profile?.skype             ?? '',
+    social_media: {
+        instagram: profile?.social_media?.instagram ?? '',
+        facebook:  profile?.social_media?.facebook  ?? '',
+        tiktok:    profile?.social_media?.tiktok    ?? '',
+        website:   profile?.social_media?.website   ?? '',
+        other:     profile?.social_media?.other     ?? '',
+    },
+});
+
+// Eventos del diseñador
+const designerEvents = computed(() => props.designer.events ?? []);
+const designerShows  = computed(() => props.designer.shows ?? []);
+
+// Asignar evento
+const selectedEventId = ref('');
+const selectedPackageId = ref('');
+const assignLooks = ref('');
+const assignPrice = ref('');
+const assignCasting = ref(true);
+const assignNotes = ref('');
+
+const selectedEventData = computed(() => props.events?.find(e => e.id == selectedEventId.value) ?? null);
+const eventDays = computed(() => selectedEventData.value?.days ?? []);
+
+watch(selectedPackageId, (newId) => {
+    const pkg = props.packages?.find(p => p.id == newId);
+    if (pkg) {
+        assignLooks.value = pkg.default_looks;
+        assignPrice.value = pkg.price;
+    }
+});
+
+// Shows del evento seleccionado
+const assignShows = ref([]);
+
+function isShowSelected(showId) {
+    return assignShows.value.some(s => s.show_id === showId);
+}
+
+function toggleShow(showId) {
+    const idx = assignShows.value.findIndex(s => s.show_id === showId);
+    if (idx >= 0) {
+        assignShows.value.splice(idx, 1);
+    } else {
+        assignShows.value.push({ show_id: showId, collection_name: '' });
+    }
+}
+
+function assignEvent() {
+    if (!selectedEventId.value) return;
+    router.post(`/admin/designers/${props.designer.id}/assign-event`, {
+        event_id:              selectedEventId.value,
+        package_id:            selectedPackageId.value || null,
+        looks:                 assignLooks.value || null,
+        model_casting_enabled: assignCasting.value,
+        package_price:         assignPrice.value || null,
+        notes:                 assignNotes.value || null,
+        shows:                 assignShows.value.length ? assignShows.value : null,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            selectedEventId.value = '';
+            selectedPackageId.value = '';
+            assignLooks.value = '';
+            assignPrice.value = '';
+            assignCasting.value = true;
+            assignNotes.value = '';
+            assignShows.value = [];
+        },
+    });
+}
+
+function removeFromEvent(eventId, eventName) {
+    if (!confirm(`Quitar del evento "${eventName}"?`)) return;
+    router.delete(`/admin/designers/${props.designer.id}/remove-event/${eventId}`, { preserveScroll: true });
+}
+
+// Asistentes
+const assistants = computed(() => props.designer.assistants ?? []);
+const newAssistant = ref({ full_name: '', document_id: '', phone: '', email: '' });
+const assistantEventId = ref(designerEvents.value[0]?.id ?? '');
+
+function addAssistant() {
+    if (!newAssistant.value.full_name || !assistantEventId.value) return;
+    router.post(`/admin/designers/${props.designer.id}/assistants`, {
+        event_id:    assistantEventId.value,
+        ...newAssistant.value,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            newAssistant.value = { full_name: '', document_id: '', phone: '', email: '' };
+        },
+    });
+}
+
+function removeAssistant(assistantId) {
+    if (!confirm('Eliminar asistente?')) return;
+    router.delete(`/admin/designers/assistants/${assistantId}`, { preserveScroll: true });
+}
+
+// Materiales
+const materials = computed(() => props.designer.materials ?? []);
+
+function updateMaterial(material, field, value) {
+    router.put(`/admin/designer-materials/${material.id}`, {
+        [field]: value,
+    }, { preserveScroll: true });
+}
+
+// Displays
+const displays = computed(() => props.designer.displays ?? []);
+
+function updateDisplay(display, data) {
+    router.put(`/admin/designer-displays/${display.id}`, data, { preserveScroll: true });
+}
+
+function uploadDisplayFile(displayId, type) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = type === 'video' ? 'video/*' : 'audio/*';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('file', file);
+        const endpoint = type === 'video' ? 'upload-video' : 'upload-audio';
+        router.post(`/admin/designer-displays/${displayId}/${endpoint}`, formData, { preserveScroll: true });
+    };
+    input.click();
+}
+
+function materialStatusClass(status) {
+    return {
+        pending:   'text-yellow-700 bg-yellow-50',
+        submitted: 'text-blue-700 bg-blue-50',
+        confirmed: 'text-green-700 bg-green-50',
+        rejected:  'text-red-600 bg-red-50',
+    }[status] ?? 'text-gray-600 bg-gray-50';
+}
+
+function materialStatusLabel(status) {
+    return { pending: 'Pendiente', submitted: 'Enviado', confirmed: 'Confirmado', rejected: 'Rechazado' }[status] ?? status;
+}
+
+function displayStatusLabel(status) {
+    return { pending: 'Pendiente', ready: 'Listo', confirmed: 'Confirmado' }[status] ?? status;
+}
+
+function materialsProgress(eventId) {
+    const mats = materials.value.filter(m => m.event_id === eventId);
+    if (mats.length === 0) return 0;
+    const done = mats.filter(m => m.status === 'confirmed' || m.status === 'submitted').length;
+    return Math.round((done / mats.length) * 100);
+}
+
+function progressColor(pct) {
+    if (pct === 100) return 'bg-green-500';
+    if (pct >= 50)   return 'bg-yellow-400';
+    return 'bg-red-300';
+}
+
+function eventName(eventId) {
+    return designerEvents.value.find(e => e.id === eventId)?.name ?? `Evento #${eventId}`;
+}
+
+function showStatusLabel(s) {
+    return { assigned: 'Asignado', pending: 'Pendiente', confirmed: 'Confirmado', rejected: 'Rechazado' }[s] ?? s;
+}
+
+// Eliminar un show individual
+function removeShow(showId, showName) {
+    if (!confirm(`Quitar del show "${showName}"?`)) return;
+    router.delete(`/admin/designers/${props.designer.id}/shows/${showId}`, { preserveScroll: true });
+}
+
+// Shows agrupados por evento
+function showsForEvent(eventId) {
+    return designerShows.value.filter(s => s.event_day?.event_id === eventId);
+}
+
+function availableShowsForEvent(eventId) {
+    const assignedShowIds = designerShows.value.map(s => s.id);
+    const eventData = props.events?.find(e => e.id === eventId);
+    if (!eventData) return [];
+    const all = [];
+    for (const day of eventData.days ?? []) {
+        for (const show of day.shows) {
+            if (!assignedShowIds.includes(show.id)) {
+                all.push({ ...show, dayLabel: day.label });
+            }
+        }
+    }
+    return all;
+}
+
+// Estado para agregar show (por evento)
+const addShowState = ref({});
+
+function getAddShowState(eventId) {
+    if (!addShowState.value[eventId]) {
+        addShowState.value[eventId] = { showId: '', collection: '' };
+    }
+    return addShowState.value[eventId];
+}
+
+function addShowToEvent(eventId) {
+    const state = addShowState.value[eventId];
+    if (!state?.showId) return;
+    router.post(`/admin/designers/${props.designer.id}/shows`, {
+        show_id: state.showId,
+        collection_name: state.collection || null,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            addShowState.value[eventId] = { showId: '', collection: '' };
+        },
+    });
+}
+
+function submit() {
+    form.put(`/admin/designers/${props.designer.id}`);
+}
+</script>
+
+<template>
+    <AdminLayout>
+        <template #header>
+            <div class="flex items-center gap-3">
+                <Link :href="`/admin/designers/${designer.id}`" class="text-gray-400 hover:text-gray-600 text-sm">← Ver diseñador</Link>
+                <span class="text-gray-300">/</span>
+                <h2 class="text-lg font-semibold text-gray-900">Editar: {{ designer.first_name }} {{ designer.last_name }}</h2>
+            </div>
+        </template>
+
+        <div class="max-w-3xl mx-auto">
+            <!-- Tabs -->
+            <div class="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6">
+                <button v-for="tab in [
+                    { n: 1, label: 'Datos Personales' },
+                    { n: 2, label: 'Evento y Show' },
+                    { n: 3, label: 'Asistentes' },
+                    { n: 4, label: 'Materiales' },
+                    { n: 5, label: 'Displays' },
+                ]" :key="tab.n"
+                    type="button"
+                    @click="activeTab = tab.n"
+                    class="flex-1 py-2 text-sm font-medium rounded-lg transition-all"
+                    :class="activeTab === tab.n ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
+                    {{ tab.label }}
+                </button>
+            </div>
+
+            <form @submit.prevent="submit" class="space-y-5">
+
+                <!-- Tab 1: Datos Personales -->
+                <div v-show="activeTab === 1" class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                            <input v-model="form.first_name" type="text"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            <p v-if="form.errors.first_name" class="mt-1 text-red-500 text-xs">{{ form.errors.first_name }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
+                            <input v-model="form.last_name" type="text"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                            <input v-model="form.email" type="email"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            <p v-if="form.errors.email" class="mt-1 text-red-500 text-xs">{{ form.errors.email }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
+                            <input v-model="form.phone" type="tel"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Marca / Brand *</label>
+                            <input v-model="form.brand_name" type="text"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            <p v-if="form.errors.brand_name" class="mt-1 text-red-500 text-xs">{{ form.errors.brand_name }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre de Coleccion</label>
+                            <input v-model="form.collection_name" type="text"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                            <select v-model="form.category_id"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                                <option value="">— Sin categoria —</option>
+                                <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Pais</label>
+                            <input v-model="form.country" type="text"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                        </div>
+                    </div>
+
+                    <div v-if="salesReps?.length" class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Representante de Ventas</label>
+                            <select v-model="form.sales_rep_id"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                                <option value="">— Sin asignar —</option>
+                                <option v-for="rep in salesReps" :key="rep.id" :value="rep.id">{{ rep.first_name }} {{ rep.last_name }}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tracking Link</label>
+                            <input v-model="form.tracking_link" type="text" placeholder="https://..."
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Skype</label>
+                            <input v-model="form.skype" type="text"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+                        <textarea v-model="form.bio" rows="3"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"></textarea>
+                    </div>
+
+                    <!-- Redes sociales -->
+                    <div class="border-t border-gray-100 pt-4">
+                        <h4 class="text-sm font-semibold text-gray-800 mb-3">Redes Sociales</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Instagram</label>
+                                <input v-model="form.social_media.instagram" type="text" placeholder="@usuario"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Facebook</label>
+                                <input v-model="form.social_media.facebook" type="text"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">TikTok</label>
+                                <input v-model="form.social_media.tiktok" type="text" placeholder="@usuario"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Website</label>
+                                <input v-model="form.social_media.website" type="text" placeholder="https://..."
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
+                            <div class="col-span-2">
+                                <label class="block text-xs text-gray-500 mb-1">Otro</label>
+                                <input v-model="form.social_media.other" type="text"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Evento y Show -->
+                <div v-show="activeTab === 2" class="space-y-5">
+                    <!-- Asignar a nuevo evento (primero) -->
+                    <div class="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
+                        <h4 class="font-semibold text-gray-800">Asignar a evento</h4>
+
+                        <select v-model="selectedEventId"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                            <option value="">— Seleccionar evento —</option>
+                            <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
+                        </select>
+
+                        <div v-if="selectedEventId" class="space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">Paquete</label>
+                                    <select v-model="selectedPackageId"
+                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                                        <option value="">— Sin paquete —</option>
+                                        <option v-for="p in packages" :key="p.id" :value="p.id">
+                                            {{ p.name }} — ${{ Number(p.price).toLocaleString() }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">Looks</label>
+                                    <input v-model="assignLooks" type="number" min="0"
+                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">Precio ($)</label>
+                                    <input v-model="assignPrice" type="number" step="0.01" min="0"
+                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                                </div>
+                                <div class="flex items-end pb-0.5">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input v-model="assignCasting" type="checkbox"
+                                            class="rounded border-gray-300 text-black focus:ring-black/20" />
+                                        <span class="text-sm text-gray-700">Casting habilitado</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Notas</label>
+                                <textarea v-model="assignNotes" rows="2"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"></textarea>
+                            </div>
+
+                            <!-- Shows del evento seleccionado -->
+                            <div v-if="eventDays.length" class="border-t border-gray-100 pt-3">
+                                <p class="text-xs font-semibold text-gray-700 mb-2">Asignar a Shows</p>
+                                <div v-for="day in eventDays" :key="day.id" class="mb-3 last:mb-0">
+                                    <p class="text-xs text-gray-500 mb-1.5">{{ day.label }} — {{ day.date }}</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        <button v-for="show in day.shows" :key="show.id"
+                                            type="button"
+                                            @click="toggleShow(show.id)"
+                                            :class="isShowSelected(show.id)
+                                                ? 'bg-black text-white border-black'
+                                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'"
+                                            class="px-3 py-1.5 border rounded-lg text-xs font-medium transition-all">
+                                            {{ show.name }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" @click="assignEvent"
+                            :disabled="!selectedEventId"
+                            class="w-full py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors">
+                            Asignar al evento
+                        </button>
+                    </div>
+
+                    <!-- Eventos asignados (un card por evento con sus shows) -->
+                    <div v-if="designerEvents.length === 0" class="bg-white rounded-2xl border border-gray-200 p-5">
+                        <p class="text-sm text-gray-400 italic text-center">No hay eventos asignados.</p>
+                    </div>
+
+                    <div v-for="evt in designerEvents" :key="evt.id"
+                        class="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
+                        <!-- Header del evento -->
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h4 class="font-semibold text-gray-800">{{ evt.name }}</h4>
+                                <div class="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                                    <span v-if="evt.package_price">${{ Number(evt.package_price).toLocaleString() }}</span>
+                                    <span>{{ evt.looks }} looks</span>
+                                    <span>Casting: {{ evt.model_casting_enabled ? 'Si' : 'No' }}</span>
+                                </div>
+                            </div>
+                            <button type="button" @click="removeFromEvent(evt.id, evt.name)"
+                                class="text-red-400 hover:text-red-600 text-xs">Quitar evento</button>
+                        </div>
+
+                        <!-- Shows de este evento -->
+                        <div class="border-t border-gray-100 pt-3">
+                            <p class="text-xs font-semibold text-gray-600 mb-2">Shows asignados</p>
+
+                            <div v-if="showsForEvent(evt.id).length === 0" class="text-xs text-gray-400 italic mb-2">Sin shows en este evento.</div>
+                            <div v-for="s in showsForEvent(evt.id)" :key="s.id"
+                                class="flex items-center gap-3 py-1.5 border-b border-gray-50 last:border-0 text-sm">
+                                <span class="text-gray-400 text-xs w-20 flex-shrink-0">{{ s.event_day?.label }}</span>
+                                <span class="font-medium text-gray-800">{{ s.name }}</span>
+                                <span v-if="s.collection_name" class="text-gray-400 text-xs">({{ s.collection_name }})</span>
+                                <span class="ml-auto text-xs px-1.5 py-0.5 rounded"
+                                    :class="s.status === 'assigned' ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-500'">
+                                    {{ showStatusLabel(s.status) }}
+                                </span>
+                                <button type="button" @click="removeShow(s.id, s.name)"
+                                    class="text-red-400 hover:text-red-600 text-xs">Quitar</button>
+                            </div>
+
+                            <!-- Agregar show a este evento -->
+                            <div v-if="availableShowsForEvent(evt.id).length" class="mt-3 pt-3 border-t border-gray-100 space-y-2">
+                                <p class="text-xs font-medium text-gray-600">Agregar show</p>
+                                <div class="flex items-end gap-2">
+                                    <div class="flex-1">
+                                        <select :value="getAddShowState(evt.id).showId"
+                                            @change="getAddShowState(evt.id).showId = $event.target.value"
+                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                                            <option value="">— Seleccionar show —</option>
+                                            <option v-for="show in availableShowsForEvent(evt.id)" :key="show.id" :value="show.id">
+                                                {{ show.dayLabel }} — {{ show.name }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div class="flex-1">
+                                        <input :value="getAddShowState(evt.id).collection"
+                                            @input="getAddShowState(evt.id).collection = $event.target.value"
+                                            type="text" placeholder="Coleccion (opcional) Ej: Dark Elegance SS26"
+                                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                                    </div>
+                                    <button type="button" @click="addShowToEvent(evt.id)"
+                                        :disabled="!getAddShowState(evt.id).showId"
+                                        class="px-3 py-2 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors flex-shrink-0">
+                                        + Show
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Asistentes -->
+                <div v-show="activeTab === 3" class="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
+                    <h4 class="font-semibold text-gray-800">Asistentes</h4>
+
+                    <!-- Lista actual -->
+                    <div v-if="assistants.length === 0" class="text-sm text-gray-400 italic">Sin asistentes registrados.</div>
+                    <div v-for="a in assistants" :key="a.id"
+                        class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                        <div>
+                            <p class="text-sm font-medium text-gray-800">{{ a.full_name }}</p>
+                            <p class="text-xs text-gray-400">
+                                {{ eventName(a.event_id) }}
+                                <span v-if="a.document_id"> · ID: {{ a.document_id }}</span>
+                                <span v-if="a.phone"> · {{ a.phone }}</span>
+                                <span v-if="a.email"> · {{ a.email }}</span>
+                            </p>
+                        </div>
+                        <button type="button" @click="removeAssistant(a.id)"
+                            class="text-red-400 hover:text-red-600 text-xs">Eliminar</button>
+                    </div>
+
+                    <!-- Agregar nuevo -->
+                    <div class="border-t border-gray-100 pt-4 space-y-3">
+                        <h5 class="text-sm font-medium text-gray-700">Agregar asistente</h5>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Evento *</label>
+                                <select v-model="assistantEventId"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                                    <option v-for="evt in designerEvents" :key="evt.id" :value="evt.id">{{ evt.name }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Nombre completo *</label>
+                                <input v-model="newAssistant.full_name" type="text"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Documento ID</label>
+                                <input v-model="newAssistant.document_id" type="text"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Telefono</label>
+                                <input v-model="newAssistant.phone" type="tel"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Email</label>
+                                <input v-model="newAssistant.email" type="email"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
+                        </div>
+                        <button type="button" @click="addAssistant"
+                            :disabled="!newAssistant.full_name || !assistantEventId"
+                            class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors">
+                            + Agregar Asistente
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Materiales -->
+                <div v-show="activeTab === 4" class="space-y-5">
+                    <div v-for="evt in designerEvents" :key="'mat-' + evt.id"
+                        class="bg-white rounded-2xl border border-gray-200 p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="font-semibold text-gray-800">{{ evt.name }}</h4>
+                            <div class="flex items-center gap-2">
+                                <div class="w-28 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div :class="progressColor(materialsProgress(evt.id))"
+                                        class="h-full rounded-full transition-all"
+                                        :style="`width: ${materialsProgress(evt.id)}%`"></div>
+                                </div>
+                                <span class="text-xs font-medium text-gray-600">{{ materialsProgress(evt.id) }}%</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <div v-for="m in materials.filter(mat => mat.event_id === evt.id)" :key="m.id"
+                                class="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2.5">
+                                <span class="text-sm text-gray-700 font-medium flex-1">{{ m.name }}</span>
+                                <input :value="m.drive_link" type="text" placeholder="Drive link..."
+                                    @change="updateMaterial(m, 'drive_link', $event.target.value)"
+                                    class="w-56 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-black/10" />
+                                <select :value="m.status"
+                                    @change="updateMaterial(m, 'status', $event.target.value)"
+                                    class="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
+                                    <option value="pending">Pendiente</option>
+                                    <option value="submitted">Enviado</option>
+                                    <option value="confirmed">Confirmado</option>
+                                    <option value="rejected">Rechazado</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <p v-if="materials.filter(mat => mat.event_id === evt.id).length === 0"
+                            class="text-sm text-gray-400 italic">Sin materiales para este evento.</p>
+                    </div>
+
+                    <div v-if="designerEvents.length === 0"
+                        class="bg-white rounded-2xl border border-gray-200 p-6 text-sm text-gray-400 italic text-center">
+                        Asigna el diseñador a un evento para ver sus materiales.
+                    </div>
+                </div>
+
+                <!-- Tab 5: Displays -->
+                <div v-show="activeTab === 5" class="space-y-5">
+                    <div v-for="evt in designerEvents" :key="'disp-' + evt.id"
+                        class="bg-white rounded-2xl border border-gray-200 p-6">
+                        <h4 class="font-semibold text-gray-800 mb-4">{{ evt.name }}</h4>
+
+                        <div v-for="d in displays.filter(dd => dd.event_id === evt.id)" :key="d.id"
+                            class="space-y-4">
+                            <!-- Video -->
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm text-gray-500 w-16">Video:</span>
+                                <input :value="d.background_video_url" type="text" placeholder="URL del video..."
+                                    @change="updateDisplay(d, { background_video_url: $event.target.value })"
+                                    class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-black/10" />
+                                <button type="button" @click="uploadDisplayFile(d.id, 'video')"
+                                    class="px-3 py-1.5 text-xs border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                    Subir
+                                </button>
+                            </div>
+                            <!-- Audio -->
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm text-gray-500 w-16">Audio:</span>
+                                <input :value="d.music_audio_url" type="text" placeholder="URL del audio..."
+                                    @change="updateDisplay(d, { music_audio_url: $event.target.value })"
+                                    class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-black/10" />
+                                <button type="button" @click="uploadDisplayFile(d.id, 'audio')"
+                                    class="px-3 py-1.5 text-xs border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                    Subir
+                                </button>
+                            </div>
+                            <!-- Estado -->
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm text-gray-500 w-16">Estado:</span>
+                                <select :value="d.status"
+                                    @change="updateDisplay(d, { status: $event.target.value })"
+                                    class="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
+                                    <option value="pending">Pendiente</option>
+                                    <option value="ready">Listo</option>
+                                    <option value="confirmed">Confirmado</option>
+                                </select>
+                            </div>
+                            <!-- Notas -->
+                            <div class="flex items-start gap-3">
+                                <span class="text-sm text-gray-500 w-16 pt-2">Notas:</span>
+                                <textarea :value="d.notes" rows="2" placeholder="Notas del display..."
+                                    @change="updateDisplay(d, { notes: $event.target.value })"
+                                    class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"></textarea>
+                            </div>
+                        </div>
+
+                        <p v-if="displays.filter(dd => dd.event_id === evt.id).length === 0"
+                            class="text-sm text-gray-400 italic">Sin display para este evento.</p>
+                    </div>
+
+                    <div v-if="designerEvents.length === 0"
+                        class="bg-white rounded-2xl border border-gray-200 p-6 text-sm text-gray-400 italic text-center">
+                        Asigna el diseñador a un evento para ver sus displays.
+                    </div>
+                </div>
+
+                <!-- Botones (solo en tab 1 se muestran guardar/cancelar) -->
+                <div v-if="activeTab === 1" class="flex justify-between">
+                    <Link :href="`/admin/designers/${designer.id}`"
+                        class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+                        Cancelar
+                    </Link>
+                    <button type="submit" :disabled="form.processing"
+                        class="px-8 py-2.5 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800 disabled:opacity-60 transition-colors">
+                        <span v-if="form.processing">Guardando...</span>
+                        <span v-else>Guardar Cambios</span>
+                    </button>
+                </div>
+                <div v-else class="flex justify-end">
+                    <Link :href="`/admin/designers/${designer.id}`"
+                        class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+                        Volver al perfil
+                    </Link>
+                </div>
+            </form>
+        </div>
+    </AdminLayout>
+</template>

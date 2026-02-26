@@ -13,7 +13,7 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     // Role constants grouped by category
-    const ROLES_INTERNAL = ['admin', 'accounting', 'operation', 'tickets_manager', 'marketing', 'public_relations'];
+    const ROLES_INTERNAL = ['admin', 'accounting', 'operation', 'tickets_manager', 'marketing', 'public_relations', 'sales'];
     const ROLES_PARTICIPANT = ['designer', 'model', 'media', 'volunteer', 'staff'];
     const ROLES_ATTENDEE = ['attendee', 'vip', 'influencer', 'press', 'sponsor', 'complementary'];
 
@@ -58,6 +58,7 @@ class User extends Authenticatable
     public function isTicketsManager(): bool { return $this->role === 'tickets_manager'; }
     public function isMarketing(): bool { return $this->role === 'marketing'; }
     public function isPublicRelations(): bool { return $this->role === 'public_relations'; }
+    public function isSales(): bool { return $this->role === 'sales'; }
     public function isInternalTeam(): bool { return in_array($this->role, self::ROLES_INTERNAL); }
 
     // --- Role checks: Participants ---
@@ -122,9 +123,13 @@ class User extends Authenticatable
     public function eventsAsDesigner()
     {
         return $this->belongsToMany(Event::class, 'event_designer', 'designer_id', 'event_id')
-            ->withPivot(['status'])
+            ->withPivot(['status', 'package_id', 'looks', 'model_casting_enabled', 'package_price', 'notes'])
             ->withTimestamps();
     }
+
+    public function designerAssistants() { return $this->hasMany(DesignerAssistant::class, 'designer_id'); }
+    public function designerMaterials() { return $this->hasMany(DesignerMaterial::class, 'designer_id'); }
+    public function designerDisplays() { return $this->hasMany(DesignerDisplay::class, 'designer_id'); }
 
     public function eventsAsStaff()
     {

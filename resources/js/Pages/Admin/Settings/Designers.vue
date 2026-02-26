@@ -1,0 +1,292 @@
+<script setup>
+import AdminLayout from '@/Layouts/AdminLayout.vue';
+import { router } from '@inertiajs/vue3';
+import { ref } from 'vue';
+
+const props = defineProps({
+    categories: Array,
+    packages: Array,
+});
+
+const activeTab = ref('categories');
+
+// --- Categorías ---
+const newCategoryName = ref('');
+const editingCategory = ref(null);
+const editCategoryName = ref('');
+
+function addCategory() {
+    if (!newCategoryName.value.trim()) return;
+    router.post('/admin/settings/designer-categories', { name: newCategoryName.value }, {
+        preserveScroll: true,
+        onSuccess: () => { newCategoryName.value = ''; },
+    });
+}
+
+function startEditCategory(cat) {
+    editingCategory.value = cat.id;
+    editCategoryName.value = cat.name;
+}
+
+function saveCategory(cat) {
+    router.put(`/admin/settings/designer-categories/${cat.id}`, { name: editCategoryName.value }, {
+        preserveScroll: true,
+        onSuccess: () => { editingCategory.value = null; },
+    });
+}
+
+function toggleCategory(cat) {
+    router.put(`/admin/settings/designer-categories/${cat.id}`, { is_active: !cat.is_active }, { preserveScroll: true });
+}
+
+function deleteCategory(cat) {
+    if (!confirm(`¿Eliminar la categoría "${cat.name}"?`)) return;
+    router.delete(`/admin/settings/designer-categories/${cat.id}`, { preserveScroll: true });
+}
+
+// --- Paquetes ---
+const showPackageForm = ref(false);
+const editingPackage = ref(null);
+const packageForm = ref(getEmptyPackage());
+
+function getEmptyPackage() {
+    return { name: '', description: '', price: 0, default_looks: 10, default_assistants: 2, features: [] };
+}
+
+function resetPackageForm() {
+    packageForm.value = getEmptyPackage();
+    showPackageForm.value = false;
+    editingPackage.value = null;
+}
+
+function savePackage() {
+    if (editingPackage.value) {
+        router.put(`/admin/settings/designer-packages/${editingPackage.value}`, packageForm.value, {
+            preserveScroll: true,
+            onSuccess: () => resetPackageForm(),
+        });
+    } else {
+        router.post('/admin/settings/designer-packages', packageForm.value, {
+            preserveScroll: true,
+            onSuccess: () => resetPackageForm(),
+        });
+    }
+}
+
+function startEditPackage(pkg) {
+    editingPackage.value = pkg.id;
+    packageForm.value = {
+        name: pkg.name,
+        description: pkg.description || '',
+        price: pkg.price,
+        default_looks: pkg.default_looks,
+        default_assistants: pkg.default_assistants,
+        features: pkg.features || [],
+    };
+    showPackageForm.value = true;
+}
+
+function togglePackage(pkg) {
+    router.put(`/admin/settings/designer-packages/${pkg.id}`, { is_active: !pkg.is_active }, { preserveScroll: true });
+}
+
+function deletePackage(pkg) {
+    if (!confirm(`¿Eliminar el paquete "${pkg.name}"?`)) return;
+    router.delete(`/admin/settings/designer-packages/${pkg.id}`, { preserveScroll: true });
+}
+
+function formatPrice(val) {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(val);
+}
+</script>
+
+<template>
+    <AdminLayout>
+        <template #header>
+            <h2 class="text-lg font-semibold text-gray-900">Ajustes</h2>
+        </template>
+
+        <div>
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-900">Ajustes de Diseñadores</h3>
+                    <p class="text-gray-500 text-sm mt-1">Gestionar categorías y paquetes disponibles para diseñadores</p>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex gap-1 mb-6">
+                <button @click="activeTab = 'categories'"
+                    class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    :class="activeTab === 'categories' ? 'bg-black text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'">
+                    Categorías ({{ categories.length }})
+                </button>
+                <button @click="activeTab = 'packages'"
+                    class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    :class="activeTab === 'packages' ? 'bg-black text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'">
+                    Paquetes ({{ packages.length }})
+                </button>
+            </div>
+
+            <!-- ============ CATEGORÍAS ============ -->
+            <div v-show="activeTab === 'categories'" class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <!-- Add row -->
+                <div class="px-6 py-4 border-b border-gray-100 flex gap-3">
+                    <input v-model="newCategoryName" type="text" placeholder="Nueva categoría..."
+                        class="flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400"
+                        @keyup.enter="addCategory" />
+                    <button @click="addCategory"
+                        class="px-4 py-2.5 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
+                        + Agregar
+                    </button>
+                </div>
+
+                <!-- List -->
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nombre</th>
+                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Slug</th>
+                            <th class="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
+                            <th class="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <tr v-for="cat in categories" :key="cat.id" class="hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-3">
+                                <template v-if="editingCategory === cat.id">
+                                    <input v-model="editCategoryName" type="text"
+                                        class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 w-full"
+                                        @keyup.enter="saveCategory(cat)" @keyup.escape="editingCategory = null" />
+                                </template>
+                                <span v-else class="text-sm font-medium text-gray-900">{{ cat.name }}</span>
+                            </td>
+                            <td class="px-6 py-3">
+                                <span class="text-xs text-gray-400 font-mono">{{ cat.slug }}</span>
+                            </td>
+                            <td class="px-6 py-3 text-center">
+                                <button @click="toggleCategory(cat)"
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors"
+                                    :class="cat.is_active ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'">
+                                    {{ cat.is_active ? 'Activa' : 'Inactiva' }}
+                                </button>
+                            </td>
+                            <td class="px-6 py-3">
+                                <div class="flex items-center justify-end gap-1">
+                                    <template v-if="editingCategory === cat.id">
+                                        <button @click="saveCategory(cat)" class="text-xs px-3 py-1.5 bg-black text-white rounded-lg hover:bg-gray-800">Guardar</button>
+                                        <button @click="editingCategory = null" class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50">Cancelar</button>
+                                    </template>
+                                    <template v-else>
+                                        <button @click="startEditCategory(cat)" class="text-gray-400 hover:text-gray-700 p-1.5 rounded hover:bg-gray-100 transition-colors" title="Editar">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /></svg>
+                                        </button>
+                                        <button @click="deleteCategory(cat)" class="text-gray-400 hover:text-red-500 p-1.5 rounded hover:bg-red-50 transition-colors" title="Eliminar">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                                        </button>
+                                    </template>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-if="categories.length === 0">
+                            <td colspan="4" class="px-6 py-12 text-center text-gray-400 text-sm">No hay categorías creadas.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ============ PAQUETES ============ -->
+            <div v-show="activeTab === 'packages'">
+                <!-- Add/Edit form -->
+                <div v-if="showPackageForm" class="bg-white rounded-xl border border-gray-200 p-6 mb-5">
+                    <h4 class="font-semibold text-gray-900 mb-4">{{ editingPackage ? 'Editar Paquete' : 'Nuevo Paquete' }}</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Nombre *</label>
+                            <input v-model="packageForm.name" type="text" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Precio (USD) *</label>
+                            <input v-model.number="packageForm.price" type="number" min="0" step="100" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Looks incluidos *</label>
+                            <input v-model.number="packageForm.default_looks" type="number" min="1" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Asistentes incluidos *</label>
+                            <input v-model.number="packageForm.default_assistants" type="number" min="0" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Descripción</label>
+                            <input v-model="packageForm.description" type="text" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button @click="savePackage" class="px-4 py-2.5 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
+                            {{ editingPackage ? 'Guardar Cambios' : 'Crear Paquete' }}
+                        </button>
+                        <button @click="resetPackageForm" class="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium hover:bg-gray-50 transition-colors">
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+
+                <div v-if="!showPackageForm" class="mb-4">
+                    <button @click="showPackageForm = true" class="px-4 py-2.5 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
+                        + Agregar Paquete
+                    </button>
+                </div>
+
+                <!-- Packages table -->
+                <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Paquete</th>
+                                <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Precio</th>
+                                <th class="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Looks</th>
+                                <th class="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Asistentes</th>
+                                <th class="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <tr v-for="pkg in packages" :key="pkg.id" class="hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-3">
+                                    <p class="font-medium text-gray-900 text-sm">{{ pkg.name }}</p>
+                                    <p v-if="pkg.description" class="text-xs text-gray-400 mt-0.5">{{ pkg.description }}</p>
+                                </td>
+                                <td class="px-6 py-3">
+                                    <span class="text-sm font-semibold" style="color: #D4AF37;">{{ formatPrice(pkg.price) }}</span>
+                                </td>
+                                <td class="px-6 py-3 text-center text-sm text-gray-700">{{ pkg.default_looks }}</td>
+                                <td class="px-6 py-3 text-center text-sm text-gray-700">{{ pkg.default_assistants }}</td>
+                                <td class="px-6 py-3 text-center">
+                                    <button @click="togglePackage(pkg)"
+                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors"
+                                        :class="pkg.is_active ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'">
+                                        {{ pkg.is_active ? 'Activo' : 'Inactivo' }}
+                                    </button>
+                                </td>
+                                <td class="px-6 py-3">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <button @click="startEditPackage(pkg)" class="text-gray-400 hover:text-gray-700 p-1.5 rounded hover:bg-gray-100 transition-colors" title="Editar">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /></svg>
+                                        </button>
+                                        <button @click="deletePackage(pkg)" class="text-gray-400 hover:text-red-500 p-1.5 rounded hover:bg-red-50 transition-colors" title="Eliminar">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr v-if="packages.length === 0">
+                                <td colspan="6" class="px-6 py-12 text-center text-gray-400 text-sm">No hay paquetes creados.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </AdminLayout>
+</template>

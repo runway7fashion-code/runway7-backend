@@ -2,9 +2,14 @@
 
 namespace Database\Seeders;
 
+use App\Models\DesignerAssistant;
+use App\Models\DesignerDisplay;
+use App\Models\DesignerMaterial;
+use App\Models\DesignerPackage;
 use App\Models\Event;
 use App\Models\EventDay;
 use App\Models\User;
+use App\Services\DesignerService;
 use App\Services\EventService;
 use Illuminate\Database\Seeder;
 
@@ -114,15 +119,94 @@ class EventSeeder extends Seeder
         ]);
 
         // ---------------------------------------------------------------
-        // Assign designers to first 2 shows of Sep 9
+        // Assign designers to event_designer pivot + shows
         // ---------------------------------------------------------------
         $designer1 = User::where('email', 'ale@nocturnadesign.com')->first();
         $designer2 = User::where('email', 'val@lunawhite.com')->first();
+        $designerService = app(DesignerService::class);
 
+        $premiumPkg  = DesignerPackage::where('slug', 'premium')->first();
+        $platinumPkg = DesignerPackage::where('slug', 'platinum')->first();
+
+        // Attach designers to event with package info
+        if ($designer1) {
+            $event->designers()->attach($designer1->id, [
+                'status'                => 'confirmed',
+                'package_id'            => $premiumPkg?->id,
+                'looks'                 => 12,
+                'model_casting_enabled' => true,
+                'package_price'         => 5000.00,
+                'notes'                 => 'Confirmado. Coleccion Dark Elegance SS26.',
+            ]);
+
+            // Create default materials
+            $designerService->createDefaultMaterials($designer1, $event);
+
+            // Create display
+            DesignerDisplay::create([
+                'designer_id' => $designer1->id,
+                'event_id'    => $event->id,
+                'status'      => 'pending',
+                'notes'       => 'Pendiente envio de video y audio.',
+            ]);
+
+            // Create assistants
+            DesignerAssistant::create([
+                'designer_id' => $designer1->id,
+                'event_id'    => $event->id,
+                'full_name'   => 'Carlos Mendez',
+                'document_id' => 'CC-12345678',
+                'phone'       => '+1-212-555-0311',
+                'email'       => 'carlos@nocturnadesign.com',
+                'status'      => 'registered',
+            ]);
+            DesignerAssistant::create([
+                'designer_id' => $designer1->id,
+                'event_id'    => $event->id,
+                'full_name'   => 'Laura Jimenez',
+                'phone'       => '+1-212-555-0312',
+                'email'       => 'laura@nocturnadesign.com',
+                'status'      => 'registered',
+            ]);
+        }
+
+        if ($designer2) {
+            $event->designers()->attach($designer2->id, [
+                'status'                => 'confirmed',
+                'package_id'            => $platinumPkg?->id,
+                'looks'                 => 15,
+                'model_casting_enabled' => true,
+                'package_price'         => 7500.00,
+                'notes'                 => 'Confirmada. Coleccion Monochrome Dreams.',
+            ]);
+
+            // Create default materials
+            $designerService->createDefaultMaterials($designer2, $event);
+
+            // Create display
+            DesignerDisplay::create([
+                'designer_id' => $designer2->id,
+                'event_id'    => $event->id,
+                'status'      => 'ready',
+                'notes'       => 'Video enviado via WeTransfer.',
+            ]);
+
+            // Create assistant
+            DesignerAssistant::create([
+                'designer_id' => $designer2->id,
+                'event_id'    => $event->id,
+                'full_name'   => 'Ana Gutierrez',
+                'document_id' => 'PP-87654321',
+                'phone'       => '+1-305-555-0411',
+                'email'       => 'ana@lunawhite.com',
+                'status'      => 'registered',
+            ]);
+        }
+
+        // Assign designers to shows
         if ($day2 && $designer1 && $designer2) {
             $shows = $day2->shows()->orderBy('order')->get();
             if ($shows->count() >= 2) {
-                // Assign both designers to the 11am show (multi-designer showcase)
                 $shows[0]->designers()->attach($designer1->id, [
                     'order'           => 1,
                     'collection_name' => 'Dark Elegance SS26',
@@ -133,8 +217,6 @@ class EventSeeder extends Seeder
                     'collection_name' => 'Monochrome Dreams',
                     'status'          => 'confirmed',
                 ]);
-
-                // Also assign designer2 individually to the 1pm show
                 $shows[1]->designers()->attach($designer2->id, [
                     'order'           => 1,
                     'collection_name' => 'Monochrome Dreams – Evening',

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\DesignerCategory;
 use App\Models\DesignerProfile;
 use App\Models\ModelProfile;
 use App\Models\PressProfile;
@@ -38,6 +39,15 @@ class UserSeeder extends Seeder
             'email'      => 'operation@runway7.com',
             'password'   => bcrypt('password123'),
             'role'       => 'operation',
+            'status'     => 'active',
+        ]);
+
+        $salesRep = User::create([
+            'first_name' => 'Carlos',
+            'last_name'  => 'Mendez',
+            'email'      => 'sales@runway7.com',
+            'password'   => bcrypt('password123'),
+            'role'       => 'sales',
             'status'     => 'active',
         ]);
 
@@ -121,13 +131,16 @@ class UserSeeder extends Seeder
             'compcard_completed' => false,
         ]);
 
-        // --- Diseñadores ---
+        // --- Diseñadores (password: runway7) ---
+        $streetwearCat    = DesignerCategory::where('slug', 'streetwear')->first();
+        $eveningwearCat   = DesignerCategory::where('slug', 'eveningwear-gowns')->first();
+
         $designer1 = User::create([
             'first_name' => 'Alejandro',
             'last_name'  => 'Vasquez',
             'email'      => 'ale@nocturnadesign.com',
             'phone'      => '+1-212-555-0303',
-            'password'   => bcrypt('password123'),
+            'password'   => bcrypt('runway7'),
             'role'       => 'designer',
             'status'     => 'active',
         ]);
@@ -140,6 +153,17 @@ class UserSeeder extends Seeder
             'instagram'       => '@nocturnadesign',
             'bio'             => 'Diseñador colombiano radicado en Nueva York. Especializado en alta costura oscura y elegante.',
             'country'         => 'Colombia',
+            'category_id'     => $streetwearCat?->id,
+            'sales_rep_id'    => $salesRep->id,
+            'tracking_link'   => 'https://nocturnadesign.com/tracking/nyfw26',
+            'skype'           => 'ale.vasquez.nocturna',
+            'social_media'    => [
+                'instagram' => '@nocturnadesign',
+                'facebook'  => 'nocturnadesign',
+                'tiktok'    => '@nocturnadesign',
+                'website'   => 'https://nocturnadesign.com',
+                'other'     => '',
+            ],
         ]);
 
         $designer2 = User::create([
@@ -147,7 +171,7 @@ class UserSeeder extends Seeder
             'last_name'  => 'Morales',
             'email'      => 'val@lunawhite.com',
             'phone'      => '+1-305-555-0404',
-            'password'   => bcrypt('password123'),
+            'password'   => bcrypt('runway7'),
             'role'       => 'designer',
             'status'     => 'active',
         ]);
@@ -160,6 +184,16 @@ class UserSeeder extends Seeder
             'instagram'       => '@lunawhitestudio',
             'bio'             => 'Diseñadora venezolana. Minimalismo y blanco como filosofía de vida.',
             'country'         => 'Venezuela',
+            'category_id'     => $eveningwearCat?->id,
+            'tracking_link'   => 'https://lunawhite.com/tracking/nyfw26',
+            'skype'           => 'valentina.morales.lw',
+            'social_media'    => [
+                'instagram' => '@lunawhitestudio',
+                'facebook'  => 'lunawhitestudio',
+                'tiktok'    => '@lunawhite',
+                'website'   => 'https://lunawhite.com',
+                'other'     => '',
+            ],
         ]);
 
         // --- Prensa ---
