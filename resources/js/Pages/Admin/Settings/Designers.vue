@@ -1,6 +1,6 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { router } from '@inertiajs/vue3';
+import { router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 
 const props = defineProps({
@@ -11,15 +11,15 @@ const props = defineProps({
 const activeTab = ref('categories');
 
 // --- Categorías ---
-const newCategoryName = ref('');
+const categoryForm = useForm({ name: '' });
 const editingCategory = ref(null);
 const editCategoryName = ref('');
 
 function addCategory() {
-    if (!newCategoryName.value.trim()) return;
-    router.post('/admin/settings/designer-categories', { name: newCategoryName.value }, {
+    if (!categoryForm.name.trim()) return;
+    categoryForm.post('/admin/settings/designer-categories', {
         preserveScroll: true,
-        onSuccess: () => { newCategoryName.value = ''; },
+        onSuccess: () => { categoryForm.reset(); },
     });
 }
 
@@ -131,14 +131,20 @@ function formatPrice(val) {
             <!-- ============ CATEGORÍAS ============ -->
             <div v-show="activeTab === 'categories'" class="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <!-- Add row -->
-                <div class="px-6 py-4 border-b border-gray-100 flex gap-3">
-                    <input v-model="newCategoryName" type="text" placeholder="Nueva categoría..."
-                        class="flex-1 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400"
-                        @keyup.enter="addCategory" />
-                    <button @click="addCategory"
-                        class="px-4 py-2.5 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
-                        + Agregar
-                    </button>
+                <div class="px-6 py-4 border-b border-gray-100">
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <input v-model="categoryForm.name" type="text" placeholder="Nueva categoría..."
+                                class="w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400"
+                                :class="categoryForm.errors.name ? 'border-red-400 bg-red-50' : 'border-gray-200'"
+                                @keyup.enter="addCategory" />
+                            <p v-if="categoryForm.errors.name" class="text-red-500 text-xs mt-1">{{ categoryForm.errors.name }}</p>
+                        </div>
+                        <button @click="addCategory" :disabled="categoryForm.processing"
+                            class="px-4 py-2.5 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50">
+                            {{ categoryForm.processing ? '...' : '+ Agregar' }}
+                        </button>
+                    </div>
                 </div>
 
                 <!-- List -->

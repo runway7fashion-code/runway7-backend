@@ -24,13 +24,19 @@ class DesignerSettingsController extends Controller
 
     public function storeCategory(Request $request)
     {
+        $slug = Str::slug($request->name ?? '');
+
         $request->validate([
             'name' => 'required|string|max:255|unique:designer_categories,name',
         ]);
 
+        if (DesignerCategory::where('slug', $slug)->exists()) {
+            return back()->withErrors(['name' => 'Ya existe una categoría con un nombre similar.'])->withInput();
+        }
+
         DesignerCategory::create([
             'name'  => $request->name,
-            'slug'  => Str::slug($request->name),
+            'slug'  => $slug,
             'order' => (DesignerCategory::max('order') ?? 0) + 1,
         ]);
 
