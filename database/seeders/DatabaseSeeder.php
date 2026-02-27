@@ -16,6 +16,8 @@ class DatabaseSeeder extends Seeder
             DesignerSettingsSeeder::class,
             UserSeeder::class,
             EventSeeder::class,
+            AccountingSeeder::class,
+            SupportCaseSeeder::class,
             ConversationSeeder::class,
             BannerSeeder::class,
         ]);

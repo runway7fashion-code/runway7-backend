@@ -49,6 +49,7 @@ class DesignerService
                 'last_name'  => $userData['last_name'] ?? $user->last_name,
                 'email'      => $userData['email'] ?? $user->email,
                 'phone'      => $userData['phone'] ?? $user->phone,
+                'status'     => $userData['status'] ?? $user->status,
             ]);
 
             $user->designerProfile()->updateOrCreate(

@@ -204,6 +204,7 @@ class DesignerController extends Controller
             'last_name'       => 'required|string|max:255',
             'email'           => "required|email|unique:users,email,{$designer->id}",
             'phone'           => 'nullable|string',
+            'status'          => 'nullable|in:active,inactive,pending',
             'brand_name'      => 'required|string|max:255',
             'collection_name' => 'nullable|string|max:255',
             'website'         => 'nullable|string|max:255',
@@ -217,7 +218,7 @@ class DesignerController extends Controller
             'social_media'    => 'nullable|array',
         ]);
 
-        $userData = $request->only(['first_name', 'last_name', 'email', 'phone']);
+        $userData = $request->only(['first_name', 'last_name', 'email', 'phone', 'status']);
         $profileData = $request->only([
             'brand_name', 'collection_name', 'website', 'instagram',
             'bio', 'country', 'category_id', 'sales_rep_id', 'tracking_link', 'skype', 'social_media',

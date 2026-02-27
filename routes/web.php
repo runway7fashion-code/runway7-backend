@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\ChatController;
 use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\DesignerController;
 use App\Http\Controllers\Admin\DesignerSettingsController;
+use App\Http\Controllers\Admin\AccountingController;
 
 Route::get('/', function () {
     return redirect()->route('admin.login');
@@ -93,6 +94,52 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::resource('banners', BannerController::class);
             Route::post('banners/{banner}/upload-image', [BannerController::class, 'uploadImage'])->name('banners.upload-image');
             Route::post('banners/reorder', [BannerController::class, 'reorder'])->name('banners.reorder');
+        });
+
+        // Contabilidad - admin, accounting
+        Route::prefix('accounting')->name('accounting.')->group(function () {
+            Route::middleware('section:accounting_dashboard')->group(function () {
+                Route::get('dashboard', [AccountingController::class, 'dashboard'])->name('dashboard');
+            });
+            Route::middleware('section:accounting_payments')->group(function () {
+                Route::get('overdue', [AccountingController::class, 'overdueList'])->name('overdue');
+                Route::get('overdue/export', [AccountingController::class, 'exportOverdueList'])->name('overdue.export');
+                Route::get('designers-list', [AccountingController::class, 'designersList'])->name('designers-list');
+                Route::get('api/designer-detail/{designer}', [AccountingController::class, 'designerDetail'])->name('api.designer-detail');
+                Route::get('designers-list/export', [AccountingController::class, 'exportDesignersList'])->name('designers-list.export');
+
+                Route::get('payments', [AccountingController::class, 'payments'])->name('payments');
+                Route::get('payments/designer/{designer}/event/{event}', [AccountingController::class, 'showDesignerPayment'])->name('payments.designer');
+                Route::post('payments/create-plan', [AccountingController::class, 'createPaymentPlan'])->name('payments.create-plan');
+                Route::put('payments/plans/{plan}', [AccountingController::class, 'updatePaymentPlan'])->name('payments.update-plan');
+                Route::post('payments/plans/{plan}/downpayment-paid', [AccountingController::class, 'markDownpaymentPaid'])->name('payments.downpayment-paid');
+                Route::post('payments/installments/{installment}/mark-paid', [AccountingController::class, 'markInstallmentPaid'])->name('payments.installment-paid');
+                Route::post('payments/installments/{installment}/upload-receipt', [AccountingController::class, 'uploadReceipt'])->name('payments.upload-receipt');
+                Route::put('payments/designer/{designer}/event/{event}', [AccountingController::class, 'updateDesignerInfo'])->name('payments.update-designer');
+                Route::get('api/designers-by-event/{event}', [AccountingController::class, 'designersByEvent'])->name('api.designers-by-event');
+                Route::get('api/designers-all-events', [AccountingController::class, 'designersAllEvents'])->name('api.designers-all-events');
+
+                // Registro de Pagos
+                Route::get('payment-records', [AccountingController::class, 'paymentRecords'])->name('payment-records.index');
+                Route::post('payment-records', [AccountingController::class, 'storePaymentRecord'])->name('payment-records.store');
+                Route::put('payment-records/{record}', [AccountingController::class, 'updatePaymentRecord'])->name('payment-records.update');
+                Route::delete('payment-records/{record}', [AccountingController::class, 'destroyPaymentRecord'])->name('payment-records.destroy');
+                Route::get('api/search-designers', [AccountingController::class, 'searchDesignersForRecord'])->name('api.search-designers');
+
+                // Historial / Bitácora
+                Route::get('cases', [AccountingController::class, 'caseHistory'])->name('cases.index');
+                Route::get('cases/create', [AccountingController::class, 'createCase'])->name('cases.create');
+                Route::post('cases', [AccountingController::class, 'storeCase'])->name('cases.store');
+                Route::get('cases/{case}', [AccountingController::class, 'showCase'])->name('cases.show');
+                Route::post('cases/{case}/messages', [AccountingController::class, 'addMessage'])->name('cases.add-message');
+                Route::put('cases/{case}/status', [AccountingController::class, 'updateCaseStatus'])->name('cases.update-status');
+                Route::delete('cases/{case}', [AccountingController::class, 'destroyCase'])->name('cases.destroy');
+                Route::get('api/designer-emails/{designer}', [AccountingController::class, 'getDesignerEmails'])->name('api.designer-emails');
+
+                // Reporte de Liquidez
+                Route::get('liquidity', [AccountingController::class, 'liquidityReport'])->name('liquidity');
+                Route::get('liquidity/export', [AccountingController::class, 'exportLiquidityReport'])->name('liquidity.export');
+            });
         });
 
         // Ajustes - solo admin

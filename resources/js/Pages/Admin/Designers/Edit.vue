@@ -19,6 +19,7 @@ const form = useForm({
     last_name:       props.designer.last_name   ?? '',
     email:           props.designer.email       ?? '',
     phone:           props.designer.phone       ?? '',
+    status:          props.designer.status      ?? 'pending',
     brand_name:      profile?.brand_name        ?? '',
     collection_name: profile?.collection_name   ?? '',
     category_id:     profile?.category_id       ?? '',
@@ -309,6 +310,16 @@ function submit() {
                             <input v-model="form.phone" type="tel"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                        <select v-model="form.status"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                            <option value="active">Activo</option>
+                            <option value="inactive">Inactivo</option>
+                            <option value="pending">Pendiente</option>
+                        </select>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">

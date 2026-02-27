@@ -17,6 +17,7 @@ class DashboardController extends Controller
 
         return match($user->role) {
             'admin', 'operation' => $this->adminDashboard(),
+            'accounting' => redirect()->route('admin.accounting.dashboard'),
             'sales' => $this->salesDashboard($user),
             default => $this->defaultDashboard($user),
         };

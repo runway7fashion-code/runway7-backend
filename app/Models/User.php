@@ -107,6 +107,13 @@ class User extends Authenticatable
     public function pressProfile() { return $this->hasOne(PressProfile::class); }
     public function sponsorProfile() { return $this->hasOne(SponsorProfile::class); }
 
+    // --- Payment Plans ---
+    public function paymentPlans() { return $this->hasMany(DesignerPaymentPlan::class, 'designer_id'); }
+
+    // --- Support Cases ---
+    public function supportCases() { return $this->hasMany(SupportCase::class, 'designer_id'); }
+    public function contactEmails() { return $this->hasMany(DesignerContactEmail::class, 'designer_id'); }
+
     // --- Products & Commerce ---
     public function designerProducts() { return $this->hasMany(DesignerProduct::class, 'designer_id'); }
     public function orders() { return $this->hasMany(Order::class); }
