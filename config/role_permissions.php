@@ -2,7 +2,7 @@
 
 return [
     'admin' => [
-        'sections' => ['dashboard', 'events', 'models', 'designers', 'chats', 'banners', 'users', 'settings', 'accounting', 'accounting_dashboard', 'accounting_payments'],
+        'sections' => ['dashboard', 'events', 'models', 'designers', 'chats', 'banners', 'users', 'settings', 'accounting', 'accounting_dashboard', 'accounting_payments', 'tickets_dashboard', 'tickets_management'],
         'label' => 'Administrador',
     ],
     'accounting' => [
@@ -28,5 +28,9 @@ return [
     'sales' => [
         'sections' => ['sales_dashboard', 'designers'],
         'label' => 'Ventas',
+    ],
+    'assistant' => [
+        'sections' => [],
+        'label' => 'Asistente',
     ],
 ];

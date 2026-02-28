@@ -83,12 +83,11 @@ class UserSeeder extends Seeder
             'ethnicity'          => 'hispanic',
             'hair'               => 'brown',
             'body_type'          => 'slim',
-            // Comp card completo (4 fotos placeholder)
-            'photo_1'            => 'models/placeholder-headshot.jpg',
-            'photo_2'            => 'models/placeholder-fullbody-front.jpg',
-            'photo_3'            => 'models/placeholder-fullbody-side.jpg',
-            'photo_4'            => 'models/placeholder-editorial.jpg',
-            'compcard_completed' => true,
+            'photo_1'            => null,
+            'photo_2'            => null,
+            'photo_3'            => null,
+            'photo_4'            => null,
+            'compcard_completed' => false,
             'notes'              => 'Experiencia en desfiles internacionales. Disponible para casting en septiembre.',
         ]);
 
@@ -123,9 +122,8 @@ class UserSeeder extends Seeder
             'ethnicity'          => 'asian',
             'hair'               => 'black',
             'body_type'          => 'slim',
-            // Comp card incompleto (solo 2 fotos)
-            'photo_1'            => 'models/placeholder-headshot.jpg',
-            'photo_2'            => 'models/placeholder-fullbody-front.jpg',
+            'photo_1'            => null,
+            'photo_2'            => null,
             'photo_3'            => null,
             'photo_4'            => null,
             'compcard_completed' => false,

@@ -1,6 +1,8 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import QrCode from '@/Components/QrCode.vue';
 
 const props = defineProps({
     model: Object,
@@ -46,6 +48,18 @@ function showStatusClass(s) {
         requested: 'text-blue-700 bg-blue-50', pending: 'text-gray-600 bg-gray-50' }[s] ?? 'text-gray-600 bg-gray-50';
 }
 
+function passStatusClass(s) {
+    return {
+        active:    'bg-green-50 text-green-700',
+        cancelled: 'bg-red-50 text-red-600',
+        used:      'bg-gray-100 text-gray-500',
+    }[s] ?? 'bg-gray-100 text-gray-500';
+}
+
+function passStatusLabel(s) {
+    return { active: 'Activo', cancelled: 'Cancelado', used: 'Usado' }[s] ?? s;
+}
+
 function progressColor(pct) {
     if (pct === 100) return 'bg-green-500';
     if (pct >= 50)   return 'bg-yellow-400';
@@ -64,6 +78,12 @@ function removeFromEvent(eventId, eventName) {
 
 const compCardLabels = ['Headshot', 'Full Body Front', 'Full Body Side', 'Creative/Editorial'];
 const compCardPhotos = [profile?.photo_1, profile?.photo_2, profile?.photo_3, profile?.photo_4];
+const failedImgs = ref([false, false, false, false]);
+
+// Modal pase
+const passModal = ref(null);
+function openPassModal(evt) { passModal.value = { ...evt.pass, event_name: evt.name }; }
+function closePassModal()   { passModal.value = null; }
 </script>
 
 <template>
@@ -164,8 +184,9 @@ const compCardPhotos = [profile?.photo_1, profile?.photo_2, profile?.photo_3, pr
                         <div class="grid grid-cols-4 gap-3">
                             <div v-for="(label, i) in compCardLabels" :key="i"
                                 class="aspect-[3/4] rounded-xl overflow-hidden border border-gray-200 bg-gray-50 relative group">
-                                <img v-if="storageUrl(compCardPhotos[i])"
+                                <img v-if="storageUrl(compCardPhotos[i]) && !failedImgs[i]"
                                     :src="storageUrl(compCardPhotos[i])"
+                                    @error="failedImgs[i] = true"
                                     class="w-full h-full object-cover" />
                                 <div v-else class="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-300">
                                     <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
@@ -228,6 +249,18 @@ const compCardPhotos = [profile?.photo_1, profile?.photo_2, profile?.photo_3, pr
                                             <span v-if="evt.casting_status"> · {{ castingStatusLabel(evt.casting_status) }}</span>
                                         </span>
                                     </div>
+                                    <!-- Pase inline -->
+                                    <div v-if="evt.pass" class="flex items-center gap-2 mt-1.5">
+                                        <span class="font-mono text-[11px] text-gray-400 tracking-wide">{{ evt.pass.qr_code }}</span>
+                                        <span :class="passStatusClass(evt.pass.status)"
+                                            class="text-[10px] font-medium px-1.5 py-0.5 rounded">
+                                            {{ passStatusLabel(evt.pass.status) }}
+                                        </span>
+                                        <button @click="openPassModal(evt)"
+                                            class="text-[11px] text-indigo-500 hover:text-indigo-700 font-medium">
+                                            Ver QR →
+                                        </button>
+                                    </div>
                                 </div>
                                 <button @click="removeFromEvent(evt.id, evt.name)"
                                     class="text-red-400 hover:text-red-600 text-xs ml-2 flex-shrink-0">✕</button>
@@ -257,4 +290,44 @@ const compCardPhotos = [profile?.photo_1, profile?.photo_2, profile?.photo_3, pr
             </div>
         </div>
     </AdminLayout>
+
+    <!-- Modal: Ver Pase QR -->
+    <Teleport to="body">
+        <div v-if="passModal" class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/60" @click="closePassModal"></div>
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 flex flex-col items-center gap-4">
+                <!-- Cerrar -->
+                <button @click="closePassModal" class="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+
+                <!-- Evento -->
+                <p class="text-xs font-medium text-gray-400 text-center">{{ passModal.event_name }}</p>
+
+                <!-- QR -->
+                <div class="p-3 bg-white border-2 border-gray-100 rounded-xl">
+                    <QrCode :value="passModal.qr_code" :size="220" />
+                </div>
+
+                <!-- Código + estado -->
+                <div class="text-center">
+                    <p class="font-mono text-sm text-gray-400">{{ passModal.qr_code }}</p>
+                </div>
+
+                <span :class="passStatusClass(passModal.status)"
+                    class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium">
+                    {{ passStatusLabel(passModal.status) }}
+                </span>
+
+                <!-- Días válidos -->
+                <div class="text-center">
+                    <p v-if="passModal.valid_days_labels" class="text-xs text-gray-500 font-medium">Días válidos</p>
+                    <p v-if="passModal.valid_days_labels" class="text-xs text-gray-400 mt-0.5">{{ passModal.valid_days_labels }}</p>
+                    <p v-else class="text-xs text-gray-400">Válido todos los días</p>
+                </div>
+            </div>
+        </div>
+    </Teleport>
 </template>

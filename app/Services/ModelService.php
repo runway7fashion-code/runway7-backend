@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Event;
+use App\Models\EventDay;
+use App\Models\EventPass;
 use App\Models\Show;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -91,7 +93,65 @@ class ModelService
     }
 
     /**
-     * Quitar modelo de un evento (libera casting slot y la remueve de los shows).
+     * Crear o actualizar el pase de una modelo para un evento.
+     * valid_days = día de casting (si tiene turno) + días de shows confirmados/reservados.
+     */
+    public function syncModelPass(User $model, int $eventId, int $issuedById): void
+    {
+        $eventDayIds = EventDay::where('event_id', $eventId)->pluck('id');
+
+        $dayIds = [];
+
+        // Día de casting (si la modelo tiene casting_time asignado en este evento)
+        $eventPivot = Event::findOrFail($eventId)->models()
+            ->where('model_id', $model->id)
+            ->first();
+
+        if ($eventPivot && $eventPivot->pivot->casting_time) {
+            $castingDay = EventDay::where('event_id', $eventId)
+                ->where('type', 'casting')
+                ->first();
+            if ($castingDay) {
+                $dayIds[] = $castingDay->id;
+            }
+        }
+
+        // Días de shows confirmados o reservados
+        $showDayIds = Show::whereIn('event_day_id', $eventDayIds)
+            ->whereHas('models', fn ($q) => $q->where('model_id', $model->id)
+                ->whereIn('show_model.status', ['reserved', 'confirmed']))
+            ->pluck('event_day_id')
+            ->unique()
+            ->values()
+            ->toArray();
+
+        $dayIds = array_values(array_unique(array_merge($dayIds, $showDayIds)));
+        $validDays = empty($dayIds) ? null : $dayIds;
+
+        $pass = EventPass::where('user_id', $model->id)
+            ->where('event_id', $eventId)
+            ->where('status', '!=', 'cancelled')
+            ->first();
+
+        if ($pass) {
+            $pass->update(['valid_days' => $validDays]);
+        } else {
+            EventPass::create([
+                'event_id'     => $eventId,
+                'user_id'      => $model->id,
+                'issued_by'    => $issuedById,
+                'qr_code'      => EventPass::generateQrCode(),
+                'pass_type'    => 'model',
+                'holder_name'  => $model->full_name,
+                'holder_email' => $model->email,
+                'valid_days'   => $validDays,
+                'status'       => 'active',
+            ]);
+        }
+    }
+
+    /**
+     * Quitar modelo de un evento (libera casting slot, remueve shows y cancela pase).
      */
     public function removeFromEvent(User $user, int $eventId): void
     {
@@ -112,6 +172,12 @@ class ModelService
 
             $showIds = Show::whereIn('event_day_id', $event->eventDays()->pluck('id'))->pluck('id');
             DB::table('show_model')->where('model_id', $user->id)->whereIn('show_id', $showIds)->delete();
+
+            // Cancelar pase de la modelo
+            EventPass::where('user_id', $user->id)
+                ->where('event_id', $event->id)
+                ->where('status', '!=', 'cancelled')
+                ->update(['status' => 'cancelled']);
 
             $event->models()->detach($user->id);
         });

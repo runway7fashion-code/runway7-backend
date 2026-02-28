@@ -14,7 +14,7 @@ class User extends Authenticatable
 
     // Role constants grouped by category
     const ROLES_INTERNAL = ['admin', 'accounting', 'operation', 'tickets_manager', 'marketing', 'public_relations', 'sales'];
-    const ROLES_PARTICIPANT = ['designer', 'model', 'media', 'volunteer', 'staff'];
+    const ROLES_PARTICIPANT = ['designer', 'model', 'media', 'volunteer', 'staff', 'assistant'];
     const ROLES_ATTENDEE = ['attendee', 'vip', 'influencer', 'press', 'sponsor', 'complementary'];
 
     protected $fillable = [
@@ -66,6 +66,7 @@ class User extends Authenticatable
     public function isDesigner(): bool { return $this->role === 'designer'; }
     public function isMedia(): bool { return $this->role === 'media'; }
     public function isVolunteer(): bool { return $this->role === 'volunteer'; }
+    public function isAssistant(): bool { return $this->role === 'assistant'; }
     public function isEventParticipant(): bool { return in_array($this->role, self::ROLES_PARTICIPANT); }
 
     // --- Role checks: Attendees ---
@@ -137,6 +138,7 @@ class User extends Authenticatable
     public function designerAssistants() { return $this->hasMany(DesignerAssistant::class, 'designer_id'); }
     public function designerMaterials() { return $this->hasMany(DesignerMaterial::class, 'designer_id'); }
     public function designerDisplays() { return $this->hasMany(DesignerDisplay::class, 'designer_id'); }
+    public function eventPasses() { return $this->hasMany(EventPass::class, 'user_id'); }
 
     public function eventsAsStaff()
     {

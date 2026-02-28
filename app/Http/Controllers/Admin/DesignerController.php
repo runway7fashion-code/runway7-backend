@@ -131,7 +131,7 @@ class DesignerController extends Controller
 
         if ($request->filled('assistants')) {
             foreach ($request->assistants as $assistantData) {
-                $this->designerService->addAssistant($designer, $request->event_id, $assistantData);
+                $this->designerService->addAssistant($designer, $request->event_id, $assistantData, $request->user()->id);
             }
         }
 
@@ -139,9 +139,13 @@ class DesignerController extends Controller
             foreach ($request->shows as $showData) {
                 $designer->designedShows()->attach($showData['show_id'], [
                     'collection_name' => $showData['collection_name'] ?? null,
-                    'status'          => 'assigned',
+                    'status'          => 'confirmed',
                 ]);
             }
+        }
+
+        if ($request->filled('event_id')) {
+            $this->designerService->syncDesignerPass($designer, $request->event_id, $request->user()->id);
         }
 
         return redirect()->route('admin.designers.show', $designer)
@@ -155,11 +159,12 @@ class DesignerController extends Controller
         $designer->load([
             'designerProfile.category',
             'designerProfile.salesRep',
-            'eventsAsDesigner',
+            'eventsAsDesigner.eventDays',
             'designedShows.eventDay',
             'designerAssistants',
             'designerMaterials',
             'designerDisplays',
+            'eventPasses',
         ]);
 
         return Inertia::render('Admin/Designers/Show', [
@@ -266,12 +271,26 @@ class DesignerController extends Controller
                 foreach ($request->shows as $showData) {
                     $designer->designedShows()->attach($showData['show_id'], [
                         'collection_name' => $showData['collection_name'] ?? null,
-                        'status'          => 'assigned',
+                        'status'          => 'confirmed',
                     ]);
                 }
             }
 
+            $this->designerService->syncDesignerPass($designer, $request->event_id, $request->user()->id);
+
             return back()->with('success', 'Diseñador asignado al evento.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['event' => $e->getMessage()]);
+        }
+    }
+
+    public function cancelEvent(User $designer, Event $event)
+    {
+        $this->authorizeDesigner($designer);
+
+        try {
+            $this->designerService->cancelEventParticipation($designer, $event->id);
+            return back()->with('success', 'Participación en el evento cancelada.');
         } catch (\Exception $e) {
             return back()->withErrors(['event' => $e->getMessage()]);
         }
@@ -289,10 +308,30 @@ class DesignerController extends Controller
         }
     }
 
+    public function cancelShow(User $designer, Show $show)
+    {
+        $this->authorizeDesigner($designer);
+
+        $show->loadMissing('eventDay');
+        $eventId = $show->eventDay->event_id;
+
+        $designer->designedShows()->updateExistingPivot($show->id, ['status' => 'cancelled']);
+
+        $this->designerService->syncDesignerPass($designer, $eventId, request()->user()->id);
+
+        return back()->with('success', 'Show cancelado.');
+    }
+
     public function removeShow(User $designer, Show $show)
     {
         $this->authorizeDesigner($designer);
+
+        $show->loadMissing('eventDay');
+        $eventId = $show->eventDay->event_id;
+
         $designer->designedShows()->detach($show->id);
+
+        $this->designerService->syncDesignerPass($designer, $eventId, request()->user()->id);
 
         return back()->with('success', 'Show desasignado.');
     }
@@ -315,6 +354,9 @@ class DesignerController extends Controller
             'status'          => 'assigned',
         ]);
 
+        $show = Show::with('eventDay')->findOrFail($request->show_id);
+        $this->designerService->syncDesignerPass($designer, $show->eventDay->event_id, $request->user()->id);
+
         return back()->with('success', 'Show asignado.');
     }
 
@@ -333,7 +375,7 @@ class DesignerController extends Controller
         try {
             $this->designerService->addAssistant($designer, $request->event_id, $request->only([
                 'full_name', 'document_id', 'phone', 'email',
-            ]));
+            ]), $request->user()->id);
             return back()->with('success', 'Asistente agregado.');
         } catch (\Exception $e) {
             return back()->withErrors(['assistant' => $e->getMessage()]);
@@ -441,6 +483,15 @@ class DesignerController extends Controller
     private function formatDesignerForView(User $designer): array
     {
         $profile = $designer->designerProfile;
+        $passMap = $designer->eventPasses->keyBy('event_id');
+
+        // Build day map: day_id -> label across all designer events
+        $dayMap = [];
+        foreach ($designer->eventsAsDesigner ?? [] as $evt) {
+            foreach ($evt->eventDays ?? [] as $day) {
+                $dayMap[$day->id] = $day->label;
+            }
+        }
 
         return array_merge($designer->toArray(), [
             'designer_profile' => $profile ? array_merge($profile->toArray(), [
@@ -461,6 +512,21 @@ class DesignerController extends Controller
                 'package_price'         => $event->pivot->package_price,
                 'notes'                 => $event->pivot->notes,
                 'designer_status'       => $event->pivot->status,
+                'pass'                  => $passMap->has($event->id) ? (function () use ($passMap, $event, $dayMap) {
+                    $p = $passMap[$event->id];
+                    return [
+                        'qr_code'           => $p->qr_code,
+                        'status'            => $p->status,
+                        'pass_type'         => $p->pass_type,
+                        'pass_type_label'   => $p->passTypeLabel(),
+                        'holder_name'       => $p->holder_name,
+                        'holder_email'      => $p->holder_email,
+                        'valid_days'        => $p->valid_days,
+                        'valid_days_labels' => $p->valid_days
+                            ? collect($p->valid_days)->map(fn($id) => $dayMap[$id] ?? null)->filter()->join(' · ')
+                            : null,
+                    ];
+                })() : null,
             ])->values(),
             'shows' => $designer->designedShows?->map(fn($show) => [
                 'id'              => $show->id,

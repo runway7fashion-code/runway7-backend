@@ -113,6 +113,10 @@ class ModelController extends Controller
             $request->casting_time,
         );
 
+        if ($request->filled('event_id')) {
+            $this->modelService->syncModelPass($model, $request->event_id, $request->user()->id);
+        }
+
         if ($request->boolean('send_welcome_email')) {
             $this->modelService->sendWelcomeEmail($model);
         }
@@ -127,8 +131,9 @@ class ModelController extends Controller
 
         $model->load([
             'modelProfile',
-            'eventsAsModelWithCasting',
+            'eventsAsModelWithCasting.eventDays',
             'shows' => fn($q) => $q->with(['eventDay.event', 'designers.designerProfile']),
+            'eventPasses',
         ]);
 
         return Inertia::render('Admin/Models/Show', [
@@ -210,6 +215,7 @@ class ModelController extends Controller
 
         try {
             $this->modelService->assignToEvent($model, $request->event_id, $request->casting_time);
+            $this->modelService->syncModelPass($model, $request->event_id, $request->user()->id);
             return back()->with('success', 'Modelo asignada al evento.');
         } catch (\Exception $e) {
             return back()->withErrors(['event' => $e->getMessage()]);
@@ -324,6 +330,15 @@ class ModelController extends Controller
     private function formatModelForView(User $model): array
     {
         $profile = $model->modelProfile;
+        $passMap = $model->eventPasses->keyBy('event_id');
+
+        // Build day map: day_id -> label across all model events
+        $dayMap = [];
+        foreach ($model->eventsAsModelWithCasting ?? [] as $evt) {
+            foreach ($evt->eventDays ?? [] as $day) {
+                $dayMap[$day->id] = $day->label;
+            }
+        }
 
         $data = array_merge($model->toArray(), [
             'model_profile'  => $profile ? array_merge($profile->toArray(), [
@@ -339,6 +354,21 @@ class ModelController extends Controller
                 'casting_checked_in_at' => $event->pivot->casting_checked_in_at,
                 'participation_number'  => $event->pivot->participation_number,
                 'model_status'          => $event->pivot->status,
+                'pass'                  => $passMap->has($event->id) ? (function () use ($passMap, $event, $dayMap) {
+                    $p = $passMap[$event->id];
+                    return [
+                        'qr_code'           => $p->qr_code,
+                        'status'            => $p->status,
+                        'pass_type'         => $p->pass_type,
+                        'pass_type_label'   => $p->passTypeLabel(),
+                        'holder_name'       => $p->holder_name,
+                        'holder_email'      => $p->holder_email,
+                        'valid_days'        => $p->valid_days,
+                        'valid_days_labels' => $p->valid_days
+                            ? collect($p->valid_days)->map(fn($id) => $dayMap[$id] ?? null)->filter()->join(' · ')
+                            : null,
+                    ];
+                })() : null,
             ])->values(),
             'shows' => $model->shows?->map(fn($show) => [
                 'id'             => $show->id,

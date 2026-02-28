@@ -100,8 +100,13 @@ function assignEvent() {
     });
 }
 
+function cancelFromEvent(eventId, eventName) {
+    if (!confirm(`¿Cancelar participación en "${eventName}"? Se cancelarán todos sus shows y pases, pero se conservarán materiales y asistentes.`)) return;
+    router.patch(`/admin/designers/${props.designer.id}/cancel-event/${eventId}`, {}, { preserveScroll: true });
+}
+
 function removeFromEvent(eventId, eventName) {
-    if (!confirm(`Quitar del evento "${eventName}"?`)) return;
+    if (!confirm(`¿Quitar completamente del evento "${eventName}"? Se eliminarán todos los datos asociados.`)) return;
     router.delete(`/admin/designers/${props.designer.id}/remove-event/${eventId}`, { preserveScroll: true });
 }
 
@@ -194,12 +199,18 @@ function eventName(eventId) {
 }
 
 function showStatusLabel(s) {
-    return { assigned: 'Asignado', pending: 'Pendiente', confirmed: 'Confirmado', rejected: 'Rechazado' }[s] ?? s;
+    return { confirmed: 'Confirmado', cancelled: 'Cancelado' }[s] ?? s;
 }
 
-// Eliminar un show individual
+// Cancelar participación en un show (mantiene historial, status=cancelled)
+function cancelShow(showId, showName) {
+    if (!confirm(`¿Cancelar participación en "${showName}"? El show quedará marcado como cancelado.`)) return;
+    router.patch(`/admin/designers/${props.designer.id}/shows/${showId}/cancel`, {}, { preserveScroll: true });
+}
+
+// Quitar show completamente (elimina el registro)
 function removeShow(showId, showName) {
-    if (!confirm(`Quitar del show "${showName}"?`)) return;
+    if (!confirm(`¿Quitar completamente el show "${showName}"? Esta acción no se puede deshacer.`)) return;
     router.delete(`/admin/designers/${props.designer.id}/shows/${showId}`, { preserveScroll: true });
 }
 
@@ -507,10 +518,19 @@ function submit() {
                                     <span v-if="evt.package_price">${{ Number(evt.package_price).toLocaleString() }}</span>
                                     <span>{{ evt.looks }} looks</span>
                                     <span>Casting: {{ evt.model_casting_enabled ? 'Si' : 'No' }}</span>
+                                    <span v-if="evt.designer_status === 'cancelled'"
+                                        class="px-1.5 py-0.5 rounded bg-red-50 text-red-600 font-medium">
+                                        Cancelado
+                                    </span>
                                 </div>
                             </div>
-                            <button type="button" @click="removeFromEvent(evt.id, evt.name)"
-                                class="text-red-400 hover:text-red-600 text-xs">Quitar evento</button>
+                            <div class="flex items-center gap-3">
+                                <button v-if="evt.designer_status === 'confirmed'" type="button"
+                                    @click="cancelFromEvent(evt.id, evt.name)"
+                                    class="text-yellow-500 hover:text-yellow-700 text-xs">Cancelar</button>
+                                <button type="button" @click="removeFromEvent(evt.id, evt.name)"
+                                    class="text-red-400 hover:text-red-600 text-xs">Quitar</button>
+                            </div>
                         </div>
 
                         <!-- Shows de este evento -->
@@ -524,9 +544,12 @@ function submit() {
                                 <span class="font-medium text-gray-800">{{ s.name }}</span>
                                 <span v-if="s.collection_name" class="text-gray-400 text-xs">({{ s.collection_name }})</span>
                                 <span class="ml-auto text-xs px-1.5 py-0.5 rounded"
-                                    :class="s.status === 'assigned' ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-500'">
+                                    :class="s.status === 'confirmed' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'">
                                     {{ showStatusLabel(s.status) }}
                                 </span>
+                                <button v-if="s.status === 'confirmed'" type="button"
+                                    @click="cancelShow(s.id, s.name)"
+                                    class="text-yellow-500 hover:text-yellow-700 text-xs">Cancelar</button>
                                 <button type="button" @click="removeShow(s.id, s.name)"
                                     class="text-red-400 hover:text-red-600 text-xs">Quitar</button>
                             </div>

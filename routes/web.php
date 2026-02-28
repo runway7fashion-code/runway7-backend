@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\DesignerController;
 use App\Http\Controllers\Admin\DesignerSettingsController;
 use App\Http\Controllers\Admin\AccountingController;
+use App\Http\Controllers\Admin\PassController;
 
 Route::get('/', function () {
     return redirect()->route('admin.login');
@@ -53,9 +54,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::middleware('section:designers')->group(function () {
             Route::resource('designers', DesignerController::class);
             Route::post('designers/{designer}/assign-event', [DesignerController::class, 'assignEvent'])->name('designers.assign-event');
+            Route::patch('designers/{designer}/cancel-event/{event}', [DesignerController::class, 'cancelEvent'])->name('designers.cancel-event');
             Route::delete('designers/{designer}/remove-event/{event}', [DesignerController::class, 'removeEvent'])->name('designers.remove-event');
             Route::post('designers/{designer}/assistants', [DesignerController::class, 'addAssistant'])->name('designers.add-assistant');
             Route::delete('designers/assistants/{assistant}', [DesignerController::class, 'removeAssistant'])->name('designers.remove-assistant');
+            Route::patch('designers/{designer}/shows/{show}/cancel', [DesignerController::class, 'cancelShow'])->name('designers.cancel-show');
             Route::delete('designers/{designer}/shows/{show}', [DesignerController::class, 'removeShow'])->name('designers.remove-show');
             Route::post('designers/{designer}/shows', [DesignerController::class, 'addShow'])->name('designers.add-show');
             Route::put('designer-materials/{material}', [DesignerController::class, 'updateMaterial'])->name('designers.update-material');
@@ -140,6 +143,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('liquidity', [AccountingController::class, 'liquidityReport'])->name('liquidity');
                 Route::get('liquidity/export', [AccountingController::class, 'exportLiquidityReport'])->name('liquidity.export');
             });
+        });
+
+        // Pases - admin, tickets_manager
+        Route::middleware('section:tickets_management')->group(function () {
+            Route::get('passes', [PassController::class, 'index'])->name('passes.index');
+            Route::post('passes', [PassController::class, 'store'])->name('passes.store');
+            Route::put('passes/{pass}', [PassController::class, 'update'])->name('passes.update');
+            Route::delete('passes/{pass}', [PassController::class, 'destroy'])->name('passes.destroy');
+            Route::post('passes/{pass}/check-in', [PassController::class, 'checkIn'])->name('passes.check-in');
+            Route::post('passes/{pass}/reactivate', [PassController::class, 'reactivate'])->name('passes.reactivate');
+            Route::get('api/passes/search-users', [PassController::class, 'searchUsers'])->name('passes.search-users');
         });
 
         // Ajustes - solo admin

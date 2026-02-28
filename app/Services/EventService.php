@@ -119,7 +119,7 @@ class EventService
         $show->designers()->attach($designerId, [
             'order'           => $order,
             'collection_name' => $collectionName,
-            'status'          => 'assigned',
+            'status'          => 'confirmed',
         ]);
 
         return $show->fresh(['designers.designerProfile']);
