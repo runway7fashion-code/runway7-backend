@@ -25,6 +25,18 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
+
+        if ($user->status === 'inactive') {
+            Auth::logout();
+            return response()->json(['message' => 'Tu cuenta ha sido desactivada. Contacta al administrador.'], 403);
+        }
+
+        if ($user->status === 'pending') {
+            $user->update(['status' => 'active', 'last_login_at' => now()]);
+        } else {
+            $user->update(['last_login_at' => now()]);
+        }
+
         $token = $user->createToken('api-token')->plainTextToken;
 
         return response()->json([
@@ -46,6 +58,8 @@ class AuthController extends Controller
         if (!$user) {
             return response()->json(['message' => 'Código inválido o usuario inactivo.'], 401);
         }
+
+        $user->update(['last_login_at' => now()]);
 
         $token = $user->createToken('kiosk-token')->plainTextToken;
 

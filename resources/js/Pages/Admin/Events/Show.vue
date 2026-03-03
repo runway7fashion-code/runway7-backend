@@ -3,6 +3,7 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import { formatDateShort, formatDateRange, formatTime } from '@/utils/dates.js';
+import { ArrowLeftIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     event: Object,
@@ -80,7 +81,9 @@ function slotBadgeClass(show) {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link href="/admin/events" class="text-gray-400 hover:text-gray-600 text-sm">← Eventos</Link>
+                <Link href="/admin/events" class="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-sm">
+                    <ArrowLeftIcon class="w-4 h-4" /> Eventos
+                </Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900 truncate">{{ event.name }}</h2>
             </div>
@@ -219,8 +222,10 @@ function slotBadgeClass(show) {
                                         <div class="flex items-center gap-1 flex-shrink-0">
                                             <span class="text-xs text-green-600">{{ show.models_count ?? 0 }} ♀</span>
                                             <button @click="removeDesigner(show, designer.id)"
-                                                class="text-red-400 hover:text-red-600 text-lg leading-none ml-1"
-                                                title="Remover diseñador">×</button>
+                                                class="text-red-400 hover:text-red-600 ml-1"
+                                                title="Remover diseñador">
+                                                <XMarkIcon class="w-4 h-4" />
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

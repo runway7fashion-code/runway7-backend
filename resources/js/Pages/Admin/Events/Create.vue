@@ -3,6 +3,7 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { useForm } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
 import { formatDayLabel } from '@/utils/dates.js';
+import { XMarkIcon } from '@heroicons/vue/24/outline';
 
 const step = ref(1);
 
@@ -305,7 +306,9 @@ function submit() {
                             </div>
 
                             <!-- Remove -->
-                            <button @click="removeDay(index)" class="text-red-400 hover:text-red-600 text-xl mt-4 flex-shrink-0" title="Eliminar día">×</button>
+                            <button @click="removeDay(index)" class="text-red-400 hover:text-red-600 mt-4 flex-shrink-0" title="Eliminar día">
+                                <XMarkIcon class="w-5 h-5" />
+                            </button>
                         </div>
 
                         <!-- Casting extra fields -->
@@ -376,7 +379,9 @@ function submit() {
                             <div v-for="(slot, i) in form.time_slots" :key="i" class="flex items-center gap-1">
                                 <input v-model="form.time_slots[i]" type="time"
                                     class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-black/10" />
-                                <button @click="removeTimeSlot(i)" class="text-red-400 hover:text-red-600 text-lg leading-none">×</button>
+                                <button @click="removeTimeSlot(i)" class="text-red-400 hover:text-red-600">
+                                    <XMarkIcon class="w-4 h-4" />
+                                </button>
                             </div>
                             <button @click="addTimeSlot" class="px-3 py-1.5 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-gray-400">+ Hora</button>
                         </div>
@@ -389,7 +394,9 @@ function submit() {
                                     <div v-for="(slot, si) in (day.time_slots ?? [])" :key="si" class="flex items-center gap-1">
                                         <input v-model="day.time_slots[si]" type="time"
                                             class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm w-24 focus:outline-none focus:ring-2 focus:ring-black/10" />
-                                        <button @click="removeDaySlot(day, si)" class="text-red-400 hover:text-red-600 text-lg leading-none">×</button>
+                                        <button @click="removeDaySlot(day, si)" class="text-red-400 hover:text-red-600">
+                                            <XMarkIcon class="w-4 h-4" />
+                                        </button>
                                     </div>
                                     <button @click="addDaySlot(day)" class="px-3 py-1.5 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-gray-400">+ Hora</button>
                                 </div>

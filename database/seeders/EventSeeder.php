@@ -220,7 +220,7 @@ class EventSeeder extends Seeder
                 $shows[1]->designers()->attach($designer2->id, [
                     'order'           => 1,
                     'collection_name' => 'Monochrome Dreams – Evening',
-                    'status'          => 'assigned',
+                    'status'          => 'confirmed',
                 ]);
             }
         }

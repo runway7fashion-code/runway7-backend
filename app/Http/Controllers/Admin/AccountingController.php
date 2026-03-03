@@ -32,8 +32,6 @@ class AccountingController extends Controller
     {
         $eventId = $request->filled('event') ? (int) $request->event : null;
 
-        $this->accountingService->updateOverdueInstallments();
-
         $stats = $this->accountingService->getDashboardStats($eventId);
 
         $events = Event::orderBy('start_date', 'desc')->get(['id', 'name']);
@@ -801,8 +799,6 @@ class AccountingController extends Controller
 
     public function overdueList(Request $request): Response
     {
-        $this->accountingService->updateOverdueInstallments();
-
         // Query plans that have overdue installments (active designers only)
         $query = DesignerPaymentPlan::whereHas('installments', function ($q) {
                 $q->whereIn('status', ['overdue', 'partial'])->where('due_date', '<', now());
@@ -889,8 +885,6 @@ class AccountingController extends Controller
 
     public function exportOverdueList(Request $request)
     {
-        $this->accountingService->updateOverdueInstallments();
-
         $query = DesignerPaymentPlan::whereHas('installments', function ($q) {
                 $q->whereIn('status', ['overdue', 'partial'])->where('due_date', '<', now());
             })
@@ -1253,8 +1247,6 @@ class AccountingController extends Controller
 
     public function liquidityReport(Request $request): Response
     {
-        $this->accountingService->updateOverdueInstallments();
-
         $defaultStart = now()->addMonth()->startOfMonth()->format('Y-m-d');
         $defaultEnd = now()->addMonth()->endOfMonth()->format('Y-m-d');
 
@@ -1348,8 +1340,6 @@ class AccountingController extends Controller
 
     public function exportLiquidityReport(Request $request)
     {
-        $this->accountingService->updateOverdueInstallments();
-
         $defaultStart = now()->addMonth()->startOfMonth()->format('Y-m-d');
         $defaultEnd = now()->addMonth()->endOfMonth()->format('Y-m-d');
 

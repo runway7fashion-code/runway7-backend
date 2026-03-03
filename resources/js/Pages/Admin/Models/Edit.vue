@@ -2,6 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
+import { UserIcon, CameraIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     model:  Object,
@@ -37,6 +38,8 @@ const form = useForm({
     is_agency:     profile?.is_agency      ?? false,
     is_test_model: profile?.is_test_model  ?? false,
     notes:         profile?.notes          ?? '',
+    // Estado de cuenta
+    status:        props.model.status      ?? 'pending',
 });
 
 // Comp card
@@ -313,6 +316,15 @@ function submit() {
                         </div>
                     </div>
 
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Estado de cuenta</label>
+                        <select v-model="form.status"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                            <option value="pending">Pendiente</option>
+                            <option value="inactive">Inactiva</option>
+                        </select>
+                    </div>
+
                     <div class="flex gap-6">
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input v-model="form.is_test_model" type="checkbox"
@@ -461,9 +473,7 @@ function submit() {
                             <img v-if="storageUrl(profilePicture)"
                                 :src="storageUrl(profilePicture)"
                                 class="w-full h-full object-cover" />
-                            <svg v-else class="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                            </svg>
+                            <UserIcon v-else class="w-8 h-8 text-gray-300" />
                         </div>
                         <div>
                             <p class="text-sm font-semibold text-gray-800 mb-0.5">Foto de Perfil</p>
@@ -491,10 +501,7 @@ function submit() {
                                     :src="storageUrl(compCardPhotos[i])"
                                     class="w-full h-full object-cover" />
                                 <div v-else class="w-full h-full flex items-center justify-center">
-                                    <svg class="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-                                    </svg>
+                                    <CameraIcon class="w-8 h-8 text-gray-300" />
                                 </div>
                             </div>
                             <p class="text-xs text-center text-gray-500 font-medium">{{ label }}</p>
@@ -505,8 +512,8 @@ function submit() {
                                     {{ uploading[i + 1] ? '...' : 'Subir' }}
                                 </button>
                                 <button v-if="compCardPhotos[i]" type="button" @click="deletePhoto(i + 1)"
-                                    class="px-2 py-1.5 text-xs border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors">
-                                    ✕
+                                    class="p-1.5 border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors">
+                                    <XMarkIcon class="w-4 h-4" />
                                 </button>
                             </div>
                         </div>

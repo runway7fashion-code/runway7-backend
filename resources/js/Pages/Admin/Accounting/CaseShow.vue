@@ -2,6 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
+import { ChevronLeftIcon, ChevronDownIcon, DocumentIcon, ArrowUpTrayIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     case: Object,
@@ -137,9 +138,7 @@ function doDelete() {
         <template #header>
             <div class="flex items-center gap-3">
                 <Link href="/admin/accounting/cases" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                    </svg>
+                    <ChevronLeftIcon class="w-5 h-5" />
                 </Link>
                 <div>
                     <h2 class="text-lg font-semibold text-gray-900">{{ c.case_number }}</h2>
@@ -161,9 +160,7 @@ function doDelete() {
                                     :class="statusBadge(c.status)"
                                     class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border cursor-pointer hover:opacity-80">
                                     {{ c.status_label }}
-                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                                    </svg>
+                                    <ChevronDownIcon class="w-3 h-3" />
                                 </button>
                                 <div v-if="showStatusDropdown" class="absolute z-10 mt-1 bg-white rounded-lg border border-gray-200 shadow-lg py-1 min-w-[140px]">
                                     <button v-for="opt in statusOptions" :key="opt.value"
@@ -247,9 +244,7 @@ function doDelete() {
                                     class="w-full h-full object-cover" />
                             </div>
                             <div v-else class="aspect-square bg-gray-50 flex items-center justify-center">
-                                <svg class="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                                </svg>
+                                <DocumentIcon class="w-8 h-8 text-gray-300" />
                             </div>
                             <div class="px-2 py-1.5 bg-white border-t border-gray-100">
                                 <p class="text-xs text-gray-600 truncate group-hover:text-black">{{ att.file_name }}</p>
@@ -321,9 +316,7 @@ function doDelete() {
                         <div @dragover.prevent @drop="onMsgDrop"
                             class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors cursor-pointer"
                             @click="$refs.msgFileInput.click()">
-                            <svg class="mx-auto h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                            </svg>
+                            <ArrowUpTrayIcon class="mx-auto h-6 w-6 text-gray-400" />
                             <p class="mt-1 text-sm text-gray-500">Arrastra archivos o haz click</p>
                         </div>
                         <input ref="msgFileInput" type="file" multiple class="hidden"
@@ -335,7 +328,7 @@ function doDelete() {
                                 <span class="flex-1 truncate text-gray-700">{{ file.name }}</span>
                                 <span class="text-xs text-gray-400">{{ formatSize(file.size) }}</span>
                                 <button type="button" @click="removeMsgFile(idx)" class="text-gray-400 hover:text-red-500">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    <XMarkIcon class="w-4 h-4" />
                                 </button>
                             </div>
                         </div>

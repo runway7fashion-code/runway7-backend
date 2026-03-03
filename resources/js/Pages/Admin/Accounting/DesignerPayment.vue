@@ -2,6 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
+import { ChevronLeftIcon, PencilSquareIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     designer: Object,
@@ -331,7 +332,7 @@ const paymentMethods = [
         <template #header>
             <div class="flex items-center gap-3">
                 <Link href="/admin/accounting/payments" class="text-gray-400 hover:text-gray-600 transition">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                    <ChevronLeftIcon class="w-5 h-5" />
                 </Link>
                 <h2 class="text-lg font-semibold text-gray-900">Pago de Disenador</h2>
             </div>
@@ -372,7 +373,7 @@ const paymentMethods = [
                     <button @click="startEditingDesigner"
                         class="flex-shrink-0 border border-gray-300 text-gray-700 p-2 rounded-lg hover:bg-gray-50 transition"
                         title="Editar datos">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                        <PencilSquareIcon class="w-4 h-4" />
                     </button>
                 </div>
 
@@ -565,7 +566,7 @@ const paymentMethods = [
                             <button v-if="!editing && plan.status !== 'completed'"
                                 @click="startEditing"
                                 class="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-50 transition flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                <PencilSquareIcon class="w-3.5 h-3.5" />
                                 Editar Plan
                             </button>
                             <span :class="statusBadge(plan.status)" class="px-3 py-1 rounded-lg text-xs font-semibold">

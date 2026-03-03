@@ -2,6 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { router, useForm } from '@inertiajs/vue3';
 import { ref, watch, computed } from 'vue';
+import { PaperClipIcon, PencilSquareIcon, TrashIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     records: Object,
@@ -302,17 +303,17 @@ function typeBadge(type) {
                                 <td class="py-3 px-4 text-center">
                                     <a v-if="r.receipt_url" :href="`/storage/${r.receipt_url}`" target="_blank"
                                         class="text-blue-600 hover:text-blue-800" title="Ver comprobante">
-                                        <svg class="w-4 h-4 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                        <PaperClipIcon class="w-4 h-4 inline" />
                                     </a>
                                     <span v-else class="text-gray-300">—</span>
                                 </td>
                                 <td class="py-3 px-4">
                                     <div class="flex items-center gap-1">
                                         <button @click="openEditModal(r)" class="p-1.5 text-gray-400 hover:text-gray-700 rounded hover:bg-gray-100 transition" title="Editar">
-                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                            <PencilSquareIcon class="w-4 h-4" />
                                         </button>
                                         <button @click="openDeleteModal(r)" class="p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-red-50 transition" title="Eliminar">
-                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                            <TrashIcon class="w-4 h-4" />
                                         </button>
                                     </div>
                                 </td>
@@ -366,7 +367,7 @@ function typeBadge(type) {
                                     <p v-if="selectedDesigner.brand" class="text-xs text-gray-500">{{ selectedDesigner.brand }}</p>
                                 </div>
                                 <button type="button" @click="clearSelectedDesigner" class="text-gray-400 hover:text-gray-600">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    <XMarkIcon class="w-4 h-4" />
                                 </button>
                             </div>
                             <div v-else class="relative">

@@ -3,6 +3,7 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import QrCode from '@/Components/QrCode.vue';
+import { ArrowLeftIcon, EnvelopeIcon, ChevronLeftIcon, ChevronRightIcon, XMarkIcon, ArrowRightIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     designer: Object,
@@ -130,7 +131,9 @@ const socialLinks = computed(() => {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link href="/admin/designers" class="text-gray-400 hover:text-gray-600 text-sm">← Diseñadores</Link>
+                <Link href="/admin/designers" class="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
+                    <ArrowLeftIcon class="w-4 h-4" /> Diseñadores
+                </Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900">{{ designer.first_name }} {{ designer.last_name }}</h2>
             </div>
@@ -167,10 +170,8 @@ const socialLinks = computed(() => {
                         </div>
 
                         <div class="mt-3 flex flex-wrap gap-3 text-sm">
-                            <span class="text-gray-600">
-                                <svg class="w-4 h-4 inline mr-1 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                                </svg>
+                            <span class="text-gray-600 flex items-center gap-1">
+                                <EnvelopeIcon class="w-4 h-4 text-gray-400" />
                                 {{ designer.email }}
                             </span>
                             <span v-if="designer.phone" class="text-gray-600">Tel: {{ designer.phone }}</span>
@@ -214,9 +215,7 @@ const socialLinks = computed(() => {
                 <button v-if="events.length > 3"
                     @click="scrollTabs(-1)"
                     class="flex-shrink-0 px-2 h-full text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-l-2xl transition-colors py-3 border-r border-gray-100">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                    </svg>
+                    <ChevronLeftIcon class="w-4 h-4" />
                 </button>
 
                 <!-- Tabs con fade -->
@@ -247,9 +246,7 @@ const socialLinks = computed(() => {
                 <button v-if="events.length > 3"
                     @click="scrollTabs(1)"
                     class="flex-shrink-0 px-2 h-full text-gray-400 hover:text-gray-700 hover:bg-gray-50 rounded-r-2xl transition-colors py-3 border-l border-gray-100">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                    </svg>
+                    <ChevronRightIcon class="w-4 h-4" />
                 </button>
             </div>
             <div v-else class="bg-white rounded-2xl border border-gray-200 p-6 text-center text-sm text-gray-400 italic">
@@ -345,7 +342,9 @@ const socialLinks = computed(() => {
                                 {{ selectedEvent.name }}
                             </Link>
                             <button @click="removeFromEvent(selectedEvent.id, selectedEvent.name)"
-                                class="text-red-400 hover:text-red-600 text-xs ml-2 flex-shrink-0">✕</button>
+                                class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0">
+                                <XMarkIcon class="w-4 h-4" />
+                            </button>
                         </div>
 
                         <div class="space-y-1">
@@ -377,8 +376,8 @@ const socialLinks = computed(() => {
                                 {{ passStatusLabel(selectedEvent.pass.status) }}
                             </span>
                             <button @click="openPassModal(selectedEvent)"
-                                class="text-[11px] text-indigo-500 hover:text-indigo-700 font-medium ml-auto">
-                                Ver QR →
+                                class="text-[11px] text-indigo-500 hover:text-indigo-700 font-medium ml-auto flex items-center gap-0.5">
+                                Ver QR <ArrowRightIcon class="w-3 h-3" />
                             </button>
                         </div>
                     </div>
@@ -432,9 +431,7 @@ const socialLinks = computed(() => {
             <div class="absolute inset-0 bg-black/60" @click="closePassModal"></div>
             <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 flex flex-col items-center gap-4">
                 <button @click="closePassModal" class="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <XMarkIcon class="h-5 w-5" />
                 </button>
                 <p class="text-xs font-medium text-gray-400 text-center">{{ passModal.event_name }}</p>
                 <div class="p-3 bg-white border-2 border-gray-100 rounded-xl">

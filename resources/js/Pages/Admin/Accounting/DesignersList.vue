@@ -2,6 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
+import { ArrowDownTrayIcon, MagnifyingGlassIcon, InformationCircleIcon, CurrencyDollarIcon, XMarkIcon, DocumentTextIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     designers: Object,
@@ -144,9 +145,7 @@ function methodLabel(m) {
                 <p class="text-sm text-gray-500">{{ designers.total }} diseñadores</p>
                 <button @click="exportCsv"
                     class="flex items-center gap-2 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                    </svg>
+                    <ArrowDownTrayIcon class="w-4 h-4" />
                     Exportar CSV
                 </button>
             </div>
@@ -156,9 +155,7 @@ function methodLabel(m) {
                 <div class="flex flex-col md:flex-row gap-4">
                     <div class="flex-1">
                         <div class="relative">
-                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
+                            <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input v-model="search" @input="applyFilters" type="text" placeholder="Buscar por marca, nombre o email..."
                                 class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
@@ -218,15 +215,11 @@ function methodLabel(m) {
                                 <div class="flex items-center justify-center gap-2">
                                     <button @click="openInfoModal(d.id)"
                                         class="border border-gray-300 text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition" title="Ver Info">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
+                                        <InformationCircleIcon class="w-4 h-4" />
                                     </button>
                                     <button @click="openPaymentModal(d.id)"
                                         class="border border-gray-300 text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition" title="Ver Pagos">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
+                                        <CurrencyDollarIcon class="w-4 h-4" />
                                     </button>
                                 </div>
                             </td>
@@ -270,7 +263,7 @@ function methodLabel(m) {
                         <div class="flex items-center justify-between mb-5">
                             <h4 class="font-bold text-gray-900 text-lg">Info del Diseñador</h4>
                             <button @click="showInfoModal = false" class="text-gray-400 hover:text-gray-600">
-                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                <XMarkIcon class="w-5 h-5" />
                             </button>
                         </div>
 
@@ -375,7 +368,7 @@ function methodLabel(m) {
                                 <p v-if="paymentData.designer.brand_name" class="text-sm text-gray-500">{{ paymentData.designer.brand_name }}</p>
                             </div>
                             <button @click="showPaymentModal = false" class="text-gray-400 hover:text-gray-600">
-                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                <XMarkIcon class="w-5 h-5" />
                             </button>
                         </div>
 
@@ -457,9 +450,7 @@ function methodLabel(m) {
                         <!-- SIN plan de pagos -->
                         <template v-else>
                             <div class="py-8 text-center">
-                                <svg class="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                </svg>
+                                <DocumentTextIcon class="w-12 h-12 text-gray-300 mx-auto mb-3" />
                                 <p class="text-sm text-gray-500 mb-4">Este diseñador no tiene un plan de pagos registrado.</p>
                                 <Link v-if="paymentData.event" :href="`/admin/accounting/payments/designer/${paymentData.designer.id}/event/${paymentData.event.id}`"
                                     class="inline-flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition">

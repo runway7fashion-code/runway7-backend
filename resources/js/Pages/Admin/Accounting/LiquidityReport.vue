@@ -2,6 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
+import { ArrowDownTrayIcon, CheckCircleIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     dates: Array,
@@ -124,9 +125,7 @@ function exportCsv() {
             <div class="flex items-center justify-end">
                 <button @click="exportCsv"
                     class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                    </svg>
+                    <ArrowDownTrayIcon class="w-4 h-4 mr-2" />
                     Exportar CSV
                 </button>
             </div>
@@ -230,9 +229,7 @@ function exportCsv() {
 
                 <!-- Empty state -->
                 <div v-else class="px-8 py-16 text-center">
-                    <svg class="mx-auto h-12 w-12 text-green-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                    <CheckCircleIcon class="mx-auto h-12 w-12 text-green-400" />
                     <p class="mt-4 text-gray-700 text-sm font-medium">No hay cuotas pendientes en este periodo</p>
                     <p class="mt-1 text-gray-400 text-xs">Selecciona otro rango de fechas para ver proyecciones</p>
                 </div>
@@ -256,9 +253,7 @@ function exportCsv() {
                             <p class="text-sm text-gray-500 mt-1">Monto total: <strong>{{ fmt(modalRow.total_pending) }}</strong></p>
                         </div>
                         <button @click="showModal = false" class="text-gray-400 hover:text-gray-600">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            <XMarkIcon class="w-5 h-5" />
                         </button>
                     </div>
 

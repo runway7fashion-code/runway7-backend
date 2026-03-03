@@ -2,6 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
+import { PhotoIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     banners: Array,
@@ -133,9 +134,7 @@ function moveDown(banner, index) {
                             :src="storageUrl(banner.image_url)"
                             class="w-full h-full object-cover" />
                         <div v-else class="w-full h-full flex items-center justify-center text-gray-300">
-                            <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
-                            </svg>
+                            <PhotoIcon class="w-12 h-12" />
                         </div>
 
                         <!-- Status badge -->

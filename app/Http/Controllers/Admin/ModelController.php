@@ -2,13 +2,18 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\ModelsExport;
 use App\Http\Controllers\Controller;
+use App\Imports\ModelsImport;
+use App\Jobs\SendWelcomeEmailJob;
 use App\Models\Event;
 use App\Models\User;
 use App\Services\ModelService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ModelController extends Controller
 {
@@ -40,12 +45,35 @@ class ModelController extends Controller
         }
 
         if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('first_name', 'ilike', "%{$request->search}%")
-                  ->orWhere('last_name', 'ilike', "%{$request->search}%")
-                  ->orWhere('email', 'ilike', "%{$request->search}%")
-                  ->orWhere('phone', 'ilike', "%{$request->search}%");
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('first_name', 'ilike', "%{$search}%")
+                  ->orWhere('last_name',  'ilike', "%{$search}%")
+                  ->orWhere('email',      'ilike', "%{$search}%")
+                  ->orWhere('phone',      'ilike', "%{$search}%")
+                  ->orWhereHas('eventsAsModelWithCasting', fn($eq) =>
+                      $eq->where('event_model.participation_number', 'like', "%{$search}%")
+                  );
             });
+        }
+
+        if ($request->filled('email_sent')) {
+            if ($request->email_sent === 'sent') {
+                $query->whereNotNull('welcome_email_sent_at');
+            } elseif ($request->email_sent === 'not_sent') {
+                $query->whereNull('welcome_email_sent_at');
+            }
+        }
+
+        if ($request->filled('test_model')) {
+            if ($request->test_model === 'only_test') {
+                $query->whereHas('modelProfile', fn($q) => $q->where('is_test_model', true));
+            } elseif ($request->test_model === 'only_real') {
+                $query->where(function ($q) {
+                    $q->whereHas('modelProfile', fn($pq) => $pq->where('is_test_model', false))
+                      ->orWhereDoesntHave('modelProfile');
+                });
+            }
         }
 
         $models = $query->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
@@ -53,10 +81,15 @@ class ModelController extends Controller
         $events = Event::orderBy('start_date', 'desc')
             ->get(['id', 'name']);
 
+        $pendingEmailCount = User::models()
+            ->whereNull('welcome_email_sent_at')
+            ->count();
+
         return Inertia::render('Admin/Models/Index', [
-            'models'  => $models,
-            'events'  => $events,
-            'filters' => $request->only(['event', 'compcard', 'gender', 'search']),
+            'models'             => $models,
+            'events'             => $events,
+            'filters'            => $request->only(['event', 'compcard', 'gender', 'search', 'email_sent', 'test_model']),
+            'pendingEmailCount'  => $pendingEmailCount,
         ]);
     }
 
@@ -163,6 +196,7 @@ class ModelController extends Controller
             'last_name'   => 'required|string|max:255',
             'email'       => "required|email|unique:users,email,{$model->id}",
             'phone'       => "nullable|string|unique:users,phone,{$model->id}",
+            'status'      => 'nullable|in:inactive,pending',
             'instagram'   => 'nullable|string|max:255',
             'age'         => 'nullable|integer|min:16|max:80',
             'gender'      => 'nullable|in:female,male,non_binary',
@@ -190,6 +224,7 @@ class ModelController extends Controller
             'agency', 'is_agency', 'is_test_model', 'notes',
         ]);
 
+        $userData['status'] = $request->input('status', $model->status);
         $this->modelService->updateModel($model, $userData, $profileData);
 
         return redirect()->route('admin.models.show', $model)
@@ -199,9 +234,16 @@ class ModelController extends Controller
     public function destroy(User $model)
     {
         $this->authorizeModel($model);
-        $model->delete();
+
+        try {
+            $this->modelService->deleteModel($model);
+        } catch (\Exception $e) {
+            return redirect()->route('admin.models.index')
+                ->withErrors(['delete' => 'No se pudo eliminar la modelo: ' . $e->getMessage()]);
+        }
+
         return redirect()->route('admin.models.index')
-            ->with('success', 'Modelo eliminada.');
+            ->with('success', 'Modelo eliminada correctamente.');
     }
 
     public function assignEvent(Request $request, User $model)
@@ -293,8 +335,95 @@ class ModelController extends Controller
     public function sendWelcomeEmail(User $model)
     {
         $this->authorizeModel($model);
-        $this->modelService->sendWelcomeEmail($model);
-        return back()->with('success', 'Email de bienvenida enviado (pendiente de integración con Mailgun).');
+
+        // Obtener primer evento asignado para incluir datos en el email
+        $model->load(['eventsAsModelWithCasting.eventDays' => fn($q) => $q->where('type', 'casting')]);
+        $firstEvent  = $model->eventsAsModelWithCasting?->first();
+        $castingDay  = $firstEvent?->eventDays?->first();
+
+        SendWelcomeEmailJob::dispatch(
+            userId:      $model->id,
+            eventName:   $firstEvent?->name,
+            castingTime: $firstEvent?->pivot?->casting_time,
+            castingDate: $castingDay?->date?->format('Y-m-d'),
+        );
+
+        return back()->with('success', 'Email de bienvenida encolado para envío.');
+    }
+
+    public function exportModels(Request $request)
+    {
+        $filename = 'modelos_' . now()->format('Ymd_His') . '.xlsx';
+
+        return Excel::download(new ModelsExport(
+            search:    $request->input('search'),
+            event:     $request->input('event'),
+            compcard:  $request->input('compcard'),
+            gender:    $request->input('gender'),
+            emailSent: $request->input('email_sent'),
+            testModel: $request->input('test_model'),
+        ), $filename);
+    }
+
+    public function importModels(Request $request)
+    {
+        $request->validate([
+            'file'     => 'required|file|mimes:xlsx,xls,csv|max:10240',
+            'event_id' => 'nullable|exists:events,id',
+        ]);
+
+        $eventId = $request->filled('event_id') ? (int) $request->event_id : null;
+        $import  = new ModelsImport(globalEventId: $eventId);
+        Excel::import($import, $request->file('file'));
+
+        $s = $import->summary;
+        $msg = "Importación completada: {$s['created']} creadas, {$s['updated']} actualizadas, {$s['assigned']} asignadas a eventos.";
+
+        if (!empty($s['errors'])) {
+            $msg .= ' ' . count($s['errors']) . ' errores (ver log).';
+            \Illuminate\Support\Facades\Log::warning('ModelsImport errors', $s['errors']);
+        }
+
+        return back()->with('success', $msg)->with('importSummary', $s);
+    }
+
+    public function sendPendingWelcomeEmails()
+    {
+        $pending = User::models()
+            ->whereNull('welcome_email_sent_at')
+            ->with(['eventsAsModelWithCasting.eventDays' => fn($q) => $q->where('type', 'casting')])
+            ->get();
+
+        if ($pending->isEmpty()) {
+            return back()->with('info', 'No hay modelos pendientes de recibir correo.');
+        }
+
+        $count = 0;
+        foreach ($pending as $model) {
+            $firstEvent = $model->eventsAsModelWithCasting?->first();
+            $castingDay = $firstEvent?->eventDays?->first();
+
+            SendWelcomeEmailJob::dispatch(
+                userId:      $model->id,
+                eventName:   $firstEvent?->name,
+                castingTime: $firstEvent?->pivot?->casting_time,
+                castingDate: $castingDay?->date?->format('Y-m-d'),
+            );
+            $count++;
+        }
+
+        return back()->with('success', "{$count} emails encolados para envío. Se procesarán en los próximos minutos.");
+    }
+
+    public function updateStatus(Request $request, User $model)
+    {
+        $this->authorizeModel($model);
+
+        $request->validate(['status' => 'required|in:inactive,pending']);
+
+        $model->update(['status' => $request->status]);
+
+        return back()->with('success', 'Estado actualizado.');
     }
 
     // --- Helpers ---

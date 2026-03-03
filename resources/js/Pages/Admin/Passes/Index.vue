@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import QrCode from '@/Components/QrCode.vue';
+import { XMarkIcon, TicketIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     events:          { type: Array, default: () => [] },
@@ -300,9 +301,7 @@ const selectedEvent = computed(() => props.events.find(e => e.id === eventId.val
 
                 <!-- Empty state -->
                 <div v-else class="py-16 text-center">
-                    <svg class="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                    </svg>
+                    <TicketIcon class="mx-auto h-12 w-12 text-gray-300" />
                     <p class="mt-3 text-gray-500 text-sm">No hay pases{{ selectedEvent ? ` para ${selectedEvent.name}` : '' }}.</p>
                     <button @click="showCreate = true" class="mt-3 text-sm font-medium" style="color: #D4AF37;">Crear el primero</button>
                 </div>
@@ -326,9 +325,7 @@ const selectedEvent = computed(() => props.events.find(e => e.id === eventId.val
                     <div class="flex items-center justify-between">
                         <h3 class="text-base font-semibold text-gray-900">Nuevo Pase</h3>
                         <button @click="cancelCreate" class="p-1 text-gray-400 hover:text-gray-600">
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                            <XMarkIcon class="h-5 w-5" />
                         </button>
                     </div>
 
@@ -439,9 +436,7 @@ const selectedEvent = computed(() => props.events.find(e => e.id === eventId.val
 
                     <!-- Cerrar -->
                     <button @click="closeQr" class="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        <XMarkIcon class="h-5 w-5" />
                     </button>
 
                     <!-- Tipo badge -->

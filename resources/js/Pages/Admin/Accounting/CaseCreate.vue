@@ -2,6 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, watch, computed } from 'vue';
+import { XMarkIcon, ArrowUpTrayIcon, PaperClipIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     events: Array,
@@ -218,7 +219,7 @@ function submit() {
                                 <span class="text-xs text-gray-500 ml-2">{{ selectedDesigner.first_name ? selectedDesigner.first_name + ' ' + selectedDesigner.last_name : selectedDesigner.name }}</span>
                             </div>
                             <button type="button" @click="clearDesigner" class="text-gray-400 hover:text-red-500">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                <XMarkIcon class="w-4 h-4" />
                             </button>
                         </div>
                         <div v-else class="relative">
@@ -346,9 +347,7 @@ function submit() {
                         <div @dragover.prevent @drop="onDesignerDrop"
                             class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors cursor-pointer"
                             @click="$refs.designerFileInput.click()">
-                            <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                            </svg>
+                            <ArrowUpTrayIcon class="mx-auto h-8 w-8 text-gray-400" />
                             <p class="mt-2 text-sm text-gray-500">Arrastra archivos aqui o haz click para seleccionar</p>
                             <p class="text-xs text-gray-400 mt-1">Imagenes (jpg, png, gif) y documentos (pdf, doc, docx)</p>
                         </div>
@@ -358,13 +357,11 @@ function submit() {
                         <div v-if="designerFiles.length" class="mt-3 space-y-2">
                             <div v-for="(file, idx) in designerFiles" :key="idx"
                                 class="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
-                                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
-                                </svg>
+                                <PaperClipIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
                                 <span class="text-sm text-gray-700 flex-1 truncate">{{ file.name }}</span>
                                 <span class="text-xs text-gray-400">{{ formatSize(file.size) }}</span>
                                 <button type="button" @click="removeDesignerFile(idx)" class="text-gray-400 hover:text-red-500">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    <XMarkIcon class="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
@@ -407,9 +404,7 @@ function submit() {
                         <div @dragover.prevent @drop="onTeamDrop"
                             class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors cursor-pointer"
                             @click="$refs.teamFileInput.click()">
-                            <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                            </svg>
+                            <ArrowUpTrayIcon class="mx-auto h-8 w-8 text-gray-400" />
                             <p class="mt-2 text-sm text-gray-500">Arrastra archivos aqui o haz click para seleccionar</p>
                         </div>
                         <input ref="teamFileInput" type="file" multiple class="hidden"
@@ -418,13 +413,11 @@ function submit() {
                         <div v-if="teamFiles.length" class="mt-3 space-y-2">
                             <div v-for="(file, idx) in teamFiles" :key="idx"
                                 class="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
-                                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
-                                </svg>
+                                <PaperClipIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
                                 <span class="text-sm text-gray-700 flex-1 truncate">{{ file.name }}</span>
                                 <span class="text-xs text-gray-400">{{ formatSize(file.size) }}</span>
                                 <button type="button" @click="removeTeamFile(idx)" class="text-gray-400 hover:text-red-500">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    <XMarkIcon class="w-4 h-4" />
                                 </button>
                             </div>
                         </div>

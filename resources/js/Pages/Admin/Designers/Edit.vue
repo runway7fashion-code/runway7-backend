@@ -2,6 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     designer:   Object,
@@ -267,7 +268,9 @@ function submit() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link :href="`/admin/designers/${designer.id}`" class="text-gray-400 hover:text-gray-600 text-sm">← Ver diseñador</Link>
+                <Link :href="`/admin/designers/${designer.id}`" class="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
+                    <ArrowLeftIcon class="w-4 h-4" /> Ver diseñador
+                </Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900">Editar: {{ designer.first_name }} {{ designer.last_name }}</h2>
             </div>

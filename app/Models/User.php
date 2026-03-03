@@ -19,7 +19,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'first_name', 'last_name', 'email', 'phone', 'password',
-        'role', 'status', 'profile_picture', 'login_code',
+        'role', 'status', 'last_login_at', 'welcome_email_sent_at', 'profile_picture', 'login_code',
     ];
 
     protected $hidden = ['password', 'remember_token', 'login_code'];
@@ -27,7 +27,9 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
+            'email_verified_at'       => 'datetime',
+            'last_login_at'           => 'datetime',
+            'welcome_email_sent_at'   => 'datetime',
             'password' => 'hashed',
         ];
     }

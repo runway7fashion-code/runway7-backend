@@ -25,7 +25,7 @@ class ModelService
                 'phone'      => $userData['phone'] ?? null,
                 'password'   => bcrypt('runway7'),
                 'role'       => 'model',
-                'status'     => 'active',
+                'status'     => 'pending',
             ]);
 
             $user->modelProfile()->create($profileData);
@@ -252,6 +252,21 @@ class ModelService
             Storage::disk('public')->delete($user->profile_picture);
             $user->update(['profile_picture' => null]);
         }
+    }
+
+    /**
+     * Eliminar una modelo completamente: archivos del storage + hard delete de BD.
+     */
+    public function deleteModel(User $user): void
+    {
+        DB::transaction(function () use ($user) {
+            // Eliminar toda la carpeta del storage (foto de perfil + comp card)
+            Storage::disk('public')->deleteDirectory("models/{$user->id}");
+
+            // Hard delete: elimina definitivamente de la BD (cascade borra model_profile,
+            // event_model, show_model, event_passes, device_tokens automáticamente)
+            $user->forceDelete();
+        });
     }
 
     /**

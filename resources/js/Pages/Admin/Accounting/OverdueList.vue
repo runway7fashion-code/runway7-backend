@@ -2,6 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
+import { CurrencyDollarIcon, UserGroupIcon, ClipboardDocumentListIcon, CalendarDaysIcon, ArrowDownTrayIcon, MagnifyingGlassIcon, EyeIcon, CheckCircleIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     plans: Object,
@@ -117,9 +118,7 @@ function methodLabel(m) {
                 <div class="bg-white rounded-2xl border border-gray-200 p-5">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
-                            <svg class="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
+                            <CurrencyDollarIcon class="w-5 h-5 text-red-500" />
                         </div>
                         <div>
                             <p class="text-xs text-gray-400 uppercase tracking-widest">Monto Vencido</p>
@@ -131,9 +130,7 @@ function methodLabel(m) {
                 <div class="bg-white rounded-2xl border border-gray-200 p-5">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center">
-                            <svg class="w-5 h-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            </svg>
+                            <UserGroupIcon class="w-5 h-5 text-orange-500" />
                         </div>
                         <div>
                             <p class="text-xs text-gray-400 uppercase tracking-widest">Disenadores</p>
@@ -145,9 +142,7 @@ function methodLabel(m) {
                 <div class="bg-white rounded-2xl border border-gray-200 p-5">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-xl bg-yellow-50 flex items-center justify-center">
-                            <svg class="w-5 h-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                            </svg>
+                            <ClipboardDocumentListIcon class="w-5 h-5 text-yellow-600" />
                         </div>
                         <div>
                             <p class="text-xs text-gray-400 uppercase tracking-widest">Cuotas Vencidas</p>
@@ -159,9 +154,7 @@ function methodLabel(m) {
                 <div class="bg-white rounded-2xl border border-gray-200 p-5">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
-                            <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                            </svg>
+                            <CalendarDaysIcon class="w-5 h-5 text-gray-500" />
                         </div>
                         <div>
                             <p class="text-xs text-gray-400 uppercase tracking-widest">Mas Antigua</p>
@@ -176,9 +169,7 @@ function methodLabel(m) {
                 <p class="text-sm text-gray-500">{{ plans.total }} disenadores con deuda</p>
                 <button @click="exportCsv"
                     class="flex items-center gap-2 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                    </svg>
+                    <ArrowDownTrayIcon class="w-4 h-4" />
                     Exportar CSV
                 </button>
             </div>
@@ -188,9 +179,7 @@ function methodLabel(m) {
                 <div class="flex flex-col md:flex-row gap-4">
                     <div class="flex-1">
                         <div class="relative">
-                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
+                            <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input v-model="search" @input="applyFilters" type="text" placeholder="Buscar por marca o nombre del disenador..."
                                 class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
@@ -241,16 +230,11 @@ function methodLabel(m) {
                                 <div class="flex items-center justify-center gap-2">
                                     <button @click="openDetailModal(item.designer_id)"
                                         class="border border-gray-300 text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition" title="Ver Detalle">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                        </svg>
+                                        <EyeIcon class="w-4 h-4" />
                                     </button>
                                     <Link :href="`/admin/accounting/payments/designer/${item.designer_id}/event/${item.event_id}`"
                                         class="border border-gray-300 text-gray-600 p-1.5 rounded-lg hover:bg-gray-100 transition" title="Ir a Pagos">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
+                                        <CurrencyDollarIcon class="w-4 h-4" />
                                     </Link>
                                 </div>
                             </td>
@@ -259,9 +243,7 @@ function methodLabel(m) {
                 </table>
 
                 <div v-if="!plans.data.length" class="p-12 text-center">
-                    <svg class="w-16 h-16 text-green-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
+                    <CheckCircleIcon class="w-16 h-16 text-green-300 mx-auto mb-3" />
                     <p class="text-sm text-gray-500 font-medium">No hay cuotas vencidas</p>
                     <p class="text-xs text-gray-400 mt-1">Todos los pagos estan al dia.</p>
                 </div>
@@ -301,7 +283,7 @@ function methodLabel(m) {
                                 <p v-if="detailData.designer.brand_name" class="text-sm text-gray-500">{{ detailData.designer.brand_name }}</p>
                             </div>
                             <button @click="showDetailModal = false" class="text-gray-400 hover:text-gray-600">
-                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                <XMarkIcon class="w-5 h-5" />
                             </button>
                         </div>
 

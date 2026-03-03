@@ -3,6 +3,7 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import { formatDateRange } from '@/utils/dates.js';
+import { DocumentDuplicateIcon, CalendarDaysIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     events: Object,
@@ -136,10 +137,10 @@ function submitDuplicate() {
                         </Link>
                         <button
                             @click="openDuplicate(event)"
-                            class="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+                            class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                             title="Duplicar evento"
                         >
-                            ⧉
+                            <DocumentDuplicateIcon class="w-4 h-4 text-gray-500" />
                         </button>
                     </div>
                 </div>
@@ -147,7 +148,7 @@ function submitDuplicate() {
 
             <!-- Empty state -->
             <div v-else class="text-center py-20">
-                <div class="text-6xl mb-4">📅</div>
+                <CalendarDaysIcon class="mx-auto h-16 w-16 text-gray-300 mb-4" />
                 <h3 class="text-lg font-semibold text-gray-900 mb-1">No hay eventos</h3>
                 <p class="text-gray-500 text-sm mb-6">Crea el primer evento para comenzar</p>
                 <Link href="/admin/events/create" class="px-5 py-2 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800">

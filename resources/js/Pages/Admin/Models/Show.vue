@@ -3,6 +3,7 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import QrCode from '@/Components/QrCode.vue';
+import { ArrowLeftIcon, EnvelopeIcon, PhoneIcon, CameraIcon, XMarkIcon, ArrowRightIcon, TrashIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     model: Object,
@@ -76,6 +77,13 @@ function removeFromEvent(eventId, eventName) {
     router.delete(`/admin/models/${props.model.id}/remove-event/${eventId}`, { preserveScroll: true });
 }
 
+function statusBadgeClass(s) {
+    return { active: 'bg-green-50 text-green-700', inactive: 'bg-red-50 text-red-600', pending: 'bg-yellow-50 text-yellow-700' }[s] ?? 'bg-gray-50 text-gray-600';
+}
+function statusBadgeLabel(s) {
+    return { active: 'Activa', inactive: 'Inactiva', pending: 'Pendiente' }[s] ?? s;
+}
+
 const compCardLabels = ['Headshot', 'Full Body Front', 'Full Body Side', 'Creative/Editorial'];
 const compCardPhotos = [profile?.photo_1, profile?.photo_2, profile?.photo_3, profile?.photo_4];
 const failedImgs = ref([false, false, false, false]);
@@ -84,13 +92,23 @@ const failedImgs = ref([false, false, false, false]);
 const passModal = ref(null);
 function openPassModal(evt) { passModal.value = { ...evt.pass, event_name: evt.name }; }
 function closePassModal()   { passModal.value = null; }
+
+// Modal eliminar
+const showDeleteModal = ref(false);
+function deleteModel() {
+    router.delete(`/admin/models/${props.model.id}`, {
+        onSuccess: () => { showDeleteModal.value = false; },
+    });
+}
 </script>
 
 <template>
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link href="/admin/models" class="text-gray-400 hover:text-gray-600 text-sm">← Modelos</Link>
+                <Link href="/admin/models" class="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-sm">
+                    <ArrowLeftIcon class="w-4 h-4" /> Modelos
+                </Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900">{{ model.first_name }} {{ model.last_name }}</h2>
             </div>
@@ -123,7 +141,11 @@ function closePassModal()   { passModal.value = null; }
                                 </p>
                             </div>
                             <!-- Acciones -->
-                            <div class="flex gap-2">
+                            <div class="flex items-center gap-2">
+                                <span :class="statusBadgeClass(model.status)"
+                                    class="text-xs font-medium rounded-lg px-3 py-1.5">
+                                    {{ statusBadgeLabel(model.status) }}
+                                </span>
                                 <button @click="sendWelcomeEmail"
                                     class="px-3 py-1.5 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 transition-colors">
                                     Enviar Email
@@ -132,22 +154,29 @@ function closePassModal()   { passModal.value = null; }
                                     class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
                                     Editar
                                 </Link>
+                                <button @click="showDeleteModal = true"
+                                    class="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors flex items-center gap-1">
+                                    <TrashIcon class="w-3.5 h-3.5" />
+                                    Eliminar
+                                </button>
                             </div>
                         </div>
 
                         <div class="mt-3 flex flex-wrap gap-3 text-sm">
-                            <span class="text-gray-600">
-                                <svg class="w-4 h-4 inline mr-1 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                                </svg>
+                            <span class="flex items-center gap-1 text-gray-600">
+                                <EnvelopeIcon class="w-4 h-4 text-gray-900" />
                                 {{ model.email }}
                             </span>
-                            <span v-if="model.phone" class="text-gray-600">
-                                📞 {{ model.phone }}
+                            <span v-if="model.phone" class="flex items-center gap-1 text-gray-600">
+                                <PhoneIcon class="w-4 h-4 text-gray-900" />
+                                {{ model.phone }}
                             </span>
                             <a v-if="profile?.instagram" :href="`https://instagram.com/${profile.instagram.replace('@','')}`"
                                 target="_blank"
-                                class="text-pink-600 hover:text-pink-700">
+                                class="flex items-center gap-1 text-pink-600 hover:text-pink-700">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                                </svg>
                                 {{ profile.instagram }}
                             </a>
                         </div>
@@ -189,10 +218,7 @@ function closePassModal()   { passModal.value = null; }
                                     @error="failedImgs[i] = true"
                                     class="w-full h-full object-cover" />
                                 <div v-else class="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-300">
-                                    <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-                                    </svg>
+                                    <CameraIcon class="w-8 h-8" />
                                     <span class="text-[10px]">Sin foto</span>
                                 </div>
                                 <div class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] text-center py-1 px-1">
@@ -257,13 +283,15 @@ function closePassModal()   { passModal.value = null; }
                                             {{ passStatusLabel(evt.pass.status) }}
                                         </span>
                                         <button @click="openPassModal(evt)"
-                                            class="text-[11px] text-indigo-500 hover:text-indigo-700 font-medium">
-                                            Ver QR →
+                                            class="flex items-center gap-0.5 text-[11px] text-indigo-500 hover:text-indigo-700 font-medium">
+                                            Ver QR <ArrowRightIcon class="w-3 h-3" />
                                         </button>
                                     </div>
                                 </div>
                                 <button @click="removeFromEvent(evt.id, evt.name)"
-                                    class="text-red-400 hover:text-red-600 text-xs ml-2 flex-shrink-0">✕</button>
+                                    class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0">
+                                    <XMarkIcon class="w-4 h-4" />
+                                </button>
                             </div>
 
                             <!-- Shows de esta modelo en este evento -->
@@ -291,6 +319,62 @@ function closePassModal()   { passModal.value = null; }
         </div>
     </AdminLayout>
 
+    <!-- Modal: Confirmar eliminación -->
+    <Teleport to="body">
+        <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/60" @click="showDeleteModal = false"></div>
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+                <!-- Ícono -->
+                <div class="flex items-center justify-center w-12 h-12 rounded-full bg-red-50 mx-auto mb-4">
+                    <TrashIcon class="w-6 h-6 text-red-600" />
+                </div>
+
+                <!-- Título -->
+                <h3 class="text-lg font-bold text-gray-900 text-center mb-1">
+                    ¿Eliminar a {{ model.first_name }} {{ model.last_name }}?
+                </h3>
+                <p class="text-sm text-gray-500 text-center mb-5">Esta acción es permanente y no se puede deshacer.</p>
+
+                <!-- Detalles de lo que se elimina -->
+                <div class="bg-red-50 border border-red-100 rounded-xl p-4 mb-6 space-y-1.5">
+                    <p class="text-xs font-semibold text-red-700 mb-2">Se eliminará de forma definitiva:</p>
+                    <div class="flex items-start gap-2 text-xs text-red-600">
+                        <span class="mt-0.5">•</span>
+                        <span>Cuenta de usuario y datos personales</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-xs text-red-600">
+                        <span class="mt-0.5">•</span>
+                        <span>Foto de perfil y todas las fotos del comp card</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-xs text-red-600">
+                        <span class="mt-0.5">•</span>
+                        <span>Asignaciones a eventos y slots de casting</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-xs text-red-600">
+                        <span class="mt-0.5">•</span>
+                        <span>Participación en shows</span>
+                    </div>
+                    <div class="flex items-start gap-2 text-xs text-red-600">
+                        <span class="mt-0.5">•</span>
+                        <span>Pases de acceso generados</span>
+                    </div>
+                </div>
+
+                <!-- Botones -->
+                <div class="flex gap-3">
+                    <button @click="showDeleteModal = false"
+                        class="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancelar
+                    </button>
+                    <button @click="deleteModel"
+                        class="flex-1 px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors">
+                        Eliminar definitivamente
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
     <!-- Modal: Ver Pase QR -->
     <Teleport to="body">
         <div v-if="passModal" class="fixed inset-0 z-50 flex items-center justify-center">
@@ -298,9 +382,7 @@ function closePassModal()   { passModal.value = null; }
             <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 flex flex-col items-center gap-4">
                 <!-- Cerrar -->
                 <button @click="closePassModal" class="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <XMarkIcon class="h-5 w-5" />
                 </button>
 
                 <!-- Evento -->

@@ -40,6 +40,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Modelos - admin, operation
         Route::middleware('section:models')->group(function () {
+            // Rutas sin {model} deben ir antes del resource
+            Route::get('models/export', [ModelController::class, 'exportModels'])->name('models.export');
+            Route::post('models/import', [ModelController::class, 'importModels'])->name('models.import');
+            Route::post('models/send-pending-emails', [ModelController::class, 'sendPendingWelcomeEmails'])->name('models.send-pending-emails');
             Route::resource('models', ModelController::class);
             Route::post('models/{model}/assign-event', [ModelController::class, 'assignEvent'])->name('models.assign-event');
             Route::delete('models/{model}/remove-event/{event}', [ModelController::class, 'removeEvent'])->name('models.remove-event');
@@ -48,6 +52,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('models/{model}/send-welcome-email', [ModelController::class, 'sendWelcomeEmail'])->name('models.send-welcome-email');
             Route::post('models/{model}/upload-profile-picture', [ModelController::class, 'uploadProfilePicture'])->name('models.upload-profile-picture');
             Route::delete('models/{model}/delete-profile-picture', [ModelController::class, 'deleteProfilePicture'])->name('models.delete-profile-picture');
+            Route::patch('models/{model}/status', [ModelController::class, 'updateStatus'])->name('models.update-status');
         });
 
         // Diseñadores - admin, operation, sales

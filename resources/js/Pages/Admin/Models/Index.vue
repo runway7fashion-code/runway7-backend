@@ -1,34 +1,192 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
+import { EnvelopeIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, XMarkIcon } from '@heroicons/vue/24/outline';
+import { computed } from 'vue';
 
 const props = defineProps({
-    models:  Object,
-    events:  Array,
-    filters: Object,
+    models:            Object,
+    events:            Array,
+    filters:           Object,
+    pendingEmailCount: Number,
 });
 
-const search    = ref(props.filters.search    ?? '');
-const event     = ref(props.filters.event     ?? '');
-const compcard  = ref(props.filters.compcard  ?? '');
-const gender    = ref(props.filters.gender    ?? '');
+const search      = ref(props.filters.search      ?? '');
+const event       = ref(props.filters.event       ?? '');
+const compcard    = ref(props.filters.compcard    ?? '');
+const gender      = ref(props.filters.gender      ?? '');
+const email_sent  = ref(props.filters.email_sent  ?? '');
+const test_model  = ref(props.filters.test_model  ?? '');
 
 let timer = null;
 function applyFilters() {
     clearTimeout(timer);
     timer = setTimeout(() => {
         router.get('/admin/models', {
-            search:   search.value   || undefined,
-            event:    event.value    || undefined,
-            compcard: compcard.value || undefined,
-            gender:   gender.value   || undefined,
+            search:     search.value      || undefined,
+            event:      event.value       || undefined,
+            compcard:   compcard.value    || undefined,
+            gender:     gender.value      || undefined,
+            email_sent: email_sent.value  || undefined,
+            test_model: test_model.value  || undefined,
         }, { preserveState: true, replace: true });
     }, 300);
 }
+watch([search, event, compcard, gender, email_sent, test_model], applyFilters);
 
-watch([search, event, compcard, gender], applyFilters);
+// --- Export Excel ---
+const exportUrl = computed(() => {
+    const params = new URLSearchParams();
+    if (search.value)     params.set('search',     search.value);
+    if (event.value)      params.set('event',      event.value);
+    if (compcard.value)   params.set('compcard',   compcard.value);
+    if (gender.value)     params.set('gender',     gender.value);
+    if (email_sent.value) params.set('email_sent', email_sent.value);
+    if (test_model.value) params.set('test_model', test_model.value);
+    const qs = params.toString();
+    return '/admin/models/export' + (qs ? '?' + qs : '');
+});
 
+// --- Import Excel ---
+const showImportModal = ref(false);
+const importForm = useForm({ file: null, event_id: '' });
+const fileInput = ref(null);
+
+function handleFileChange(e) {
+    importForm.file = e.target.files[0] ?? null;
+}
+
+function submitImport() {
+    importForm.post('/admin/models/import', {
+        forceFormData: true,
+        onSuccess: () => {
+            showImportModal.value = false;
+            importForm.reset();
+            if (fileInput.value) fileInput.value.value = '';
+        },
+    });
+}
+
+// --- Acciones por fila ---
+function sendWelcomeEmail(m, e) {
+    e.stopPropagation();
+    if (!confirm(`¿Enviar email de bienvenida a ${m.first_name}?`)) return;
+    router.post(`/admin/models/${m.id}/send-welcome-email`, {}, { preserveScroll: true });
+}
+
+function updateModelStatus(m, newStatus) {
+    router.patch(`/admin/models/${m.id}/status`, { status: newStatus }, { preserveScroll: true });
+}
+
+// --- Modal eventos ---
+const selectedModel = ref(null);
+
+function openEventsModal(model, e) {
+    e.stopPropagation();
+    selectedModel.value = model;
+}
+
+function eventStatusBadge(status) {
+    return {
+        draft:     'bg-gray-100 text-gray-600',
+        published: 'bg-blue-100 text-blue-700',
+        active:    'bg-green-100 text-green-700',
+        completed: 'bg-purple-100 text-purple-700',
+        cancelled: 'bg-red-100 text-red-600',
+    }[status] ?? 'bg-gray-100 text-gray-600';
+}
+
+function eventStatusLabel(status) {
+    return {
+        draft:     'Borrador',
+        published: 'Publicado',
+        active:    'Activo',
+        completed: 'Completado',
+        cancelled: 'Cancelado',
+    }[status] ?? status;
+}
+
+function pivotStatusBadge(status) {
+    return {
+        invited:    'bg-yellow-100 text-yellow-700',
+        confirmed:  'bg-green-100 text-green-700',
+        rejected:   'bg-red-100 text-red-600',
+        checked_in: 'bg-blue-100 text-blue-700',
+    }[status] ?? 'bg-gray-100 text-gray-600';
+}
+
+function pivotStatusLabel(status) {
+    return {
+        invited:    'Invitada',
+        confirmed:  'Confirmada',
+        rejected:   'Rechazada',
+        checked_in: 'Check-in',
+    }[status] ?? status;
+}
+
+function castingStatusInfo(status) {
+    return {
+        scheduled:  { label: 'Agendada',        color: 'text-gray-500',  dot: 'bg-gray-400' },
+        checked_in: { label: 'Check-in',         color: 'text-blue-600',  dot: 'bg-blue-500' },
+        in_progress:{ label: 'En progreso',      color: 'text-amber-600', dot: 'bg-amber-500' },
+        completed:  { label: 'Completada',       color: 'text-green-600', dot: 'bg-green-500' },
+        no_show:    { label: 'No se presentó',   color: 'text-red-500',   dot: 'bg-red-400' },
+    }[status] ?? { label: status ?? '—', color: 'text-gray-400', dot: 'bg-gray-300' };
+}
+
+// --- Números de participación ---
+function participationNumbers(model) {
+    const events = model.events_as_model_with_casting ?? [];
+    return events
+        .map(ev => ev.pivot?.participation_number)
+        .filter(n => n != null);
+}
+
+// --- Check-ins ---
+const checkinModel = ref(null);
+
+function checkinEvents(model) {
+    const events = model.events_as_model_with_casting ?? [];
+    return events
+        .filter(ev => ev.pivot?.casting_checked_in_at)
+        .sort((a, b) => new Date(b.pivot.casting_checked_in_at) - new Date(a.pivot.casting_checked_in_at));
+}
+
+function openCheckinModal(model, e) {
+    e.stopPropagation();
+    checkinModel.value = model;
+}
+
+function fmtCheckinDate(dt) {
+    if (!dt) return null;
+    return new Date(dt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function fmtCheckinTime(dt) {
+    if (!dt) return null;
+    return new Date(dt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+}
+
+function timeAgo(dt) {
+    if (!dt) return '';
+    const diff = Date.now() - new Date(dt).getTime();
+    const mins  = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days  = Math.floor(diff / 86400000);
+    if (mins < 60)   return `hace ${mins}m`;
+    if (hours < 24)  return `hace ${hours}h`;
+    if (days < 30)   return `hace ${days}d`;
+    return fmtCheckinDate(dt);
+}
+
+// --- Send pending emails ---
+function sendPendingEmails() {
+    if (!confirm(`¿Enviar correo de bienvenida a ${props.pendingEmailCount} modelo(s) pendiente(s)? Los emails se procesarán en cola.`)) return;
+    router.post('/admin/models/send-pending-emails', {}, { preserveScroll: true });
+}
+
+// --- Helpers ---
 function progressColor(pct) {
     if (pct === 100) return 'bg-green-500';
     if (pct >= 50)   return 'bg-yellow-400';
@@ -47,14 +205,23 @@ function statusBadge(status) {
     }[status] ?? 'bg-gray-100 text-gray-600';
 }
 
-function statusLabel(status) {
-    return { active: 'Activa', inactive: 'Inactiva', pending: 'Pendiente' }[status] ?? status;
-}
-
 function storageUrl(path) {
     if (!path) return null;
     if (path.startsWith('http')) return path;
     return `/storage/${path}`;
+}
+
+function fmtLogin(dt) {
+    if (!dt) return null;
+    const d = new Date(dt);
+    return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+        + ' ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+}
+
+function fmtEmailSent(dt) {
+    if (!dt) return null;
+    const d = new Date(dt);
+    return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 </script>
 
@@ -65,135 +232,618 @@ function storageUrl(path) {
         </template>
 
         <div>
+            <!-- Header -->
             <div class="flex items-center justify-between mb-6">
                 <div>
                     <h3 class="text-2xl font-bold text-gray-900">Modelos</h3>
-                    <p class="text-gray-500 text-sm mt-1">{{ models.total }} modelos registrados</p>
+                    <p class="text-gray-500 text-sm mt-1">{{ models.total }} modelos registradas</p>
                 </div>
-                <Link href="/admin/models/create" class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
-                    + Crear Modelo
-                </Link>
+                <div class="flex items-center gap-3">
+                    <!-- Botón enviar correos pendientes -->
+                    <button v-if="pendingEmailCount > 0"
+                        @click="sendPendingEmails"
+                        class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
+                        <EnvelopeIcon class="w-4 h-4 text-gray-500" />
+                        Enviar correos
+                        <span class="bg-amber-100 text-amber-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ pendingEmailCount }}</span>
+                    </button>
+
+                    <!-- Botón exportar Excel -->
+                    <a :href="exportUrl"
+                        class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
+                        <ArrowDownTrayIcon class="w-4 h-4 text-gray-500" />
+                        Exportar Excel
+                    </a>
+
+                    <!-- Botón importar Excel -->
+                    <button @click="showImportModal = true"
+                        class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
+                        <ArrowUpTrayIcon class="w-4 h-4 text-gray-500" />
+                        Importar Excel
+                    </button>
+
+                    <Link href="/admin/models/create"
+                        class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
+                        + Crear Modelo
+                    </Link>
+                </div>
             </div>
 
-        <!-- Filtros -->
-        <div class="flex flex-wrap gap-3 mb-6">
-            <input v-model="search" type="text" placeholder="Buscar por nombre, email, teléfono..."
-                class="flex-1 min-w-48 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
+            <!-- Filtros -->
+            <div class="flex flex-wrap gap-3 mb-6">
+                <input v-model="search" type="text" placeholder="Buscar por nombre, email, teléfono, # participación..."
+                    class="flex-1 min-w-48 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
 
-            <select v-model="event"
-                class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                <option value="">Todos los eventos</option>
-                <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
-            </select>
+                <select v-model="event"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Todos los eventos</option>
+                    <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
+                </select>
 
-            <select v-model="gender"
-                class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                <option value="">Todos los géneros</option>
-                <option value="female">Femenino</option>
-                <option value="male">Masculino</option>
-                <option value="non_binary">No binario</option>
-            </select>
+                <select v-model="gender"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Todos los géneros</option>
+                    <option value="female">Femenino</option>
+                    <option value="male">Masculino</option>
+                    <option value="non_binary">No binario</option>
+                </select>
 
-            <select v-model="compcard"
-                class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                <option value="">Comp card: todos</option>
-                <option value="complete">Comp card completo</option>
-                <option value="incomplete">Comp card incompleto</option>
-            </select>
-        </div>
+                <select v-model="compcard"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Comp card: todos</option>
+                    <option value="complete">Comp card completo</option>
+                    <option value="incomplete">Comp card incompleto</option>
+                </select>
 
-        <!-- Tabla -->
-        <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                        <th class="text-left px-5 py-3 font-medium text-gray-500">Modelo</th>
-                        <th class="text-left px-4 py-3 font-medium text-gray-500">Género / Edad</th>
-                        <th class="text-left px-4 py-3 font-medium text-gray-500">Eventos</th>
-                        <th class="text-left px-4 py-3 font-medium text-gray-500">Comp Card</th>
-                        <th class="text-left px-4 py-3 font-medium text-gray-500">Estado</th>
-                        <th class="px-4 py-3"></th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    <tr v-if="models.data.length === 0">
-                        <td colspan="6" class="text-center text-gray-400 py-12">No hay modelos registradas.</td>
-                    </tr>
-                    <tr v-for="m in models.data" :key="m.id"
-                        class="hover:bg-gray-50 cursor-pointer transition-colors"
-                        @click="router.visit(`/admin/models/${m.id}`)">
-                        <!-- Foto + Nombre -->
-                        <td class="px-5 py-3">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-100">
-                                    <img v-if="storageUrl(m.profile_picture)"
-                                        :src="storageUrl(m.profile_picture)"
-                                        class="w-full h-full object-cover" />
-                                    <div v-else class="w-full h-full flex items-center justify-center text-xs font-bold text-gray-500">
-                                        {{ m.first_name?.[0] }}{{ m.last_name?.[0] }}
+                <select v-model="email_sent"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Correo: todos</option>
+                    <option value="sent">Correo enviado</option>
+                    <option value="not_sent">Correo no enviado</option>
+                </select>
+
+                <select v-model="test_model"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Tipo: todas</option>
+                    <option value="only_real">Solo reales</option>
+                    <option value="only_test">Solo prueba</option>
+                </select>
+            </div>
+
+            <!-- Tabla -->
+            <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="text-left px-5 py-3 font-medium text-gray-500">Modelo</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Género / Edad</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Eventos</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500"># Part.</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Comp Card</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Estado</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Último Check-in</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Último Login</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Último Correo</th>
+                            <th class="px-4 py-3"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <tr v-if="models.data.length === 0">
+                            <td colspan="10" class="text-center text-gray-400 py-12">No hay modelos registradas.</td>
+                        </tr>
+                        <tr v-for="m in models.data" :key="m.id"
+                            class="hover:bg-gray-50 cursor-pointer transition-colors"
+                            @click="router.visit(`/admin/models/${m.id}`)">
+                            <td class="px-5 py-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-100">
+                                        <img v-if="storageUrl(m.profile_picture)"
+                                            :src="storageUrl(m.profile_picture)"
+                                            class="w-full h-full object-cover" />
+                                        <div v-else class="w-full h-full flex items-center justify-center text-xs font-bold text-gray-500">
+                                            {{ m.first_name?.[0] }}{{ m.last_name?.[0] }}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900">{{ m.first_name }} {{ m.last_name }}</p>
+                                        <p class="text-gray-400 text-xs">{{ m.email }}</p>
                                     </div>
                                 </div>
-                                <div>
-                                    <p class="font-medium text-gray-900">{{ m.first_name }} {{ m.last_name }}</p>
-                                    <p class="text-gray-400 text-xs">{{ m.email }}</p>
+                            </td>
+                            <td class="px-4 py-3 text-gray-600">
+                                <p>{{ genderLabel(m.model_profile?.gender) }}</p>
+                                <p class="text-xs text-gray-400">{{ m.model_profile?.age ? m.model_profile.age + ' años' : '—' }}</p>
+                            </td>
+                            <td class="px-4 py-3" @click.stop>
+                                <button v-if="m.events_as_model_with_casting?.length"
+                                    @click="openEventsModal(m, $event)"
+                                    class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full hover:bg-blue-100 transition-colors cursor-pointer">
+                                    {{ m.events_as_model_with_casting.length }} evento{{ m.events_as_model_with_casting.length !== 1 ? 's' : '' }}
+                                </button>
+                                <span v-else class="text-gray-400 text-xs">Sin eventos</span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <template v-if="participationNumbers(m).length">
+                                    <div class="flex flex-wrap gap-1">
+                                        <span v-for="num in participationNumbers(m)" :key="num"
+                                            class="text-xs font-bold bg-black text-white px-2 py-0.5 rounded-full">
+                                            #{{ num }}
+                                        </span>
+                                    </div>
+                                </template>
+                                <span v-else class="text-xs text-gray-400">—</span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                        <div :class="progressColor(m.model_profile?.comp_card_progress ?? 0)"
+                                            class="h-full rounded-full transition-all"
+                                            :style="`width: ${m.model_profile?.comp_card_progress ?? 0}%`"></div>
+                                    </div>
+                                    <span class="text-xs text-gray-500">{{ m.model_profile?.comp_card_progress ?? 0 }}%</span>
                                 </div>
-                            </div>
-                        </td>
-                        <!-- Género / Edad -->
-                        <td class="px-4 py-3 text-gray-600">
-                            <p>{{ genderLabel(m.model_profile?.gender) }}</p>
-                            <p class="text-xs text-gray-400">{{ m.model_profile?.age ? m.model_profile.age + ' años' : '—' }}</p>
-                        </td>
-                        <!-- Eventos -->
-                        <td class="px-4 py-3">
-                            <span v-if="m.events_as_model_with_casting?.length"
-                                class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
-                                {{ m.events_as_model_with_casting.length }} evento{{ m.events_as_model_with_casting.length !== 1 ? 's' : '' }}
-                            </span>
-                            <span v-else class="text-gray-400 text-xs">Sin eventos</span>
-                        </td>
-                        <!-- Comp Card -->
-                        <td class="px-4 py-3">
-                            <div class="flex items-center gap-2">
-                                <div class="w-20 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                    <div :class="progressColor(m.model_profile?.comp_card_progress ?? 0)"
-                                        class="h-full rounded-full transition-all"
-                                        :style="`width: ${m.model_profile?.comp_card_progress ?? 0}%`"></div>
+                            </td>
+                            <td class="px-4 py-3" @click.stop>
+                                <!-- Activa: badge estático (solo la app puede asignar este estado) -->
+                                <span v-if="m.status === 'active'"
+                                    class="text-xs font-medium rounded-full px-2 py-0.5 bg-green-100 text-green-700">
+                                    Activa
+                                </span>
+                                <!-- Pendiente / Inactiva: selector editable -->
+                                <select v-else :value="m.status"
+                                    @change="updateModelStatus(m, $event.target.value)"
+                                    :class="statusBadge(m.status)"
+                                    class="text-xs font-medium rounded-full px-2 py-0.5 border-0 outline-none cursor-pointer appearance-none">
+                                    <option value="inactive">Inactiva</option>
+                                    <option value="pending">Pendiente</option>
+                                </select>
+                            </td>
+                            <td class="px-4 py-3" @click.stop>
+                                <template v-if="checkinEvents(m).length">
+                                    <button @click="openCheckinModal(m, $event)"
+                                        class="group flex items-center gap-2 text-left hover:opacity-80 transition-opacity">
+                                        <div>
+                                            <p class="text-xs font-semibold text-gray-800 leading-tight">
+                                                {{ fmtCheckinDate(checkinEvents(m)[0].pivot.casting_checked_in_at) }}
+                                            </p>
+                                            <p class="text-[11px] text-blue-600 font-medium leading-tight">
+                                                {{ fmtCheckinTime(checkinEvents(m)[0].pivot.casting_checked_in_at) }}
+                                            </p>
+                                        </div>
+                                        <span v-if="checkinEvents(m).length > 1"
+                                            class="flex-shrink-0 text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full group-hover:bg-gray-200 transition-colors">
+                                            +{{ checkinEvents(m).length - 1 }}
+                                        </span>
+                                    </button>
+                                </template>
+                                <span v-else class="text-xs text-gray-400">—</span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <template v-if="fmtLogin(m.last_login_at)">
+                                    <p class="text-xs text-gray-700">{{ fmtLogin(m.last_login_at) }}</p>
+                                </template>
+                                <span v-else class="text-xs text-gray-400 italic">Nunca</span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <template v-if="m.welcome_email_sent_at">
+                                    <span class="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full font-medium">
+                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                        </svg>
+                                        {{ fmtEmailSent(m.welcome_email_sent_at) }}
+                                    </span>
+                                </template>
+                                <span v-else class="inline-flex items-center text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                    No enviado
+                                </span>
+                            </td>
+                            <td class="px-4 py-3" @click.stop>
+                                <div class="flex items-center gap-2">
+                                    <button @click="sendWelcomeEmail(m, $event)"
+                                        class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap">
+                                        Enviar Email
+                                    </button>
+                                    <Link :href="`/admin/models/${m.id}/edit`"
+                                        class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                        Editar
+                                    </Link>
                                 </div>
-                                <span class="text-xs text-gray-500">{{ m.model_profile?.comp_card_progress ?? 0 }}%</span>
-                            </div>
-                        </td>
-                        <!-- Estado -->
-                        <td class="px-4 py-3">
-                            <span :class="statusBadge(m.status)" class="text-xs px-2 py-0.5 rounded-full font-medium">
-                                {{ statusLabel(m.status) }}
-                            </span>
-                        </td>
-                        <!-- Acciones -->
-                        <td class="px-4 py-3" @click.stop>
-                            <div class="flex gap-2 justify-end">
-                                <Link :href="`/admin/models/${m.id}/edit`"
-                                    class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                                    Editar
-                                </Link>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
 
-            <!-- Paginación -->
-            <div v-if="models.last_page > 1" class="border-t border-gray-100 px-5 py-3 flex items-center justify-between text-sm text-gray-500">
-                <span>{{ models.from }}–{{ models.to }} de {{ models.total }} modelos</span>
-                <div class="flex gap-1">
-                    <Link v-if="models.prev_page_url" :href="models.prev_page_url"
-                        class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">← Anterior</Link>
-                    <Link v-if="models.next_page_url" :href="models.next_page_url"
-                        class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">Siguiente →</Link>
+                <!-- Paginación -->
+                <div v-if="models.last_page > 1" class="border-t border-gray-100 px-5 py-3 flex items-center justify-between text-sm text-gray-500">
+                    <span>{{ models.from }}–{{ models.to }} de {{ models.total }} modelos</span>
+                    <div class="flex gap-1">
+                        <Link v-if="models.prev_page_url" :href="models.prev_page_url"
+                            class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">← Anterior</Link>
+                        <Link v-if="models.next_page_url" :href="models.next_page_url"
+                            class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">Siguiente →</Link>
+                    </div>
                 </div>
             </div>
         </div>
-
-        </div>
     </AdminLayout>
+
+    <!-- Modal: Historial de Check-ins -->
+    <Teleport to="body">
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0">
+            <div v-if="checkinModel" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="checkinModel = null"></div>
+
+                <Transition
+                    enter-active-class="transition duration-200 ease-out"
+                    enter-from-class="opacity-0 scale-95 translate-y-2"
+                    enter-to-class="opacity-100 scale-100 translate-y-0"
+                    leave-active-class="transition duration-150 ease-in"
+                    leave-from-class="opacity-100 scale-100 translate-y-0"
+                    leave-to-class="opacity-0 scale-95 translate-y-2">
+                    <div v-if="checkinModel" class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+
+                        <!-- Header -->
+                        <div class="bg-black px-6 py-5">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 border-2 border-white/20">
+                                        <img v-if="storageUrl(checkinModel.profile_picture)"
+                                            :src="storageUrl(checkinModel.profile_picture)"
+                                            class="w-full h-full object-cover" />
+                                        <div v-else class="w-full h-full bg-white/10 flex items-center justify-center text-sm font-bold text-white">
+                                            {{ checkinModel.first_name?.[0] }}{{ checkinModel.last_name?.[0] }}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-white text-base leading-tight">
+                                            {{ checkinModel.first_name }} {{ checkinModel.last_name }}
+                                        </p>
+                                        <div class="flex items-center gap-1.5 mt-0.5">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+                                            <p class="text-white/60 text-xs">
+                                                {{ checkinEvents(checkinModel).length }} check-in{{ checkinEvents(checkinModel).length !== 1 ? 's' : '' }} registrado{{ checkinEvents(checkinModel).length !== 1 ? 's' : '' }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button @click="checkinModel = null"
+                                    class="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white">
+                                    <XMarkIcon class="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Timeline de check-ins -->
+                        <div class="p-5 space-y-0 max-h-[60vh] overflow-y-auto">
+                            <div v-for="(ev, idx) in checkinEvents(checkinModel)" :key="ev.id"
+                                class="relative flex gap-4">
+                                <!-- Línea de timeline -->
+                                <div class="flex flex-col items-center flex-shrink-0">
+                                    <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center shadow-sm flex-shrink-0 z-10">
+                                        <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                        </svg>
+                                    </div>
+                                    <div v-if="idx < checkinEvents(checkinModel).length - 1"
+                                        class="w-px flex-1 bg-gray-200 my-1 min-h-[20px]"></div>
+                                </div>
+
+                                <!-- Contenido -->
+                                <div class="pb-5 flex-1 min-w-0">
+                                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3.5 hover:border-gray-200 transition-colors">
+                                        <!-- Evento -->
+                                        <div class="flex items-start justify-between gap-2 mb-2.5">
+                                            <p class="font-semibold text-gray-900 text-sm leading-tight truncate">{{ ev.name }}</p>
+                                            <span :class="eventStatusBadge(ev.status)"
+                                                class="flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full">
+                                                {{ eventStatusLabel(ev.status) }}
+                                            </span>
+                                        </div>
+
+                                        <!-- Fecha y hora del check-in -->
+                                        <div class="flex items-center gap-3 mb-2.5">
+                                            <div class="flex items-center gap-1.5">
+                                                <div class="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center">
+                                                    <svg class="w-3 h-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
+                                                    </svg>
+                                                </div>
+                                                <span class="text-xs text-gray-700 font-medium">{{ fmtCheckinDate(ev.pivot.casting_checked_in_at) }}</span>
+                                            </div>
+                                            <div class="flex items-center gap-1.5">
+                                                <div class="w-6 h-6 rounded-lg bg-green-50 flex items-center justify-center">
+                                                    <svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                </div>
+                                                <span class="text-xs font-bold text-green-600">{{ fmtCheckinTime(ev.pivot.casting_checked_in_at) }}</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Datos extra -->
+                                        <div class="flex items-center gap-3 flex-wrap">
+                                            <div v-if="ev.pivot?.participation_number" class="flex items-center gap-1">
+                                                <span class="text-[10px] text-gray-400">Participación:</span>
+                                                <span class="text-xs font-bold bg-black text-white px-1.5 py-0.5 rounded-full">
+                                                    #{{ ev.pivot.participation_number }}
+                                                </span>
+                                            </div>
+                                            <div v-if="ev.pivot?.casting_time" class="flex items-center gap-1">
+                                                <span class="text-[10px] text-gray-400">Horario:</span>
+                                                <span class="text-xs font-medium text-gray-700">{{ ev.pivot.casting_time }}</span>
+                                            </div>
+                                            <div class="ml-auto">
+                                                <span class="text-[10px] text-gray-400 italic">{{ timeAgo(ev.pivot.casting_checked_in_at) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
+                            <Link :href="`/admin/models/${checkinModel.id}`"
+                                class="text-sm font-semibold text-black hover:underline underline-offset-2">
+                                Ver perfil completo →
+                            </Link>
+                            <button @click="checkinModel = null"
+                                class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                                Cerrar
+                            </button>
+                        </div>
+
+                    </div>
+                </Transition>
+            </div>
+        </Transition>
+    </Teleport>
+
+    <!-- Modal: Eventos de la modelo -->
+    <Teleport to="body">
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0">
+            <div v-if="selectedModel" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <!-- Backdrop -->
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="selectedModel = null"></div>
+
+                <!-- Card -->
+                <Transition
+                    enter-active-class="transition duration-200 ease-out"
+                    enter-from-class="opacity-0 scale-95 translate-y-2"
+                    enter-to-class="opacity-100 scale-100 translate-y-0"
+                    leave-active-class="transition duration-150 ease-in"
+                    leave-from-class="opacity-100 scale-100 translate-y-0"
+                    leave-to-class="opacity-0 scale-95 translate-y-2">
+                    <div v-if="selectedModel" class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+
+                        <!-- Header negro -->
+                        <div class="bg-black px-6 py-5">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <!-- Avatar -->
+                                    <div class="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 border-2 border-white/20">
+                                        <img v-if="storageUrl(selectedModel.profile_picture)"
+                                            :src="storageUrl(selectedModel.profile_picture)"
+                                            class="w-full h-full object-cover" />
+                                        <div v-else class="w-full h-full bg-white/10 flex items-center justify-center text-sm font-bold text-white">
+                                            {{ selectedModel.first_name?.[0] }}{{ selectedModel.last_name?.[0] }}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-white text-base leading-tight">
+                                            {{ selectedModel.first_name }} {{ selectedModel.last_name }}
+                                        </p>
+                                        <p class="text-white/50 text-xs mt-0.5">
+                                            {{ selectedModel.events_as_model_with_casting.length }}
+                                            evento{{ selectedModel.events_as_model_with_casting.length !== 1 ? 's' : '' }} asignado{{ selectedModel.events_as_model_with_casting.length !== 1 ? 's' : '' }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button @click="selectedModel = null"
+                                    class="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white">
+                                    <XMarkIcon class="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Lista de eventos -->
+                        <div class="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
+                            <div v-for="(ev, idx) in selectedModel.events_as_model_with_casting" :key="ev.id"
+                                class="border border-gray-100 rounded-xl p-4 hover:border-gray-200 transition-colors bg-gray-50/50">
+
+                                <!-- Row superior: nombre evento + estado -->
+                                <div class="flex items-start justify-between gap-3 mb-3">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-black text-white text-xs font-bold flex items-center justify-center">
+                                            {{ idx + 1 }}
+                                        </span>
+                                        <p class="font-semibold text-gray-900 text-sm leading-tight truncate">{{ ev.name }}</p>
+                                    </div>
+                                    <span :class="eventStatusBadge(ev.status)"
+                                        class="flex-shrink-0 text-xs font-medium px-2 py-0.5 rounded-full">
+                                        {{ eventStatusLabel(ev.status) }}
+                                    </span>
+                                </div>
+
+                                <!-- Grid de datos -->
+                                <div class="grid grid-cols-2 gap-x-4 gap-y-2.5">
+
+                                    <!-- Participación -->
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-7 h-7 rounded-lg bg-[#D4AF37]/10 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-3.5 h-3.5 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Participación</p>
+                                            <p class="text-xs font-semibold text-gray-800">
+                                                {{ ev.pivot?.participation_number ? '#' + ev.pivot.participation_number : '—' }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Horario casting -->
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-3.5 h-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Horario casting</p>
+                                            <p class="text-xs font-semibold text-gray-800">{{ ev.pivot?.casting_time ?? '—' }}</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Estado en evento -->
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Estado en evento</p>
+                                            <span :class="pivotStatusBadge(ev.pivot?.status)"
+                                                class="text-xs font-medium px-1.5 py-0.5 rounded-full">
+                                                {{ pivotStatusLabel(ev.pivot?.status) }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Estado casting -->
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-3.5 h-3.5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Estado casting</p>
+                                            <div class="flex items-center gap-1">
+                                                <span :class="castingStatusInfo(ev.pivot?.casting_status).dot"
+                                                    class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>
+                                                <span :class="castingStatusInfo(ev.pivot?.casting_status).color"
+                                                    class="text-xs font-medium">
+                                                    {{ castingStatusInfo(ev.pivot?.casting_status).label }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <!-- Check-in timestamp si existe -->
+                                <div v-if="ev.pivot?.casting_checked_in_at"
+                                    class="mt-3 pt-3 border-t border-gray-100 flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                    </svg>
+                                    <p class="text-xs text-gray-500">
+                                        Check-in realizado:
+                                        <span class="font-medium text-gray-700">
+                                            {{ new Date(ev.pivot.casting_checked_in_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) }}
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
+                            <Link :href="`/admin/models/${selectedModel.id}`"
+                                class="text-sm font-semibold text-black hover:underline underline-offset-2">
+                                Ver perfil completo →
+                            </Link>
+                            <button @click="selectedModel = null"
+                                class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                                Cerrar
+                            </button>
+                        </div>
+
+                    </div>
+                </Transition>
+            </div>
+        </Transition>
+    </Teleport>
+
+    <!-- Modal: Importar Excel -->
+    <Teleport to="body">
+        <div v-if="showImportModal" class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/50" @click="showImportModal = false"></div>
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+                <!-- Header -->
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="text-lg font-bold text-gray-900">Importar Modelos desde Excel</h3>
+                    <button @click="showImportModal = false" class="text-gray-400 hover:text-gray-600">
+                        <XMarkIcon class="w-5 h-5" />
+                    </button>
+                </div>
+
+                <!-- Formato esperado -->
+                <div class="bg-gray-50 rounded-xl p-4 mb-5 text-xs text-gray-600">
+                    <p class="font-semibold text-gray-800 mb-2">Columnas del Excel:</p>
+                    <div class="grid grid-cols-2 gap-1">
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">email</span> <span class="text-red-500">*obligatorio</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">first_name</span> o <span class="font-mono bg-white border border-gray-200 px-1 rounded">nombre</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">last_name</span> o <span class="font-mono bg-white border border-gray-200 px-1 rounded">apellido</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">phone</span> / <span class="font-mono bg-white border border-gray-200 px-1 rounded">telefono</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">casting_time</span> (ej: 09:00)</span>
+                    </div>
+                    <p class="mt-2 text-gray-500">Formatos: <strong>.xlsx, .xls, .csv</strong></p>
+                </div>
+
+                <!-- Selector de evento -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Asignar a un evento <span class="text-gray-400 font-normal">(opcional)</span></label>
+                    <select v-model="importForm.event_id"
+                        class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                        <option value="">— Sin asignar a evento —</option>
+                        <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
+                    </select>
+                    <p v-if="importForm.event_id" class="mt-1.5 text-xs text-blue-600">
+                        Todas las modelos importadas se asignarán a este evento. Si el Excel incluye la columna <span class="font-mono">casting_time</span>, cada modelo recibirá su horario individual.
+                    </p>
+                    <p v-else class="mt-1.5 text-xs text-gray-400">
+                        Si no seleccionas un evento, las modelos se crean sin asignación.
+                    </p>
+                </div>
+
+                <!-- Input archivo -->
+                <div class="mb-5">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar archivo</label>
+                    <input ref="fileInput" type="file" accept=".xlsx,.xls,.csv"
+                        @change="handleFileChange"
+                        class="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800 cursor-pointer" />
+                    <p v-if="importForm.errors.file" class="mt-1 text-xs text-red-500">{{ importForm.errors.file }}</p>
+                </div>
+
+                <!-- Acciones -->
+                <div class="flex gap-3">
+                    <button @click="showImportModal = false"
+                        class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancelar
+                    </button>
+                    <button @click="submitImport"
+                        :disabled="!importForm.file || importForm.processing"
+                        class="flex-1 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                        {{ importForm.processing ? 'Importando...' : 'Importar' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
 </template>

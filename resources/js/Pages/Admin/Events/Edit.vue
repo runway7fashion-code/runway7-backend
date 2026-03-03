@@ -3,6 +3,7 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
 import { computed, reactive } from 'vue';
 import { formatDayLabel } from '@/utils/dates.js';
+import { ArrowLeftIcon, XMarkIcon, CheckIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     event: Object,
@@ -100,7 +101,9 @@ function submit() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link :href="`/admin/events/${event.id}`" class="text-gray-400 hover:text-gray-600 text-sm">← Volver</Link>
+                <Link :href="`/admin/events/${event.id}`" class="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-sm">
+                    <ArrowLeftIcon class="w-4 h-4" /> Volver
+                </Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900">Editar Evento</h2>
             </div>
@@ -215,8 +218,10 @@ function submit() {
                                         @click="removeDay(i)"
                                         :disabled="day.has_assigned_shows"
                                         :title="day.has_assigned_shows ? 'No se puede eliminar: tiene shows con diseñadores asignados' : 'Eliminar día'"
-                                        class="text-red-400 hover:text-red-600 text-xl disabled:opacity-30 disabled:cursor-not-allowed"
-                                    >×</button>
+                                        class="text-red-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    >
+                                        <XMarkIcon class="w-5 h-5" />
+                                    </button>
                                 </div>
                             </div>
 
@@ -258,14 +263,16 @@ function submit() {
                                         class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs"
                                     >
                                         <span class="font-medium">{{ show.formatted_time ?? show.scheduled_time }}</span>
-                                        <span v-if="show.designers_count > 0" class="text-green-600">✓</span>
+                                        <CheckIcon v-if="show.designers_count > 0" class="w-3.5 h-3.5 text-green-600" />
                                         <button
                                             type="button"
                                             @click="deleteShow(day, show)"
                                             :disabled="show.designers_count > 0"
                                             :title="show.designers_count > 0 ? 'Tiene diseñadores asignados' : 'Eliminar show'"
                                             class="text-red-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
-                                        >×</button>
+                                        >
+                                            <XMarkIcon class="w-3.5 h-3.5" />
+                                        </button>
                                     </div>
                                 </div>
                                 <!-- Add show -->

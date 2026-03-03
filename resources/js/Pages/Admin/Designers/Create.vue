@@ -2,6 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, useForm } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
+import { ArrowLeftIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     events:     Array,
@@ -93,7 +94,9 @@ function submit() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link href="/admin/designers" class="text-gray-400 hover:text-gray-600 text-sm">← Diseñadores</Link>
+                <Link href="/admin/designers" class="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
+                    <ArrowLeftIcon class="w-4 h-4" /> Diseñadores
+                </Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900">Crear Diseñador</h2>
             </div>
@@ -334,7 +337,9 @@ function submit() {
                     <div v-for="(assistant, i) in form.assistants" :key="i"
                         class="border border-gray-200 rounded-xl p-4 space-y-3 relative">
                         <button type="button" @click="removeAssistant(i)"
-                            class="absolute top-3 right-3 text-red-400 hover:text-red-600 text-sm">✕</button>
+                            class="absolute top-3 right-3 text-red-400 hover:text-red-600">
+                            <XMarkIcon class="w-4 h-4" />
+                        </button>
 
                         <p class="text-xs font-semibold text-gray-500">Asistente {{ i + 1 }}</p>
 
