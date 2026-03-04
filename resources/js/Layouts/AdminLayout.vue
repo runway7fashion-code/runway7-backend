@@ -42,6 +42,7 @@ const allNavItems = [
     { name: 'Banners',      href: '/admin/banners',   exact: false, section: 'banners',            icon: PhotoIcon },
     { name: 'Usuarios',     href: '/admin/users',     exact: false, section: 'users',              icon: UsersIcon },
     { name: 'Pases',        href: '/admin/passes',    exact: false, section: 'tickets_management', icon: TicketIcon },
+    { name: 'Logs',         href: '/admin/logs',      exact: false, section: 'activity_logs',      icon: DocumentTextIcon },
 ];
 
 const navItems = computed(() => allNavItems.filter(item => hasSection(item.section)));

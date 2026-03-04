@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\ActivityAction;
 use App\Exports\ModelsExport;
 use App\Http\Controllers\Controller;
 use App\Imports\ModelsImport;
@@ -9,6 +10,7 @@ use App\Jobs\SendWelcomeEmailJob;
 use App\Models\Event;
 use App\Models\FittingAssignment;
 use App\Models\User;
+use App\Services\ActivityLogService;
 use App\Services\ModelService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -19,7 +21,10 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ModelController extends Controller
 {
-    public function __construct(protected ModelService $modelService) {}
+    public function __construct(
+        protected ModelService $modelService,
+        protected ActivityLogService $activityLog,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -267,6 +272,11 @@ class ModelController extends Controller
             $this->modelService->sendWelcomeEmail($model);
         }
 
+        $this->activityLog->log(
+            ActivityAction::Registered, $model, $request->user(),
+            "Modelo creada desde admin: {$model->first_name} {$model->last_name}"
+        );
+
         return redirect()->route('admin.models.show', $model)
             ->with('success', 'Modelo creada exitosamente.');
     }
@@ -350,16 +360,32 @@ class ModelController extends Controller
             'agency', 'is_agency', 'is_test_model', 'notes',
         ]);
 
+        $oldStatus = $model->status;
         $userData['status'] = $request->input('status', $model->status);
         $this->modelService->updateModel($model, $userData, $profileData);
+
+        $this->activityLog->log(
+            ActivityAction::ProfileUpdated, $model, $request->user(),
+            "Perfil actualizado: {$model->first_name} {$model->last_name}"
+        );
+
+        if ($oldStatus !== $userData['status']) {
+            $this->activityLog->log(
+                ActivityAction::StatusChanged, $model, $request->user(),
+                "Estado cambiado de {$oldStatus} a {$userData['status']}",
+                ['old_status' => $oldStatus, 'new_status' => $userData['status']]
+            );
+        }
 
         return redirect()->route('admin.models.show', $model)
             ->with('success', 'Modelo actualizada exitosamente.');
     }
 
-    public function destroy(User $model)
+    public function destroy(Request $request, User $model)
     {
         $this->authorizeModel($model);
+
+        $modelName = "{$model->first_name} {$model->last_name}";
 
         try {
             $this->modelService->deleteModel($model);
@@ -367,6 +393,12 @@ class ModelController extends Controller
             return redirect()->route('admin.models.index')
                 ->withErrors(['delete' => 'No se pudo eliminar la modelo: ' . $e->getMessage()]);
         }
+
+        $this->activityLog->log(
+            ActivityAction::StatusChanged, null, $request->user(),
+            "Modelo eliminada: {$modelName}",
+            ['deleted_user' => $modelName]
+        );
 
         return redirect()->route('admin.models.index')
             ->with('success', 'Modelo eliminada correctamente.');
@@ -384,18 +416,33 @@ class ModelController extends Controller
         try {
             $this->modelService->assignToEvent($model, $request->event_id, $request->casting_time);
             $this->modelService->syncModelPass($model, $request->event_id, $request->user()->id);
+
+            $event = Event::find($request->event_id);
+            $this->activityLog->log(
+                ActivityAction::EventAssigned, $model, $request->user(),
+                "Asignada a evento: {$event->name}",
+                ['event_id' => $event->id, 'event_name' => $event->name]
+            );
+
             return back()->with('success', 'Modelo asignada al evento.');
         } catch (\Exception $e) {
             return back()->withErrors(['event' => $e->getMessage()]);
         }
     }
 
-    public function removeEvent(User $model, Event $event)
+    public function removeEvent(Request $request, User $model, Event $event)
     {
         $this->authorizeModel($model);
 
         try {
             $this->modelService->removeFromEvent($model, $event->id);
+
+            $this->activityLog->log(
+                ActivityAction::EventRemoved, $model, $request->user(),
+                "Removida de evento: {$event->name}",
+                ['event_id' => $event->id, 'event_name' => $event->name]
+            );
+
             return back()->with('success', 'Modelo removida del evento.');
         } catch (\Exception $e) {
             return back()->withErrors(['event' => $e->getMessage()]);
@@ -412,18 +459,32 @@ class ModelController extends Controller
 
         try {
             $path = $this->modelService->uploadCompCardPhoto($model, $position, $request->file('photo'));
+
+            $this->activityLog->log(
+                ActivityAction::PhotoUploaded, $model, $request->user(),
+                "Foto comp card #{$position} subida",
+                ['position' => $position]
+            );
+
             return back()->with('success', "Foto {$position} subida correctamente.");
         } catch (\Exception $e) {
             return back()->withErrors(['photo' => $e->getMessage()]);
         }
     }
 
-    public function deletePhoto(User $model, int $position)
+    public function deletePhoto(Request $request, User $model, int $position)
     {
         $this->authorizeModel($model);
 
         try {
             $this->modelService->deleteCompCardPhoto($model, $position);
+
+            $this->activityLog->log(
+                ActivityAction::PhotoDeleted, $model, $request->user(),
+                "Foto comp card #{$position} eliminada",
+                ['position' => $position]
+            );
+
             return back()->with('success', "Foto {$position} eliminada.");
         } catch (\Exception $e) {
             return back()->withErrors(['photo' => $e->getMessage()]);
@@ -440,25 +501,37 @@ class ModelController extends Controller
 
         try {
             $this->modelService->uploadProfilePicture($model, $request->file('photo'));
+
+            $this->activityLog->log(
+                ActivityAction::PhotoUploaded, $model, $request->user(),
+                "Foto de perfil actualizada"
+            );
+
             return back()->with('success', 'Foto de perfil actualizada.');
         } catch (\Exception $e) {
             return back()->withErrors(['photo' => $e->getMessage()]);
         }
     }
 
-    public function deleteProfilePicture(User $model)
+    public function deleteProfilePicture(Request $request, User $model)
     {
         $this->authorizeModel($model);
 
         try {
             $this->modelService->deleteProfilePicture($model);
+
+            $this->activityLog->log(
+                ActivityAction::PhotoDeleted, $model, $request->user(),
+                "Foto de perfil eliminada"
+            );
+
             return back()->with('success', 'Foto de perfil eliminada.');
         } catch (\Exception $e) {
             return back()->withErrors(['photo' => $e->getMessage()]);
         }
     }
 
-    public function sendWelcomeEmail(User $model)
+    public function sendWelcomeEmail(Request $request, User $model)
     {
         $this->authorizeModel($model);
 
@@ -472,6 +545,11 @@ class ModelController extends Controller
             eventName:   $firstEvent?->name,
             castingTime: $firstEvent?->pivot?->casting_time,
             castingDate: $castingDay?->date?->format('Y-m-d'),
+        );
+
+        $this->activityLog->log(
+            ActivityAction::EmailSent, $model, $request->user(),
+            "Email de bienvenida enviado a {$model->email}"
         );
 
         return back()->with('success', 'Email de bienvenida encolado para envío.');
@@ -547,7 +625,14 @@ class ModelController extends Controller
 
         $request->validate(['status' => 'required|in:inactive,pending,applicant']);
 
+        $oldStatus = $model->status;
         $model->update(['status' => $request->status]);
+
+        $this->activityLog->log(
+            ActivityAction::StatusChanged, $model, $request->user(),
+            "Estado cambiado de {$oldStatus} a {$request->status}",
+            ['old_status' => $oldStatus, 'new_status' => $request->status]
+        );
 
         return back()->with('success', 'Estado actualizado.');
     }

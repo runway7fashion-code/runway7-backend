@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\ActivityAction;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Services\ActivityLogService;
 use App\Services\ModelService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,7 +13,10 @@ use Illuminate\Support\Facades\DB;
 
 class ModelRegistrationController extends Controller
 {
-    public function __construct(protected ModelService $modelService) {}
+    public function __construct(
+        protected ModelService $modelService,
+        protected ActivityLogService $activityLog,
+    ) {}
 
     /**
      * Listar eventos publicados (para el dropdown del formulario de WordPress).
@@ -130,6 +135,15 @@ class ModelRegistrationController extends Controller
 
                 return $user;
             });
+
+            $event = Event::find($validated['event_id']);
+            $this->activityLog->log(
+                ActivityAction::Registered,
+                $model,
+                null,
+                "Registro público: {$model->first_name} {$model->last_name} para {$event->name}",
+                ['source' => 'wordpress', 'event_id' => $event->id]
+            );
 
             return response()->json([
                 'message' => 'Your application has been received successfully. We will contact you soon!',

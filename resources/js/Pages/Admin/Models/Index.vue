@@ -402,7 +402,7 @@ function fmtEmailSent(dt) {
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Comp Card</th>
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Estado</th>
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Último Check-in</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Último Login</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Registro</th>
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Último Correo</th>
                             <th class="px-4 py-3"></th>
                         </tr>
@@ -505,10 +505,7 @@ function fmtEmailSent(dt) {
                                 <span v-else class="text-xs text-gray-400">—</span>
                             </td>
                             <td class="px-4 py-3">
-                                <template v-if="fmtLogin(m.last_login_at)">
-                                    <p class="text-xs text-gray-700">{{ fmtLogin(m.last_login_at) }}</p>
-                                </template>
-                                <span v-else class="text-xs text-gray-400 italic">Nunca</span>
+                                <p class="text-xs text-gray-700">{{ fmtLogin(m.created_at) }}</p>
                             </td>
                             <td class="px-4 py-3">
                                 <template v-if="m.welcome_email_sent_at">

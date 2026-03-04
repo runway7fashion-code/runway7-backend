@@ -2,7 +2,7 @@
 
 return [
     'admin' => [
-        'sections' => ['dashboard', 'events', 'models', 'designers', 'chats', 'banners', 'users', 'settings', 'accounting', 'accounting_dashboard', 'accounting_payments', 'tickets_dashboard', 'tickets_management'],
+        'sections' => ['dashboard', 'events', 'models', 'designers', 'chats', 'banners', 'users', 'settings', 'accounting', 'accounting_dashboard', 'accounting_payments', 'tickets_dashboard', 'tickets_management', 'activity_logs'],
         'label' => 'Administrador',
     ],
     'accounting' => [
