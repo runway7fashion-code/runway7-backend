@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\ActivityAction;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\ActivityLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -11,6 +13,8 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    public function __construct(protected ActivityLogService $activityLog) {}
+
     public function login(Request $request): JsonResponse
     {
         $request->validate([
@@ -31,6 +35,11 @@ class AuthController extends Controller
             return response()->json(['message' => 'Tu cuenta ha sido desactivada. Contacta al administrador.'], 403);
         }
 
+        if ($user->status === 'applicant') {
+            Auth::logout();
+            return response()->json(['message' => 'Tu aplicación está siendo revisada. Te notificaremos cuando sea aprobada.'], 403);
+        }
+
         if ($user->status === 'pending') {
             $user->update(['status' => 'active', 'last_login_at' => now()]);
         } else {
@@ -38,6 +47,8 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('api-token')->plainTextToken;
+
+        $this->activityLog->log(ActivityAction::Login, $user, $user, "Login vía app ({$user->role})");
 
         return response()->json([
             'user' => $user->load(['modelProfile', 'designerProfile']),
@@ -62,6 +73,8 @@ class AuthController extends Controller
         $user->update(['last_login_at' => now()]);
 
         $token = $user->createToken('kiosk-token')->plainTextToken;
+
+        $this->activityLog->log(ActivityAction::Login, $user, $user, "Login vía kiosk ({$user->role})");
 
         return response()->json([
             'user' => $user->load('modelProfile'),

@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\DesignerController;
 use App\Http\Controllers\Admin\DesignerSettingsController;
 use App\Http\Controllers\Admin\AccountingController;
 use App\Http\Controllers\Admin\PassController;
+use App\Http\Controllers\Admin\ActivityLogController;
 
 Route::get('/', function () {
     return redirect()->route('admin.login');
@@ -58,6 +59,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Diseñadores - admin, operation, sales
         Route::middleware('section:designers')->group(function () {
             Route::resource('designers', DesignerController::class);
+            Route::patch('designers/{designer}/status', [DesignerController::class, 'updateStatus'])->name('designers.update-status');
             Route::post('designers/{designer}/assign-event', [DesignerController::class, 'assignEvent'])->name('designers.assign-event');
             Route::patch('designers/{designer}/cancel-event/{event}', [DesignerController::class, 'cancelEvent'])->name('designers.cancel-event');
             Route::delete('designers/{designer}/remove-event/{event}', [DesignerController::class, 'removeEvent'])->name('designers.remove-event');
@@ -164,6 +166,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('passes/{pass}/check-in', [PassController::class, 'checkIn'])->name('passes.check-in');
             Route::post('passes/{pass}/reactivate', [PassController::class, 'reactivate'])->name('passes.reactivate');
             Route::get('api/passes/search-users', [PassController::class, 'searchUsers'])->name('passes.search-users');
+        });
+
+        // Logs de actividad - solo admin
+        Route::middleware('section:activity_logs')->group(function () {
+            Route::get('logs', [ActivityLogController::class, 'index'])->name('logs.index');
         });
 
         // Ajustes - solo admin

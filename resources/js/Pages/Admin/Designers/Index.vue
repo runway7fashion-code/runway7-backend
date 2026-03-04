@@ -8,28 +8,36 @@ const props = defineProps({
     events:     Array,
     categories: Array,
     packages:   Array,
+    salesReps:  Array,
+    countries:  Array,
     filters:    Object,
 });
 
-const search   = ref(props.filters.search   ?? '');
-const event    = ref(props.filters.event     ?? '');
-const category = ref(props.filters.category  ?? '');
-const pkg      = ref(props.filters.package   ?? '');
+const search   = ref(props.filters.search    ?? '');
+const event    = ref(props.filters.event      ?? '');
+const category = ref(props.filters.category   ?? '');
+const pkg      = ref(props.filters.package    ?? '');
+const salesRep  = ref(props.filters.sales_rep  ?? '');
+const materials = ref(props.filters.materials  ?? '');
+const country   = ref(props.filters.country    ?? '');
 
 let timer = null;
 function applyFilters() {
     clearTimeout(timer);
     timer = setTimeout(() => {
         router.get('/admin/designers', {
-            search:   search.value   || undefined,
-            event:    event.value    || undefined,
-            category: category.value || undefined,
-            package:  pkg.value      || undefined,
+            search:    search.value    || undefined,
+            event:     event.value     || undefined,
+            category:  category.value  || undefined,
+            package:   pkg.value       || undefined,
+            sales_rep: salesRep.value  || undefined,
+            materials: materials.value || undefined,
+            country:   country.value   || undefined,
         }, { preserveState: true, replace: true });
     }, 300);
 }
 
-watch([search, event, category, pkg], applyFilters);
+watch([search, event, category, pkg, salesRep, materials, country], applyFilters);
 
 function statusBadge(status) {
     return {
@@ -39,8 +47,8 @@ function statusBadge(status) {
     }[status] ?? 'bg-gray-100 text-gray-600';
 }
 
-function statusLabel(status) {
-    return { active: 'Activo', inactive: 'Inactivo', pending: 'Pendiente' }[status] ?? status;
+function updateDesignerStatus(d, newStatus) {
+    router.patch(`/admin/designers/${d.id}/status`, { status: newStatus }, { preserveScroll: true });
 }
 
 function storageUrl(path) {
@@ -101,6 +109,25 @@ function progressColor(pct) {
                     <option value="">Todos los paquetes</option>
                     <option v-for="p in packages" :key="p.id" :value="p.id">{{ p.name }}</option>
                 </select>
+
+                <select v-model="salesRep"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Todos los vendedores</option>
+                    <option v-for="s in salesReps" :key="s.id" :value="s.id">{{ s.first_name }} {{ s.last_name }}</option>
+                </select>
+
+                <select v-model="materials"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Material: Todos</option>
+                    <option value="complete">Completo</option>
+                    <option value="incomplete">Incompleto</option>
+                </select>
+
+                <select v-model="country"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Todos los paises</option>
+                    <option v-for="c in countries" :key="c" :value="c">{{ c }}</option>
+                </select>
             </div>
 
             <!-- Tabla -->
@@ -108,16 +135,19 @@ function progressColor(pct) {
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 border-b border-gray-200">
                         <tr>
-                            <th class="text-left px-5 py-3 font-medium text-gray-500">Diseñador / Marca</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Categoría</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Eventos</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Estado</th>
+                            <th class="text-left px-5 py-3 font-medium text-gray-500">Designer / Brand</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Email</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Phone</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Category</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Events</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Materials</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Status</th>
                             <th class="px-4 py-3"></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         <tr v-if="designers.data.length === 0">
-                            <td colspan="5" class="text-center text-gray-400 py-12">No hay diseñadores registrados.</td>
+                            <td colspan="8" class="text-center text-gray-400 py-12">No hay diseñadores registrados.</td>
                         </tr>
                         <tr v-for="d in designers.data" :key="d.id"
                             class="hover:bg-gray-50 cursor-pointer transition-colors"
@@ -139,6 +169,14 @@ function progressColor(pct) {
                                     </div>
                                 </div>
                             </td>
+                            <!-- Email -->
+                            <td class="px-4 py-3">
+                                <span class="text-gray-500 text-xs">{{ d.email }}</span>
+                            </td>
+                            <!-- Teléfono -->
+                            <td class="px-4 py-3">
+                                <span class="text-gray-500 text-xs">{{ d.phone ?? '—' }}</span>
+                            </td>
                             <!-- Categoría -->
                             <td class="px-4 py-3">
                                 <span v-if="d.designer_profile?.category"
@@ -155,11 +193,30 @@ function progressColor(pct) {
                                 </span>
                                 <span v-else class="text-gray-400 text-xs">Sin eventos</span>
                             </td>
-                            <!-- Estado -->
+                            <!-- Materials -->
                             <td class="px-4 py-3">
-                                <span :class="statusBadge(d.status)" class="text-xs px-2 py-0.5 rounded-full font-medium">
-                                    {{ statusLabel(d.status) }}
+                                <div class="flex items-center gap-2">
+                                    <div class="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                        <div :class="progressColor(materialsProgress(d.designer_materials))"
+                                            class="h-full rounded-full transition-all"
+                                            :style="{ width: materialsProgress(d.designer_materials) + '%' }"></div>
+                                    </div>
+                                    <span class="text-xs text-gray-500">{{ materialsProgress(d.designer_materials) }}%</span>
+                                </div>
+                            </td>
+                            <!-- Estado -->
+                            <td class="px-4 py-3" @click.stop>
+                                <span v-if="d.status === 'active'"
+                                    class="text-xs font-medium rounded-full px-2 py-0.5 bg-green-100 text-green-700">
+                                    Activo
                                 </span>
+                                <select v-else :value="d.status"
+                                    @change="updateDesignerStatus(d, $event.target.value)"
+                                    :class="statusBadge(d.status)"
+                                    class="text-xs font-medium rounded-full px-2 py-0.5 border-0 outline-none cursor-pointer appearance-none">
+                                    <option value="inactive">Inactivo</option>
+                                    <option value="pending">Pendiente</option>
+                                </select>
                             </td>
                             <!-- Acciones -->
                             <td class="px-4 py-3" @click.stop>

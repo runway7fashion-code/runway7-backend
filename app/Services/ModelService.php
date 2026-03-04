@@ -15,9 +15,9 @@ class ModelService
     /**
      * Crear una modelo completa: usuario + perfil + asignación opcional a evento.
      */
-    public function createModel(array $userData, array $profileData, ?int $eventId = null, ?string $castingTime = null): User
+    public function createModel(array $userData, array $profileData, ?int $eventId = null, ?string $castingTime = null, string $status = 'pending'): User
     {
-        return DB::transaction(function () use ($userData, $profileData, $eventId, $castingTime) {
+        return DB::transaction(function () use ($userData, $profileData, $eventId, $castingTime, $status) {
             $user = User::create([
                 'first_name' => $userData['first_name'],
                 'last_name'  => $userData['last_name'],
@@ -25,7 +25,7 @@ class ModelService
                 'phone'      => $userData['phone'] ?? null,
                 'password'   => bcrypt('runway7'),
                 'role'       => 'model',
-                'status'     => 'pending',
+                'status'     => $status,
             ]);
 
             $user->modelProfile()->create($profileData);

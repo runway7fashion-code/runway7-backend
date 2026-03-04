@@ -23,6 +23,7 @@ const test_model     = ref(props.filters.test_model     ?? '');
 const casting_time   = ref(props.filters.casting_time   ?? '');
 const casting_status = ref(props.filters.casting_status ?? '');
 const designer       = ref(props.filters.designer       ?? '');
+const status         = ref(props.filters.status         ?? '');
 
 let timer = null;
 function applyFilters() {
@@ -38,10 +39,11 @@ function applyFilters() {
             casting_time:   casting_time.value   || undefined,
             casting_status: casting_status.value || undefined,
             designer:       designer.value       || undefined,
+            status:         status.value         || undefined,
         }, { preserveState: true, replace: true });
     }, 300);
 }
-watch([search, event, compcard, gender, email_sent, test_model, casting_time, casting_status, designer], applyFilters);
+watch([search, event, compcard, gender, email_sent, test_model, casting_time, casting_status, designer, status], applyFilters);
 
 // Limpiar horario de casting y diseñador cuando cambia el evento
 watch(event, () => {
@@ -61,6 +63,7 @@ const exportUrl = computed(() => {
     if (casting_time.value)   params.set('casting_time',   casting_time.value);
     if (casting_status.value) params.set('casting_status', casting_status.value);
     if (designer.value)       params.set('designer',       designer.value);
+    if (status.value)         params.set('status',         status.value);
     const qs = params.toString();
     return '/admin/models/export' + (qs ? '?' + qs : '');
 });
@@ -238,9 +241,10 @@ function genderLabel(g) {
 
 function statusBadge(status) {
     return {
-        active:   'bg-green-100 text-green-700',
-        inactive: 'bg-gray-100 text-gray-600',
-        pending:  'bg-yellow-100 text-yellow-700',
+        active:    'bg-green-100 text-green-700',
+        inactive:  'bg-gray-100 text-gray-600',
+        pending:   'bg-yellow-100 text-yellow-700',
+        applicant: 'bg-purple-100 text-purple-700',
     }[status] ?? 'bg-gray-100 text-gray-600';
 }
 
@@ -375,6 +379,15 @@ function fmtEmailSent(dt) {
                     <option value="completed">Completada</option>
                     <option value="no_show">No se presentó</option>
                 </select>
+
+                <select v-model="status"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Estado: todos</option>
+                    <option value="active">Activo</option>
+                    <option value="inactive">Inactivo</option>
+                    <option value="pending">Pendiente</option>
+                    <option value="applicant">Aplicante</option>
+                </select>
             </div>
 
             <!-- Tabla -->
@@ -389,7 +402,7 @@ function fmtEmailSent(dt) {
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Comp Card</th>
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Estado</th>
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Último Check-in</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Último Login</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Registro</th>
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Último Correo</th>
                             <th class="px-4 py-3"></th>
                         </tr>
@@ -456,18 +469,19 @@ function fmtEmailSent(dt) {
                                 </div>
                             </td>
                             <td class="px-4 py-3" @click.stop>
-                                <!-- Activa: badge estático (solo la app puede asignar este estado) -->
+                                <!-- Activo: badge estático (solo la app puede asignar este estado) -->
                                 <span v-if="m.status === 'active'"
                                     class="text-xs font-medium rounded-full px-2 py-0.5 bg-green-100 text-green-700">
-                                    Activa
+                                    Activo
                                 </span>
-                                <!-- Pendiente / Inactiva: selector editable -->
+                                <!-- Pendiente / Inactivo: selector editable -->
                                 <select v-else :value="m.status"
                                     @change="updateModelStatus(m, $event.target.value)"
                                     :class="statusBadge(m.status)"
                                     class="text-xs font-medium rounded-full px-2 py-0.5 border-0 outline-none cursor-pointer appearance-none">
-                                    <option value="inactive">Inactiva</option>
+                                    <option value="inactive">Inactivo</option>
                                     <option value="pending">Pendiente</option>
+                                    <option value="applicant">Aplicante</option>
                                 </select>
                             </td>
                             <td class="px-4 py-3" @click.stop>
@@ -491,10 +505,7 @@ function fmtEmailSent(dt) {
                                 <span v-else class="text-xs text-gray-400">—</span>
                             </td>
                             <td class="px-4 py-3">
-                                <template v-if="fmtLogin(m.last_login_at)">
-                                    <p class="text-xs text-gray-700">{{ fmtLogin(m.last_login_at) }}</p>
-                                </template>
-                                <span v-else class="text-xs text-gray-400 italic">Nunca</span>
+                                <p class="text-xs text-gray-700">{{ fmtLogin(m.created_at) }}</p>
                             </td>
                             <td class="px-4 py-3">
                                 <template v-if="m.welcome_email_sent_at">

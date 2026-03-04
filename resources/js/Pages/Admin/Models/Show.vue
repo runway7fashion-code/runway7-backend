@@ -79,10 +79,10 @@ function removeFromEvent(eventId, eventName) {
 }
 
 function statusBadgeClass(s) {
-    return { active: 'bg-green-50 text-green-700', inactive: 'bg-red-50 text-red-600', pending: 'bg-yellow-50 text-yellow-700' }[s] ?? 'bg-gray-50 text-gray-600';
+    return { active: 'bg-green-50 text-green-700', inactive: 'bg-red-50 text-red-600', pending: 'bg-yellow-50 text-yellow-700', applicant: 'bg-purple-50 text-purple-700' }[s] ?? 'bg-gray-50 text-gray-600';
 }
 function statusBadgeLabel(s) {
-    return { active: 'Activa', inactive: 'Inactiva', pending: 'Pendiente' }[s] ?? s;
+    return { active: 'Activo', inactive: 'Inactivo', pending: 'Pendiente', applicant: 'Aplicante' }[s] ?? s;
 }
 
 const compCardLabels = ['Headshot', 'Full Body Front', 'Full Body Side', 'Creative/Editorial'];

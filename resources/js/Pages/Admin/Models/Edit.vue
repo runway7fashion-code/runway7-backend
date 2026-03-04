@@ -321,7 +321,8 @@ function submit() {
                         <select v-model="form.status"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                             <option value="pending">Pendiente</option>
-                            <option value="inactive">Inactiva</option>
+                            <option value="inactive">Inactivo</option>
+                            <option value="applicant">Aplicante</option>
                         </select>
                     </div>
 
