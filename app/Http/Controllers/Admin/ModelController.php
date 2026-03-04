@@ -92,6 +92,10 @@ class ModelController extends Controller
             );
         }
 
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
         if ($request->filled('designer')) {
             $designerFilter = (int) $request->designer;
             $query->whereIn('users.id', function ($sub) use ($designerFilter) {
@@ -196,7 +200,7 @@ class ModelController extends Controller
             'models'             => $models,
             'events'             => $events,
             'designers'          => $designers,
-            'filters'            => $request->only(['event', 'compcard', 'gender', 'search', 'email_sent', 'test_model', 'casting_time', 'casting_status', 'designer']),
+            'filters'            => $request->only(['event', 'compcard', 'gender', 'search', 'email_sent', 'test_model', 'casting_time', 'casting_status', 'designer', 'status']),
             'castingTimes'       => $castingTimes,
             'pendingEmailCount'  => $pendingEmailCount,
         ]);
@@ -318,7 +322,7 @@ class ModelController extends Controller
             'last_name'   => 'required|string|max:255',
             'email'       => "required|email|unique:users,email,{$model->id}",
             'phone'       => "nullable|string|unique:users,phone,{$model->id}",
-            'status'      => 'nullable|in:inactive,pending',
+            'status'      => 'nullable|in:inactive,pending,applicant',
             'instagram'   => 'nullable|string|max:255',
             'age'         => 'nullable|integer|min:16|max:80',
             'gender'      => 'nullable|in:female,male,non_binary',
@@ -541,7 +545,7 @@ class ModelController extends Controller
     {
         $this->authorizeModel($model);
 
-        $request->validate(['status' => 'required|in:inactive,pending']);
+        $request->validate(['status' => 'required|in:inactive,pending,applicant']);
 
         $model->update(['status' => $request->status]);
 

@@ -31,6 +31,7 @@ class DesignerController extends Controller
         $query = User::designers()->with([
             'designerProfile.category',
             'eventsAsDesigner',
+            'designerMaterials',
         ]);
 
         if ($request->filled('search')) {
@@ -53,6 +54,23 @@ class DesignerController extends Controller
             $query->whereHas('eventsAsDesigner', fn($q) => $q->where('event_designer.package_id', $request->package));
         }
 
+        if ($request->filled('sales_rep')) {
+            $query->whereHas('designerProfile', fn($q) => $q->where('sales_rep_id', $request->sales_rep));
+        }
+
+        if ($request->filled('country')) {
+            $query->whereHas('designerProfile', fn($q) => $q->where('country', $request->country));
+        }
+
+        if ($request->filled('materials')) {
+            if ($request->materials === 'complete') {
+                $query->whereHas('designerMaterials')
+                      ->whereDoesntHave('designerMaterials', fn($q) => $q->whereIn('status', ['pending', 'rejected']));
+            } elseif ($request->materials === 'incomplete') {
+                $query->whereHas('designerMaterials', fn($q) => $q->whereIn('status', ['pending', 'rejected']));
+            }
+        }
+
         $designers = $query->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
 
         $events = Event::orderBy('start_date', 'desc')
@@ -60,13 +78,22 @@ class DesignerController extends Controller
 
         $categories = DesignerCategory::ordered()->get();
         $packages = DesignerPackage::ordered()->get();
+        $salesReps = User::where('role', 'sales')->active()->orderBy('first_name')->get(['id', 'first_name', 'last_name']);
+
+        $usedCountries = \App\Models\DesignerProfile::whereNotNull('country')
+            ->where('country', '!=', '')
+            ->distinct()
+            ->orderBy('country')
+            ->pluck('country');
 
         return Inertia::render('Admin/Designers/Index', [
             'designers'  => $designers,
             'events'     => $events,
             'categories' => $categories,
             'packages'   => $packages,
-            'filters'    => $request->only(['search', 'event', 'category', 'package']),
+            'salesReps'  => $salesReps,
+            'countries'  => $usedCountries,
+            'filters'    => $request->only(['search', 'event', 'category', 'package', 'sales_rep', 'materials', 'country']),
         ]);
     }
 
@@ -81,6 +108,7 @@ class DesignerController extends Controller
             'events'     => $events,
             'categories' => $categories,
             'packages'   => $packages,
+            'countries'  => config('countries'),
             'salesReps'  => $salesReps,
         ]);
     }
@@ -217,7 +245,19 @@ class DesignerController extends Controller
             'categories' => $categories,
             'packages'   => $packages,
             'salesReps'  => $salesReps,
+            'countries'  => config('countries'),
         ]);
+    }
+
+    public function updateStatus(Request $request, User $designer)
+    {
+        $this->authorizeDesigner($designer);
+
+        $request->validate(['status' => 'required|in:inactive,pending']);
+
+        $designer->update(['status' => $request->status]);
+
+        return back()->with('success', 'Estado actualizado.');
     }
 
     public function update(Request $request, User $designer)

@@ -10,6 +10,7 @@ const props = defineProps({
     categories: Array,
     packages:   Array,
     salesReps:  Array,
+    countries:  Object,
 });
 
 const activeTab = ref(1);
@@ -369,7 +370,7 @@ function submit() {
                         <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
                         <select v-model="form.status"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                            <option value="active">Activo</option>
+                            <option v-if="form.status === 'active'" value="active">Activo</option>
                             <option value="inactive">Inactivo</option>
                             <option value="pending">Pendiente</option>
                         </select>
@@ -400,8 +401,11 @@ function submit() {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Pais</label>
-                            <input v-model="form.country" type="text"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            <select v-model="form.country"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
+                                <option value="">— Seleccionar pais —</option>
+                                <option v-for="(name, code) in countries" :key="code" :value="name">{{ name }}</option>
+                            </select>
                         </div>
                     </div>
 

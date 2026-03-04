@@ -31,6 +31,11 @@ class AuthController extends Controller
             return response()->json(['message' => 'Tu cuenta ha sido desactivada. Contacta al administrador.'], 403);
         }
 
+        if ($user->status === 'applicant') {
+            Auth::logout();
+            return response()->json(['message' => 'Tu aplicación está siendo revisada. Te notificaremos cuando sea aprobada.'], 403);
+        }
+
         if ($user->status === 'pending') {
             $user->update(['status' => 'active', 'last_login_at' => now()]);
         } else {

@@ -58,6 +58,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Diseñadores - admin, operation, sales
         Route::middleware('section:designers')->group(function () {
             Route::resource('designers', DesignerController::class);
+            Route::patch('designers/{designer}/status', [DesignerController::class, 'updateStatus'])->name('designers.update-status');
             Route::post('designers/{designer}/assign-event', [DesignerController::class, 'assignEvent'])->name('designers.assign-event');
             Route::patch('designers/{designer}/cancel-event/{event}', [DesignerController::class, 'cancelEvent'])->name('designers.cancel-event');
             Route::delete('designers/{designer}/remove-event/{event}', [DesignerController::class, 'removeEvent'])->name('designers.remove-event');

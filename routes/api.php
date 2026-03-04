@@ -7,6 +7,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::middleware('throttle:10,1')->group(function () {
         Route::post('auth/login', [App\Http\Controllers\Api\V1\AuthController::class, 'login']);
         Route::post('auth/login-code', [App\Http\Controllers\Api\V1\AuthController::class, 'loginWithCode']);
+        Route::post('models/register', [App\Http\Controllers\Api\V1\ModelRegistrationController::class, 'store']);
     });
 
     Route::middleware('auth:sanctum')->group(function () {
