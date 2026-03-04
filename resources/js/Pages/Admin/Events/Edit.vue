@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
-import { computed, reactive } from 'vue';
+import { computed, reactive, watch } from 'vue';
 import { formatDayLabel } from '@/utils/dates.js';
 import { ArrowLeftIcon, XMarkIcon, CheckIcon } from '@heroicons/vue/24/outline';
 
@@ -19,21 +19,48 @@ const form = useForm({
     description: props.event.description ?? '',
     status: props.event.status,
     model_number_start: props.event.model_number_start ?? 1,
-    days: [...props.event.event_days].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '')).map(d => ({
-        id: d.id,
-        date: d.date?.split('T')[0] ?? '',
-        label: d.label,
-        type: d.type,
-        start_time: d.start_time ?? '',
-        end_time: d.end_time ?? '',
-        description: d.description ?? '',
-        casting_start: '08:00',
-        casting_end: '23:00',
-        casting_interval: 30,
-        casting_capacity: 50,
-        shows: d.shows ?? [],
-        has_assigned_shows: (d.shows ?? []).some(s => s.designers_count > 0),
-    })),
+    days: [...props.event.event_days].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '')).map(d => {
+        const slots = d.casting_slots ?? [];
+        const fSlots = d.fitting_slots ?? [];
+        // Derivar config de casting desde los slots existentes
+        const firstSlot = slots[0];
+        const lastSlot  = slots[slots.length - 1];
+        let interval = 30;
+        if (slots.length >= 2) {
+            const [h1, m1] = slots[0].time.split(':').map(Number);
+            const [h2, m2] = slots[1].time.split(':').map(Number);
+            interval = (h2 * 60 + m2) - (h1 * 60 + m1);
+        }
+        // Derivar config de fitting
+        const firstFSlot = fSlots[0];
+        const lastFSlot  = fSlots[fSlots.length - 1];
+        let fInterval = 30;
+        if (fSlots.length >= 2) {
+            const [fh1, fm1] = fSlots[0].time.split(':').map(Number);
+            const [fh2, fm2] = fSlots[1].time.split(':').map(Number);
+            fInterval = (fh2 * 60 + fm2) - (fh1 * 60 + fm1);
+        }
+        return {
+            id: d.id,
+            date: d.date?.split('T')[0] ?? '',
+            label: d.label,
+            type: d.type,
+            start_time: d.start_time ?? '',
+            end_time: d.end_time ?? '',
+            description: d.description ?? '',
+            casting_start: firstSlot?.time ?? '08:00',
+            casting_end: lastSlot?.time ?? '23:00',
+            casting_interval: interval,
+            casting_capacity: firstSlot?.capacity ?? 50,
+            has_fitting: !!(d.fitting_start || fSlots.length > 0),
+            fitting_start: d.fitting_start ?? firstFSlot?.time ?? '08:00',
+            fitting_end: d.fitting_end ?? lastFSlot?.time ?? '12:00',
+            fitting_interval: d.fitting_interval ?? fInterval,
+            fitting_capacity: firstFSlot?.capacity ?? 5,
+            shows: d.shows ?? [],
+            has_assigned_shows: (d.shows ?? []).some(s => s.designers_count > 0),
+        };
+    }),
 });
 
 const statusOptions = [
@@ -56,6 +83,11 @@ function addDay() {
         casting_end: '23:00',
         casting_interval: 30,
         casting_capacity: 50,
+        has_fitting: false,
+        fitting_start: '08:00',
+        fitting_end: '12:00',
+        fitting_interval: 30,
+        fitting_capacity: 5,
         shows: [],
         has_assigned_shows: false,
     });
@@ -68,6 +100,23 @@ function removeDay(index) {
         router.delete(`/admin/events/${props.event.id}/days/${day.id}`, { preserveScroll: true });
     }
     form.days.splice(index, 1);
+}
+
+// Auto-rellenar inicio/fin casting y fitting cuando cambian start_time/end_time de un día
+function syncDayTimes(day) {
+    if (day.type === 'casting') {
+        if (day.start_time) day.casting_start = day.start_time;
+        if (day.end_time) day.casting_end = day.end_time;
+    }
+    if (day.type === 'fitting' || day.has_fitting) {
+        if (day.start_time) day.fitting_start = day.start_time;
+        if (day.end_time) day.fitting_end = day.end_time;
+    }
+}
+
+// Cuando cambia el tipo de un día, auto-rellenar con start_time/end_time existentes
+function onTypeChange(day) {
+    syncDayTimes(day);
 }
 
 function deleteShow(day, show) {
@@ -93,7 +142,20 @@ function addShow(day) {
 }
 
 function submit() {
-    form.put(`/admin/events/${props.event.id}`);
+    form.transform(data => ({
+        ...data,
+        days: data.days.map(d => {
+            const day = { ...d };
+            const shouldSendFitting = d.type === 'fitting' || (d.type === 'show_day' && d.has_fitting);
+            if (!shouldSendFitting) {
+                delete day.fitting_start;
+                delete day.fitting_end;
+                delete day.fitting_interval;
+                delete day.fitting_capacity;
+            }
+            return day;
+        }),
+    })).put(`/admin/events/${props.event.id}`);
 }
 </script>
 
@@ -176,7 +238,7 @@ function submit() {
                             v-for="(day, i) in form.days"
                             :key="day.id ?? `new-${i}`"
                             class="border border-gray-200 rounded-xl p-4"
-                            :class="day.type === 'casting' ? 'border-yellow-300' : day.type === 'show_day' ? 'border-green-200' : ''"
+                            :class="day.type === 'casting' ? 'border-yellow-300' : day.type === 'show_day' ? 'border-green-200' : day.type === 'fitting' ? 'border-orange-300' : ''"
                         >
                             <!-- Day fields -->
                             <div class="flex items-end gap-3 flex-wrap">
@@ -193,11 +255,12 @@ function submit() {
                                 </div>
                                 <div class="w-32">
                                     <label class="text-xs text-gray-500 mb-0.5 block">Tipo</label>
-                                    <select v-model="day.type"
+                                    <select v-model="day.type" @change="onTypeChange(day)"
                                         class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                                         <option value="setup">Setup</option>
                                         <option value="casting">Casting</option>
                                         <option value="show_day">Show Day</option>
+                                        <option value="fitting">Fitting</option>
                                         <option value="ceremony">Ceremonia</option>
                                         <option value="other">Otro</option>
                                     </select>
@@ -205,11 +268,11 @@ function submit() {
                                 <div class="flex gap-2">
                                     <div>
                                         <label class="text-xs text-gray-500 mb-0.5 block">Inicio</label>
-                                        <input v-model="day.start_time" type="time" class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm w-24 focus:outline-none" />
+                                        <input v-model="day.start_time" @change="syncDayTimes(day)" type="time" class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm w-24 focus:outline-none" />
                                     </div>
                                     <div>
                                         <label class="text-xs text-gray-500 mb-0.5 block">Fin</label>
-                                        <input v-model="day.end_time" type="time" class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm w-24 focus:outline-none" />
+                                        <input v-model="day.end_time" @change="syncDayTimes(day)" type="time" class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm w-24 focus:outline-none" />
                                     </div>
                                 </div>
                                 <div class="mt-4">
@@ -253,6 +316,34 @@ function submit() {
                                 </div>
                             </div>
 
+                            <!-- Fitting fields (for type "fitting") -->
+                            <div v-if="day.type === 'fitting'" class="mt-3 pt-3 border-t border-orange-200 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div>
+                                    <label class="text-xs text-orange-700 font-medium mb-0.5 block">Inicio fitting</label>
+                                    <input v-model="day.fitting_start" type="time"
+                                        class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
+                                </div>
+                                <div>
+                                    <label class="text-xs text-orange-700 font-medium mb-0.5 block">Fin fitting</label>
+                                    <input v-model="day.fitting_end" type="time"
+                                        class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
+                                </div>
+                                <div>
+                                    <label class="text-xs text-orange-700 font-medium mb-0.5 block">Intervalo (min)</label>
+                                    <select v-model="day.fitting_interval"
+                                        class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30">
+                                        <option :value="15">15 min</option>
+                                        <option :value="30">30 min</option>
+                                        <option :value="60">60 min</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-orange-700 font-medium mb-0.5 block">Cap. por slot</label>
+                                    <input v-model.number="day.fitting_capacity" type="number" min="1"
+                                        class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
+                                </div>
+                            </div>
+
                             <!-- Shows for this day (only for existing saved days) -->
                             <div v-if="day.id && day.type === 'show_day'" class="mt-3 pt-3 border-t border-gray-100">
                                 <p class="text-xs text-gray-500 mb-2 font-medium">Shows ({{ day.shows?.length ?? 0 }})</p>
@@ -288,6 +379,40 @@ function submit() {
                                         :disabled="!newShowTimes[day.id]"
                                         class="px-3 py-1 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors"
                                     >+ Show</button>
+                                </div>
+
+                                <!-- Fitting toggle for show_day -->
+                                <div class="mt-3 pt-3 border-t border-orange-100">
+                                    <label class="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                                        <input v-model="day.has_fitting" type="checkbox" class="rounded text-orange-500 focus:ring-orange-400" />
+                                        Incluir fitting en la mañana
+                                    </label>
+                                    <div v-if="day.has_fitting" class="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        <div>
+                                            <label class="text-xs text-orange-700 font-medium mb-0.5 block">Inicio fitting</label>
+                                            <input v-model="day.fitting_start" type="time"
+                                                class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
+                                        </div>
+                                        <div>
+                                            <label class="text-xs text-orange-700 font-medium mb-0.5 block">Fin fitting</label>
+                                            <input v-model="day.fitting_end" type="time"
+                                                class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
+                                        </div>
+                                        <div>
+                                            <label class="text-xs text-orange-700 font-medium mb-0.5 block">Intervalo (min)</label>
+                                            <select v-model="day.fitting_interval"
+                                                class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30">
+                                                <option :value="15">15 min</option>
+                                                <option :value="30">30 min</option>
+                                                <option :value="60">60 min</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="text-xs text-orange-700 font-medium mb-0.5 block">Cap. por slot</label>
+                                            <input v-model.number="day.fitting_capacity" type="number" min="1"
+                                                class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

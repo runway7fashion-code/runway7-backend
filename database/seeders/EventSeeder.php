@@ -239,6 +239,7 @@ class EventSeeder extends Seeder
                 'casting_checked_in_at' => now(),
                 'status'                => 'confirmed',
             ]);
+            $castingDay->castingSlots()->where('time', '08:00')->increment('booked');
         }
 
         if ($model2) {
@@ -249,6 +250,94 @@ class EventSeeder extends Seeder
                 'casting_checked_in_at' => now(),
                 'status'                => 'confirmed',
             ]);
+            $castingDay->castingSlots()->where('time', '08:30')->increment('booked');
+        }
+
+        // Modelo 3: Camila Duarte — casting 09:00
+        $model3 = User::where('email', 'camila.duarte@models.com')->first();
+        if ($model3) {
+            $event->models()->attach($model3->id, [
+                'participation_number'  => 3,
+                'casting_time'          => '09:00',
+                'casting_status'        => 'scheduled',
+                'status'                => 'confirmed',
+            ]);
+            $castingDay->castingSlots()->where('time', '09:00')->increment('booked');
+        }
+
+        // Modelo 4: Aisha Williams — casting 09:30
+        $model4 = User::where('email', 'aisha.w@models.com')->first();
+        if ($model4) {
+            $event->models()->attach($model4->id, [
+                'participation_number'  => 4,
+                'casting_time'          => '09:30',
+                'casting_status'        => 'scheduled',
+                'status'                => 'confirmed',
+            ]);
+            $castingDay->castingSlots()->where('time', '09:30')->increment('booked');
+        }
+
+        // Modelo 5: Natalia Petrov — casting 10:00
+        $model5 = User::where('email', 'natalia.p@models.com')->first();
+        if ($model5) {
+            $event->models()->attach($model5->id, [
+                'participation_number'  => 5,
+                'casting_time'          => '10:00',
+                'casting_status'        => 'scheduled',
+                'status'                => 'confirmed',
+            ]);
+            $castingDay->castingSlots()->where('time', '10:00')->increment('booked');
+        }
+
+        // ---------------------------------------------------------------
+        // Modelos adicionales 6–35
+        // ---------------------------------------------------------------
+        $extraModelCasting = [
+            // [email, participation_number, casting_time, casting_status]
+            ['daniela.ortiz@models.com',   6,  '08:00', 'checked_in'],
+            ['marco.rivera@models.com',    7,  '08:00', 'scheduled'],
+            ['lina.park@models.com',       8,  '08:30', 'checked_in'],
+            ['emma.thompson@models.com',   9,  '08:30', 'scheduled'],
+            ['valentina.cruz@models.com',  10, '09:00', 'scheduled'],
+            ['zara.ahmed@models.com',      11, '09:30', 'scheduled'],
+            ['mia.santos@models.com',      12, '10:00', 'checked_in'],
+            ['yuki.tanaka@models.com',     13, '10:00', 'scheduled'],
+            ['olivia.white@models.com',    14, '10:30', 'scheduled'],
+            ['amara.diallo@models.com',    15, '10:30', 'scheduled'],
+            ['andre.baptiste@models.com',  16, '11:00', 'scheduled'],
+            ['chloe.martin@models.com',    17, '11:00', 'scheduled'],
+            ['priya.sharma@models.com',    18, '11:30', 'scheduled'],
+            ['adriana.lopez@models.com',   19, '12:00', 'scheduled'],
+            ['naomi.scott@models.com',     20, '12:00', 'scheduled'],
+            ['sara.kim@models.com',        21, '12:30', 'scheduled'],
+            ['bianca.rossi@models.com',    22, '13:00', 'scheduled'],
+            ['fatima.hassan@models.com',   23, '13:00', 'scheduled'],
+            ['kai.nakamura@models.com',    24, '13:30', 'scheduled'],
+            ['elena.volkov@models.com',    25, '14:00', 'scheduled'],
+            ['catalina.reyes@models.com',  26, '14:00', 'scheduled'],
+            ['nia.brooks@models.com',      27, '14:30', 'scheduled'],
+            ['mei.lin@models.com',         28, '15:00', 'scheduled'],
+            ['jordan.ellis@models.com',    29, '15:00', 'scheduled'],
+            ['gabriela.mendez@models.com', 30, '15:30', 'scheduled'],
+            ['sienna.james@models.com',    31, '16:00', 'scheduled'],
+            ['leila.nazari@models.com',    32, '16:30', 'scheduled'],
+            ['harper.davis@models.com',    33, '17:00', 'scheduled'],
+            ['xiomara.vega@models.com',    34, '17:30', 'scheduled'],
+            ['tiana.moore@models.com',     35, '18:00', 'scheduled'],
+        ];
+
+        foreach ($extraModelCasting as [$email, $number, $time, $castingStatus]) {
+            $extraModel = User::where('email', $email)->first();
+            if ($extraModel) {
+                $event->models()->attach($extraModel->id, [
+                    'participation_number'  => $number,
+                    'casting_time'          => $time,
+                    'casting_status'        => $castingStatus,
+                    'casting_checked_in_at' => $castingStatus === 'checked_in' ? now() : null,
+                    'status'                => 'confirmed',
+                ]);
+                $castingDay->castingSlots()->where('time', $time)->increment('booked');
+            }
         }
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\EventDay;
+use App\Models\FittingSlot;
 use App\Models\Show;
 use App\Services\EventService;
 use Illuminate\Http\Request;
@@ -61,6 +62,7 @@ class ShowController extends Controller
         $request->validate([
             'designer_id'     => 'required|exists:users,id',
             'collection_name' => 'nullable|string|max:255',
+            'fitting_slot_id' => 'nullable|exists:fitting_slots,id',
         ]);
 
         try {
@@ -69,6 +71,19 @@ class ShowController extends Controller
                 $request->designer_id,
                 $request->collection_name
             );
+
+            // Asignar fitting si se seleccionó un slot
+            if ($request->filled('fitting_slot_id')) {
+                $fittingSlot = FittingSlot::find($request->fitting_slot_id);
+                if ($fittingSlot) {
+                    try {
+                        $this->eventService->assignDesignerToFitting($fittingSlot, $request->designer_id);
+                    } catch (\Exception $e) {
+                        // Ya está asignado, ignorar
+                    }
+                }
+            }
+
             $name = $updated->designers()->where('designer_id', $request->designer_id)->first()?->full_name ?? '';
             return back()->with('success', "Diseñador asignado: {$name}");
         } catch (\Exception $e) {

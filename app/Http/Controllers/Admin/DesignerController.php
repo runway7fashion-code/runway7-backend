@@ -9,9 +9,11 @@ use App\Models\DesignerDisplay;
 use App\Models\DesignerMaterial;
 use App\Models\DesignerPackage;
 use App\Models\Event;
+use App\Models\FittingSlot;
 use App\Models\Show;
 use App\Models\User;
 use App\Services\DesignerService;
+use App\Services\EventService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -19,7 +21,10 @@ use Inertia\Response;
 
 class DesignerController extends Controller
 {
-    public function __construct(protected DesignerService $designerService) {}
+    public function __construct(
+        protected DesignerService $designerService,
+        protected EventService $eventService,
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -112,6 +117,7 @@ class DesignerController extends Controller
             'shows'                   => 'nullable|array',
             'shows.*.show_id'         => 'required|exists:shows,id',
             'shows.*.collection_name' => 'nullable|string|max:255',
+            'fitting_slot_id'         => 'nullable|exists:fitting_slots,id',
         ]);
 
         $userData = $request->only(['first_name', 'last_name', 'email', 'phone']);
@@ -144,6 +150,18 @@ class DesignerController extends Controller
             }
         }
 
+        // Asignar fitting si se seleccionó un slot
+        if ($request->filled('fitting_slot_id')) {
+            $fittingSlot = FittingSlot::find($request->fitting_slot_id);
+            if ($fittingSlot) {
+                try {
+                    $this->eventService->assignDesignerToFitting($fittingSlot, $designer->id);
+                } catch (\Exception $e) {
+                    // Ya está asignado, ignorar
+                }
+            }
+        }
+
         if ($request->filled('event_id')) {
             $this->designerService->syncDesignerPass($designer, $request->event_id, $request->user()->id);
         }
@@ -164,6 +182,7 @@ class DesignerController extends Controller
             'designerAssistants',
             'designerMaterials',
             'designerDisplays',
+            'fittingAssignments.fittingSlot.eventDay',
             'eventPasses',
         ]);
 
@@ -184,6 +203,7 @@ class DesignerController extends Controller
             'designerAssistants',
             'designerMaterials',
             'designerDisplays',
+            'fittingAssignments.fittingSlot.eventDay',
         ]);
 
         $events = $this->getEventsWithShows();
@@ -258,6 +278,7 @@ class DesignerController extends Controller
             'shows'                        => 'nullable|array',
             'shows.*.show_id'              => 'required|exists:shows,id',
             'shows.*.collection_name'      => 'nullable|string|max:255',
+            'fitting_slot_id'       => 'nullable|exists:fitting_slots,id',
         ]);
 
         try {
@@ -273,6 +294,18 @@ class DesignerController extends Controller
                         'collection_name' => $showData['collection_name'] ?? null,
                         'status'          => 'confirmed',
                     ]);
+                }
+            }
+
+            // Asignar fitting si se seleccionó un slot
+            if ($request->filled('fitting_slot_id')) {
+                $fittingSlot = FittingSlot::find($request->fitting_slot_id);
+                if ($fittingSlot) {
+                    try {
+                        $this->eventService->assignDesignerToFitting($fittingSlot, $designer->id);
+                    } catch (\Exception $e) {
+                        // Ya está asignado, ignorar
+                    }
                 }
             }
 
@@ -358,6 +391,35 @@ class DesignerController extends Controller
         $this->designerService->syncDesignerPass($designer, $show->eventDay->event_id, $request->user()->id);
 
         return back()->with('success', 'Show asignado.');
+    }
+
+    public function updateFitting(Request $request, User $designer)
+    {
+        $this->authorizeDesigner($designer);
+
+        $request->validate([
+            'fitting_slot_id' => 'nullable|exists:fitting_slots,id',
+            'event_id'        => 'required|exists:events,id',
+        ]);
+
+        // Remover fitting existente del diseñador en este evento
+        $existingAssignments = $designer->fittingAssignments()
+            ->whereHas('fittingSlot.eventDay', fn($q) => $q->where('event_id', $request->event_id))
+            ->get();
+
+        foreach ($existingAssignments as $assignment) {
+            $assignment->delete();
+        }
+
+        // Asignar nuevo fitting si se seleccionó
+        if ($request->filled('fitting_slot_id')) {
+            $fittingSlot = FittingSlot::find($request->fitting_slot_id);
+            if ($fittingSlot) {
+                $this->eventService->assignDesignerToFitting($fittingSlot, $designer->id);
+            }
+        }
+
+        return back()->with('success', 'Fitting actualizado.');
     }
 
     public function addAssistant(Request $request, User $designer)
@@ -463,7 +525,9 @@ class DesignerController extends Controller
     {
         return Event::whereIn('status', ['published', 'active', 'draft'])
             ->orderBy('start_date', 'desc')
-            ->with(['eventDays' => fn($q) => $q->where('type', 'show_day')->with('shows')])
+            ->with([
+                'eventDays' => fn($q) => $q->whereIn('type', ['show_day', 'fitting'])->with(['shows', 'fittingSlots']),
+            ])
             ->get()
             ->map(fn(Event $event) => [
                 'id'   => $event->id,
@@ -472,9 +536,14 @@ class DesignerController extends Controller
                     'id'    => $day->id,
                     'label' => $day->label,
                     'date'  => $day->date?->format('Y-m-d'),
+                    'type'  => $day->type,
                     'shows' => $day->shows->map(fn($show) => [
                         'id'   => $show->id,
                         'name' => $show->name,
+                    ])->values(),
+                    'fitting_slots' => $day->fittingSlots->map(fn($slot) => [
+                        'id'   => $slot->id,
+                        'time' => $slot->time,
                     ])->values(),
                 ])->values(),
             ]);
@@ -492,6 +561,36 @@ class DesignerController extends Controller
                 $dayMap[$day->id] = $day->label;
             }
         }
+
+        // Modelos asignadas al diseñador por evento
+        $modelRows = \DB::table('show_model')
+            ->join('shows', 'shows.id', '=', 'show_model.show_id')
+            ->join('event_days', 'event_days.id', '=', 'shows.event_day_id')
+            ->join('users', 'users.id', '=', 'show_model.model_id')
+            ->leftJoin('event_model', function ($j) {
+                $j->on('event_model.model_id', '=', 'show_model.model_id')
+                  ->on('event_model.event_id', '=', 'event_days.event_id');
+            })
+            ->where('show_model.designer_id', $designer->id)
+            ->whereIn('show_model.status', ['confirmed', 'reserved', 'requested'])
+            ->select(
+                'event_days.event_id',
+                'users.id as model_id',
+                'users.first_name',
+                'users.last_name',
+                'users.email',
+                'users.profile_picture',
+                'event_model.participation_number',
+                'show_model.status',
+            )
+            ->distinct()
+            ->get();
+
+        $modelsByEvent = $modelRows->groupBy('event_id')->map(fn($rows) =>
+            $rows->unique('model_id')->values()
+        );
+
+        $modelCountsByEvent = $modelsByEvent->map(fn($rows) => $rows->count());
 
         return array_merge($designer->toArray(), [
             'designer_profile' => $profile ? array_merge($profile->toArray(), [
@@ -512,6 +611,16 @@ class DesignerController extends Controller
                 'package_price'         => $event->pivot->package_price,
                 'notes'                 => $event->pivot->notes,
                 'designer_status'       => $event->pivot->status,
+                'models_count'          => $modelCountsByEvent[$event->id] ?? 0,
+                'assigned_models'       => ($modelsByEvent[$event->id] ?? collect())->map(fn($m) => [
+                    'id'                   => $m->model_id,
+                    'first_name'           => $m->first_name,
+                    'last_name'            => $m->last_name,
+                    'email'                => $m->email,
+                    'profile_picture'      => $m->profile_picture,
+                    'participation_number' => $m->participation_number,
+                    'status'               => $m->status,
+                ])->values()->toArray(),
                 'pass'                  => $passMap->has($event->id) ? (function () use ($passMap, $event, $dayMap) {
                     $p = $passMap[$event->id];
                     return [
@@ -569,6 +678,16 @@ class DesignerController extends Controller
                 'music_audio_url'      => $d->music_audio_url,
                 'status'               => $d->status,
                 'notes'                => $d->notes,
+            ])->values(),
+            'fittings' => $designer->fittingAssignments?->map(fn($fa) => [
+                'id'             => $fa->id,
+                'fitting_slot_id'=> $fa->fitting_slot_id,
+                'event_id'       => $fa->fittingSlot?->eventDay?->event_id,
+                'event_day_id'   => $fa->fittingSlot?->event_day_id,
+                'day_label'      => $fa->fittingSlot?->eventDay?->label,
+                'day_date'       => $fa->fittingSlot?->eventDay?->date?->format('Y-m-d'),
+                'time'           => $fa->fittingSlot?->time,
+                'notes'          => $fa->notes,
             ])->values(),
         ]);
     }

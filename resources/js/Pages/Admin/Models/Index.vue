@@ -8,42 +8,59 @@ import { computed } from 'vue';
 const props = defineProps({
     models:            Object,
     events:            Array,
+    designers:         Array,
     filters:           Object,
+    castingTimes:      Array,
     pendingEmailCount: Number,
 });
 
-const search      = ref(props.filters.search      ?? '');
-const event       = ref(props.filters.event       ?? '');
-const compcard    = ref(props.filters.compcard    ?? '');
-const gender      = ref(props.filters.gender      ?? '');
-const email_sent  = ref(props.filters.email_sent  ?? '');
-const test_model  = ref(props.filters.test_model  ?? '');
+const search         = ref(props.filters.search         ?? '');
+const event          = ref(props.filters.event          ?? '');
+const compcard       = ref(props.filters.compcard       ?? '');
+const gender         = ref(props.filters.gender         ?? '');
+const email_sent     = ref(props.filters.email_sent     ?? '');
+const test_model     = ref(props.filters.test_model     ?? '');
+const casting_time   = ref(props.filters.casting_time   ?? '');
+const casting_status = ref(props.filters.casting_status ?? '');
+const designer       = ref(props.filters.designer       ?? '');
 
 let timer = null;
 function applyFilters() {
     clearTimeout(timer);
     timer = setTimeout(() => {
         router.get('/admin/models', {
-            search:     search.value      || undefined,
-            event:      event.value       || undefined,
-            compcard:   compcard.value    || undefined,
-            gender:     gender.value      || undefined,
-            email_sent: email_sent.value  || undefined,
-            test_model: test_model.value  || undefined,
+            search:         search.value         || undefined,
+            event:          event.value          || undefined,
+            compcard:       compcard.value       || undefined,
+            gender:         gender.value         || undefined,
+            email_sent:     email_sent.value     || undefined,
+            test_model:     test_model.value     || undefined,
+            casting_time:   casting_time.value   || undefined,
+            casting_status: casting_status.value || undefined,
+            designer:       designer.value       || undefined,
         }, { preserveState: true, replace: true });
     }, 300);
 }
-watch([search, event, compcard, gender, email_sent, test_model], applyFilters);
+watch([search, event, compcard, gender, email_sent, test_model, casting_time, casting_status, designer], applyFilters);
+
+// Limpiar horario de casting y diseñador cuando cambia el evento
+watch(event, () => {
+    casting_time.value = '';
+    designer.value = '';
+});
 
 // --- Export Excel ---
 const exportUrl = computed(() => {
     const params = new URLSearchParams();
-    if (search.value)     params.set('search',     search.value);
-    if (event.value)      params.set('event',      event.value);
-    if (compcard.value)   params.set('compcard',   compcard.value);
-    if (gender.value)     params.set('gender',     gender.value);
-    if (email_sent.value) params.set('email_sent', email_sent.value);
-    if (test_model.value) params.set('test_model', test_model.value);
+    if (search.value)         params.set('search',         search.value);
+    if (event.value)          params.set('event',          event.value);
+    if (compcard.value)       params.set('compcard',       compcard.value);
+    if (gender.value)         params.set('gender',         gender.value);
+    if (email_sent.value)     params.set('email_sent',     email_sent.value);
+    if (test_model.value)     params.set('test_model',     test_model.value);
+    if (casting_time.value)   params.set('casting_time',   casting_time.value);
+    if (casting_status.value) params.set('casting_status', casting_status.value);
+    if (designer.value)       params.set('designer',       designer.value);
     const qs = params.toString();
     return '/admin/models/export' + (qs ? '?' + qs : '');
 });
@@ -125,6 +142,12 @@ function pivotStatusLabel(status) {
     }[status] ?? status;
 }
 
+// Formatear time HH:MM:SS → HH:MM
+function formatTime(t) {
+    if (!t) return '—';
+    return t.length > 5 ? t.substring(0, 5) : t;
+}
+
 function castingStatusInfo(status) {
     return {
         scheduled:  { label: 'Agendada',        color: 'text-gray-500',  dot: 'bg-gray-400' },
@@ -139,8 +162,24 @@ function castingStatusInfo(status) {
 function participationNumbers(model) {
     const events = model.events_as_model_with_casting ?? [];
     return events
-        .map(ev => ev.pivot?.participation_number)
-        .filter(n => n != null);
+        .filter(ev => ev.pivot?.participation_number != null)
+        .map(ev => ({
+            number: ev.pivot.participation_number,
+            eventName: ev.name,
+            eventStatus: ev.status,
+        }));
+}
+
+const participationModel = ref(null);
+
+function openParticipationModal(model, e) {
+    e.stopPropagation();
+    participationModel.value = model;
+}
+
+// --- Fittings por evento ---
+function eventFittings(model, eventId) {
+    return model.fittings_by_event?.[eventId] ?? [];
 }
 
 // --- Check-ins ---
@@ -280,6 +319,14 @@ function fmtEmailSent(dt) {
                     <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
                 </select>
 
+                <select v-model="designer"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Todos los diseñadores</option>
+                    <option v-for="d in designers" :key="d.id" :value="d.id">
+                        {{ d.brand_name || d.name }}
+                    </option>
+                </select>
+
                 <select v-model="gender"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
                     <option value="">Todos los géneros</option>
@@ -307,6 +354,26 @@ function fmtEmailSent(dt) {
                     <option value="">Tipo: todas</option>
                     <option value="only_real">Solo reales</option>
                     <option value="only_test">Solo prueba</option>
+                </select>
+
+                <select v-model="casting_time"
+                    :disabled="!event"
+                    :class="[
+                        'border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white',
+                        !event ? 'opacity-50 cursor-not-allowed' : ''
+                    ]">
+                    <option value="">{{ event ? 'Horario casting: todos' : 'Seleccione evento primero' }}</option>
+                    <option v-for="t in castingTimes" :key="t" :value="t">{{ t }}</option>
+                </select>
+
+                <select v-model="casting_status"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Estado casting: todos</option>
+                    <option value="scheduled">Agendada</option>
+                    <option value="checked_in">Check-in</option>
+                    <option value="in_progress">En progreso</option>
+                    <option value="completed">Completada</option>
+                    <option value="no_show">No se presentó</option>
                 </select>
             </div>
 
@@ -362,13 +429,18 @@ function fmtEmailSent(dt) {
                                 </button>
                                 <span v-else class="text-gray-400 text-xs">Sin eventos</span>
                             </td>
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-3" @click.stop>
                                 <template v-if="participationNumbers(m).length">
-                                    <div class="flex flex-wrap gap-1">
-                                        <span v-for="num in participationNumbers(m)" :key="num"
+                                    <div class="flex items-center gap-1">
+                                        <span v-for="p in participationNumbers(m).slice(0, 2)" :key="p.number"
                                             class="text-xs font-bold bg-black text-white px-2 py-0.5 rounded-full">
-                                            #{{ num }}
+                                            #{{ p.number }}
                                         </span>
+                                        <button v-if="participationNumbers(m).length > 2"
+                                            @click="openParticipationModal(m, $event)"
+                                            class="text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full hover:bg-gray-200 transition-colors cursor-pointer">
+                                            +{{ participationNumbers(m).length - 2 }}
+                                        </button>
                                     </div>
                                 </template>
                                 <span v-else class="text-xs text-gray-400">—</span>
@@ -576,7 +648,7 @@ function fmtEmailSent(dt) {
                                             </div>
                                             <div v-if="ev.pivot?.casting_time" class="flex items-center gap-1">
                                                 <span class="text-[10px] text-gray-400">Horario:</span>
-                                                <span class="text-xs font-medium text-gray-700">{{ ev.pivot.casting_time }}</span>
+                                                <span class="text-xs font-medium text-gray-700">{{ formatTime(ev.pivot.casting_time) }}</span>
                                             </div>
                                             <div class="ml-auto">
                                                 <span class="text-[10px] text-gray-400 italic">{{ timeAgo(ev.pivot.casting_checked_in_at) }}</span>
@@ -704,7 +776,7 @@ function fmtEmailSent(dt) {
                                         </div>
                                         <div>
                                             <p class="text-[10px] text-gray-400 leading-none mb-0.5">Horario casting</p>
-                                            <p class="text-xs font-semibold text-gray-800">{{ ev.pivot?.casting_time ?? '—' }}</p>
+                                            <p class="text-xs font-semibold text-gray-800">{{ formatTime(ev.pivot?.casting_time) }}</p>
                                         </div>
                                     </div>
 
@@ -759,6 +831,26 @@ function fmtEmailSent(dt) {
                                         </span>
                                     </p>
                                 </div>
+
+                                <!-- Fitting schedule -->
+                                <div v-if="eventFittings(selectedModel, ev.id).length"
+                                    class="mt-3 pt-3 border-t border-gray-100 space-y-1.5">
+                                    <div v-for="f in eventFittings(selectedModel, ev.id)" :key="f.time + f.designer_name"
+                                        class="flex items-center gap-2 bg-orange-50 border border-orange-100 rounded-lg px-3 py-2">
+                                        <div class="w-6 h-6 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-3 h-3 text-orange-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-[10px] text-orange-500 leading-none mb-0.5">Fitting</p>
+                                            <p class="text-xs font-semibold text-orange-700">
+                                                {{ f.day_label }} · {{ f.time }}
+                                                <span class="font-normal text-orange-500 ml-1">{{ f.brand_name || f.designer_name }}</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -769,6 +861,90 @@ function fmtEmailSent(dt) {
                                 Ver perfil completo →
                             </Link>
                             <button @click="selectedModel = null"
+                                class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                                Cerrar
+                            </button>
+                        </div>
+
+                    </div>
+                </Transition>
+            </div>
+        </Transition>
+    </Teleport>
+
+    <!-- Modal: Números de participación -->
+    <Teleport to="body">
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0">
+            <div v-if="participationModel" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="participationModel = null"></div>
+
+                <Transition
+                    enter-active-class="transition duration-200 ease-out"
+                    enter-from-class="opacity-0 scale-95 translate-y-2"
+                    enter-to-class="opacity-100 scale-100 translate-y-0"
+                    leave-active-class="transition duration-150 ease-in"
+                    leave-from-class="opacity-100 scale-100 translate-y-0"
+                    leave-to-class="opacity-0 scale-95 translate-y-2">
+                    <div v-if="participationModel" class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+
+                        <!-- Header -->
+                        <div class="bg-black px-6 py-5">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 border-2 border-white/20">
+                                        <img v-if="storageUrl(participationModel.profile_picture)"
+                                            :src="storageUrl(participationModel.profile_picture)"
+                                            class="w-full h-full object-cover" />
+                                        <div v-else class="w-full h-full bg-white/10 flex items-center justify-center text-sm font-bold text-white">
+                                            {{ participationModel.first_name?.[0] }}{{ participationModel.last_name?.[0] }}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-white text-base leading-tight">
+                                            {{ participationModel.first_name }} {{ participationModel.last_name }}
+                                        </p>
+                                        <p class="text-white/50 text-xs mt-0.5">
+                                            {{ participationNumbers(participationModel).length }} número{{ participationNumbers(participationModel).length !== 1 ? 's' : '' }} de participación
+                                        </p>
+                                    </div>
+                                </div>
+                                <button @click="participationModel = null"
+                                    class="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white">
+                                    <XMarkIcon class="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Lista de participaciones -->
+                        <div class="p-5 space-y-2.5 max-h-[60vh] overflow-y-auto">
+                            <div v-for="p in participationNumbers(participationModel)" :key="p.number"
+                                class="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 hover:border-gray-200 transition-colors">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <span class="text-sm font-bold bg-black text-white px-2.5 py-1 rounded-full flex-shrink-0">
+                                        #{{ p.number }}
+                                    </span>
+                                    <p class="text-sm text-gray-700 font-medium truncate">{{ p.eventName }}</p>
+                                </div>
+                                <span :class="eventStatusBadge(p.eventStatus)"
+                                    class="flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full ml-2">
+                                    {{ eventStatusLabel(p.eventStatus) }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
+                            <Link :href="`/admin/models/${participationModel.id}`"
+                                class="text-sm font-semibold text-black hover:underline underline-offset-2">
+                                Ver perfil completo →
+                            </Link>
+                            <button @click="participationModel = null"
                                 class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
                                 Cerrar
                             </button>

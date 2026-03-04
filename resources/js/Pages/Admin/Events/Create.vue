@@ -61,11 +61,32 @@ watch([() => form.start_date, () => form.end_date], () => {
             casting_interval: 30,
             casting_capacity: 50,
             time_slots: [...form.time_slots],
+            has_fitting: false,
+            fitting_start: '08:00',
+            fitting_end: '12:00',
+            fitting_interval: 30,
+            fitting_capacity: 5,
         });
         current.setDate(current.getDate() + 1);
         dayNum++;
     }
     form.days = generated;
+});
+
+// Cuando se desactiva "Aplicar a todos", sincronizar los slots globales a cada día
+// filtrando según el horario de inicio/fin de cada día
+watch(() => form.apply_same_schedule, (val) => {
+    if (!val) {
+        form.days.forEach(d => {
+            if (d.type === 'show_day') {
+                d.time_slots = form.time_slots.filter(t => {
+                    if (d.start_time && t < d.start_time) return false;
+                    if (d.end_time && t > d.end_time) return false;
+                    return true;
+                });
+            }
+        });
+    }
 });
 
 const showDaysCount = computed(() => form.days.filter(d => d.type === 'show_day').length);
@@ -88,11 +109,32 @@ function addDay() {
         casting_interval: 30,
         casting_capacity: 50,
         time_slots: [...form.time_slots],
+        has_fitting: false,
+        fitting_start: '08:00',
+        fitting_end: '12:00',
+        fitting_interval: 30,
+        fitting_capacity: 5,
     });
 }
 
 function removeDay(index) {
     form.days.splice(index, 1);
+}
+
+// Auto-rellenar inicio/fin casting y fitting cuando cambian start_time/end_time
+function syncDayTimes(day) {
+    if (day.type === 'casting') {
+        if (day.start_time) day.casting_start = day.start_time;
+        if (day.end_time) day.casting_end = day.end_time;
+    }
+    if (day.type === 'fitting' || day.has_fitting) {
+        if (day.start_time) day.fitting_start = day.start_time;
+        if (day.end_time) day.fitting_end = day.end_time;
+    }
+}
+
+function onTypeChange(day) {
+    syncDayTimes(day);
 }
 
 function addTimeSlot() {
@@ -125,6 +167,7 @@ const typeConfig = {
     setup:    { label: 'Setup',     class: 'bg-gray-700 text-gray-300' },
     casting:  { label: 'Casting',   class: 'bg-yellow-800/60 text-yellow-300' },
     show_day: { label: 'Show Day',  class: 'bg-green-800/60 text-green-300' },
+    fitting:  { label: 'Fitting',   class: 'bg-orange-800/60 text-orange-300' },
     ceremony: { label: 'Ceremonia', class: 'bg-purple-800/60 text-purple-300' },
     other:    { label: 'Otro',      class: 'bg-blue-800/60 text-blue-300' },
 };
@@ -133,6 +176,18 @@ function submit() {
     const payload = {
         ...form.data(),
         city: form.city === 'Otro' ? form.city_custom : form.city,
+        days: form.days.map(d => {
+            const day = { ...d };
+            // Solo enviar datos de fitting si corresponde
+            const shouldSendFitting = d.type === 'fitting' || (d.type === 'show_day' && d.has_fitting);
+            if (!shouldSendFitting) {
+                delete day.fitting_start;
+                delete day.fitting_end;
+                delete day.fitting_interval;
+                delete day.fitting_capacity;
+            }
+            return day;
+        }),
     };
     form.transform(() => payload).post('/admin/events');
 }
@@ -260,7 +315,7 @@ function submit() {
                         v-for="(day, index) in form.days"
                         :key="index"
                         class="border border-gray-200 rounded-xl p-4"
-                        :class="day.type === 'casting' ? 'border-yellow-300 bg-yellow-50/30' : day.type === 'show_day' ? 'border-green-200 bg-green-50/20' : ''"
+                        :class="day.type === 'casting' ? 'border-yellow-300 bg-yellow-50/30' : day.type === 'show_day' ? 'border-green-200 bg-green-50/20' : day.type === 'fitting' ? 'border-orange-300 bg-orange-50/30' : ''"
                     >
                         <div class="flex items-center gap-3 flex-wrap">
                             <!-- Date -->
@@ -281,11 +336,12 @@ function submit() {
                             <!-- Type -->
                             <div class="w-36">
                                 <p class="text-xs text-gray-500 mb-0.5">Tipo</p>
-                                <select v-model="day.type"
+                                <select v-model="day.type" @change="onTypeChange(day)"
                                     class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                                     <option value="setup">Setup</option>
                                     <option value="casting">Casting</option>
                                     <option value="show_day">Show Day</option>
+                                    <option value="fitting">Fitting</option>
                                     <option value="ceremony">Ceremonia</option>
                                     <option value="other">Otro</option>
                                 </select>
@@ -295,12 +351,12 @@ function submit() {
                             <div class="flex gap-2">
                                 <div>
                                     <p class="text-xs text-gray-500 mb-0.5">Inicio</p>
-                                    <input v-model="day.start_time" type="time"
+                                    <input v-model="day.start_time" @change="syncDayTimes(day)" type="time"
                                         class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 w-24" />
                                 </div>
                                 <div>
                                     <p class="text-xs text-gray-500 mb-0.5">Fin</p>
-                                    <input v-model="day.end_time" type="time"
+                                    <input v-model="day.end_time" @change="syncDayTimes(day)" type="time"
                                         class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 w-24" />
                                 </div>
                             </div>
@@ -339,9 +395,69 @@ function submit() {
                             </div>
                         </div>
 
-                        <!-- Show day badge -->
-                        <div v-if="day.type === 'show_day'" class="mt-2">
-                            <span class="text-xs text-green-600 font-medium">Shows se configuran en el paso 3</span>
+                        <!-- Fitting extra fields (for type "fitting") -->
+                        <div v-if="day.type === 'fitting'" class="mt-3 pt-3 border-t border-orange-200 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div>
+                                <label class="text-xs text-orange-700 font-medium mb-0.5 block">Inicio fitting</label>
+                                <input v-model="day.fitting_start" type="time"
+                                    class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
+                            </div>
+                            <div>
+                                <label class="text-xs text-orange-700 font-medium mb-0.5 block">Fin fitting</label>
+                                <input v-model="day.fitting_end" type="time"
+                                    class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
+                            </div>
+                            <div>
+                                <label class="text-xs text-orange-700 font-medium mb-0.5 block">Intervalo (min)</label>
+                                <select v-model="day.fitting_interval"
+                                    class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30">
+                                    <option :value="15">15 min</option>
+                                    <option :value="30">30 min</option>
+                                    <option :value="60">60 min</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs text-orange-700 font-medium mb-0.5 block">Cap. por slot</label>
+                                <input v-model.number="day.fitting_capacity" type="number" min="1"
+                                    class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
+                            </div>
+                        </div>
+
+                        <!-- Show day with optional fitting -->
+                        <div v-if="day.type === 'show_day'" class="mt-2 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-green-600 font-medium">Shows se configuran en el paso 3</span>
+                                <label class="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+                                    <input v-model="day.has_fitting" type="checkbox" class="rounded text-orange-500 focus:ring-orange-400" />
+                                    Incluir fitting en la mañana
+                                </label>
+                            </div>
+                            <div v-if="day.has_fitting" class="pt-2 border-t border-orange-200 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div>
+                                    <label class="text-xs text-orange-700 font-medium mb-0.5 block">Inicio fitting</label>
+                                    <input v-model="day.fitting_start" type="time"
+                                        class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
+                                </div>
+                                <div>
+                                    <label class="text-xs text-orange-700 font-medium mb-0.5 block">Fin fitting</label>
+                                    <input v-model="day.fitting_end" type="time"
+                                        class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
+                                </div>
+                                <div>
+                                    <label class="text-xs text-orange-700 font-medium mb-0.5 block">Intervalo (min)</label>
+                                    <select v-model="day.fitting_interval"
+                                        class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30">
+                                        <option :value="15">15 min</option>
+                                        <option :value="30">30 min</option>
+                                        <option :value="60">60 min</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-orange-700 font-medium mb-0.5 block">Cap. por slot</label>
+                                    <input v-model.number="day.fitting_capacity" type="number" min="1"
+                                        class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
+                                </div>
+                            </div>
                         </div>
                     </div>
 

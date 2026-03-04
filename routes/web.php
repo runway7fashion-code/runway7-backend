@@ -66,6 +66,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::patch('designers/{designer}/shows/{show}/cancel', [DesignerController::class, 'cancelShow'])->name('designers.cancel-show');
             Route::delete('designers/{designer}/shows/{show}', [DesignerController::class, 'removeShow'])->name('designers.remove-show');
             Route::post('designers/{designer}/shows', [DesignerController::class, 'addShow'])->name('designers.add-show');
+            Route::put('designers/{designer}/fitting', [DesignerController::class, 'updateFitting'])->name('designers.update-fitting');
             Route::put('designer-materials/{material}', [DesignerController::class, 'updateMaterial'])->name('designers.update-material');
             Route::put('designer-displays/{display}', [DesignerController::class, 'updateDisplay'])->name('designers.update-display');
             Route::post('designer-displays/{display}/upload-video', [DesignerController::class, 'uploadVideo'])->name('designers.upload-video');
@@ -89,6 +90,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('shows/{show}', [ShowController::class, 'destroy'])->name('shows.destroy');
             Route::post('shows/{show}/assign-designer', [ShowController::class, 'assignDesigner'])->name('shows.assign-designer');
             Route::post('shows/{show}/remove-designer', [ShowController::class, 'removeDesigner'])->name('shows.remove-designer');
+
+            // Fitting — asignación de diseñadores a slots
+            Route::post('fitting-slots/{fittingSlot}/assign-designer', [EventController::class, 'assignDesignerToFitting'])->name('fitting-slots.assign-designer');
+            Route::delete('fitting-slots/{fittingSlot}/remove-designer/{designer}', [EventController::class, 'removeDesignerFromFitting'])->name('fitting-slots.remove-designer');
         });
 
         // Chats - admin, operation

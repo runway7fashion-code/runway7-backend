@@ -1,8 +1,10 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { ref, reactive, watch } from 'vue';
 import { PhotoIcon } from '@heroicons/vue/24/outline';
+
+const failedImgs = reactive({});
 
 const props = defineProps({
     banners: Array,
@@ -129,12 +131,14 @@ function moveDown(banner, index) {
                     class="bg-white rounded-2xl border border-gray-200 overflow-hidden group transition-shadow hover:shadow-lg"
                     :class="banner.status === 'inactive' ? 'opacity-60' : ''">
                     <!-- Imagen preview -->
-                    <div class="aspect-[16/9] bg-gray-100 relative overflow-hidden">
-                        <img v-if="storageUrl(banner.image_url)"
+                    <div class="aspect-[16/9] bg-gray-50 relative overflow-hidden">
+                        <img v-if="storageUrl(banner.image_url) && !failedImgs[banner.id]"
                             :src="storageUrl(banner.image_url)"
+                            @error="failedImgs[banner.id] = true"
                             class="w-full h-full object-cover" />
-                        <div v-else class="w-full h-full flex items-center justify-center text-gray-300">
-                            <PhotoIcon class="w-12 h-12" />
+                        <div v-else class="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-300 border-2 border-dashed border-gray-200 rounded-t-2xl">
+                            <PhotoIcon class="w-10 h-10" />
+                            <span class="text-xs text-gray-400">Sin imagen</span>
                         </div>
 
                         <!-- Status badge -->

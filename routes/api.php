@@ -23,5 +23,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
         // Banners
         Route::get('banners', [App\Http\Controllers\Api\V1\BannerController::class, 'index'])->name('banners');
+
+        // Events / Fittings
+        Route::get('my-fittings', [App\Http\Controllers\Api\V1\EventController::class, 'myFittings'])->name('my-fittings');
     });
 });

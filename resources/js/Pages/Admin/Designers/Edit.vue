@@ -41,6 +41,7 @@ const form = useForm({
 // Eventos del diseñador
 const designerEvents = computed(() => props.designer.events ?? []);
 const designerShows  = computed(() => props.designer.shows ?? []);
+const designerFittings = computed(() => props.designer.fittings ?? []);
 
 // Asignar evento
 const selectedEventId = ref('');
@@ -63,6 +64,18 @@ watch(selectedPackageId, (newId) => {
 
 // Shows del evento seleccionado
 const assignShows = ref([]);
+const assignFittingSlotId = ref('');
+
+// Fitting slots del evento seleccionado (de cualquier día)
+const eventFittingSlots = computed(() => {
+    const slots = [];
+    for (const day of (selectedEventData.value?.days ?? [])) {
+        for (const slot of day.fitting_slots ?? []) {
+            slots.push({ ...slot, day_label: day.label, day_date: day.date });
+        }
+    }
+    return slots;
+});
 
 function isShowSelected(showId) {
     return assignShows.value.some(s => s.show_id === showId);
@@ -87,6 +100,7 @@ function assignEvent() {
         package_price:         assignPrice.value || null,
         notes:                 assignNotes.value || null,
         shows:                 assignShows.value.length ? assignShows.value : null,
+        fitting_slot_id:       assignFittingSlotId.value || null,
     }, {
         preserveScroll: true,
         onSuccess: () => {
@@ -97,6 +111,7 @@ function assignEvent() {
             assignCasting.value = true;
             assignNotes.value = '';
             assignShows.value = [];
+            assignFittingSlotId.value = '';
         },
     });
 }
@@ -243,6 +258,30 @@ function getAddShowState(eventId) {
         addShowState.value[eventId] = { showId: '', collection: '' };
     }
     return addShowState.value[eventId];
+}
+
+// Fitting helpers para eventos ya asignados
+function fittingForEvent(eventId) {
+    return designerFittings.value.find(f => f.event_id === eventId) ?? null;
+}
+
+function fittingSlotsForEvent(eventId) {
+    const eventData = props.events?.find(e => e.id === eventId);
+    if (!eventData) return [];
+    const slots = [];
+    for (const day of eventData.days ?? []) {
+        for (const slot of day.fitting_slots ?? []) {
+            slots.push({ ...slot, day_label: day.label, day_date: day.date });
+        }
+    }
+    return slots;
+}
+
+function updateFitting(eventId, fittingSlotId) {
+    router.put(`/admin/designers/${props.designer.id}/fitting`, {
+        event_id: eventId,
+        fitting_slot_id: fittingSlotId || null,
+    }, { preserveScroll: true });
 }
 
 function addShowToEvent(eventId) {
@@ -497,6 +536,18 @@ function submit() {
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Fitting slot selector -->
+                            <div v-if="eventFittingSlots.length" class="border-t border-gray-100 pt-3">
+                                <label class="block text-xs font-semibold text-orange-600 mb-2">Horario de Fitting (opcional)</label>
+                                <select v-model="assignFittingSlotId"
+                                    class="w-full border border-orange-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30">
+                                    <option value="">— Sin fitting —</option>
+                                    <option v-for="slot in eventFittingSlots" :key="slot.id" :value="slot.id">
+                                        {{ slot.day_label }} · {{ slot.time }}
+                                    </option>
+                                </select>
+                            </div>
                         </div>
 
                         <button type="button" @click="assignEvent"
@@ -520,6 +571,7 @@ function submit() {
                                 <div class="flex items-center gap-3 mt-1 text-xs text-gray-400">
                                     <span v-if="evt.package_price">${{ Number(evt.package_price).toLocaleString() }}</span>
                                     <span>{{ evt.looks }} looks</span>
+                                    <span>{{ evt.models_count ?? 0 }} modelos</span>
                                     <span>Casting: {{ evt.model_casting_enabled ? 'Si' : 'No' }}</span>
                                     <span v-if="evt.designer_status === 'cancelled'"
                                         class="px-1.5 py-0.5 rounded bg-red-50 text-red-600 font-medium">
@@ -584,6 +636,24 @@ function submit() {
                                     </button>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Fitting del evento -->
+                        <div v-if="fittingSlotsForEvent(evt.id).length" class="border-t border-gray-100 pt-3">
+                            <p class="text-xs font-semibold text-orange-600 mb-2">Fitting</p>
+                            <div v-if="fittingForEvent(evt.id)" class="flex items-center gap-2 mb-2">
+                                <span class="text-xs bg-orange-50 text-orange-700 border border-orange-200 px-2 py-1 rounded-lg">
+                                    {{ fittingForEvent(evt.id).day_label }} · {{ fittingForEvent(evt.id).time }}
+                                </span>
+                            </div>
+                            <select @change="updateFitting(evt.id, $event.target.value)"
+                                :value="fittingForEvent(evt.id)?.fitting_slot_id ?? ''"
+                                class="w-full border border-orange-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30">
+                                <option value="">— Sin fitting —</option>
+                                <option v-for="slot in fittingSlotsForEvent(evt.id)" :key="slot.id" :value="slot.id">
+                                    {{ slot.day_label }} · {{ slot.time }}
+                                </option>
+                            </select>
                         </div>
                     </div>
                 </div>

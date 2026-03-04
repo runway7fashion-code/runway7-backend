@@ -91,6 +91,15 @@ class Event extends Model
             ->count();
     }
 
+    public function showsWithDesignersCount(): int
+    {
+        $showIds = Show::whereIn('event_day_id', $this->eventDays()->pluck('id'))->pluck('id');
+        return \Illuminate\Support\Facades\DB::table('show_designer')
+            ->whereIn('show_id', $showIds)
+            ->distinct('show_id')
+            ->count('show_id');
+    }
+
     public function isUpcoming(): bool
     {
         return $this->start_date > Carbon::today();

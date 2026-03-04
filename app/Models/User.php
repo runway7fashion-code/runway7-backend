@@ -140,6 +140,7 @@ class User extends Authenticatable
     public function designerAssistants() { return $this->hasMany(DesignerAssistant::class, 'designer_id'); }
     public function designerMaterials() { return $this->hasMany(DesignerMaterial::class, 'designer_id'); }
     public function designerDisplays() { return $this->hasMany(DesignerDisplay::class, 'designer_id'); }
+    public function fittingAssignments() { return $this->hasMany(FittingAssignment::class, 'designer_id'); }
     public function eventPasses() { return $this->hasMany(EventPass::class, 'user_id'); }
 
     public function eventsAsStaff()

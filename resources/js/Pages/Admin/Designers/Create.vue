@@ -42,6 +42,7 @@ const form = useForm({
     package_price:         '',
     notes:                 '',
     shows:                 [],
+    fitting_slot_id:       '',
     // Tab 3 - Asistentes
     assistants: [],
 });
@@ -62,6 +63,17 @@ watch(() => form.package_id, (newId) => {
 
 // Shows del evento seleccionado (agrupados por día)
 const eventDays = computed(() => selectedEvent.value?.days ?? []);
+
+// Fitting slots del evento seleccionado
+const eventFittingSlots = computed(() => {
+    const slots = [];
+    for (const day of (selectedEvent.value?.days ?? [])) {
+        for (const slot of day.fitting_slots ?? []) {
+            slots.push({ ...slot, day_label: day.label, day_date: day.date });
+        }
+    }
+    return slots;
+});
 
 function isShowSelected(showId) {
     return form.shows.some(s => s.show_id === showId);
@@ -316,6 +328,18 @@ function submit() {
                                     </button>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Fitting slot selector -->
+                        <div v-if="eventFittingSlots.length" class="border-t border-gray-100 pt-4">
+                            <label class="block text-sm font-semibold text-orange-600 mb-2">Horario de Fitting (opcional)</label>
+                            <select v-model="form.fitting_slot_id"
+                                class="w-full border border-orange-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30">
+                                <option value="">— Sin fitting —</option>
+                                <option v-for="slot in eventFittingSlots" :key="slot.id" :value="slot.id">
+                                    {{ slot.day_label }} · {{ slot.time }}
+                                </option>
+                            </select>
                         </div>
                     </div>
                 </div>

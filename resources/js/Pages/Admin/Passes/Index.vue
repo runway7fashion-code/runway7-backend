@@ -23,7 +23,7 @@ const statusF  = ref(props.filters.status ?? '');
 
 function applyFilters() {
     router.get('/admin/passes', {
-        event_id: eventId.value,
+        event_id: eventId.value || undefined,
         search:   search.value || undefined,
         type:     typeF.value  || undefined,
         status:   statusF.value || undefined,
@@ -157,6 +157,7 @@ const selectedEvent = computed(() => props.events.find(e => e.id === eventId.val
                 <div class="flex-1 min-w-48">
                     <label class="block text-xs font-medium text-gray-500 mb-1">Evento</label>
                     <select v-model="eventId" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                        <option :value="null">Todos los eventos</option>
                         <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
                     </select>
                 </div>
@@ -181,24 +182,20 @@ const selectedEvent = computed(() => props.events.find(e => e.id === eventId.val
 
                 <div class="flex-1 min-w-48">
                     <label class="block text-xs font-medium text-gray-500 mb-1">Buscar</label>
-                    <div class="flex gap-2">
-                        <input
-                            v-model="search"
-                            @keyup.enter="applyFilters"
-                            type="text"
-                            placeholder="Nombre, email, QR..."
-                            class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                        />
-                        <button @click="applyFilters" class="px-3 py-2 bg-gray-100 rounded-lg text-sm hover:bg-gray-200 transition-colors">
-                            Buscar
-                        </button>
-                    </div>
+                    <input
+                        v-model="search"
+                        @keyup.enter="applyFilters"
+                        type="text"
+                        placeholder="Nombre, email, QR..."
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    />
                 </div>
 
-                <div class="flex items-end">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">&nbsp;</label>
                     <button
                         @click="showCreate = true"
-                        :disabled="!selectedEventId"
+                        :disabled="!eventId"
                         class="px-4 py-2 rounded-lg text-sm font-medium text-black transition-colors disabled:opacity-40"
                         style="background-color: #D4AF37;"
                     >
@@ -234,6 +231,7 @@ const selectedEvent = computed(() => props.events.find(e => e.id === eventId.val
                         <thead class="bg-gray-50 border-b border-gray-200">
                             <tr>
                                 <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">QR / Titular</th>
+                                <th v-if="!eventId" class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Evento</th>
                                 <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
                                 <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                                 <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Emitido</th>
@@ -246,6 +244,9 @@ const selectedEvent = computed(() => props.events.find(e => e.id === eventId.val
                                     <p class="font-mono text-xs text-gray-400 mb-0.5">{{ pass.qr_code }}</p>
                                     <p class="font-medium text-gray-900">{{ pass.holder_name }}</p>
                                     <p v-if="pass.holder_email" class="text-xs text-gray-500">{{ pass.holder_email }}</p>
+                                </td>
+                                <td v-if="!eventId" class="px-4 py-3">
+                                    <p class="text-xs text-gray-600 font-medium">{{ pass.event_name }}</p>
                                 </td>
                                 <td class="px-4 py-3">
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" :class="typeColors[pass.pass_type] ?? 'bg-gray-100 text-gray-700'">

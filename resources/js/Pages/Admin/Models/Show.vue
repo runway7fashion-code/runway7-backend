@@ -9,9 +9,10 @@ const props = defineProps({
     model: Object,
 });
 
-const profile = props.model.model_profile;
-const events  = props.model.events ?? [];
-const shows   = props.model.shows  ?? [];
+const profile  = props.model.model_profile;
+const events   = props.model.events ?? [];
+const shows    = props.model.shows  ?? [];
+const fittings = props.model.fittings ?? [];
 
 function storageUrl(path) {
     if (!path) return null;
@@ -304,6 +305,16 @@ function deleteModel() {
                                     <span :class="showStatusClass(s.status)" class="ml-auto px-1.5 py-0.5 rounded text-[10px] font-medium">
                                         {{ showStatusLabel(s.status) }}
                                     </span>
+                                </div>
+                            </div>
+
+                            <!-- Fittings heredados del diseñador -->
+                            <div v-if="fittings.filter(f => f.event_id === evt.id).length" class="mt-2 space-y-1">
+                                <div v-for="f in fittings.filter(f => f.event_id === evt.id)" :key="f.designer_name + f.time"
+                                    class="flex items-center gap-2 text-xs bg-orange-50 border border-orange-100 rounded-lg px-2 py-1.5">
+                                    <span class="text-orange-600 font-semibold">Fitting</span>
+                                    <span class="text-orange-500">{{ f.day_label }} · {{ f.time }}</span>
+                                    <span class="text-orange-400 ml-auto">{{ f.brand_name || f.designer_name }}</span>
                                 </div>
                             </div>
                         </div>

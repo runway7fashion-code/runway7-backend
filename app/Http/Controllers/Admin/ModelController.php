@@ -7,8 +7,10 @@ use App\Http\Controllers\Controller;
 use App\Imports\ModelsImport;
 use App\Jobs\SendWelcomeEmailJob;
 use App\Models\Event;
+use App\Models\FittingAssignment;
 use App\Models\User;
 use App\Services\ModelService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -49,6 +51,7 @@ class ModelController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'ilike', "%{$search}%")
                   ->orWhere('last_name',  'ilike', "%{$search}%")
+                  ->orWhereRaw("CONCAT(first_name, ' ', last_name) ILIKE ?", ["%{$search}%"])
                   ->orWhere('email',      'ilike', "%{$search}%")
                   ->orWhere('phone',      'ilike', "%{$search}%")
                   ->orWhereHas('eventsAsModelWithCasting', fn($eq) =>
@@ -76,7 +79,81 @@ class ModelController extends Controller
             }
         }
 
+        if ($request->filled('casting_time')) {
+            $castingFilter = $request->casting_time;
+            $query->whereHas('eventsAsModelWithCasting', fn($q) =>
+                $q->whereRaw("TO_CHAR(event_model.casting_time, 'HH24:MI') = ?", [$castingFilter])
+            );
+        }
+
+        if ($request->filled('casting_status')) {
+            $query->whereHas('eventsAsModelWithCasting', fn($q) =>
+                $q->where('event_model.casting_status', $request->casting_status)
+            );
+        }
+
+        if ($request->filled('designer')) {
+            $designerFilter = (int) $request->designer;
+            $query->whereIn('users.id', function ($sub) use ($designerFilter) {
+                $sub->select('show_model.model_id')
+                    ->from('show_model')
+                    ->where('show_model.designer_id', $designerFilter)
+                    ->whereIn('show_model.status', ['confirmed', 'reserved', 'requested']);
+            });
+        }
+
         $models = $query->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
+
+        // Batch-load fitting data for models on this page
+        $modelIds = $models->pluck('id');
+
+        // Get designer-event pairs for each model via show_model
+        $showModelRows = DB::table('show_model')
+            ->join('shows', 'shows.id', '=', 'show_model.show_id')
+            ->join('event_days', 'event_days.id', '=', 'shows.event_day_id')
+            ->whereIn('show_model.model_id', $modelIds)
+            ->whereIn('show_model.status', ['confirmed', 'reserved', 'requested'])
+            ->select('show_model.model_id', 'show_model.designer_id', 'event_days.event_id')
+            ->distinct()
+            ->get();
+
+        // Get fitting assignments for all relevant designers
+        $designerIds = $showModelRows->pluck('designer_id')->unique()->filter();
+        $fittingsByDesignerEvent = [];
+
+        if ($designerIds->isNotEmpty()) {
+            $assignments = FittingAssignment::whereIn('designer_id', $designerIds)
+                ->with(['fittingSlot.eventDay', 'designer.designerProfile'])
+                ->get();
+
+            foreach ($assignments as $a) {
+                $eventId = $a->fittingSlot->eventDay?->event_id;
+                if ($eventId) {
+                    $key = $a->designer_id . '-' . $eventId;
+                    $fittingsByDesignerEvent[$key] = [
+                        'day_label'     => $a->fittingSlot->eventDay->label,
+                        'time'          => $a->fittingSlot->time,
+                        'designer_name' => $a->designer?->full_name,
+                        'brand_name'    => $a->designer?->designerProfile?->brand_name,
+                    ];
+                }
+            }
+        }
+
+        // Build fittings map: model_id -> event_id -> fittings[]
+        $modelFittingsMap = [];
+        foreach ($showModelRows as $row) {
+            $key = $row->designer_id . '-' . $row->event_id;
+            if (isset($fittingsByDesignerEvent[$key])) {
+                $modelFittingsMap[$row->model_id][$row->event_id][] = $fittingsByDesignerEvent[$key];
+            }
+        }
+
+        // Inject fittings_by_event into each model
+        $models->through(function ($model) use ($modelFittingsMap) {
+            $model->fittings_by_event = $modelFittingsMap[$model->id] ?? [];
+            return $model;
+        });
 
         $events = Event::orderBy('start_date', 'desc')
             ->get(['id', 'name']);
@@ -85,10 +162,42 @@ class ModelController extends Controller
             ->whereNull('welcome_email_sent_at')
             ->count();
 
+        // Obtener horarios de casting desde casting_slots (solo cuando hay evento seleccionado)
+        $castingTimes = collect();
+        if ($request->filled('event')) {
+            $castingTimes = DB::table('casting_slots')
+                ->join('event_days', 'event_days.id', '=', 'casting_slots.event_day_id')
+                ->where('event_days.type', 'casting')
+                ->where('event_days.event_id', $request->event)
+                ->distinct()
+                ->pluck('casting_slots.time')
+                ->map(fn($t) => \Illuminate\Support\Str::substr($t, 0, 5))
+                ->sort()
+                ->values();
+        }
+
+        // Designers list for filter (filtered by event if selected)
+        $designersQuery = User::where('role', 'designer')
+            ->with('designerProfile:id,user_id,brand_name');
+
+        if ($request->filled('event')) {
+            $designersQuery->whereHas('eventsAsDesigner', fn($q) => $q->where('events.id', $request->event));
+        }
+
+        $designers = $designersQuery->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name'])
+            ->map(fn($d) => [
+                'id'         => $d->id,
+                'name'       => $d->full_name,
+                'brand_name' => $d->designerProfile?->brand_name,
+            ]);
+
         return Inertia::render('Admin/Models/Index', [
             'models'             => $models,
             'events'             => $events,
-            'filters'            => $request->only(['event', 'compcard', 'gender', 'search', 'email_sent', 'test_model']),
+            'designers'          => $designers,
+            'filters'            => $request->only(['event', 'compcard', 'gender', 'search', 'email_sent', 'test_model', 'casting_time', 'casting_status', 'designer']),
+            'castingTimes'       => $castingTimes,
             'pendingEmailCount'  => $pendingEmailCount,
         ]);
     }
@@ -168,6 +277,19 @@ class ModelController extends Controller
             'shows' => fn($q) => $q->with(['eventDay.event', 'designers.designerProfile']),
             'eventPasses',
         ]);
+
+        // Auto-generar pases faltantes para eventos asignados
+        $existingPassEventIds = $model->eventPasses->pluck('event_id')->toArray();
+        foreach ($model->eventsAsModelWithCasting ?? [] as $event) {
+            if (!in_array($event->id, $existingPassEventIds)) {
+                $this->modelService->syncModelPass($model, $event->id, auth()->id());
+            }
+        }
+
+        // Recargar pases si se generaron nuevos
+        if (count($existingPassEventIds) < ($model->eventsAsModelWithCasting?->count() ?? 0)) {
+            $model->load('eventPasses');
+        }
 
         return Inertia::render('Admin/Models/Show', [
             'model' => $this->formatModelForView($model),
@@ -522,8 +644,59 @@ class ModelController extends Controller
                     'brand_name' => $d->designerProfile?->brand_name,
                 ])->values(),
             ])->values(),
+            'fittings' => $this->getModelFittings($model),
         ]);
 
         return $data;
+    }
+
+    /**
+     * Get fitting schedule for a model (inherited from their designers).
+     */
+    private function getModelFittings(User $model): array
+    {
+        $fittings = [];
+
+        foreach ($model->shows ?? [] as $show) {
+            if (!$show->eventDay?->event) continue;
+            $eventId = $show->eventDay->event->id;
+            $eventName = $show->eventDay->event->name;
+
+            // Obtener designer_ids que seleccionaron a esta modelo en show_model
+            $designerIds = DB::table('show_model')
+                ->where('show_id', $show->id)
+                ->where('model_id', $model->id)
+                ->whereIn('status', ['confirmed', 'reserved', 'requested'])
+                ->pluck('designer_id')
+                ->unique()
+                ->filter();
+
+            if ($designerIds->isEmpty()) {
+                // Fallback: use designers from the show pivot
+                $designerIds = $show->designers?->pluck('id') ?? collect();
+            }
+
+            foreach ($designerIds as $designerId) {
+                $assignment = FittingAssignment::whereHas('fittingSlot.eventDay', fn($q) => $q->where('event_id', $eventId))
+                    ->where('designer_id', $designerId)
+                    ->with(['fittingSlot.eventDay', 'designer.designerProfile'])
+                    ->first();
+
+                if ($assignment) {
+                    $fittings[] = [
+                        'event_id'      => $eventId,
+                        'event_name'    => $eventName,
+                        'day_label'     => $assignment->fittingSlot->eventDay?->label,
+                        'day_date'      => $assignment->fittingSlot->eventDay?->date?->format('Y-m-d'),
+                        'time'          => $assignment->fittingSlot->time,
+                        'designer_name' => $assignment->designer?->full_name,
+                        'brand_name'    => $assignment->designer?->designerProfile?->brand_name,
+                    ];
+                }
+            }
+        }
+
+        // Deduplicate by event_id + designer_name
+        return collect($fittings)->unique(fn($f) => $f['event_id'] . '-' . $f['designer_name'])->values()->toArray();
     }
 }

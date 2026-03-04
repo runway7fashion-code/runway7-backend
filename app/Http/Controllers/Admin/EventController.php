@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Models\FittingSlot;
 use App\Models\User;
 use App\Services\EventService;
 use Illuminate\Http\Request;
@@ -63,7 +64,7 @@ class EventController extends Controller
             'days'               => 'required|array|min:1',
             'days.*.date'  => 'required|date',
             'days.*.label' => 'required|string',
-            'days.*.type'  => 'required|in:setup,casting,show_day,ceremony,other',
+            'days.*.type'  => 'required|in:setup,casting,show_day,ceremony,other,fitting',
             'time_slots'            => 'nullable|array',
             'apply_same_schedule'   => 'boolean',
         ]);
@@ -85,6 +86,7 @@ class EventController extends Controller
             'eventDays.shows.designers.designerProfile',
             'eventDays.shows' => fn($q) => $q->withCount('models')->orderBy('order'),
             'eventDays.castingSlots',
+            'eventDays.fittingSlots.assignments.designer.designerProfile',
         ]);
 
         $designers = User::designers()->with('designerProfile')->get()
@@ -101,17 +103,23 @@ class EventController extends Controller
                 'days_count'            => $event->eventDays->count(),
                 'total_shows'           => $event->totalShows(),
                 'assigned_show_slots'   => $event->totalAssignedShowSlots(),
+                'shows_with_designers'  => $event->showsWithDesignersCount(),
                 'unique_designers'      => $event->assignedDesignersCount(),
                 'total_models'          => $event->models()->count(),
-                'casting_slots'         => $event->castingDay()?->castingSlots()->count() ?? 0,
-                'casting_booked'        => $event->castingDay()?->castingSlots()->sum('booked') ?? 0,
+                'casting_slots'          => $event->castingDay()?->castingSlots()->count() ?? 0,
+                'casting_checked_in'     => $event->models()->wherePivot('casting_status', 'checked_in')->count(),
+                'casting_models'         => $event->models()->whereNotNull('event_model.casting_time')->count(),
             ],
         ]);
     }
 
     public function edit(Event $event): Response
     {
-        $event->load(['eventDays.shows' => fn($q) => $q->withCount('designers')->orderBy('order')]);
+        $event->load([
+            'eventDays.shows' => fn($q) => $q->withCount('designers')->orderBy('order'),
+            'eventDays.castingSlots' => fn($q) => $q->orderBy('time'),
+            'eventDays.fittingSlots' => fn($q) => $q->orderBy('time'),
+        ]);
 
         return Inertia::render('Admin/Events/Edit', [
             'event' => $event,
@@ -166,5 +174,30 @@ class EventController extends Controller
         $event->delete();
         return redirect()->route('admin.events.index')
             ->with('success', 'Evento eliminado.');
+    }
+
+    public function assignDesignerToFitting(Request $request, FittingSlot $fittingSlot)
+    {
+        $request->validate([
+            'designer_id' => 'required|exists:users,id',
+            'notes'       => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $this->eventService->assignDesignerToFitting(
+                $fittingSlot,
+                $request->designer_id,
+                $request->notes
+            );
+            return back()->with('success', 'Diseñador asignado al fitting.');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function removeDesignerFromFitting(FittingSlot $fittingSlot, User $designer)
+    {
+        $this->eventService->removeDesignerFromFitting($fittingSlot, $designer->id);
+        return back()->with('success', 'Diseñador removido del fitting.');
     }
 }

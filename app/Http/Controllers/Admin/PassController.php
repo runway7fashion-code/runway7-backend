@@ -17,58 +17,61 @@ class PassController extends Controller
     {
         $events = Event::orderBy('start_date', 'desc')->get(['id', 'name', 'start_date', 'status']);
 
-        $selectedEventId = $request->input('event_id', $events->first()?->id);
+        $selectedEventId = $request->input('event_id');
 
-        $passes = [];
-        $stats  = [];
+        $query = EventPass::with(['user:id,first_name,last_name,email', 'issuedBy:id,first_name,last_name', 'event:id,name']);
 
         if ($selectedEventId) {
-            $query = EventPass::with(['user:id,first_name,last_name,email', 'issuedBy:id,first_name,last_name'])
-                ->forEvent($selectedEventId);
-
-            if ($request->filled('type')) {
-                $query->byType($request->type);
-            }
-            if ($request->filled('status')) {
-                $query->where('status', $request->status);
-            }
-            if ($request->filled('search')) {
-                $q = $request->search;
-                $query->where(function ($sub) use ($q) {
-                    $sub->where('holder_name', 'ilike', "%{$q}%")
-                        ->orWhere('holder_email', 'ilike', "%{$q}%")
-                        ->orWhere('qr_code', 'ilike', "%{$q}%");
-                });
-            }
-
-            $passes = $query->orderBy('created_at', 'desc')
-                ->paginate(25)
-                ->withQueryString()
-                ->through(fn (EventPass $p) => [
-                    'id'           => $p->id,
-                    'qr_code'      => $p->qr_code,
-                    'pass_type'    => $p->pass_type,
-                    'pass_type_label' => $p->passTypeLabel(),
-                    'holder_name'  => $p->holder_name,
-                    'holder_email' => $p->holder_email,
-                    'status'       => $p->status,
-                    'valid_days'   => $p->valid_days,
-                    'checked_in_at' => $p->checked_in_at?->toISOString(),
-                    'notes'        => $p->notes,
-                    'issued_at'    => $p->issued_at->toISOString(),
-                    'user'         => $p->user ? ['id' => $p->user->id, 'full_name' => $p->user->full_name] : null,
-                    'issued_by'    => $p->issuedBy ? ['id' => $p->issuedBy->id, 'full_name' => $p->issuedBy->full_name] : null,
-                ]);
-
-            $allPasses = EventPass::forEvent($selectedEventId)->get();
-            $stats = [
-                'total'     => $allPasses->count(),
-                'active'    => $allPasses->where('status', 'active')->count(),
-                'used'      => $allPasses->where('status', 'used')->count(),
-                'cancelled' => $allPasses->where('status', 'cancelled')->count(),
-                'by_type'   => $allPasses->groupBy('pass_type')->map->count(),
-            ];
+            $query->forEvent($selectedEventId);
         }
+
+        if ($request->filled('type')) {
+            $query->byType($request->type);
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('search')) {
+            $q = $request->search;
+            $query->where(function ($sub) use ($q) {
+                $sub->where('holder_name', 'ilike', "%{$q}%")
+                    ->orWhere('holder_email', 'ilike', "%{$q}%")
+                    ->orWhere('qr_code', 'ilike', "%{$q}%");
+            });
+        }
+
+        $passes = $query->orderBy('created_at', 'desc')
+            ->paginate(25)
+            ->withQueryString()
+            ->through(fn (EventPass $p) => [
+                'id'           => $p->id,
+                'qr_code'      => $p->qr_code,
+                'pass_type'    => $p->pass_type,
+                'pass_type_label' => $p->passTypeLabel(),
+                'holder_name'  => $p->holder_name,
+                'holder_email' => $p->holder_email,
+                'status'       => $p->status,
+                'valid_days'   => $p->valid_days,
+                'checked_in_at' => $p->checked_in_at?->toISOString(),
+                'notes'        => $p->notes,
+                'issued_at'    => $p->issued_at->toISOString(),
+                'event_name'   => $p->event?->name,
+                'user'         => $p->user ? ['id' => $p->user->id, 'full_name' => $p->user->full_name] : null,
+                'issued_by'    => $p->issuedBy ? ['id' => $p->issuedBy->id, 'full_name' => $p->issuedBy->full_name] : null,
+            ]);
+
+        $statsQuery = EventPass::query();
+        if ($selectedEventId) {
+            $statsQuery->forEvent($selectedEventId);
+        }
+        $allPasses = $statsQuery->get();
+        $stats = [
+            'total'     => $allPasses->count(),
+            'active'    => $allPasses->where('status', 'active')->count(),
+            'used'      => $allPasses->where('status', 'used')->count(),
+            'cancelled' => $allPasses->where('status', 'cancelled')->count(),
+            'by_type'   => $allPasses->groupBy('pass_type')->map->count(),
+        ];
 
         $eventDays = $selectedEventId
             ? EventDay::where('event_id', $selectedEventId)
@@ -83,7 +86,7 @@ class PassController extends Controller
 
         return Inertia::render('Admin/Passes/Index', [
             'events'          => $events,
-            'selectedEventId' => (int) $selectedEventId,
+            'selectedEventId' => $selectedEventId ? (int) $selectedEventId : null,
             'passes'          => $passes,
             'stats'           => $stats,
             'passTypes'       => EventPass::passTypes(),

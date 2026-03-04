@@ -12,6 +12,7 @@ const props = defineProps({
 const profile    = props.designer.designer_profile;
 const events     = props.designer.events     ?? [];
 const shows      = props.designer.shows      ?? [];
+const fittings   = props.designer.fittings   ?? [];
 const assistants = props.designer.assistants  ?? [];
 const materials  = props.designer.materials   ?? [];
 const displays   = props.designer.displays    ?? [];
@@ -30,6 +31,9 @@ function scrollTabs(dir) {
 // ── Datos filtrados por evento ───────────────────────────────────
 const tabShows = computed(() =>
     shows.filter(s => s.event_day?.event_id === selectedEventId.value)
+);
+const tabFitting = computed(() =>
+    fittings.find(f => f.event_id === selectedEventId.value) ?? null
 );
 const tabMaterials = computed(() =>
     materials.filter(m => m.event_id === selectedEventId.value)
@@ -61,6 +65,9 @@ function removeFromEvent(eventId, eventName) {
 // Modal pase
 const passModal = ref(null);
 function openPassModal(evt) { passModal.value = { ...evt.pass, event_name: evt.name }; }
+
+// Modal modelos
+const modelsModal = ref(null);
 function closePassModal()   { passModal.value = null; }
 
 function progressColor(pct) {
@@ -261,7 +268,14 @@ const socialLinks = computed(() => {
 
                     <!-- Shows del evento -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-6">
-                        <h4 class="font-bold text-gray-900 mb-4">Shows</h4>
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="font-bold text-gray-900">Shows</h4>
+                            <!-- Fitting badge inline -->
+                            <div v-if="tabFitting" class="flex items-center gap-1.5 bg-orange-50 border border-orange-200 rounded-lg px-2.5 py-1">
+                                <span class="text-[10px] font-semibold text-orange-600 uppercase tracking-wide">Fitting</span>
+                                <span class="text-xs font-medium text-orange-700">{{ tabFitting.day_label }} · {{ tabFitting.time }}</span>
+                            </div>
+                        </div>
                         <div v-if="tabShows.length === 0" class="text-sm text-gray-400 italic">Sin shows asignados en este evento.</div>
                         <div class="space-y-2">
                             <div v-for="s in tabShows" :key="s.id"
@@ -359,11 +373,22 @@ const socialLinks = computed(() => {
                             <p class="text-xs text-gray-500">
                                 Looks: <span class="font-medium text-gray-700">{{ selectedEvent.looks }}</span>
                             </p>
+                            <p class="text-xs text-gray-500 flex items-center gap-1">
+                                Modelos: <span class="font-medium text-gray-700">{{ selectedEvent.models_count ?? 0 }}</span>
+                                <button v-if="(selectedEvent.models_count ?? 0) > 0"
+                                    @click="modelsModal = selectedEvent"
+                                    class="text-indigo-500 hover:text-indigo-700 font-medium ml-1">
+                                    Ver
+                                </button>
+                            </p>
                             <p class="text-xs text-gray-500">
                                 Casting:
                                 <span :class="selectedEvent.model_casting_enabled ? 'text-green-600' : 'text-red-500'" class="font-medium">
                                     {{ selectedEvent.model_casting_enabled ? 'Habilitado' : 'Deshabilitado' }}
                                 </span>
+                            </p>
+                            <p v-if="tabFitting" class="text-xs text-gray-500">
+                                Fitting: <span class="font-medium text-orange-600">{{ tabFitting.day_label }} · {{ tabFitting.time }}</span>
                             </p>
                             <p v-if="selectedEvent.notes" class="text-xs text-gray-400 pt-1">{{ selectedEvent.notes }}</p>
                         </div>
@@ -446,6 +471,51 @@ const socialLinks = computed(() => {
                     <p v-if="passModal.valid_days_labels" class="text-xs text-gray-500 font-medium">Días válidos</p>
                     <p v-if="passModal.valid_days_labels" class="text-xs text-gray-400 mt-0.5">{{ passModal.valid_days_labels }}</p>
                     <p v-else class="text-xs text-gray-400">Válido todos los días</p>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Modal: Modelos asignadas -->
+    <Teleport to="body">
+        <div v-if="modelsModal" class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/60" @click="modelsModal = null"></div>
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 max-h-[80vh] flex flex-col">
+                <button @click="modelsModal = null" class="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600">
+                    <XMarkIcon class="h-5 w-5" />
+                </button>
+                <h3 class="text-lg font-bold text-gray-900 mb-1">Modelos Asignadas</h3>
+                <p class="text-sm text-gray-500 mb-4">{{ modelsModal.name }}</p>
+
+                <div class="overflow-y-auto space-y-2">
+                    <div v-if="!modelsModal.assigned_models?.length" class="text-sm text-gray-400 italic text-center py-4">
+                        Sin modelos asignadas.
+                    </div>
+                    <Link v-for="m in modelsModal.assigned_models" :key="m.id"
+                        :href="`/admin/models/${m.id}`"
+                        class="flex items-center gap-3 bg-gray-50 hover:bg-gray-100 rounded-xl px-3 py-2.5 transition-colors">
+                        <div class="w-9 h-9 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                            <img v-if="m.profile_picture" :src="m.profile_picture.startsWith('http') ? m.profile_picture : `/storage/${m.profile_picture}`"
+                                class="w-full h-full object-cover" />
+                            <div v-else class="w-full h-full flex items-center justify-center text-xs font-bold text-gray-400">
+                                {{ m.first_name?.[0] }}{{ m.last_name?.[0] }}
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 truncate">{{ m.first_name }} {{ m.last_name }}</p>
+                            <p class="text-xs text-gray-400 truncate">{{ m.email }}</p>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <span v-if="m.participation_number"
+                                class="text-xs font-bold bg-black text-white px-2 py-0.5 rounded-full">
+                                #{{ m.participation_number }}
+                            </span>
+                            <span class="text-xs px-1.5 py-0.5 rounded"
+                                :class="m.status === 'confirmed' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'">
+                                {{ m.status === 'confirmed' ? 'Confirmada' : m.status }}
+                            </span>
+                        </div>
+                    </Link>
                 </div>
             </div>
         </div>
