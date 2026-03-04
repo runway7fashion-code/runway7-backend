@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Event;
 use App\Services\ModelService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,6 +13,21 @@ class ModelRegistrationController extends Controller
 {
     public function __construct(protected ModelService $modelService) {}
 
+    /**
+     * Listar eventos publicados (para el dropdown del formulario de WordPress).
+     */
+    public function events(): JsonResponse
+    {
+        $events = Event::where('status', 'active')
+            ->orderBy('start_date')
+            ->get(['id', 'name', 'city', 'start_date', 'end_date']);
+
+        return response()->json($events);
+    }
+
+    /**
+     * Registrar una modelo desde el formulario público de WordPress.
+     */
     public function store(Request $request): JsonResponse
     {
         // Honeypot: si el campo oculto tiene valor, es bot
@@ -25,46 +41,67 @@ class ModelRegistrationController extends Controller
             'first_name' => 'required|string|max:255',
             'last_name'  => 'required|string|max:255',
             'email'      => 'required|email|unique:users,email',
-            'phone'      => 'nullable|string|unique:users,phone',
-            'instagram'  => 'nullable|string|max:255',
-            'age'        => 'nullable|integer|min:16|max:80',
-            'gender'     => 'nullable|in:female,male,non_binary',
-            'location'   => 'nullable|string|max:255',
-            'ethnicity'  => 'nullable|in:asian,black,caucasian,hispanic,middle_eastern,mixed,other',
-            'hair'       => 'nullable|in:black,brown,blonde,red,gray,other',
-            'body_type'  => 'nullable|in:slim,athletic,average,curvy,plus_size',
-            'height'     => 'nullable|numeric',
-            'bust'       => 'nullable|numeric',
-            'waist'      => 'nullable|numeric',
-            'hips'       => 'nullable|numeric',
-            'shoe_size'  => 'nullable|string|max:20',
-            'dress_size' => 'nullable|string|max:20',
+            'phone'      => 'required|string|unique:users,phone',
+            'instagram'  => 'required|string|max:255',
+            'age'        => 'required|integer|min:18|max:80',
+            'gender'     => 'required|in:female,male,non_binary',
+            'location'   => 'required|string|max:255',
+            'ethnicity'  => 'required|in:asian,black,caucasian,hispanic,middle_eastern,mixed,other',
+            'hair'       => 'required|in:black,brown,blonde,red,gray,other',
+            'body_type'  => 'required|in:slim,athletic,average,curvy,plus_size',
+            'height'     => 'required|numeric',
+            'bust'       => 'required|numeric',
+            'waist'      => 'required|numeric',
+            'hips'       => 'required|numeric',
+            'shoe_size'  => 'required|string|max:20',
+            'dress_size' => 'required|string|max:20',
+            'event_id'   => 'required|exists:events,id',
 
-            'profile_picture' => 'required|image|max:5120',
-            'photo_1'         => 'nullable|image|max:5120',
-            'photo_2'         => 'nullable|image|max:5120',
-            'photo_3'         => 'nullable|image|max:5120',
-            'photo_4'         => 'nullable|image|max:5120',
+            'profile_picture' => 'required|image|max:1536',
+            'photo_1'         => 'required|image|max:1536',
+            'photo_2'         => 'required|image|max:1536',
+            'photo_3'         => 'required|image|max:1536',
+            'photo_4'         => 'required|image|max:1536',
         ], [
-            'first_name.required'      => 'El nombre es obligatorio.',
-            'last_name.required'       => 'El apellido es obligatorio.',
-            'email.required'           => 'El correo electrónico es obligatorio.',
-            'email.email'              => 'El correo electrónico no es válido.',
-            'email.unique'             => 'Este correo ya está registrado en nuestro sistema.',
-            'phone.unique'             => 'Este teléfono ya está registrado en nuestro sistema.',
-            'age.min'                  => 'La edad mínima es 16 años.',
-            'age.max'                  => 'La edad máxima es 80 años.',
-            'profile_picture.required' => 'La foto de perfil es obligatoria.',
-            'profile_picture.image'    => 'La foto de perfil debe ser una imagen.',
-            'profile_picture.max'      => 'La foto de perfil no debe superar 5MB.',
-            'photo_1.image'            => 'La foto 1 debe ser una imagen.',
-            'photo_1.max'              => 'La foto 1 no debe superar 5MB.',
-            'photo_2.image'            => 'La foto 2 debe ser una imagen.',
-            'photo_2.max'              => 'La foto 2 no debe superar 5MB.',
-            'photo_3.image'            => 'La foto 3 debe ser una imagen.',
-            'photo_3.max'              => 'La foto 3 no debe superar 5MB.',
-            'photo_4.image'            => 'La foto 4 debe ser una imagen.',
-            'photo_4.max'              => 'La foto 4 no debe superar 5MB.',
+            'first_name.required'      => 'First name is required.',
+            'last_name.required'       => 'Last name is required.',
+            'email.required'           => 'Email is required.',
+            'email.email'              => 'Please enter a valid email.',
+            'email.unique'             => 'This email is already registered in our system.',
+            'phone.required'           => 'Phone is required.',
+            'phone.unique'             => 'This phone is already registered in our system.',
+            'instagram.required'       => 'Instagram is required.',
+            'age.required'             => 'Age is required.',
+            'age.min'                  => 'You must be at least 18 years old.',
+            'age.max'                  => 'Maximum age is 80.',
+            'gender.required'          => 'Gender is required.',
+            'location.required'        => 'Location is required.',
+            'ethnicity.required'       => 'Ethnicity is required.',
+            'hair.required'            => 'Hair color is required.',
+            'body_type.required'       => 'Body type is required.',
+            'height.required'          => 'Height is required.',
+            'bust.required'            => 'Bust is required.',
+            'waist.required'           => 'Waist is required.',
+            'hips.required'            => 'Hips is required.',
+            'shoe_size.required'       => 'Shoe size is required.',
+            'dress_size.required'      => 'Dress size is required.',
+            'event_id.required'        => 'Please select an event.',
+            'event_id.exists'          => 'The selected event is not valid.',
+            'profile_picture.required' => 'Profile photo is required.',
+            'profile_picture.image'    => 'Profile photo must be an image.',
+            'profile_picture.max'      => 'Profile photo must not exceed 1.5MB.',
+            'photo_1.required'         => 'Headshot photo is required.',
+            'photo_1.image'            => 'Headshot must be an image.',
+            'photo_1.max'              => 'Headshot must not exceed 1.5MB.',
+            'photo_2.required'         => 'Full body front photo is required.',
+            'photo_2.image'            => 'Full body front must be an image.',
+            'photo_2.max'              => 'Full body front must not exceed 1.5MB.',
+            'photo_3.required'         => 'Full body side photo is required.',
+            'photo_3.image'            => 'Full body side must be an image.',
+            'photo_3.max'              => 'Full body side must not exceed 1.5MB.',
+            'photo_4.required'         => 'Creative/Editorial photo is required.',
+            'photo_4.image'            => 'Creative/Editorial must be an image.',
+            'photo_4.max'              => 'Creative/Editorial must not exceed 1.5MB.',
         ]);
 
         try {
@@ -77,28 +114,30 @@ class ModelRegistrationController extends Controller
                     'shoe_size', 'dress_size',
                 ])->toArray();
 
-                $user = $this->modelService->createModel($userData, $profileData, status: 'applicant');
+                $user = $this->modelService->createModel(
+                    $userData, $profileData,
+                    eventId: (int) $validated['event_id'],
+                    status: 'applicant'
+                );
 
                 // Subir foto de perfil
                 $this->modelService->uploadProfilePicture($user, $request->file('profile_picture'));
 
-                // Subir comp card photos si existen
+                // Subir comp card photos
                 foreach (range(1, 4) as $position) {
-                    if ($request->hasFile("photo_{$position}")) {
-                        $this->modelService->uploadCompCardPhoto($user, $position, $request->file("photo_{$position}"));
-                    }
+                    $this->modelService->uploadCompCardPhoto($user, $position, $request->file("photo_{$position}"));
                 }
 
                 return $user;
             });
 
             return response()->json([
-                'message' => 'Tu aplicación ha sido recibida exitosamente. ¡Te contactaremos pronto!',
+                'message' => 'Your application has been received successfully. We will contact you soon!',
             ], 201);
         } catch (\Exception $e) {
             report($e);
             return response()->json([
-                'message' => 'Ocurrió un error procesando tu aplicación. Inténtalo de nuevo.',
+                'message' => 'An error occurred processing your application. Please try again.',
             ], 500);
         }
     }

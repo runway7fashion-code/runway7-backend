@@ -8,6 +8,8 @@ return [
     'allowed_origins' => [
         'https://runway7fashion.com',
         'https://www.runway7fashion.com',
+        'https://runways7.com',
+        'https://www.runways7.com',
         'http://localhost:8000',
         'http://localhost:3000',
     ],
