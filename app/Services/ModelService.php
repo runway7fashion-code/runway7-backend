@@ -67,13 +67,8 @@ class ModelService
             throw new \Exception('La modelo ya está asignada a este evento.');
         }
 
-        // Auto-asignar número de participación: base + cantidad de modelos ya asignadas
-        $currentCount = $event->models()->count();
-        $participationNumber = ($event->model_number_start ?? 1) + $currentCount;
-
         $pivotData = [
-            'status'               => 'invited',
-            'participation_number' => $participationNumber,
+            'status' => 'invited',
         ];
 
         if ($castingTime) {

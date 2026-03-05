@@ -94,7 +94,7 @@ function submit() {
                 </button>
             </div>
 
-            <form @submit.prevent="submit" class="space-y-5">
+            <form @submit.prevent="submit" novalidate class="space-y-5">
 
                 <!-- Pestaña 1: Datos Personales -->
                 <div v-show="activeTab === 1" class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
