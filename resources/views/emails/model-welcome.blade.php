@@ -88,27 +88,31 @@
             line-height: 1.4;
         }
 
-        /* Code box */
-        .code-box {
-            background-color: #000000;
-            border-radius: 12px;
-            padding: 24px 20px;
-            text-align: center;
+        /* Credentials table */
+        .credentials-table {
+            width: 100%;
+            border-collapse: collapse;
             margin: 0 0 28px 0;
+            border-radius: 12px;
+            overflow: hidden;
         }
-        .code-label {
-            color: rgba(255,255,255,0.5);
+        .credentials-table td {
+            padding: 14px 20px;
+            font-size: 15px;
+        }
+        .credentials-label {
+            background-color: #000000;
+            color: rgba(255,255,255,0.6);
             font-size: 10px;
-            letter-spacing: 2px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
-            margin-bottom: 12px;
+            width: 110px;
         }
-        .code-value {
-            color: #D4AF37;
-            font-size: 34px;
-            font-weight: 800;
-            letter-spacing: 8px;
-            font-family: 'Courier New', Courier, monospace;
+        .credentials-value {
+            background-color: #f7f7f7;
+            font-weight: 700;
+            color: #111111;
         }
 
         /* App store badges */
@@ -218,8 +222,21 @@
         @endif
 
         <p class="text">
-            Download the Runway 7 app and log in with your email <strong>{{ $model->email }}</strong> and the password provided to complete your <strong>Comp Card</strong> with your photos before the casting day, so designers can view your profile. It's quick and easy!
+            Use the following credentials to log in to the Runway 7 app:
         </p>
+
+        <table class="credentials-table" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+                <td class="credentials-label" style="background-color:#000000; color:rgba(255,255,255,0.6); font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; width:110px; padding:14px 20px;">Email</td>
+                <td class="credentials-value" style="background-color:#f7f7f7; font-weight:700; color:#111111; padding:14px 20px;">{{ $model->email }}</td>
+            </tr>
+            <tr>
+                <td class="credentials-label" style="background-color:#000000; color:rgba(255,255,255,0.6); font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; width:110px; padding:14px 20px;">Password</td>
+                <td class="credentials-value" style="background-color:#f7f7f7; font-weight:700; color:#111111; padding:14px 20px;">runway7</td>
+            </tr>
+        </table>
+
+        <p class="text">Download the app and complete your <strong>Comp Card</strong> with your photos before the casting day, so designers can view your profile. It's quick and easy!</p>
 
         <!-- App Store Badges -->
         <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 28px auto;">
@@ -243,7 +260,7 @@
 
         <p class="text" style="font-size:13px; color:#999999; margin-bottom:0;">
             If you have any questions, you can reply to this email or contact us at
-            <a href="mailto:tickets@runway7fashion.com" style="color:#D4AF37; font-weight:600;">tickets@runway7fashion.com</a>
+            <a href="mailto:operation@runway7fashion.com" style="color:#D4AF37; font-weight:600;">operation@runway7fashion.com</a>
         </p>
     </div>
 
