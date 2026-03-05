@@ -117,16 +117,12 @@
             margin: 0 0 28px 0;
         }
         .stores-inner {
-            display: inline-flex;
-            gap: 16px;
-            align-items: center;
-            justify-content: center;
-            flex-wrap: wrap;
+            text-align: center;
         }
         .store-badge img {
             height: 44px;
             width: auto;
-            display: block;
+            display: inline-block;
         }
 
         /* Footer */
@@ -233,20 +229,24 @@
         <p class="text" style="margin-top:16px;">Download the app, enter this code and complete your <strong>Comp Card</strong> with your photos before the casting day, so designers can view your profile. It's quick and easy!</p>
 
         <!-- App Store Badges -->
-        <div class="stores-wrapper">
-            <div class="stores-inner">
-                <a href="#" class="store-badge">
-                    <img src="{{ url('/images/app-store.png') }}"
-                         alt="Download on the App Store"
-                         height="44" />
-                </a>
-                <a href="#" class="store-badge">
-                    <img src="{{ url('/images/google-play.png') }}"
-                         alt="Get it on Google Play"
-                         height="44" />
-                </a>
-            </div>
-        </div>
+        <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 28px auto;">
+            <tr>
+                <td style="padding-right:16px;">
+                    <a href="#">
+                        <img src="{{ url('/images/app-store.png') }}"
+                             alt="Download on the App Store"
+                             height="44" style="display:block;" />
+                    </a>
+                </td>
+                <td>
+                    <a href="#">
+                        <img src="{{ url('/images/google-play.png') }}"
+                             alt="Get it on Google Play"
+                             height="44" style="display:block;" />
+                    </a>
+                </td>
+            </tr>
+        </table>
 
         <p class="text" style="font-size:13px; color:#999999; margin-bottom:0;">
             If you have any questions, you can reply to this email or contact us at
