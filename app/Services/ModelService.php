@@ -15,9 +15,9 @@ class ModelService
     /**
      * Crear una modelo completa: usuario + perfil + asignación opcional a evento.
      */
-    public function createModel(array $userData, array $profileData, ?int $eventId = null, ?string $castingTime = null, string $status = 'pending'): User
+    public function createModel(array $userData, array $profileData, ?int $eventId = null, ?string $castingTime = null, string $status = 'pending', ?string $shopifyOrderNumber = null): User
     {
-        return DB::transaction(function () use ($userData, $profileData, $eventId, $castingTime, $status) {
+        return DB::transaction(function () use ($userData, $profileData, $eventId, $castingTime, $status, $shopifyOrderNumber) {
             $user = User::create([
                 'first_name' => $userData['first_name'],
                 'last_name'  => $userData['last_name'],
@@ -31,7 +31,7 @@ class ModelService
             $user->modelProfile()->create($profileData);
 
             if ($eventId) {
-                $this->assignToEvent($user, $eventId, $castingTime);
+                $this->assignToEvent($user, $eventId, $castingTime, $shopifyOrderNumber);
             }
 
             return $user->load('modelProfile');
@@ -59,7 +59,7 @@ class ModelService
      * Asignar modelo a un evento con casting slot opcional.
      * Auto-asigna participation_number basado en model_number_start del evento.
      */
-    public function assignToEvent(User $user, int $eventId, ?string $castingTime = null): void
+    public function assignToEvent(User $user, int $eventId, ?string $castingTime = null, ?string $shopifyOrderNumber = null): void
     {
         $event = Event::findOrFail($eventId);
 
@@ -70,6 +70,10 @@ class ModelService
         $pivotData = [
             'status' => 'invited',
         ];
+
+        if ($shopifyOrderNumber) {
+            $pivotData['shopify_order_number'] = $shopifyOrderNumber;
+        }
 
         if ($castingTime) {
             $pivotData['casting_time']   = $castingTime;

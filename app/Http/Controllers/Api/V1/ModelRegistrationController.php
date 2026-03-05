@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\ActivityAction;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendRegistrationEmailJob;
+use App\Jobs\SendWelcomeEmailJob;
 use App\Models\Event;
 use App\Services\ActivityLogService;
 use App\Services\ModelService;
+use App\Services\ShopifyOrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +19,7 @@ class ModelRegistrationController extends Controller
     public function __construct(
         protected ModelService $modelService,
         protected ActivityLogService $activityLog,
+        protected ShopifyOrderService $shopifyService,
     ) {}
 
     /**
@@ -62,6 +65,7 @@ class ModelRegistrationController extends Controller
             'shoe_size'  => 'required|string|max:20',
             'dress_size' => 'required|string|max:20',
             'event_id'   => 'required|exists:events,id',
+            'order_number' => 'nullable|string|max:50',
 
             'profile_picture' => 'required|image|max:1536',
             'photo_1'         => 'required|image|max:1536',
@@ -110,8 +114,40 @@ class ModelRegistrationController extends Controller
             'photo_4.max'              => 'Creative/Editorial must not exceed 1.5MB.',
         ]);
 
+        $orderNumber = $validated['order_number'] ?? null;
+        $hasValidOrder = false;
+
+        // Si proporcionó order number, validar antes de crear la modelo
+        if ($orderNumber) {
+            // Verificar que no haya sido usado previamente
+            $alreadyUsed = DB::table('event_model')
+                ->where('shopify_order_number', ltrim(trim($orderNumber), '#'))
+                ->exists();
+
+            if ($alreadyUsed) {
+                return response()->json([
+                    'message' => 'This order number has already been used for a registration.',
+                    'errors' => ['order_number' => ['This order number has already been used for a registration.']],
+                ], 422);
+            }
+
+            $result = $this->shopifyService->validatePaidOrder($orderNumber);
+
+            if (!$result['valid']) {
+                return response()->json([
+                    'message' => $result['reason'],
+                    'errors' => ['order_number' => [$result['reason']]],
+                ], 422);
+            }
+
+            $hasValidOrder = true;
+            $orderNumber = ltrim(trim($orderNumber), '#');
+        }
+
         try {
-            $model = DB::transaction(function () use ($request, $validated) {
+            $status = $hasValidOrder ? 'pending' : 'applicant';
+
+            $model = DB::transaction(function () use ($request, $validated, $status, $orderNumber) {
                 $userData = collect($validated)->only(['first_name', 'last_name', 'email', 'phone'])->toArray();
 
                 $profileData = collect($validated)->only([
@@ -123,7 +159,8 @@ class ModelRegistrationController extends Controller
                 $user = $this->modelService->createModel(
                     $userData, $profileData,
                     eventId: (int) $validated['event_id'],
-                    status: 'applicant'
+                    status: $status,
+                    shopifyOrderNumber: $orderNumber,
                 );
 
                 // Subir foto de perfil
@@ -142,14 +179,27 @@ class ModelRegistrationController extends Controller
                 ActivityAction::Registered,
                 $model,
                 null,
-                "Registro público: {$model->first_name} {$model->last_name} para {$event->name}",
-                ['source' => 'wordpress', 'event_id' => $event->id]
+                "Registro público: {$model->first_name} {$model->last_name} para {$event->name}" . ($hasValidOrder ? " (Shopify order #{$orderNumber})" : ''),
+                ['source' => 'wordpress', 'event_id' => $event->id, 'shopify_order' => $orderNumber]
             );
 
-            SendRegistrationEmailJob::dispatch($model->id, $event->name);
+            if ($hasValidOrder) {
+                // Fast-track: enviar welcome email con credenciales
+                $castingDay = $event->eventDays()->where('type', 'casting')->first();
+                SendWelcomeEmailJob::dispatch(
+                    $model->id,
+                    $event->name,
+                    castingDate: $castingDay?->date,
+                );
+            } else {
+                // Flujo normal: enviar email de registro (thank you, we'll review)
+                SendRegistrationEmailJob::dispatch($model->id, $event->name);
+            }
 
             return response()->json([
-                'message' => 'Your application has been received successfully. We will contact you soon!',
+                'message' => $hasValidOrder
+                    ? 'Your registration is confirmed! Check your email for login details.'
+                    : 'Your application has been received successfully. We will contact you soon!',
             ], 201);
         } catch (\Exception $e) {
             report($e);
