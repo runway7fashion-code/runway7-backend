@@ -205,7 +205,7 @@
 
         <p class="text" style="font-size:13px; color:#999999; margin-bottom:0;">
             If you have any questions, feel free to contact us at
-            <a href="mailto:operation@runway7fashion.com" style="color:#D4AF37; font-weight:600;">operation@runway7fashion.com</a>
+            <a href="mailto:operations@runway7fashion.com" style="color:#D4AF37; font-weight:600;">operations@runway7fashion.com</a>
         </p>
     </div>
 

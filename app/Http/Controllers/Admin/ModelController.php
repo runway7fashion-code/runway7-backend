@@ -101,6 +101,24 @@ class ModelController extends Controller
             $query->where('status', $request->status);
         }
 
+        if ($request->filled('registered_from')) {
+            $query->whereDate('users.created_at', '>=', $request->registered_from);
+        }
+        if ($request->filled('registered_to')) {
+            $query->whereDate('users.created_at', '<=', $request->registered_to);
+        }
+
+        if ($request->filled('checkin_from')) {
+            $query->whereHas('eventsAsModelWithCasting', fn($q) =>
+                $q->whereDate('event_model.casting_checked_in_at', '>=', $request->checkin_from)
+            );
+        }
+        if ($request->filled('checkin_to')) {
+            $query->whereHas('eventsAsModelWithCasting', fn($q) =>
+                $q->whereDate('event_model.casting_checked_in_at', '<=', $request->checkin_to)
+            );
+        }
+
         if ($request->filled('designer')) {
             $designerFilter = (int) $request->designer;
             $query->whereIn('users.id', function ($sub) use ($designerFilter) {
@@ -111,7 +129,14 @@ class ModelController extends Controller
             });
         }
 
-        $models = $query->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
+        if ($request->filled('sort_name')) {
+            $dir = $request->sort_name === 'asc' ? 'asc' : 'desc';
+            $query->orderBy('first_name', $dir)->orderBy('last_name', $dir);
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        $models = $query->paginate(20)->withQueryString();
 
         // Batch-load fitting data for models on this page
         $modelIds = $models->pluck('id');
@@ -158,9 +183,57 @@ class ModelController extends Controller
             }
         }
 
-        // Inject fittings_by_event into each model
-        $models->through(function ($model) use ($modelFittingsMap) {
+        // Batch-load shows data for models on this page
+        $modelShowsMap = [];
+        if ($modelIds->isNotEmpty()) {
+            $showRows = DB::table('show_model')
+                ->join('shows', 'shows.id', '=', 'show_model.show_id')
+                ->join('event_days', 'event_days.id', '=', 'shows.event_day_id')
+                ->leftJoin('users as designer_user', 'designer_user.id', '=', 'show_model.designer_id')
+                ->leftJoin('designer_profiles', 'designer_profiles.user_id', '=', 'show_model.designer_id')
+                ->whereIn('show_model.model_id', $modelIds)
+                ->whereIn('show_model.status', ['confirmed', 'reserved', 'requested'])
+                ->select(
+                    'show_model.model_id',
+                    'show_model.show_id',
+                    'show_model.designer_id',
+                    'show_model.status as model_status',
+                    'shows.name as show_name',
+                    'shows.scheduled_time',
+                    'event_days.event_id',
+                    'event_days.label as day_label',
+                    'designer_user.first_name as designer_first_name',
+                    'designer_user.last_name as designer_last_name',
+                    'designer_profiles.brand_name',
+                )
+                ->orderBy('event_days.date')
+                ->orderBy('shows.scheduled_time')
+                ->get();
+
+            foreach ($showRows as $row) {
+                $time = $row->scheduled_time;
+                try {
+                    $time = \Illuminate\Support\Carbon::createFromFormat('H:i:s', $time)->format('g:i A');
+                } catch (\Exception $e) {
+                    try { $time = \Illuminate\Support\Carbon::createFromFormat('H:i', $time)->format('g:i A'); } catch (\Exception $e2) {}
+                }
+
+                $modelShowsMap[$row->model_id][$row->event_id][] = [
+                    'show_id'        => $row->show_id,
+                    'show_name'      => $row->show_name,
+                    'day_label'      => $row->day_label,
+                    'formatted_time' => $time,
+                    'status'         => $row->model_status,
+                    'designer_name'  => trim(($row->designer_first_name ?? '') . ' ' . ($row->designer_last_name ?? '')) ?: null,
+                    'brand_name'     => $row->brand_name,
+                ];
+            }
+        }
+
+        // Inject fittings_by_event and shows_by_event into each model
+        $models->through(function ($model) use ($modelFittingsMap, $modelShowsMap) {
             $model->fittings_by_event = $modelFittingsMap[$model->id] ?? [];
+            $model->shows_by_event = $modelShowsMap[$model->id] ?? [];
             return $model;
         });
 
@@ -168,6 +241,7 @@ class ModelController extends Controller
             ->get(['id', 'name']);
 
         $pendingEmailCount = User::models()
+            ->where('status', 'pending')
             ->whereNull('welcome_email_sent_at')
             ->count();
 
@@ -594,6 +668,7 @@ class ModelController extends Controller
     public function sendPendingWelcomeEmails()
     {
         $pending = User::models()
+            ->where('status', 'pending')
             ->whereNull('welcome_email_sent_at')
             ->with(['eventsAsModelWithCasting.eventDays' => fn($q) => $q->where('type', 'casting')])
             ->get();

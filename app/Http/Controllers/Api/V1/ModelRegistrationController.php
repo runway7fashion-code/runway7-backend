@@ -65,6 +65,7 @@ class ModelRegistrationController extends Controller
             'shoe_size'  => 'required|string|max:20',
             'dress_size' => 'required|string|max:20',
             'event_id'   => 'required|exists:events,id',
+            'agency_name'  => 'nullable|string|max:255',
             'order_number' => 'nullable|string|max:50',
 
             'profile_picture' => 'required|image|max:1536',
@@ -155,6 +156,11 @@ class ModelRegistrationController extends Controller
                     'hair', 'body_type', 'height', 'bust', 'waist', 'hips',
                     'shoe_size', 'dress_size',
                 ])->toArray();
+
+                if (!empty($validated['agency_name'])) {
+                    $profileData['agency'] = $validated['agency_name'];
+                    $profileData['is_agency'] = true;
+                }
 
                 $user = $this->modelService->createModel(
                     $userData, $profileData,

@@ -259,35 +259,14 @@ function deleteModel() {
 
                         <div v-if="events.length === 0" class="text-sm text-gray-400 italic">Sin eventos asignados.</div>
 
-                        <div v-for="evt in events" :key="evt.id" class="mb-4 last:mb-0">
-                            <div class="flex items-start justify-between">
-                                <div>
+                        <div v-for="evt in events" :key="evt.id" class="mb-5 last:mb-0 border border-gray-100 rounded-xl overflow-hidden">
+                            <!-- Header del evento -->
+                            <div class="bg-gray-50 px-4 py-3 flex items-center justify-between">
+                                <div class="min-w-0">
                                     <Link :href="`/admin/events/${evt.id}`"
-                                        class="text-sm font-semibold text-gray-900 hover:text-black hover:underline">
+                                        class="text-sm font-semibold text-gray-900 hover:text-black hover:underline leading-tight">
                                         {{ evt.name }}
                                     </Link>
-                                    <div class="flex items-center gap-2 mt-0.5">
-                                        <span v-if="evt.participation_number"
-                                            class="text-xs font-bold bg-black text-white px-2 py-0.5 rounded-full tracking-wide">
-                                            #{{ evt.participation_number }}
-                                        </span>
-                                        <span class="text-xs text-gray-500">
-                                            Casting: {{ evt.casting_time ?? 'No asignado' }}
-                                            <span v-if="evt.casting_status"> · {{ castingStatusLabel(evt.casting_status) }}</span>
-                                        </span>
-                                    </div>
-                                    <!-- Pase inline -->
-                                    <div v-if="evt.pass" class="flex items-center gap-2 mt-1.5">
-                                        <span class="font-mono text-[11px] text-gray-400 tracking-wide">{{ evt.pass.qr_code }}</span>
-                                        <span :class="passStatusClass(evt.pass.status)"
-                                            class="text-[10px] font-medium px-1.5 py-0.5 rounded">
-                                            {{ passStatusLabel(evt.pass.status) }}
-                                        </span>
-                                        <button @click="openPassModal(evt)"
-                                            class="flex items-center gap-0.5 text-[11px] text-indigo-500 hover:text-indigo-700 font-medium">
-                                            Ver QR <ArrowRightIcon class="w-3 h-3" />
-                                        </button>
-                                    </div>
                                 </div>
                                 <button @click="removeFromEvent(evt.id, evt.name)"
                                     class="text-red-400 hover:text-red-600 ml-2 flex-shrink-0">
@@ -295,26 +274,88 @@ function deleteModel() {
                                 </button>
                             </div>
 
-                            <!-- Shows de esta modelo en este evento -->
-                            <div class="mt-2 space-y-1">
-                                <div v-for="s in shows.filter(sh => sh.event?.id === evt.id)" :key="s.id"
-                                    class="flex items-center gap-2 text-xs bg-gray-50 rounded-lg px-2 py-1.5">
-                                    <span class="text-gray-500">{{ s.event_day?.label }}</span>
-                                    <span class="text-gray-400">·</span>
-                                    <span class="font-medium">{{ s.formatted_time }}</span>
-                                    <span :class="showStatusClass(s.status)" class="ml-auto px-1.5 py-0.5 rounded text-[10px] font-medium">
-                                        {{ showStatusLabel(s.status) }}
+                            <div class="px-4 py-3 space-y-3">
+                                <!-- Info general: participación + casting -->
+                                <div class="flex items-center gap-3 flex-wrap">
+                                    <span v-if="evt.participation_number"
+                                        class="inline-flex items-center gap-1 text-xs font-bold bg-black text-white px-2 py-0.5 rounded-full">
+                                        #{{ evt.participation_number }}
+                                    </span>
+                                    <span class="inline-flex items-center gap-1 text-xs text-gray-500">
+                                        <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Casting: {{ evt.casting_time ?? 'No asignado' }}
+                                        <span v-if="evt.casting_status"
+                                            :class="{
+                                                'text-yellow-600': evt.casting_status === 'scheduled',
+                                                'text-green-600': evt.casting_status === 'checked_in',
+                                                'text-red-500': evt.casting_status === 'no_show',
+                                            }"
+                                            class="font-medium">
+                                            · {{ castingStatusLabel(evt.casting_status) }}
+                                        </span>
                                     </span>
                                 </div>
-                            </div>
 
-                            <!-- Fittings heredados del diseñador -->
-                            <div v-if="fittings.filter(f => f.event_id === evt.id).length" class="mt-2 space-y-1">
-                                <div v-for="f in fittings.filter(f => f.event_id === evt.id)" :key="f.designer_name + f.time"
-                                    class="flex items-center gap-2 text-xs bg-orange-50 border border-orange-100 rounded-lg px-2 py-1.5">
-                                    <span class="text-orange-600 font-semibold">Fitting</span>
-                                    <span class="text-orange-500">{{ f.day_label }} · {{ f.time }}</span>
-                                    <span class="text-orange-400 ml-auto">{{ f.brand_name || f.designer_name }}</span>
+                                <!-- Pase -->
+                                <div v-if="evt.pass" class="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                                    <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5z" />
+                                    </svg>
+                                    <span class="font-mono text-[11px] text-gray-500 tracking-wide">{{ evt.pass.qr_code }}</span>
+                                    <span :class="passStatusClass(evt.pass.status)"
+                                        class="text-[10px] font-medium px-1.5 py-0.5 rounded">
+                                        {{ passStatusLabel(evt.pass.status) }}
+                                    </span>
+                                    <button @click="openPassModal(evt)"
+                                        class="ml-auto flex items-center gap-0.5 text-[11px] text-indigo-500 hover:text-indigo-700 font-medium">
+                                        Ver QR <ArrowRightIcon class="w-3 h-3" />
+                                    </button>
+                                </div>
+
+                                <!-- Shows -->
+                                <div v-if="shows.filter(sh => sh.event?.id === evt.id).length">
+                                    <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Shows</p>
+                                    <div class="space-y-1.5">
+                                        <div v-for="s in shows.filter(sh => sh.event?.id === evt.id)" :key="s.id"
+                                            class="flex items-start gap-2 bg-purple-50 border border-purple-100 rounded-lg px-3 py-2">
+                                            <svg class="w-3.5 h-3.5 text-purple-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5" />
+                                            </svg>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-xs font-semibold text-purple-800">
+                                                    {{ s.event_day?.label }} · {{ s.formatted_time }}
+                                                </p>
+                                                <p v-if="s.designers?.length" class="text-[11px] text-purple-500 truncate"
+                                                    :title="s.designers.map(d => d.brand_name || d.name).join(', ')">
+                                                    {{ s.designers.map(d => d.brand_name || d.name).join(', ') }}
+                                                </p>
+                                            </div>
+                                            <span :class="showStatusClass(s.status)" class="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium mt-0.5">
+                                                {{ showStatusLabel(s.status) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Fittings -->
+                                <div v-if="fittings.filter(f => f.event_id === evt.id).length">
+                                    <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Fittings</p>
+                                    <div class="space-y-1.5">
+                                        <div v-for="f in fittings.filter(f => f.event_id === evt.id)" :key="f.designer_name + f.time"
+                                            class="flex items-start gap-2 bg-orange-50 border border-orange-100 rounded-lg px-3 py-2">
+                                            <svg class="w-3.5 h-3.5 text-orange-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-xs font-semibold text-orange-800">
+                                                    {{ f.day_label }} · {{ f.time }}
+                                                </p>
+                                                <p class="text-[11px] text-orange-500">{{ f.brand_name || f.designer_name }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

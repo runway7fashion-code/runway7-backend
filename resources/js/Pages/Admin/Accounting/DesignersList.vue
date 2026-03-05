@@ -46,7 +46,7 @@ function statusLabel(s) {
 function statusClass(s) {
     return {
         active: 'bg-green-50 text-green-700',
-        inactive: 'bg-gray-100 text-gray-500',
+        inactive: 'bg-red-100 text-red-700',
         pending: 'bg-yellow-50 text-yellow-700',
     }[s] ?? 'bg-gray-50 text-gray-600';
 }
