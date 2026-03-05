@@ -218,15 +218,8 @@
         @endif
 
         <p class="text">
-            Use the following code to access the Runway 7 app and complete your profile before the casting day:
+            Download the Runway 7 app and log in with your email <strong>{{ $model->email }}</strong> and the password provided to complete your <strong>Comp Card</strong> with your photos before the casting day, so designers can view your profile. It's quick and easy!
         </p>
-
-        <div class="code-box">
-            <div class="code-label">Your access code</div>
-            <div class="code-value">{{ $model->login_code }}</div>
-        </div>
-
-        <p class="text" style="margin-top:16px;">Download the app, enter this code and complete your <strong>Comp Card</strong> with your photos before the casting day, so designers can view your profile. It's quick and easy!</p>
 
         <!-- App Store Badges -->
         <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 28px auto;">

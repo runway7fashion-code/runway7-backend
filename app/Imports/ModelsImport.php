@@ -80,7 +80,7 @@ class ModelsImport implements ToCollection, WithHeadingRow
                     'password'   => Hash::make(Str::random(16)),
                     'role'       => 'model',
                     'status'     => 'pending',
-                    'login_code' => $this->generateLoginCode(),
+                    'login_code' => null,
                 ]);
 
                 ModelProfile::firstOrCreate(['user_id' => $user->id]);
@@ -152,12 +152,4 @@ class ModelsImport implements ToCollection, WithHeadingRow
         return trim((string) $value);
     }
 
-    private function generateLoginCode(): string
-    {
-        do {
-            $code = 'MOD' . str_pad(random_int(1, 9999), 4, '0', STR_PAD_LEFT);
-        } while (User::where('login_code', $code)->exists());
-
-        return $code;
-    }
 }
