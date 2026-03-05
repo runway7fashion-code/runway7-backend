@@ -155,7 +155,6 @@ function castingStatusInfo(status) {
     return {
         scheduled:  { label: 'Agendada',        color: 'text-gray-500',  dot: 'bg-gray-400' },
         checked_in: { label: 'Check-in',         color: 'text-blue-600',  dot: 'bg-blue-500' },
-        in_progress:{ label: 'En progreso',      color: 'text-amber-600', dot: 'bg-amber-500' },
         completed:  { label: 'Completada',       color: 'text-green-600', dot: 'bg-green-500' },
         no_show:    { label: 'No se presentó',   color: 'text-red-500',   dot: 'bg-red-400' },
     }[status] ?? { label: status ?? '—', color: 'text-gray-400', dot: 'bg-gray-300' };
@@ -375,7 +374,6 @@ function fmtEmailSent(dt) {
                     <option value="">Estado casting: todos</option>
                     <option value="scheduled">Agendada</option>
                     <option value="checked_in">Check-in</option>
-                    <option value="in_progress">En progreso</option>
                     <option value="completed">Completada</option>
                     <option value="no_show">No se presentó</option>
                 </select>

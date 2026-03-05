@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\ActivityAction;
 use App\Http\Controllers\Controller;
+use App\Jobs\SendRegistrationEmailJob;
 use App\Models\Event;
 use App\Services\ActivityLogService;
 use App\Services\ModelService;
@@ -144,6 +145,8 @@ class ModelRegistrationController extends Controller
                 "Registro público: {$model->first_name} {$model->last_name} para {$event->name}",
                 ['source' => 'wordpress', 'event_id' => $event->id]
             );
+
+            SendRegistrationEmailJob::dispatch($model->id, $event->name);
 
             return response()->json([
                 'message' => 'Your application has been received successfully. We will contact you soon!',
