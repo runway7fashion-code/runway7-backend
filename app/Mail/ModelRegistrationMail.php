@@ -21,10 +21,6 @@ class ModelRegistrationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            from: new \Illuminate\Mail\Mailables\Address(
-                config('mail.from.address', 'tickets@runway7fashion.com'),
-                config('mail.from.name', 'Runway 7')
-            ),
             subject: 'Thank You for Applying — Runway 7',
         );
     }

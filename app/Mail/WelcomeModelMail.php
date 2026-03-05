@@ -23,10 +23,6 @@ class WelcomeModelMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            from: new \Illuminate\Mail\Mailables\Address(
-                config('mail.from.address', 'tickets@runway7fashion.com'),
-                config('mail.from.name', 'Runway 7')
-            ),
             subject: 'Welcome to Runway 7! — Your Event Access',
         );
     }
