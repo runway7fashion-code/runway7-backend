@@ -104,31 +104,13 @@
             margin-bottom: 16px;
         }
         .step {
-            display: flex;
-            align-items: flex-start;
-            gap: 14px;
-            margin-bottom: 16px;
-        }
-        .step:last-child { margin-bottom: 0; }
-        .step-number {
-            width: 28px;
-            height: 28px;
-            min-width: 28px;
-            background-color: #D4AF37;
-            color: #ffffff;
-            font-size: 13px;
-            font-weight: 800;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .step-text {
             font-size: 14px;
             color: #555555;
             line-height: 1.6;
-            padding-top: 3px;
+            margin-bottom: 12px;
+            padding-left: 8px;
         }
+        .step:last-child { margin-bottom: 0; }
 
         /* Footer */
         .footer {
@@ -211,18 +193,9 @@
 
         <div class="steps-box">
             <div class="steps-title">What happens next?</div>
-            <div class="step">
-                <div class="step-number">1</div>
-                <div class="step-text">Our team will carefully review your application and photos.</div>
-            </div>
-            <div class="step">
-                <div class="step-number">2</div>
-                <div class="step-text">If you qualify, we will contact you with the details for the <strong>Model Casting</strong>.</div>
-            </div>
-            <div class="step">
-                <div class="step-number">3</div>
-                <div class="step-text">You will receive a welcome email with your access code to the Runway 7 app.</div>
-            </div>
+            <div class="step">&#8226; Our team will carefully review your application and photos.</div>
+            <div class="step">&#8226; If you qualify, we will contact you with the details for the <strong>Model Casting</strong>.</div>
+            <div class="step">&#8226; You will receive a welcome email with your access to the Runway7 app.</div>
         </div>
 
         <p class="text">
@@ -238,10 +211,10 @@
 
     <!-- Footer -->
     <div class="footer">
-        <div class="footer-brand">Runway 7</div>
+        <div class="footer-brand">Runway7 Fashion</div>
         <div class="footer-text">
             This email was sent to {{ $model->email }}<br>
-            © {{ date('Y') }} Runway 7 Fashion Week. All rights reserved.
+            © {{ date('Y') }} Runway7 Fashion. All rights reserved.
         </div>
     </div>
 
