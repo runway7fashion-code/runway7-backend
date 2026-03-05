@@ -222,7 +222,7 @@
         @endif
 
         <p class="text">
-            Use the following credentials to log in to the Runway 7 app:
+            Use the following credentials to log in to the Runway7 app:
         </p>
 
         <table class="credentials-table" cellpadding="0" cellspacing="0" border="0">
@@ -269,7 +269,7 @@
         <div class="footer-brand">Runway 7</div>
         <div class="footer-text">
             This email was sent to {{ $model->email }}<br>
-            © {{ date('Y') }} Runway 7 Fashion Week. All rights reserved.
+            © {{ date('Y') }} Runway7 Fashion. All rights reserved.
         </div>
     </div>
 
