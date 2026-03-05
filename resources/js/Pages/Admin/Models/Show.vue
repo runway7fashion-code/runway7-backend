@@ -89,6 +89,15 @@ const compCardLabels = ['Headshot', 'Full Body Front', 'Full Body Side', 'Creati
 const compCardPhotos = [profile?.photo_1, profile?.photo_2, profile?.photo_3, profile?.photo_4];
 const failedImgs = ref([false, false, false, false]);
 
+// Lightbox gallery
+const allGalleryLabels = ['Foto de Perfil', ...compCardLabels];
+const allGalleryPhotos = [props.model.profile_picture, ...compCardPhotos];
+const lightboxIndex = ref(-1);
+function openLightbox(index) { lightboxIndex.value = index; }
+function closeLightbox() { lightboxIndex.value = -1; }
+function lightboxPrev() { if (lightboxIndex.value > 0) lightboxIndex.value--; }
+function lightboxNext() { if (lightboxIndex.value < allGalleryPhotos.length - 1) lightboxIndex.value++; }
+
 // Modal pase
 const passModal = ref(null);
 function openPassModal(evt) { passModal.value = { ...evt.pass, event_name: evt.name }; }
@@ -122,7 +131,9 @@ function deleteModel() {
                 <div class="flex gap-6">
                     <!-- Foto de perfil -->
                     <div class="flex-shrink-0">
-                        <div class="w-24 h-24 rounded-full overflow-hidden bg-gray-100">
+                        <div class="w-24 h-24 rounded-full overflow-hidden bg-gray-100"
+                            :class="storageUrl(model.profile_picture) ? 'cursor-pointer hover:ring-2 hover:ring-black/20 transition' : ''"
+                            @click="storageUrl(model.profile_picture) && openLightbox(0)">
                             <img v-if="storageUrl(model.profile_picture)"
                                 :src="storageUrl(model.profile_picture)"
                                 class="w-full h-full object-cover" />
@@ -213,11 +224,15 @@ function deleteModel() {
 
                         <div class="grid grid-cols-4 gap-3">
                             <div v-for="(label, i) in compCardLabels" :key="i"
-                                class="aspect-[3/4] rounded-xl overflow-hidden border border-gray-200 bg-gray-50 relative group">
+                                :class="[
+                                    'aspect-[3/4] rounded-xl overflow-hidden border border-gray-200 bg-gray-50 relative group',
+                                    storageUrl(compCardPhotos[i]) && !failedImgs[i] ? 'cursor-pointer' : ''
+                                ]"
+                                @click="storageUrl(compCardPhotos[i]) && !failedImgs[i] && openLightbox(i + 1)">
                                 <img v-if="storageUrl(compCardPhotos[i]) && !failedImgs[i]"
                                     :src="storageUrl(compCardPhotos[i])"
                                     @error="failedImgs[i] = true"
-                                    class="w-full h-full object-cover" />
+                                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
                                 <div v-else class="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-300">
                                     <CameraIcon class="w-8 h-8" />
                                     <span class="text-[10px]">Sin foto</span>
@@ -462,6 +477,50 @@ function deleteModel() {
                     <p v-else class="text-xs text-gray-400">Válido todos los días</p>
                 </div>
             </div>
+        </div>
+    </Teleport>
+
+    <!-- Lightbox Gallery -->
+    <Teleport to="body">
+        <div v-if="lightboxIndex >= 0"
+            class="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center"
+            @click.self="closeLightbox"
+            @keydown.escape.window="closeLightbox"
+            @keydown.left.window="lightboxPrev"
+            @keydown.right.window="lightboxNext">
+
+            <!-- Close -->
+            <button @click="closeLightbox"
+                class="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition text-white cursor-pointer z-10">
+                <XMarkIcon class="w-6 h-6" />
+            </button>
+
+            <!-- Counter -->
+            <div class="absolute top-4 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium">
+                {{ lightboxIndex + 1 }} / {{ allGalleryPhotos.length }}
+            </div>
+
+            <!-- Label -->
+            <div class="absolute bottom-6 left-1/2 -translate-x-1/2 text-white text-sm font-semibold tracking-wide uppercase">
+                {{ allGalleryLabels[lightboxIndex] }}
+            </div>
+
+            <!-- Prev -->
+            <button v-if="lightboxIndex > 0" @click="lightboxPrev"
+                class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition text-white cursor-pointer">
+                <ArrowLeftIcon class="w-5 h-5" />
+            </button>
+
+            <!-- Image -->
+            <img :src="storageUrl(allGalleryPhotos[lightboxIndex])"
+                :key="lightboxIndex"
+                class="max-h-[85vh] max-w-[90vw] object-contain rounded-lg shadow-2xl" />
+
+            <!-- Next -->
+            <button v-if="lightboxIndex < allGalleryPhotos.length - 1" @click="lightboxNext"
+                class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition text-white cursor-pointer">
+                <ArrowRightIcon class="w-5 h-5" />
+            </button>
         </div>
     </Teleport>
 </template>
