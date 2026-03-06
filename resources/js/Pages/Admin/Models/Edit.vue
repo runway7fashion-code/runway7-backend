@@ -409,10 +409,15 @@ function submit() {
                                         class="text-xs font-bold bg-black text-white px-2 py-0.5 rounded-full">
                                         #{{ evt.participation_number }}
                                     </span>
-                                    <span class="text-xs text-gray-400">
-                                        Casting: {{ evt.casting_time ?? '—' }}
+                                    <span v-if="evt.casting_time" class="text-xs text-gray-400">
+                                        Casting: {{ evt.casting_time }}
                                         <span v-if="evt.casting_status"> · {{ evt.casting_status }}</span>
                                     </span>
+                                    <button v-else type="button"
+                                        @click="selectedEventId = evt.id; selectedSlotTime = ''"
+                                        class="text-xs text-amber-600 hover:text-amber-800 font-medium">
+                                        Asignar horario de casting
+                                    </button>
                                 </div>
                             </div>
                             <button type="button" @click="removeFromEvent(evt.id, evt.name)"
@@ -451,7 +456,7 @@ function submit() {
                         <button type="button" @click="assignEvent"
                             :disabled="!selectedEventId"
                             class="w-full py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors">
-                            Asignar al evento
+                            {{ model.events?.some(e => e.id == selectedEventId) ? 'Actualizar horario de casting' : 'Asignar al evento' }}
                         </button>
                     </div>
                 </div>

@@ -63,8 +63,39 @@ class ModelService
     {
         $event = Event::findOrFail($eventId);
 
-        if ($event->models()->where('model_id', $user->id)->exists()) {
-            throw new \Exception('La modelo ya está asignada a este evento.');
+        $alreadyAssigned = $event->models()->where('model_id', $user->id)->exists();
+
+        if ($alreadyAssigned) {
+            // Ya asignada: solo actualizar casting_time si se proporcionó
+            if ($castingTime) {
+                // Decrementar slot anterior si tenía horario previo
+                $pivot = $event->models()->where('model_id', $user->id)->first()?->pivot;
+                if ($pivot?->casting_time) {
+                    $castingDay = $event->eventDays()->where('type', 'casting')->first();
+                    if ($castingDay) {
+                        $oldSlot = $castingDay->castingSlots()->where('time', $pivot->casting_time)->first();
+                        if ($oldSlot && $oldSlot->booked > 0) {
+                            $oldSlot->decrement('booked');
+                        }
+                    }
+                }
+
+                $event->models()->updateExistingPivot($user->id, [
+                    'casting_time'   => $castingTime,
+                    'casting_status' => 'scheduled',
+                ]);
+
+                // Incrementar nuevo slot
+                $castingDay = $event->eventDays()->where('type', 'casting')->first();
+                if ($castingDay) {
+                    $slot = $castingDay->castingSlots()->where('time', $castingTime)->first();
+                    if ($slot) {
+                        $slot->increment('booked');
+                    }
+                }
+            }
+
+            return;
         }
 
         $pivotData = [
