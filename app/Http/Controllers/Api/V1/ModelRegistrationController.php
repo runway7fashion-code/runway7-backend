@@ -63,7 +63,7 @@ class ModelRegistrationController extends Controller
             'waist'      => 'required|numeric',
             'hips'       => 'required|numeric',
             'shoe_size'  => 'required|string|max:20',
-            'dress_size' => 'required|string|max:20',
+            'dress_size' => 'required|in:XXS,XS,S,M,L,XL,XXL',
             'event_id'   => 'required|exists:events,id',
             'agency_name'  => 'nullable|string|max:255',
             'order_number' => 'nullable|string|max:50',
