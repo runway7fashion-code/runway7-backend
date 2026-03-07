@@ -117,7 +117,7 @@ class ModelsImport implements ToCollection, WithHeadingRow
                     // Pivot event_model
                     if (!$event->models()->where('model_id', $user->id)->exists()) {
                         $event->models()->attach($user->id, [
-                            'status'       => 'confirmed',
+                            'status'       => 'invited',
                             'casting_time' => $castingTime ?: null,
                         ]);
                         $this->summary['assigned']++;

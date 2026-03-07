@@ -1,16 +1,20 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { Link, router } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { Link, router, useForm } from '@inertiajs/vue3';
+import { ref, watch, computed } from 'vue';
+import { XMarkIcon, ArrowUpTrayIcon, ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
-    designers:  Object,
-    events:     Array,
-    categories: Array,
-    packages:   Array,
-    salesReps:  Array,
-    countries:  Array,
-    filters:    Object,
+    designers:         Object,
+    events:            Array,
+    categories:        Array,
+    packages:          Array,
+    salesReps:         Array,
+    countries:         Array,
+    pendingEmailCount: Number,
+    pendingSmsCount:   Number,
+    twilioBalance:     Object,
+    filters:           Object,
 });
 
 const search   = ref(props.filters.search    ?? '');
@@ -68,6 +72,141 @@ function progressColor(pct) {
     if (pct >= 50)   return 'bg-yellow-400';
     return 'bg-gray-300';
 }
+
+const checkinDesigner = ref(null);
+
+function checkinPasses(d) {
+    return (d.event_passes ?? [])
+        .filter(p => p.checked_in_at)
+        .sort((a, b) => new Date(b.checked_in_at) - new Date(a.checked_in_at));
+}
+
+function openCheckinModal(d, e) {
+    e.stopPropagation();
+    checkinDesigner.value = d;
+}
+
+function timeAgo(dt) {
+    if (!dt) return '';
+    const diff = Date.now() - new Date(dt).getTime();
+    const mins  = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days  = Math.floor(diff / 86400000);
+    if (mins < 60)   return `hace ${mins}m`;
+    if (hours < 24)  return `hace ${hours}h`;
+    if (days < 30)   return `hace ${days}d`;
+    return fmtDate(dt);
+}
+
+function fmtDate(dt) {
+    if (!dt) return null;
+    return new Date(dt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function fmtTime(dt) {
+    if (!dt) return null;
+    return new Date(dt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+}
+
+function fmtDateTime(dt) {
+    if (!dt) return null;
+    const d = new Date(dt);
+    return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+        + ' ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+}
+
+function fmtEmailSent(dt) {
+    if (!dt) return null;
+    const d = new Date(dt);
+    return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function sendOnboardingEmail(d, e) {
+    e.stopPropagation();
+    if (!confirm(`¿Enviar email de onboarding a ${d.first_name}?`)) return;
+    router.post(`/admin/designers/${d.id}/send-onboarding`, {}, { preserveScroll: true });
+}
+
+function sendPendingOnboarding() {
+    if (!confirm(`¿Enviar email de onboarding a ${props.pendingEmailCount} diseñador(es) pendiente(s)? Los emails se procesarán en cola.`)) return;
+    router.post('/admin/designers/send-bulk-onboarding', {}, { preserveScroll: true });
+}
+
+function sendOnboardingSms(d, e) {
+    e.stopPropagation();
+    if (!d.phone) return alert(`${d.first_name} no tiene número de teléfono registrado.`);
+    if (!confirm(`¿Enviar SMS de onboarding a ${d.first_name}?`)) return;
+    router.post(`/admin/designers/${d.id}/send-onboarding-sms`, {}, { preserveScroll: true });
+}
+
+function sendPendingSms() {
+    if (!confirm(`¿Enviar SMS de onboarding a ${props.pendingSmsCount} diseñador(es) con teléfono? Los SMS se procesarán en cola.`)) return;
+    router.post('/admin/designers/send-bulk-onboarding-sms', {}, { preserveScroll: true });
+}
+
+// --- Modal eventos ---
+const selectedDesigner = ref(null);
+
+function openEventsModal(d, e) {
+    e.stopPropagation();
+    selectedDesigner.value = d;
+}
+
+function eventStatusBadge(status) {
+    return {
+        draft:     'bg-gray-100 text-gray-600',
+        published: 'bg-blue-100 text-blue-700',
+        active:    'bg-green-100 text-green-700',
+        completed: 'bg-purple-100 text-purple-700',
+        cancelled: 'bg-red-100 text-red-600',
+    }[status] ?? 'bg-gray-100 text-gray-600';
+}
+
+function eventStatusLabel(status) {
+    return { draft: 'Borrador', published: 'Publicado', active: 'Activo', completed: 'Completado', cancelled: 'Cancelado' }[status] ?? status;
+}
+
+function pivotStatusLabel(status) {
+    return { confirmed: 'Confirmado', cancelled: 'Cancelado', pending: 'Pendiente' }[status] ?? status;
+}
+
+function pivotStatusBadge(status) {
+    return { confirmed: 'bg-green-100 text-green-700', cancelled: 'bg-red-100 text-red-600', pending: 'bg-yellow-100 text-yellow-700' }[status] ?? 'bg-gray-100 text-gray-600';
+}
+
+// --- Export Excel ---
+const exportUrl = computed(() => {
+    const params = new URLSearchParams();
+    if (search.value)    params.set('search',    search.value);
+    if (event.value)     params.set('event',     event.value);
+    if (category.value)  params.set('category',  category.value);
+    if (pkg.value)       params.set('package',   pkg.value);
+    if (salesRep.value)  params.set('sales_rep', salesRep.value);
+    if (materials.value) params.set('materials', materials.value);
+    if (country.value)   params.set('country',   country.value);
+    const qs = params.toString();
+    return '/admin/designers/export' + (qs ? '?' + qs : '');
+});
+
+// --- Import Excel ---
+const showImportModal = ref(false);
+const importForm = useForm({ file: null, event_id: '' });
+const fileInput = ref(null);
+
+function handleFileChange(e) {
+    importForm.file = e.target.files[0] ?? null;
+}
+
+function submitImport() {
+    importForm.post('/admin/designers/import', {
+        forceFormData: true,
+        onSuccess: () => {
+            showImportModal.value = false;
+            importForm.reset();
+            if (fileInput.value) fileInput.value.value = '';
+        },
+    });
+}
 </script>
 
 <template>
@@ -82,9 +221,45 @@ function progressColor(pct) {
                     <h3 class="text-2xl font-bold text-gray-900">Diseñadores</h3>
                     <p class="text-gray-500 text-sm mt-1">{{ designers.total }} diseñadores registrados</p>
                 </div>
-                <Link href="/admin/designers/create" class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
-                    + Crear Diseñador
-                </Link>
+                <div class="flex items-center gap-3">
+                    <div v-if="twilioBalance" class="flex flex-col items-end px-3 py-1.5 border border-gray-200 rounded-lg bg-white">
+                        <span class="text-[10px] text-gray-400 font-medium leading-tight">Twilio Balance</span>
+                        <span class="text-sm font-bold text-gray-900 leading-tight">{{ twilioBalance.balance }} {{ twilioBalance.currency }}</span>
+                    </div>
+                    <button v-if="pendingSmsCount > 0" @click="sendPendingSms"
+                        class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
+                        <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                        </svg>
+                        Enviar SMS
+                        <span class="bg-green-100 text-green-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ pendingSmsCount }}</span>
+                    </button>
+                    <button v-if="pendingEmailCount > 0" @click="sendPendingOnboarding"
+                        class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
+                        <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                        </svg>
+                        Enviar correos
+                        <span class="bg-amber-100 text-amber-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ pendingEmailCount }}</span>
+                    </button>
+                    <!-- Exportar Excel -->
+                    <a :href="exportUrl"
+                        class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
+                        <ArrowDownTrayIcon class="w-4 h-4 text-gray-500" />
+                        Exportar Excel
+                    </a>
+
+                    <!-- Importar Excel -->
+                    <button @click="showImportModal = true"
+                        class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
+                        <ArrowUpTrayIcon class="w-4 h-4 text-gray-500" />
+                        Importar Excel
+                    </button>
+
+                    <Link href="/admin/designers/create" class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
+                        + Crear Diseñador
+                    </Link>
+                </div>
             </div>
 
             <!-- Filtros -->
@@ -136,18 +311,21 @@ function progressColor(pct) {
                     <thead class="bg-gray-50 border-b border-gray-200">
                         <tr>
                             <th class="text-left px-5 py-3 font-medium text-gray-500">Designer / Brand</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Email</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Phone</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Category</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Events</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Contacto</th>
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Materials</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Events</th>
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Status</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Último Check-in</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Registro</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Último Login</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Último Correo</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Último SMS</th>
                             <th class="px-4 py-3"></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         <tr v-if="designers.data.length === 0">
-                            <td colspan="8" class="text-center text-gray-400 py-12">No hay diseñadores registrados.</td>
+                            <td colspan="11" class="text-center text-gray-400 py-12">No hay diseñadores registrados.</td>
                         </tr>
                         <tr v-for="d in designers.data" :key="d.id"
                             class="hover:bg-gray-50 cursor-pointer transition-colors"
@@ -166,32 +344,17 @@ function progressColor(pct) {
                                     <div>
                                         <p class="font-medium text-gray-900">{{ d.first_name }} {{ d.last_name }}</p>
                                         <p class="text-gray-400 text-xs">{{ d.designer_profile?.brand_name ?? d.email }}</p>
+                                        <span v-if="d.designer_profile?.category"
+                                            class="inline-block mt-0.5 text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">
+                                            {{ d.designer_profile.category.name }}
+                                        </span>
                                     </div>
                                 </div>
                             </td>
-                            <!-- Email -->
+                            <!-- Contacto -->
                             <td class="px-4 py-3">
-                                <span class="text-gray-500 text-xs">{{ d.email }}</span>
-                            </td>
-                            <!-- Teléfono -->
-                            <td class="px-4 py-3">
-                                <span class="text-gray-500 text-xs">{{ d.phone ?? '—' }}</span>
-                            </td>
-                            <!-- Categoría -->
-                            <td class="px-4 py-3">
-                                <span v-if="d.designer_profile?.category"
-                                    class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-                                    {{ d.designer_profile.category.name }}
-                                </span>
-                                <span v-else class="text-gray-400 text-xs">Sin categoría</span>
-                            </td>
-                            <!-- Eventos -->
-                            <td class="px-4 py-3">
-                                <span v-if="d.events_as_designer?.length"
-                                    class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
-                                    {{ d.events_as_designer.length }} evento{{ d.events_as_designer.length !== 1 ? 's' : '' }}
-                                </span>
-                                <span v-else class="text-gray-400 text-xs">Sin eventos</span>
+                                <p class="text-gray-500 text-xs">{{ d.email }}</p>
+                                <p v-if="d.phone" class="text-gray-400 text-xs mt-0.5">{{ d.phone }}</p>
                             </td>
                             <!-- Materials -->
                             <td class="px-4 py-3">
@@ -203,6 +366,15 @@ function progressColor(pct) {
                                     </div>
                                     <span class="text-xs text-gray-500">{{ materialsProgress(d.designer_materials) }}%</span>
                                 </div>
+                            </td>
+                            <!-- Eventos -->
+                            <td class="px-4 py-3" @click.stop>
+                                <button v-if="d.events_as_designer?.length"
+                                    @click="openEventsModal(d, $event)"
+                                    class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full hover:bg-blue-100 transition-colors cursor-pointer">
+                                    {{ d.events_as_designer.length }} evento{{ d.events_as_designer.length !== 1 ? 's' : '' }}
+                                </button>
+                                <span v-else class="text-gray-400 text-xs">Sin eventos</span>
                             </td>
                             <!-- Estado -->
                             <td class="px-4 py-3" @click.stop>
@@ -218,9 +390,76 @@ function progressColor(pct) {
                                     <option value="pending">Pendiente</option>
                                 </select>
                             </td>
+                            <!-- Último Check-in -->
+                            <td class="px-4 py-3" @click.stop>
+                                <template v-if="checkinPasses(d).length">
+                                    <button @click="openCheckinModal(d, $event)"
+                                        class="group flex items-center gap-2 text-left hover:opacity-80 transition-opacity">
+                                        <div>
+                                            <p class="text-xs font-semibold text-gray-800 leading-tight">
+                                                {{ fmtDate(checkinPasses(d)[0].checked_in_at) }}
+                                            </p>
+                                            <p class="text-[11px] text-blue-600 font-medium leading-tight">
+                                                {{ fmtTime(checkinPasses(d)[0].checked_in_at) }}
+                                            </p>
+                                        </div>
+                                        <span v-if="checkinPasses(d).length > 1"
+                                            class="flex-shrink-0 text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full group-hover:bg-gray-200 transition-colors">
+                                            +{{ checkinPasses(d).length - 1 }}
+                                        </span>
+                                    </button>
+                                </template>
+                                <span v-else class="text-xs text-gray-400">—</span>
+                            </td>
+                            <!-- Registro -->
+                            <td class="px-4 py-3">
+                                <p class="text-xs text-gray-700">{{ fmtDateTime(d.created_at) }}</p>
+                            </td>
+                            <!-- Último Login -->
+                            <td class="px-4 py-3">
+                                <p v-if="d.last_login_at" class="text-xs text-gray-700">{{ fmtDateTime(d.last_login_at) }}</p>
+                                <span v-else class="text-xs text-gray-400">—</span>
+                            </td>
+                            <!-- Último Correo -->
+                            <td class="px-4 py-3">
+                                <template v-if="d.welcome_email_sent_at">
+                                    <span class="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full font-medium">
+                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                        </svg>
+                                        {{ fmtEmailSent(d.welcome_email_sent_at) }}
+                                    </span>
+                                </template>
+                                <span v-else class="inline-flex items-center text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                    No enviado
+                                </span>
+                            </td>
+                            <!-- Último SMS -->
+                            <td class="px-4 py-3">
+                                <template v-if="d.sms_sent_at">
+                                    <span class="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full font-medium">
+                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                        </svg>
+                                        {{ fmtEmailSent(d.sms_sent_at) }}
+                                    </span>
+                                </template>
+                                <span v-else class="inline-flex items-center text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                    No enviado
+                                </span>
+                            </td>
                             <!-- Acciones -->
                             <td class="px-4 py-3" @click.stop>
-                                <div class="flex gap-2 justify-end">
+                                <div class="flex items-center gap-2">
+                                    <button @click="sendOnboardingSms(d, $event)"
+                                        class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
+                                        :class="{ 'opacity-40 cursor-not-allowed': !d.phone }">
+                                        SMS
+                                    </button>
+                                    <button @click="sendOnboardingEmail(d, $event)"
+                                        class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap">
+                                        Email
+                                    </button>
                                     <Link :href="`/admin/designers/${d.id}/edit`"
                                         class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                                         Editar
@@ -244,4 +483,348 @@ function progressColor(pct) {
             </div>
         </div>
     </AdminLayout>
+
+    <!-- Modal: Historial de Check-ins -->
+    <Teleport to="body">
+        <Transition enter-active-class="transition duration-200" enter-from-class="opacity-0" enter-to-class="opacity-100"
+            leave-active-class="transition duration-150" leave-from-class="opacity-100" leave-to-class="opacity-0">
+            <div v-if="checkinDesigner" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="checkinDesigner = null"></div>
+
+                <Transition
+                    enter-active-class="transition duration-200 ease-out"
+                    enter-from-class="opacity-0 scale-95 translate-y-2"
+                    enter-to-class="opacity-100 scale-100 translate-y-0"
+                    leave-active-class="transition duration-150 ease-in"
+                    leave-from-class="opacity-100 scale-100 translate-y-0"
+                    leave-to-class="opacity-0 scale-95 translate-y-2">
+                    <div v-if="checkinDesigner" class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+
+                        <!-- Header -->
+                        <div class="bg-black px-6 py-5">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 border-2 border-white/20">
+                                        <img v-if="storageUrl(checkinDesigner.profile_picture)"
+                                            :src="storageUrl(checkinDesigner.profile_picture)"
+                                            class="w-full h-full object-cover" />
+                                        <div v-else class="w-full h-full bg-white/10 flex items-center justify-center text-sm font-bold text-white">
+                                            {{ checkinDesigner.first_name?.[0] }}{{ checkinDesigner.last_name?.[0] }}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-white text-base leading-tight">
+                                            {{ checkinDesigner.first_name }} {{ checkinDesigner.last_name }}
+                                        </p>
+                                        <div class="flex items-center gap-1.5 mt-0.5">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+                                            <p class="text-white/60 text-xs">
+                                                {{ checkinPasses(checkinDesigner).length }} check-in{{ checkinPasses(checkinDesigner).length !== 1 ? 's' : '' }} registrado{{ checkinPasses(checkinDesigner).length !== 1 ? 's' : '' }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button @click="checkinDesigner = null"
+                                    class="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white">
+                                    <XMarkIcon class="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Timeline de check-ins -->
+                        <div class="p-5 space-y-0 max-h-[60vh] overflow-y-auto">
+                            <div v-for="(pass, idx) in checkinPasses(checkinDesigner)" :key="pass.id"
+                                class="relative flex gap-4">
+                                <!-- Línea de timeline -->
+                                <div class="flex flex-col items-center flex-shrink-0">
+                                    <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center shadow-sm flex-shrink-0 z-10">
+                                        <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                        </svg>
+                                    </div>
+                                    <div v-if="idx < checkinPasses(checkinDesigner).length - 1"
+                                        class="w-px flex-1 bg-gray-200 my-1 min-h-[20px]"></div>
+                                </div>
+
+                                <!-- Contenido -->
+                                <div class="pb-5 flex-1 min-w-0">
+                                    <div class="bg-gray-50 border border-gray-100 rounded-xl p-3.5 hover:border-gray-200 transition-colors">
+                                        <!-- Evento -->
+                                        <div class="flex items-start justify-between gap-2 mb-2.5">
+                                            <p class="font-semibold text-gray-900 text-sm leading-tight truncate">{{ pass.event?.name ?? 'Evento' }}</p>
+                                        </div>
+
+                                        <!-- Fecha y hora del check-in -->
+                                        <div class="flex items-center gap-3 mb-2.5">
+                                            <div class="flex items-center gap-1.5">
+                                                <div class="w-6 h-6 rounded-lg bg-blue-50 flex items-center justify-center">
+                                                    <svg class="w-3 h-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
+                                                    </svg>
+                                                </div>
+                                                <span class="text-xs text-gray-700 font-medium">{{ fmtDate(pass.checked_in_at) }}</span>
+                                            </div>
+                                            <div class="flex items-center gap-1.5">
+                                                <div class="w-6 h-6 rounded-lg bg-green-50 flex items-center justify-center">
+                                                    <svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                </div>
+                                                <span class="text-xs font-bold text-green-600">{{ fmtTime(pass.checked_in_at) }}</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Time ago -->
+                                        <div class="flex items-center">
+                                            <span class="text-[10px] text-gray-400 italic ml-auto">{{ timeAgo(pass.checked_in_at) }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
+                            <Link :href="`/admin/designers/${checkinDesigner.id}`"
+                                class="text-sm font-semibold text-black hover:underline underline-offset-2">
+                                Ver perfil completo →
+                            </Link>
+                            <button @click="checkinDesigner = null"
+                                class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                                Cerrar
+                            </button>
+                        </div>
+
+                    </div>
+                </Transition>
+            </div>
+        </Transition>
+    </Teleport>
+
+    <!-- Modal: Eventos del diseñador -->
+    <Teleport to="body">
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0">
+            <div v-if="selectedDesigner" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="selectedDesigner = null"></div>
+                <Transition
+                    enter-active-class="transition duration-200 ease-out"
+                    enter-from-class="opacity-0 scale-95 translate-y-2"
+                    enter-to-class="opacity-100 scale-100 translate-y-0"
+                    leave-active-class="transition duration-150 ease-in"
+                    leave-from-class="opacity-100 scale-100 translate-y-0"
+                    leave-to-class="opacity-0 scale-95 translate-y-2">
+                    <div v-if="selectedDesigner" class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+
+                        <!-- Header negro -->
+                        <div class="bg-black px-6 py-5">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 border-2 border-white/20">
+                                        <img v-if="storageUrl(selectedDesigner.profile_picture)"
+                                            :src="storageUrl(selectedDesigner.profile_picture)"
+                                            class="w-full h-full object-cover" />
+                                        <div v-else class="w-full h-full bg-white/10 flex items-center justify-center text-sm font-bold text-white">
+                                            {{ selectedDesigner.first_name?.[0] }}{{ selectedDesigner.last_name?.[0] }}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-white text-base leading-tight">
+                                            {{ selectedDesigner.first_name }} {{ selectedDesigner.last_name }}
+                                        </p>
+                                        <p class="text-white/50 text-xs mt-0.5">
+                                            {{ selectedDesigner.events_as_designer.length }}
+                                            evento{{ selectedDesigner.events_as_designer.length !== 1 ? 's' : '' }} asignado{{ selectedDesigner.events_as_designer.length !== 1 ? 's' : '' }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button @click="selectedDesigner = null"
+                                    class="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white">
+                                    <XMarkIcon class="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Lista de eventos -->
+                        <div class="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
+                            <div v-for="(ev, idx) in selectedDesigner.events_as_designer" :key="ev.id"
+                                class="border border-gray-100 rounded-xl p-4 hover:border-gray-200 transition-colors bg-gray-50/50">
+
+                                <!-- Nombre evento + estado -->
+                                <div class="flex items-start justify-between gap-3 mb-3">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-black text-white text-xs font-bold flex items-center justify-center">
+                                            {{ idx + 1 }}
+                                        </span>
+                                        <p class="font-semibold text-gray-900 text-sm leading-tight truncate">{{ ev.name }}</p>
+                                    </div>
+                                    <span :class="eventStatusBadge(ev.status)"
+                                        class="flex-shrink-0 text-xs font-medium px-2 py-0.5 rounded-full">
+                                        {{ eventStatusLabel(ev.status) }}
+                                    </span>
+                                </div>
+
+                                <!-- Grid de datos -->
+                                <div class="grid grid-cols-2 gap-x-4 gap-y-2.5">
+
+                                    <!-- Estado en evento -->
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-7 h-7 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Estado</p>
+                                            <span :class="pivotStatusBadge(ev.pivot?.status)"
+                                                class="text-xs font-medium px-1.5 py-0.5 rounded-full">
+                                                {{ pivotStatusLabel(ev.pivot?.status) }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Looks -->
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-3.5 h-3.5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Looks</p>
+                                            <p class="text-xs font-semibold text-gray-800">{{ ev.pivot?.looks ?? '—' }}</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Paquete -->
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-7 h-7 rounded-lg bg-[#D4AF37]/10 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-3.5 h-3.5 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Paquete</p>
+                                            <p class="text-xs font-semibold text-gray-800">
+                                                {{ ev.pivot?.package_price ? '$' + Number(ev.pivot.package_price).toLocaleString() : '—' }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Casting habilitado -->
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-3.5 h-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Casting modelos</p>
+                                            <p class="text-xs font-semibold" :class="ev.pivot?.model_casting_enabled ? 'text-green-600' : 'text-red-500'">
+                                                {{ ev.pivot?.model_casting_enabled ? 'Habilitado' : 'Deshabilitado' }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <!-- Notas -->
+                                <p v-if="ev.pivot?.notes" class="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
+                                    {{ ev.pivot.notes }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
+                            <Link :href="`/admin/designers/${selectedDesigner.id}`"
+                                class="text-sm font-semibold text-black hover:underline underline-offset-2">
+                                Ver perfil completo →
+                            </Link>
+                            <button @click="selectedDesigner = null"
+                                class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                                Cerrar
+                            </button>
+                        </div>
+
+                    </div>
+                </Transition>
+            </div>
+        </Transition>
+    </Teleport>
+
+    <!-- Modal: Importar Excel -->
+    <Teleport to="body">
+        <div v-if="showImportModal" class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/50" @click="showImportModal = false"></div>
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+                <!-- Header -->
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="text-lg font-bold text-gray-900">Importar Diseñadores desde Excel</h3>
+                    <button @click="showImportModal = false" class="text-gray-400 hover:text-gray-600">
+                        <XMarkIcon class="w-5 h-5" />
+                    </button>
+                </div>
+
+                <!-- Formato esperado -->
+                <div class="bg-gray-50 rounded-xl p-4 mb-5 text-xs text-gray-600">
+                    <p class="font-semibold text-gray-800 mb-2">Columnas del Excel:</p>
+                    <div class="grid grid-cols-2 gap-1">
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">email</span> <span class="text-red-500">*obligatorio</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">first_name</span> o <span class="font-mono bg-white border border-gray-200 px-1 rounded">nombre</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">last_name</span> o <span class="font-mono bg-white border border-gray-200 px-1 rounded">apellido</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">phone</span> / <span class="font-mono bg-white border border-gray-200 px-1 rounded">telefono</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">brand_name</span> / <span class="font-mono bg-white border border-gray-200 px-1 rounded">marca</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">country</span> / <span class="font-mono bg-white border border-gray-200 px-1 rounded">pais</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">website</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">instagram</span></span>
+                    </div>
+                    <p class="mt-2 text-gray-500">Formatos: <strong>.xlsx, .xls, .csv</strong></p>
+                </div>
+
+                <!-- Selector de evento -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Asignar a un evento <span class="text-gray-400 font-normal">(opcional)</span></label>
+                    <select v-model="importForm.event_id"
+                        class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                        <option value="">— Sin asignar a evento —</option>
+                        <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
+                    </select>
+                    <p v-if="importForm.event_id" class="mt-1.5 text-xs text-blue-600">
+                        Todos los diseñadores importados se asignarán a este evento con materiales y display por defecto.
+                    </p>
+                    <p v-else class="mt-1.5 text-xs text-gray-400">
+                        Si no seleccionas un evento, los diseñadores se crean sin asignación.
+                    </p>
+                </div>
+
+                <!-- Input archivo -->
+                <div class="mb-5">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar archivo</label>
+                    <input ref="fileInput" type="file" accept=".xlsx,.xls,.csv"
+                        @change="handleFileChange"
+                        class="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800 cursor-pointer" />
+                    <p v-if="importForm.errors.file" class="mt-1 text-xs text-red-500">{{ importForm.errors.file }}</p>
+                </div>
+
+                <!-- Acciones -->
+                <div class="flex gap-3">
+                    <button @click="showImportModal = false"
+                        class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancelar
+                    </button>
+                    <button @click="submitImport"
+                        :disabled="!importForm.file || importForm.processing"
+                        class="flex-1 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                        {{ importForm.processing ? 'Importando...' : 'Importar' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
 </template>

@@ -13,7 +13,7 @@ class ModelProfile extends Model
 
     protected $fillable = [
         'user_id', 'birth_date', 'age', 'gender', 'location',
-        'agency', 'is_agency', 'is_test_model',
+        'agency', 'is_agency', 'is_top', 'is_test_model',
         'instagram', 'participation_number',
         'height', 'bust', 'chest', 'waist', 'hips',
         'shoe_size', 'dress_size', 'body_type', 'ethnicity', 'hair',
@@ -27,6 +27,7 @@ class ModelProfile extends Model
             'birth_date'         => 'date',
             'photos'             => 'array',
             'is_agency'          => 'boolean',
+            'is_top'             => 'boolean',
             'is_test_model'      => 'boolean',
             'compcard_completed' => 'boolean',
         ];

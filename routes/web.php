@@ -54,10 +54,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('models/{model}/upload-profile-picture', [ModelController::class, 'uploadProfilePicture'])->name('models.upload-profile-picture');
             Route::delete('models/{model}/delete-profile-picture', [ModelController::class, 'deleteProfilePicture'])->name('models.delete-profile-picture');
             Route::patch('models/{model}/status', [ModelController::class, 'updateStatus'])->name('models.update-status');
+            Route::post('models/{model}/toggle-top', [ModelController::class, 'toggleTop'])->name('models.toggle-top');
         });
 
         // Diseñadores - admin, operation, sales
         Route::middleware('section:designers')->group(function () {
+            Route::get('designers/export', [DesignerController::class, 'exportDesigners'])->name('designers.export');
+            Route::post('designers/import', [DesignerController::class, 'importDesigners'])->name('designers.import');
             Route::resource('designers', DesignerController::class);
             Route::patch('designers/{designer}/status', [DesignerController::class, 'updateStatus'])->name('designers.update-status');
             Route::post('designers/{designer}/assign-event', [DesignerController::class, 'assignEvent'])->name('designers.assign-event');
@@ -73,6 +76,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::put('designer-displays/{display}', [DesignerController::class, 'updateDisplay'])->name('designers.update-display');
             Route::post('designer-displays/{display}/upload-video', [DesignerController::class, 'uploadVideo'])->name('designers.upload-video');
             Route::post('designer-displays/{display}/upload-audio', [DesignerController::class, 'uploadAudio'])->name('designers.upload-audio');
+            Route::post('designers/{designer}/send-onboarding', [DesignerController::class, 'sendOnboardingEmail'])->name('designers.send-onboarding');
+            Route::post('designers/send-bulk-onboarding', [DesignerController::class, 'sendBulkOnboardingEmail'])->name('designers.send-bulk-onboarding');
+            Route::post('designers/{designer}/send-onboarding-sms', [DesignerController::class, 'sendOnboardingSms'])->name('designers.send-onboarding-sms');
+            Route::post('designers/send-bulk-onboarding-sms', [DesignerController::class, 'sendBulkOnboardingSms'])->name('designers.send-bulk-onboarding-sms');
         });
 
         // Eventos - admin, operation

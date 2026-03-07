@@ -38,7 +38,7 @@ function bodyTypeLabel(b) {
 }
 
 function castingStatusLabel(s) {
-    return { scheduled: 'Programado', checked_in: 'Hizo check-in', no_show: 'No se presentó' }[s] ?? s ?? '—';
+    return { scheduled: 'Agendada', checked_in: 'Hizo check-in', selected: 'Seleccionada', no_show: 'No se presentó' }[s] ?? s ?? '—';
 }
 
 function showStatusLabel(s) {
@@ -131,14 +131,19 @@ function deleteModel() {
                 <div class="flex gap-6">
                     <!-- Foto de perfil -->
                     <div class="flex-shrink-0">
-                        <div class="w-24 h-24 rounded-full overflow-hidden bg-gray-100"
-                            :class="storageUrl(model.profile_picture) ? 'cursor-pointer hover:ring-2 hover:ring-black/20 transition' : ''"
+                        <div class="w-24 h-24 rounded-full"
+                            :class="[
+                                profile?.is_top ? 'ring-[3px] ring-[#D4AF37] ring-offset-2' : '',
+                                storageUrl(model.profile_picture) ? 'cursor-pointer hover:opacity-90 transition' : ''
+                            ]"
                             @click="storageUrl(model.profile_picture) && openLightbox(0)">
-                            <img v-if="storageUrl(model.profile_picture)"
-                                :src="storageUrl(model.profile_picture)"
-                                class="w-full h-full object-cover" />
-                            <div v-else class="w-full h-full flex items-center justify-center text-2xl font-bold text-gray-400">
-                                {{ model.first_name?.[0] }}{{ model.last_name?.[0] }}
+                            <div class="w-full h-full rounded-full overflow-hidden bg-gray-100">
+                                <img v-if="storageUrl(model.profile_picture)"
+                                    :src="storageUrl(model.profile_picture)"
+                                    class="w-full h-full object-cover" />
+                                <div v-else class="w-full h-full flex items-center justify-center text-2xl font-bold text-gray-400">
+                                    {{ model.first_name?.[0] }}{{ model.last_name?.[0] }}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -301,10 +306,11 @@ function deleteModel() {
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                         Casting: {{ evt.casting_time ?? 'No asignado' }}
-                                        <span v-if="evt.casting_status"
+                                        <span v-if="evt.casting_time && evt.casting_status"
                                             :class="{
                                                 'text-yellow-600': evt.casting_status === 'scheduled',
-                                                'text-green-600': evt.casting_status === 'checked_in',
+                                                'text-blue-600': evt.casting_status === 'checked_in',
+                                                'text-green-600': evt.casting_status === 'selected',
                                                 'text-red-500': evt.casting_status === 'no_show',
                                             }"
                                             class="font-medium">

@@ -12,8 +12,12 @@ use App\Models\Event;
 use App\Models\FittingSlot;
 use App\Models\Show;
 use App\Models\User;
+use App\Exports\DesignersExport;
+use App\Imports\DesignersImport;
 use App\Services\DesignerService;
 use App\Services\EventService;
+use App\Services\TwilioService;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -24,6 +28,7 @@ class DesignerController extends Controller
     public function __construct(
         protected DesignerService $designerService,
         protected EventService $eventService,
+        protected TwilioService $twilioService,
     ) {}
 
     public function index(Request $request): Response
@@ -32,6 +37,7 @@ class DesignerController extends Controller
             'designerProfile.category',
             'eventsAsDesigner',
             'designerMaterials',
+            'eventPasses' => fn($q) => $q->whereNotNull('checked_in_at')->with('event:id,name,status')->select('id', 'event_id', 'user_id', 'checked_in_at', 'check_in_history'),
         ]);
 
         if ($request->filled('search')) {
@@ -86,14 +92,29 @@ class DesignerController extends Controller
             ->orderBy('country')
             ->pluck('country');
 
+        $pendingEmailCount = User::designers()
+            ->where('status', 'pending')
+            ->whereNull('welcome_email_sent_at')
+            ->count();
+
+        $pendingSmsCount = User::designers()
+            ->where('status', 'pending')
+            ->whereNotNull('phone')
+            ->where('phone', 'like', '+%')
+            ->whereNull('sms_sent_at')
+            ->count();
+
         return Inertia::render('Admin/Designers/Index', [
-            'designers'  => $designers,
-            'events'     => $events,
-            'categories' => $categories,
-            'packages'   => $packages,
-            'salesReps'  => $salesReps,
-            'countries'  => $usedCountries,
-            'filters'    => $request->only(['search', 'event', 'category', 'package', 'sales_rep', 'materials', 'country']),
+            'designers'         => $designers,
+            'events'            => $events,
+            'categories'        => $categories,
+            'packages'          => $packages,
+            'salesReps'         => $salesReps,
+            'countries'         => $usedCountries,
+            'pendingEmailCount' => $pendingEmailCount,
+            'pendingSmsCount'   => $pendingSmsCount,
+            'twilioBalance'     => $this->twilioService->getBalance(),
+            'filters'           => $request->only(['search', 'event', 'category', 'package', 'sales_rep', 'materials', 'country']),
         ]);
     }
 
@@ -304,6 +325,43 @@ class DesignerController extends Controller
             ->with('success', 'Diseñador eliminado.');
     }
 
+    public function exportDesigners(Request $request)
+    {
+        $filename = 'disenadores_' . now()->format('Ymd_His') . '.xlsx';
+
+        return Excel::download(new DesignersExport(
+            search:    $request->input('search'),
+            event:     $request->input('event'),
+            category:  $request->input('category'),
+            package:   $request->input('package'),
+            salesRep:  $request->input('sales_rep'),
+            materials: $request->input('materials'),
+            country:   $request->input('country'),
+        ), $filename);
+    }
+
+    public function importDesigners(Request $request)
+    {
+        $request->validate([
+            'file'     => 'required|file|mimes:xlsx,xls,csv|max:10240',
+            'event_id' => 'nullable|exists:events,id',
+        ]);
+
+        $eventId = $request->filled('event_id') ? (int) $request->event_id : null;
+        $import  = new DesignersImport(globalEventId: $eventId);
+        Excel::import($import, $request->file('file'));
+
+        $s = $import->summary;
+        $msg = "Importación completada: {$s['created']} creados, {$s['updated']} actualizados, {$s['assigned']} asignados a eventos.";
+
+        if (!empty($s['errors'])) {
+            $msg .= ' ' . count($s['errors']) . ' errores (ver log).';
+            \Illuminate\Support\Facades\Log::warning('DesignersImport errors', $s['errors']);
+        }
+
+        return back()->with('success', $msg)->with('importSummary', $s);
+    }
+
     public function assignEvent(Request $request, User $designer)
     {
         $this->authorizeDesigner($designer);
@@ -424,7 +482,7 @@ class DesignerController extends Controller
 
         $designer->designedShows()->attach($request->show_id, [
             'collection_name' => $request->collection_name,
-            'status'          => 'assigned',
+            'status'          => 'confirmed',
         ]);
 
         $show = Show::with('eventDay')->findOrFail($request->show_id);
@@ -552,6 +610,112 @@ class DesignerController extends Controller
         $display->update(['music_audio_url' => Storage::disk('public')->url($path)]);
 
         return back()->with('success', 'Audio subido correctamente.');
+    }
+
+    public function sendOnboardingEmail(Request $request, User $designer)
+    {
+        $this->authorizeDesigner($designer);
+
+        $designer->load('eventsAsDesigner', 'designedShows.eventDay');
+        $firstEvent = $designer->eventsAsDesigner?->first();
+
+        $shows = $designer->designedShows
+            ->filter(fn($show) => $show->eventDay && $show->pivot->status !== 'cancelled')
+            ->sortBy([fn($a, $b) => $a->eventDay->date <=> $b->eventDay->date, fn($a, $b) => $a->scheduled_time <=> $b->scheduled_time])
+            ->map(fn($show) => [
+                'day_label'      => $show->eventDay->label,
+                'day_date'       => $show->eventDay->date->format('Y-m-d'),
+                'scheduled_time' => $show->scheduled_time,
+                'show_name'      => $show->name,
+            ])->values()->toArray();
+
+        \App\Jobs\SendDesignerOnboardingJob::dispatch(
+            userId:    $designer->id,
+            eventName: $firstEvent?->name,
+            shows:     $shows,
+        );
+
+        return back()->with('success', "Email de onboarding encolado para {$designer->full_name}.");
+    }
+
+    public function sendBulkOnboardingEmail(Request $request)
+    {
+        $designers = User::designers()
+            ->where('status', 'pending')
+            ->whereNull('welcome_email_sent_at')
+            ->with(['eventsAsDesigner', 'designedShows.eventDay'])
+            ->get();
+
+        $count = 0;
+        foreach ($designers as $designer) {
+            $firstEvent = $designer->eventsAsDesigner?->first();
+
+            $shows = $designer->designedShows
+                ->filter(fn($show) => $show->eventDay && $show->pivot->status !== 'cancelled')
+                ->sortBy([fn($a, $b) => $a->eventDay->date <=> $b->eventDay->date, fn($a, $b) => $a->scheduled_time <=> $b->scheduled_time])
+                ->map(fn($show) => [
+                    'day_label'      => $show->eventDay->label,
+                    'day_date'       => $show->eventDay->date->format('Y-m-d'),
+                    'scheduled_time' => $show->scheduled_time,
+                    'show_name'      => $show->name,
+                ])->values()->toArray();
+
+            \App\Jobs\SendDesignerOnboardingJob::dispatch(
+                userId:    $designer->id,
+                eventName: $firstEvent?->name,
+                shows:     $shows,
+            );
+            $count++;
+        }
+
+        return back()->with('success', "Email de onboarding encolado para {$count} diseñadores.");
+    }
+
+    public function sendOnboardingSms(Request $request, User $designer)
+    {
+        $this->authorizeDesigner($designer);
+
+        if (!$designer->phone) {
+            return back()->with('error', "{$designer->full_name} no tiene número de teléfono registrado.");
+        }
+
+        if (!str_starts_with($designer->phone, '+')) {
+            return back()->with('error', "El teléfono de {$designer->full_name} ({$designer->phone}) debe incluir código de país (ej: +1...).");
+        }
+
+        $designer->load('eventsAsDesigner');
+        $firstEvent = $designer->eventsAsDesigner?->first();
+
+        \App\Jobs\SendDesignerOnboardingSmsJob::dispatch(
+            userId:    $designer->id,
+            eventName: $firstEvent?->name,
+        );
+
+        return back()->with('success', "SMS de onboarding encolado para {$designer->full_name}.");
+    }
+
+    public function sendBulkOnboardingSms(Request $request)
+    {
+        $designers = User::designers()
+            ->where('status', 'pending')
+            ->whereNotNull('phone')
+            ->where('phone', 'like', '+%')
+            ->whereNull('sms_sent_at')
+            ->with('eventsAsDesigner')
+            ->get();
+
+        $count = 0;
+        foreach ($designers as $designer) {
+            $firstEvent = $designer->eventsAsDesigner?->first();
+
+            \App\Jobs\SendDesignerOnboardingSmsJob::dispatch(
+                userId:    $designer->id,
+                eventName: $firstEvent?->name,
+            );
+            $count++;
+        }
+
+        return back()->with('success', "SMS de onboarding encolado para {$count} diseñadores.");
     }
 
     // --- Helpers ---

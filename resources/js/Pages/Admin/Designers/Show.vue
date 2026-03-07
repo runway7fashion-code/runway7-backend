@@ -3,7 +3,7 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import QrCode from '@/Components/QrCode.vue';
-import { ArrowLeftIcon, EnvelopeIcon, ChevronLeftIcon, ChevronRightIcon, XMarkIcon, ArrowRightIcon } from '@heroicons/vue/24/outline';
+import { ArrowLeftIcon, EnvelopeIcon, ChevronLeftIcon, ChevronRightIcon, XMarkIcon, ArrowRightIcon, TrashIcon, DevicePhoneMobileIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     designer: Object,
@@ -60,6 +60,45 @@ function storageUrl(path) {
 function removeFromEvent(eventId, eventName) {
     if (!confirm(`Quitar a ${props.designer.first_name} del evento "${eventName}"?`)) return;
     router.delete(`/admin/designers/${props.designer.id}/remove-event/${eventId}`, { preserveScroll: true });
+}
+
+// Onboarding email
+const sendingOnboarding = ref(false);
+function sendOnboardingEmail() {
+    if (!confirm(`Enviar email de onboarding a ${props.designer.first_name} ${props.designer.last_name}?`)) return;
+    sendingOnboarding.value = true;
+    router.post(`/admin/designers/${props.designer.id}/send-onboarding`, {}, {
+        preserveScroll: true,
+        onFinish: () => sendingOnboarding.value = false,
+    });
+}
+
+// Status badge
+function statusBadgeClass() {
+    return { active: 'bg-green-50 text-green-700 border-green-200', pending: 'bg-yellow-50 text-yellow-700 border-yellow-200', inactive: 'bg-red-50 text-red-600 border-red-200' }[props.designer.status] ?? 'bg-gray-50 text-gray-600 border-gray-200';
+}
+function statusBadgeLabel() {
+    return { active: 'Activo', pending: 'Pendiente', inactive: 'Inactivo' }[props.designer.status] ?? props.designer.status;
+}
+
+// Onboarding SMS
+const sendingSms = ref(false);
+function sendOnboardingSms() {
+    if (!props.designer.phone) return alert('Este diseñador no tiene teléfono registrado.');
+    if (!confirm(`Enviar SMS de onboarding a ${props.designer.first_name} ${props.designer.last_name}?`)) return;
+    sendingSms.value = true;
+    router.post(`/admin/designers/${props.designer.id}/send-onboarding-sms`, {}, {
+        preserveScroll: true,
+        onFinish: () => sendingSms.value = false,
+    });
+}
+
+// Delete designer
+const showDeleteModal = ref(false);
+function deleteDesigner() {
+    router.delete(`/admin/designers/${props.designer.id}`, {
+        onSuccess: () => showDeleteModal.value = false,
+    });
 }
 
 // Modal pase
@@ -170,10 +209,31 @@ const socialLinks = computed(() => {
                                     <span v-if="profile?.country"> · {{ profile.country }}</span>
                                 </p>
                             </div>
-                            <Link :href="`/admin/designers/${designer.id}/edit`"
-                                class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
-                                Editar
-                            </Link>
+                            <div class="flex items-center gap-2">
+                                <span :class="statusBadgeClass()"
+                                    class="px-2.5 py-1 rounded-full text-xs font-medium border">
+                                    {{ statusBadgeLabel() }}
+                                </span>
+                                <button @click="sendOnboardingSms" :disabled="sendingSms"
+                                    class="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center gap-1.5">
+                                    <DevicePhoneMobileIcon class="w-3.5 h-3.5" />
+                                    {{ sendingSms ? 'Enviando...' : 'SMS' }}
+                                </button>
+                                <button @click="sendOnboardingEmail" :disabled="sendingOnboarding"
+                                    class="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center gap-1.5">
+                                    <EnvelopeIcon class="w-3.5 h-3.5" />
+                                    {{ sendingOnboarding ? 'Enviando...' : 'Email' }}
+                                </button>
+                                <Link :href="`/admin/designers/${designer.id}/edit`"
+                                    class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
+                                    Editar
+                                </Link>
+                                <button @click="showDeleteModal = true"
+                                    class="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors flex items-center gap-1.5">
+                                    <TrashIcon class="w-3.5 h-3.5" />
+                                    Eliminar
+                                </button>
+                            </div>
                         </div>
 
                         <div class="mt-3 flex flex-wrap gap-3 text-sm">
@@ -471,6 +531,45 @@ const socialLinks = computed(() => {
                     <p v-if="passModal.valid_days_labels" class="text-xs text-gray-500 font-medium">Días válidos</p>
                     <p v-if="passModal.valid_days_labels" class="text-xs text-gray-400 mt-0.5">{{ passModal.valid_days_labels }}</p>
                     <p v-else class="text-xs text-gray-400">Válido todos los días</p>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Modal: Confirmar eliminación -->
+    <Teleport to="body">
+        <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/60" @click="showDeleteModal = false"></div>
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+                <button @click="showDeleteModal = false" class="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600">
+                    <XMarkIcon class="h-5 w-5" />
+                </button>
+                <div class="flex justify-center mb-3">
+                    <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+                        <TrashIcon class="w-6 h-6 text-red-500" />
+                    </div>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-1 text-center">¿Eliminar a {{ designer.first_name }} {{ designer.last_name }}?</h3>
+                <p class="text-sm text-gray-500 mb-4 text-center">Esta acción es permanente y no se puede deshacer.</p>
+                <div class="bg-red-50 border border-red-100 rounded-xl p-4 mb-5">
+                    <p class="text-sm font-medium text-red-700 mb-2">Se eliminará de forma definitiva:</p>
+                    <ul class="text-sm text-red-600 space-y-1 list-disc list-inside">
+                        <li>Cuenta de usuario y datos personales</li>
+                        <li>Perfil de diseñador y marca</li>
+                        <li>Asignaciones a eventos y shows</li>
+                        <li>Materiales y displays enviados</li>
+                        <li>Pases de acceso generados</li>
+                    </ul>
+                </div>
+                <div class="flex gap-3">
+                    <button @click="showDeleteModal = false"
+                        class="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
+                        Cancelar
+                    </button>
+                    <button @click="deleteDesigner"
+                        class="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors">
+                        Eliminar definitivamente
+                    </button>
                 </div>
             </div>
         </div>

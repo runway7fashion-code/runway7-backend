@@ -13,29 +13,30 @@ const overview = [
 ];
 
 const internalCards = [
-    { label: 'Admin',              key: 'admin' },
-    { label: 'Contabilidad',       key: 'accounting' },
-    { label: 'Operaciones',        key: 'operation' },
-    { label: 'Boletos',            key: 'tickets_manager' },
-    { label: 'Marketing',          key: 'marketing' },
-    { label: 'Relaciones Públicas',key: 'public_relations' },
+    { label: 'Admin',            key: 'admin' },
+    { label: 'Accounting',       key: 'accounting' },
+    { label: 'Operations',       key: 'operation' },
+    { label: 'Tickets',          key: 'tickets_manager' },
+    { label: 'Marketing',        key: 'marketing' },
+    { label: 'Public Relations', key: 'public_relations' },
+    { label: 'Sales',            key: 'sales' },
 ];
 
 const participantCards = [
-    { label: 'Diseñadores', key: 'designer' },
-    { label: 'Modelos',     key: 'model' },
-    { label: 'Medios',      key: 'media' },
-    { label: 'Voluntarios', key: 'volunteer' },
+    { label: 'Designers',   key: 'designer' },
+    { label: 'Models',      key: 'model' },
+    { label: 'Media',       key: 'media' },
+    { label: 'Volunteers',  key: 'volunteer' },
     { label: 'Staff',       key: 'staff' },
 ];
 
 const attendeeCards = [
-    { label: 'Asistentes',    key: 'attendee' },
-    { label: 'VIP',           key: 'vip' },
-    { label: 'Influencers',   key: 'influencer' },
-    { label: 'Prensa',        key: 'press' },
-    { label: 'Patrocinadores',key: 'sponsor' },
-    { label: 'Cortesía',      key: 'complementary' },
+    { label: 'Attendees',   key: 'attendee' },
+    { label: 'VIP',         key: 'vip' },
+    { label: 'Influencers', key: 'influencer' },
+    { label: 'Press',       key: 'press' },
+    { label: 'Sponsors',    key: 'sponsor' },
+    { label: 'Complimentary', key: 'complementary' },
 ];
 </script>
 
@@ -68,7 +69,7 @@ const attendeeCards = [
                     <span class="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block"></span>
                     <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500">Equipo Interno</h4>
                 </div>
-                <div class="grid grid-cols-3 md:grid-cols-6 gap-3">
+                <div class="grid grid-cols-3 md:grid-cols-7 gap-3">
                     <div
                         v-for="card in internalCards"
                         :key="card.key"

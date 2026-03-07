@@ -27,4 +27,15 @@ return [
         'api_version' => env('SHOPIFY_API_VERSION', '2025-01'),
     ],
 
+    'twilio' => [
+        'sid'   => env('TWILIO_ACCOUNT_SID'),
+        'token' => env('TWILIO_AUTH_TOKEN'),
+        'from'  => env('TWILIO_PHONE_NUMBER'),
+    ],
+
+    'app_stores' => [
+        'apple'  => env('APP_STORE_URL', 'https://apps.apple.com/app/runway7'),
+        'google' => env('PLAY_STORE_URL', 'https://play.google.com/store/apps/details?id=com.runway7'),
+    ],
+
 ];

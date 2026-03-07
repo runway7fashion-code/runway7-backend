@@ -2,7 +2,8 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
-import { EnvelopeIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, XMarkIcon } from '@heroicons/vue/24/outline';
+import { EnvelopeIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, XMarkIcon, StarIcon as StarOutline } from '@heroicons/vue/24/outline';
+import { StarIcon as StarSolid } from '@heroicons/vue/24/solid';
 import { computed } from 'vue';
 import { VueDatePicker } from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
@@ -154,6 +155,11 @@ function updateModelStatus(m, newStatus) {
     router.patch(`/admin/models/${m.id}/status`, { status: newStatus }, { preserveScroll: true });
 }
 
+function toggleTop(m, e) {
+    e.stopPropagation();
+    router.post(`/admin/models/${m.id}/toggle-top`, {}, { preserveScroll: true });
+}
+
 // --- Modal eventos ---
 const selectedModel = ref(null);
 
@@ -210,7 +216,7 @@ function castingStatusInfo(status) {
     return {
         scheduled:  { label: 'Agendada',        color: 'text-gray-500',  dot: 'bg-gray-400' },
         checked_in: { label: 'Check-in',         color: 'text-blue-600',  dot: 'bg-blue-500' },
-        completed:  { label: 'Completada',       color: 'text-green-600', dot: 'bg-green-500' },
+        selected:   { label: 'Seleccionada',      color: 'text-green-600', dot: 'bg-green-500' },
         no_show:    { label: 'No se presentó',   color: 'text-red-500',   dot: 'bg-red-400' },
     }[status] ?? { label: status ?? '—', color: 'text-gray-400', dot: 'bg-gray-300' };
 }
@@ -434,7 +440,7 @@ function fmtEmailSent(dt) {
                     <option value="">Estado casting: todos</option>
                     <option value="scheduled">Agendada</option>
                     <option value="checked_in">Check-in</option>
-                    <option value="completed">Completada</option>
+                    <option value="selected">Seleccionada</option>
                     <option value="no_show">No se presentó</option>
                 </select>
 
@@ -512,16 +518,27 @@ function fmtEmailSent(dt) {
                             @click="router.visit(`/admin/models/${m.id}`)">
                             <td class="px-5 py-3">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-100">
-                                        <img v-if="storageUrl(m.profile_picture)"
-                                            :src="storageUrl(m.profile_picture)"
-                                            class="w-full h-full object-cover" />
-                                        <div v-else class="w-full h-full flex items-center justify-center text-xs font-bold text-gray-500">
-                                            {{ m.first_name?.[0] }}{{ m.last_name?.[0] }}
+                                    <div class="w-10 h-10 rounded-full flex-shrink-0"
+                                        :class="m.model_profile?.is_top ? 'ring-2 ring-[#D4AF37] ring-offset-1' : ''">
+                                        <div class="w-full h-full rounded-full overflow-hidden bg-gray-100">
+                                            <img v-if="storageUrl(m.profile_picture)"
+                                                :src="storageUrl(m.profile_picture)"
+                                                class="w-full h-full object-cover" />
+                                            <div v-else class="w-full h-full flex items-center justify-center text-xs font-bold text-gray-500">
+                                                {{ m.first_name?.[0] }}{{ m.last_name?.[0] }}
+                                            </div>
                                         </div>
                                     </div>
                                     <div>
-                                        <p class="font-medium text-gray-900">{{ m.first_name }} {{ m.last_name }}</p>
+                                        <div class="flex items-center gap-1">
+                                            <p class="font-medium text-gray-900">{{ m.first_name }} {{ m.last_name }}</p>
+                                            <button @click="toggleTop(m, $event)"
+                                                class="flex-shrink-0 cursor-pointer hover:scale-110 transition-transform"
+                                                :title="m.model_profile?.is_top ? 'Quitar Top' : 'Marcar como Top'">
+                                                <StarSolid v-if="m.model_profile?.is_top" class="w-4 h-4 text-[#D4AF37]" />
+                                                <StarOutline v-else class="w-4 h-4 text-gray-300 hover:text-[#D4AF37]" />
+                                            </button>
+                                        </div>
                                         <p class="text-gray-400 text-xs">{{ m.email }}</p>
                                     </div>
                                 </div>
@@ -915,14 +932,17 @@ function fmtEmailSent(dt) {
                                         </div>
                                         <div>
                                             <p class="text-[10px] text-gray-400 leading-none mb-0.5">Estado casting</p>
-                                            <div class="flex items-center gap-1">
-                                                <span :class="castingStatusInfo(ev.pivot?.casting_status).dot"
-                                                    class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>
-                                                <span :class="castingStatusInfo(ev.pivot?.casting_status).color"
-                                                    class="text-xs font-medium">
-                                                    {{ castingStatusInfo(ev.pivot?.casting_status).label }}
-                                                </span>
-                                            </div>
+                                            <template v-if="ev.pivot?.casting_time">
+                                                <div class="flex items-center gap-1">
+                                                    <span :class="castingStatusInfo(ev.pivot?.casting_status).dot"
+                                                        class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>
+                                                    <span :class="castingStatusInfo(ev.pivot?.casting_status).color"
+                                                        class="text-xs font-medium">
+                                                        {{ castingStatusInfo(ev.pivot?.casting_status).label }}
+                                                    </span>
+                                                </div>
+                                            </template>
+                                            <span v-else class="text-xs text-gray-400">—</span>
                                         </div>
                                     </div>
 

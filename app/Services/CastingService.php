@@ -28,13 +28,63 @@ class CastingService
         });
     }
 
+    public function confirmCastingSlot(Event $event, User $model): void
+    {
+        $pivot = $event->models()->where('model_id', $model->id)->first()?->pivot;
+
+        if (!$pivot || !$pivot->casting_time) {
+            throw new \Exception('La modelo no tiene un horario de casting asignado.');
+        }
+
+        if ($pivot->status !== 'invited') {
+            throw new \Exception('La modelo ya respondió a esta invitación.');
+        }
+
+        $event->models()->updateExistingPivot($model->id, [
+            'status' => 'confirmed',
+        ]);
+    }
+
+    public function rejectCastingSlot(Event $event, User $model): void
+    {
+        $pivot = $event->models()->where('model_id', $model->id)->first()?->pivot;
+
+        if (!$pivot || !$pivot->casting_time) {
+            throw new \Exception('La modelo no tiene un horario de casting asignado.');
+        }
+
+        if ($pivot->status !== 'invited') {
+            throw new \Exception('La modelo ya respondió a esta invitación.');
+        }
+
+        // Liberar el slot
+        $castingDay = $event->eventDays()->where('type', 'casting')->first();
+        if ($castingDay) {
+            $slot = $castingDay->castingSlots()->where('time', $pivot->casting_time)->first();
+            if ($slot && $slot->booked > 0) {
+                $slot->decrement('booked');
+            }
+        }
+
+        $event->models()->updateExistingPivot($model->id, [
+            'casting_time'   => null,
+            'casting_status' => 'scheduled',
+            'status'         => 'invited',
+        ]);
+    }
+
     public function checkInModelToCasting(Event $event, User $model, int $participationNumber): void
     {
+        $pivot = $event->models()->where('model_id', $model->id)->first()?->pivot;
+
+        if ($pivot?->status !== 'confirmed') {
+            throw new \Exception('La modelo debe confirmar su horario de casting antes del check-in.');
+        }
+
         $event->models()->updateExistingPivot($model->id, [
             'participation_number'  => $participationNumber,
             'casting_status'        => 'checked_in',
             'casting_checked_in_at' => now(),
-            'status'                => 'confirmed',
         ]);
     }
 
@@ -45,13 +95,21 @@ class CastingService
             throw new \Exception('Este diseñador no está asignado a este show.');
         }
 
-        if ($this->hasConsecutiveShowConflict($show, $model)) {
-            throw new \Exception('La modelo ya tiene un show consecutivo asignado. No puede tener dos shows seguidos.');
+        // Verificar si la modelo ya rechazó a este diseñador en este show
+        $existingRequest = $show->models()
+            ->where('model_id', $model->id)
+            ->wherePivot('designer_id', $designer->id)
+            ->first();
+
+        if ($existingRequest) {
+            if ($existingRequest->pivot->status === 'rejected') {
+                throw new \Exception('La modelo ya rechazó esta solicitud. No se puede reenviar.');
+            }
+            throw new \Exception('Ya existe una solicitud para esta modelo con este diseñador en este show.');
         }
 
-        // A model can only have one request per designer per show
-        if ($show->models()->where('model_id', $model->id)->wherePivot('designer_id', $designer->id)->exists()) {
-            throw new \Exception('Ya existe una solicitud para esta modelo con este diseñador en este show.');
+        if ($this->hasConsecutiveShowConflict($show, $model)) {
+            throw new \Exception('La modelo ya tiene un show consecutivo asignado. No puede tener dos shows seguidos.');
         }
 
         $show->models()->attach($model->id, [
@@ -64,7 +122,7 @@ class CastingService
         return ['message' => 'Solicitud enviada correctamente.'];
     }
 
-    public function respondToRequest(Show $show, User $model, bool $accept, ?string $rejectionReason = null): void
+    public function respondToRequest(Show $show, User $model, User $designer, bool $accept, ?string $rejectionReason = null): void
     {
         if ($accept && $this->hasConsecutiveShowConflict($show, $model)) {
             throw new \Exception('Conflicto de horario: la modelo tiene un show consecutivo.');
@@ -83,7 +141,24 @@ class CastingService
             $pivotData['rejection_reason'] = $rejectionReason;
         }
 
-        $show->models()->updateExistingPivot($model->id, $pivotData);
+        // Actualizar el registro específico de este diseñador
+        DB::table('show_model')
+            ->where('show_id', $show->id)
+            ->where('model_id', $model->id)
+            ->where('designer_id', $designer->id)
+            ->update($pivotData);
+
+        // Si acepta, cambiar casting_status a 'selected' en event_model
+        if ($accept) {
+            $show->loadMissing('eventDay');
+            $eventId = $show->eventDay->event_id;
+
+            DB::table('event_model')
+                ->where('event_id', $eventId)
+                ->where('model_id', $model->id)
+                ->where('casting_status', 'checked_in')
+                ->update(['casting_status' => 'selected']);
+        }
     }
 
     public function hasConsecutiveShowConflict(Show $show, User $model): bool

@@ -123,6 +123,85 @@ class ModelService
     }
 
     /**
+     * Auto-asignar casting slot a una modelo según prioridad.
+     * $startFromPosition: 1 = primer slot, 2 = segundo, 3 = tercero...
+     * Busca desde esa posición; si no hay cupo avanza al siguiente.
+     */
+    public function autoAssignCastingSlot(User $user, int $eventId, int $startFromPosition = 1): ?string
+    {
+        $event = Event::findOrFail($eventId);
+        $castingDay = $event->eventDays()->where('type', 'casting')->first();
+        if (!$castingDay) return null;
+
+        $slots = $castingDay->castingSlots()->orderBy('time')->get();
+        if ($slots->isEmpty()) return null;
+
+        // Decrementar slot anterior si la modelo ya tenía uno asignado
+        $pivot = $event->models()->where('model_id', $user->id)->first()?->pivot;
+        if ($pivot?->casting_time) {
+            $oldSlot = $castingDay->castingSlots()->where('time', $pivot->casting_time)->first();
+            if ($oldSlot && $oldSlot->booked > 0) {
+                $oldSlot->decrement('booked');
+            }
+        }
+
+        // Empezar desde la posición indicada (0-indexed)
+        $startIndex = max(0, $startFromPosition - 1);
+
+        for ($i = $startIndex; $i < $slots->count(); $i++) {
+            if ($slots[$i]->isAvailable()) {
+                $castingTime = $slots[$i]->time;
+
+                // Actualizar el pivot
+                if ($pivot) {
+                    $event->models()->updateExistingPivot($user->id, [
+                        'casting_time'   => $castingTime,
+                        'casting_status' => 'scheduled',
+                    ]);
+                }
+
+                $slots[$i]->increment('booked');
+
+                return $castingTime;
+            }
+        }
+
+        // No se encontró slot — restaurar el slot anterior si lo decrementamos
+        if ($pivot?->casting_time) {
+            $oldSlot = $castingDay->castingSlots()->where('time', $pivot->casting_time)->first();
+            if ($oldSlot) {
+                $oldSlot->increment('booked');
+            }
+        }
+
+        return null; // No hay cupo en ningún slot
+    }
+
+    /**
+     * Liberar el casting slot de una modelo (quitar horario y decrementar booked).
+     */
+    public function removeCastingSlot(User $user, int $eventId): void
+    {
+        $event = Event::findOrFail($eventId);
+        $pivot = $event->models()->where('model_id', $user->id)->first()?->pivot;
+
+        if (!$pivot?->casting_time) return;
+
+        $castingDay = $event->eventDays()->where('type', 'casting')->first();
+        if ($castingDay) {
+            $slot = $castingDay->castingSlots()->where('time', $pivot->casting_time)->first();
+            if ($slot && $slot->booked > 0) {
+                $slot->decrement('booked');
+            }
+        }
+
+        $event->models()->updateExistingPivot($user->id, [
+            'casting_time'   => null,
+            'casting_status' => 'scheduled',
+        ]);
+    }
+
+    /**
      * Crear o actualizar el pase de una modelo para un evento.
      * valid_days = día de casting (si tiene turno) + días de shows confirmados/reservados.
      */

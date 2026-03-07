@@ -27,5 +27,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
         // Events / Fittings
         Route::get('my-fittings', [App\Http\Controllers\Api\V1\EventController::class, 'myFittings'])->name('my-fittings');
+
+        // Casting
+        Route::get('my-casting', [App\Http\Controllers\Api\V1\CastingController::class, 'myCasting'])->name('my-casting');
+        Route::post('events/{event}/casting/confirm', [App\Http\Controllers\Api\V1\CastingController::class, 'confirm'])->name('casting.confirm');
+        Route::post('events/{event}/casting/reject', [App\Http\Controllers\Api\V1\CastingController::class, 'reject'])->name('casting.reject');
     });
 });

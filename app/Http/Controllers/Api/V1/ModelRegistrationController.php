@@ -180,6 +180,12 @@ class ModelRegistrationController extends Controller
                 return $user;
             });
 
+            // Auto-assign casting slot: merch/agencia → primer slot
+            $hasAgency = !empty($validated['agency_name']);
+            if ($hasValidOrder || $hasAgency) {
+                $this->modelService->autoAssignCastingSlot($model, (int) $validated['event_id'], startFromPosition: 1);
+            }
+
             $event = Event::find($validated['event_id']);
             $this->activityLog->log(
                 ActivityAction::Registered,

@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Imports\ModelsImport;
 use App\Jobs\SendWelcomeEmailJob;
 use App\Models\Event;
+use App\Models\EventPass;
 use App\Models\FittingAssignment;
 use App\Models\User;
 use App\Services\ActivityLogService;
@@ -435,21 +436,52 @@ class ModelController extends Controller
         ]);
 
         $oldStatus = $model->status;
-        $userData['status'] = $request->input('status', $model->status);
+        $newStatus = $request->input('status', $model->status);
+        $userData['status'] = $newStatus;
         $this->modelService->updateModel($model, $userData, $profileData);
+
+        // Manejar cambios de estado en eventos/pases
+        if ($oldStatus !== $newStatus) {
+            $model->load('eventsAsModelWithCasting');
+
+            // Liberar slots, cancelar pases y marcar rejected cuando se inactiva
+            if ($newStatus === 'inactive') {
+                foreach ($model->eventsAsModelWithCasting as $event) {
+                    if ($event->pivot->casting_time) {
+                        $this->modelService->removeCastingSlot($model, $event->id);
+                    }
+                    $event->models()->updateExistingPivot($model->id, ['status' => 'rejected']);
+                    EventPass::where('user_id', $model->id)
+                        ->where('event_id', $event->id)
+                        ->where('status', 'active')
+                        ->update(['status' => 'cancelled']);
+                }
+            }
+
+            // Reactivar pases y estado cuando vuelve de inactivo
+            if ($oldStatus === 'inactive' && in_array($newStatus, ['pending', 'applicant'])) {
+                foreach ($model->eventsAsModelWithCasting as $event) {
+                    if ($event->pivot->status === 'rejected') {
+                        $event->models()->updateExistingPivot($model->id, ['status' => 'invited']);
+                    }
+                    EventPass::where('user_id', $model->id)
+                        ->where('event_id', $event->id)
+                        ->where('status', 'cancelled')
+                        ->update(['status' => 'active']);
+                }
+            }
+
+            $this->activityLog->log(
+                ActivityAction::StatusChanged, $model, $request->user(),
+                "Estado cambiado de {$oldStatus} a {$newStatus}",
+                ['old_status' => $oldStatus, 'new_status' => $newStatus]
+            );
+        }
 
         $this->activityLog->log(
             ActivityAction::ProfileUpdated, $model, $request->user(),
             "Perfil actualizado: {$model->first_name} {$model->last_name}"
         );
-
-        if ($oldStatus !== $userData['status']) {
-            $this->activityLog->log(
-                ActivityAction::StatusChanged, $model, $request->user(),
-                "Estado cambiado de {$oldStatus} a {$userData['status']}",
-                ['old_status' => $oldStatus, 'new_status' => $userData['status']]
-            );
-        }
 
         return redirect()->route('admin.models.show', $model)
             ->with('success', 'Modelo actualizada exitosamente.');
@@ -694,6 +726,27 @@ class ModelController extends Controller
         return back()->with('success', "{$count} emails encolados para envío. Se procesarán en los próximos minutos.");
     }
 
+    public function toggleTop(User $model)
+    {
+        $this->authorizeModel($model);
+
+        $profile = $model->modelProfile;
+        $wasTop = $profile->is_top;
+        $profile->update(['is_top' => !$wasTop]);
+
+        // Reasignar slot si la modelo tiene casting_time en algún evento
+        if (in_array($model->status, ['pending', 'applicant'])) {
+            $targetSlot = $wasTop ? 3 : 2; // quitó top → slot 3+, puso top → slot 2
+            foreach ($model->eventsAsModelWithCasting as $event) {
+                if ($event->pivot->casting_time) {
+                    $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $targetSlot);
+                }
+            }
+        }
+
+        return back()->with('success', $profile->is_top ? 'Modelo marcada como Top.' : 'Top removido.');
+    }
+
     public function updateStatus(Request $request, User $model)
     {
         $this->authorizeModel($model);
@@ -702,6 +755,56 @@ class ModelController extends Controller
 
         $oldStatus = $model->status;
         $model->update(['status' => $request->status]);
+
+        // Auto-assign casting slot cuando cambia de applicant → pending
+        if ($oldStatus === 'applicant' && $request->status === 'pending') {
+            $isTop = $model->modelProfile?->is_top ?? false;
+            $startSlot = $isTop ? 2 : 3;
+
+            foreach ($model->eventsAsModelWithCasting as $event) {
+                if ($isTop || !$event->pivot->casting_time) {
+                    $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot);
+                }
+            }
+        }
+
+        // Liberar slots, cancelar pases y marcar rejected cuando se inactiva
+        if ($request->status === 'inactive') {
+            foreach ($model->eventsAsModelWithCasting as $event) {
+                if ($event->pivot->casting_time) {
+                    $this->modelService->removeCastingSlot($model, $event->id);
+                }
+
+                // Marcar como rejected en el evento
+                $event->models()->updateExistingPivot($model->id, [
+                    'status' => 'rejected',
+                ]);
+
+                // Cancelar pases activos
+                EventPass::where('user_id', $model->id)
+                    ->where('event_id', $event->id)
+                    ->where('status', 'active')
+                    ->update(['status' => 'cancelled']);
+            }
+        }
+
+        // Reactivar pases y estado en evento cuando vuelve de inactivo
+        if ($oldStatus === 'inactive' && in_array($request->status, ['pending', 'applicant'])) {
+            foreach ($model->eventsAsModelWithCasting as $event) {
+                // Restaurar como invited en el evento
+                if ($event->pivot->status === 'rejected') {
+                    $event->models()->updateExistingPivot($model->id, [
+                        'status' => 'invited',
+                    ]);
+                }
+
+                // Reactivar pases cancelados
+                EventPass::where('user_id', $model->id)
+                    ->where('event_id', $event->id)
+                    ->where('status', 'cancelled')
+                    ->update(['status' => 'active']);
+            }
+        }
 
         $this->activityLog->log(
             ActivityAction::StatusChanged, $model, $request->user(),
