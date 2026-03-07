@@ -12,6 +12,7 @@ use App\Models\PaymentRecord;
 use App\Models\DesignerContactEmail;
 use App\Models\SupportCase;
 use App\Models\SupportCaseAttachment;
+use App\Models\SalesRegistration;
 use App\Models\SupportCaseMessage;
 use App\Models\User;
 use App\Services\AccountingService;
@@ -58,6 +59,7 @@ class AccountingController extends Controller
     {
         $search = $request->get('search', '');
 
+        // Diseñadores asignados al evento (event_designer)
         $designers = $event->designers()
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
@@ -90,7 +92,39 @@ class AccountingController extends Controller
                 ];
             });
 
-        return response()->json($designers);
+        // Diseñadores de sales_registrations que aún no están en event_designer
+        $assignedIds = $designers->pluck('id');
+        $salesDesigners = SalesRegistration::where('event_id', $event->id)
+            ->whereNotIn('designer_id', $assignedIds)
+            ->with(['designer.designerProfile', 'package'])
+            ->when($search, function ($q) use ($search) {
+                $q->whereHas('designer', function ($sub) use ($search) {
+                    $sub->where('first_name', 'ilike', "%{$search}%")
+                        ->orWhere('last_name', 'ilike', "%{$search}%")
+                        ->orWhere('email', 'ilike', "%{$search}%")
+                        ->orWhereHas('designerProfile', fn($p) => $p->where('brand_name', 'ilike', "%{$search}%"));
+                });
+            })
+            ->limit(20)
+            ->get()
+            ->map(function ($reg) {
+                $d = $reg->designer;
+                return [
+                    'id' => $d->id,
+                    'first_name' => $d->first_name,
+                    'last_name' => $d->last_name,
+                    'email' => $d->email,
+                    'profile_picture' => $d->profile_picture,
+                    'brand_name' => $d->designerProfile?->brand_name,
+                    'package_price' => $reg->agreed_price,
+                    'package_id' => $reg->package_id,
+                    'has_plan' => false,
+                    'plan_status' => null,
+                    'plan_progress' => null,
+                ];
+            });
+
+        return response()->json($designers->concat($salesDesigners)->values());
     }
 
     public function designersAllEvents(Request $request): JsonResponse
@@ -156,7 +190,42 @@ class AccountingController extends Controller
             ];
         });
 
-        return response()->json($results);
+        // Agregar diseñadores de sales_registrations que no están en event_designer
+        $assignedPairs = $rows->map(fn($r) => $r->designer_id . '-' . $r->event_id)->toArray();
+        $salesQuery = SalesRegistration::with(['designer.designerProfile', 'event', 'package'])
+            ->whereHas('designer');
+
+        if ($search) {
+            $salesQuery->whereHas('designer', function ($q) use ($search) {
+                $q->where('first_name', 'ilike', "%{$search}%")
+                    ->orWhere('last_name', 'ilike', "%{$search}%")
+                    ->orWhere('email', 'ilike', "%{$search}%")
+                    ->orWhereHas('designerProfile', fn($p) => $p->where('brand_name', 'ilike', "%{$search}%"));
+            });
+        }
+
+        $salesRegs = $salesQuery->limit(40)->get()
+            ->filter(fn($reg) => !in_array($reg->designer_id . '-' . $reg->event_id, $assignedPairs))
+            ->map(function ($reg) {
+                $d = $reg->designer;
+                return [
+                    'id' => $d->id,
+                    'first_name' => $d->first_name,
+                    'last_name' => $d->last_name,
+                    'email' => $d->email,
+                    'profile_picture' => $d->profile_picture,
+                    'brand_name' => $d->designerProfile?->brand_name,
+                    'package_price' => $reg->agreed_price,
+                    'package_id' => $reg->package_id,
+                    'event_id' => $reg->event_id,
+                    'event_name' => $reg->event?->name,
+                    'has_plan' => false,
+                    'plan_status' => null,
+                    'plan_progress' => null,
+                ];
+            });
+
+        return response()->json($results->concat($salesRegs)->values());
     }
 
     public function showDesignerPayment(User $designer, Event $event): Response
@@ -166,7 +235,15 @@ class AccountingController extends Controller
         $designer->load(['designerProfile.category', 'designerProfile.salesRep']);
 
         $eventDesigner = $designer->eventsAsDesigner()->where('events.id', $event->id)->first();
-        abort_unless($eventDesigner, 404);
+
+        // Fallback: buscar en sales_registrations si no está en event_designer
+        $salesReg = null;
+        if (!$eventDesigner) {
+            $salesReg = SalesRegistration::where('designer_id', $designer->id)
+                ->where('event_id', $event->id)
+                ->first();
+            abort_unless($salesReg, 404);
+        }
 
         $plan = DesignerPaymentPlan::where('designer_id', $designer->id)
             ->where('event_id', $event->id)
@@ -174,6 +251,11 @@ class AccountingController extends Controller
             ->first();
 
         $packages = DesignerPackage::ordered()->get(['id', 'name', 'price']);
+
+        // Datos del evento/paquete desde event_designer o sales_registrations
+        $packageId = $eventDesigner ? $eventDesigner->pivot->package_id : $salesReg->package_id;
+        $packagePrice = $eventDesigner ? $eventDesigner->pivot->package_price : $salesReg->agreed_price;
+        $looks = $eventDesigner ? $eventDesigner->pivot->looks : null;
 
         return Inertia::render('Admin/Accounting/DesignerPayment', [
             'designer' => [
@@ -196,12 +278,10 @@ class AccountingController extends Controller
             'event' => [
                 'id' => $event->id,
                 'name' => $event->name,
-                'package_id' => $eventDesigner->pivot->package_id,
-                'package_name' => $eventDesigner->pivot->package_id
-                    ? DesignerPackage::find($eventDesigner->pivot->package_id)?->name
-                    : null,
-                'package_price' => $eventDesigner->pivot->package_price,
-                'looks' => $eventDesigner->pivot->looks,
+                'package_id' => $packageId,
+                'package_name' => $packageId ? DesignerPackage::find($packageId)?->name : null,
+                'package_price' => $packagePrice,
+                'looks' => $looks,
             ],
             'plan' => $plan ? [
                 'id' => $plan->id,
@@ -372,7 +452,20 @@ class AccountingController extends Controller
             $pivotData['package_price'] = $package->price;
             $newPackagePrice = (float) $package->price;
         }
-        $designer->eventsAsDesigner()->updateExistingPivot($event->id, $pivotData);
+
+        // Actualizar pivot si existe en event_designer, o sales_registration como fallback
+        $eventDesigner = $designer->eventsAsDesigner()->where('events.id', $event->id)->first();
+        if ($eventDesigner) {
+            $designer->eventsAsDesigner()->updateExistingPivot($event->id, $pivotData);
+        } else {
+            $salesReg = SalesRegistration::where('designer_id', $designer->id)->where('event_id', $event->id)->first();
+            if ($salesReg) {
+                $updateData = [];
+                if (isset($pivotData['package_id'])) $updateData['package_id'] = $pivotData['package_id'];
+                if (isset($pivotData['package_price'])) $updateData['agreed_price'] = $pivotData['package_price'];
+                if ($updateData) $salesReg->update($updateData);
+            }
+        }
 
         // Si cambió el paquete y existe un plan, recalcular automáticamente
         if ($newPackagePrice !== null) {
@@ -588,7 +681,10 @@ class AccountingController extends Controller
 
         if ($request->filled('event_id')) {
             $eventId = (int) $request->event_id;
-            $query->whereHas('eventsAsDesigner', fn($q) => $q->where('events.id', $eventId));
+            $query->where(function ($q) use ($eventId) {
+                $q->whereHas('eventsAsDesigner', fn($eq) => $eq->where('events.id', $eventId))
+                  ->orWhereHas('salesRegistrations', fn($sq) => $sq->where('event_id', $eventId));
+            });
         }
 
         if ($request->filled('search')) {
@@ -603,7 +699,7 @@ class AccountingController extends Controller
 
         $filteredEventId = $request->filled('event_id') ? (int) $request->event_id : null;
 
-        $designers = $query->orderBy('first_name')->paginate(20)->withQueryString();
+        $designers = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
 
         $designers->getCollection()->transform(function ($designer) use ($filteredEventId) {
             $edQuery = DB::table('event_designer')
@@ -629,10 +725,25 @@ class AccountingController extends Controller
 
             $event = $eventDesigner ? Event::find($eventDesigner->event_id) : null;
 
+            // Fallback: si no hay event_designer, buscar en sales_registrations
+            if (!$eventDesigner) {
+                $salesReg = SalesRegistration::where('designer_id', $designer->id)
+                    ->when($filteredEventId, fn($q) => $q->where('event_id', $filteredEventId))
+                    ->orderByDesc('created_at')
+                    ->first();
+
+                if ($salesReg) {
+                    $event = Event::find($salesReg->event_id);
+                    $package = $salesReg->package_id ? DesignerPackage::find($salesReg->package_id) : null;
+                }
+            }
+
             $designer->current_event = $event;
             $designer->event_name = $event?->name;
             $designer->current_package = $package;
-            $designer->package_price = $eventDesigner->package_price ?? ($package->price ?? 0);
+            $designer->package_price = $eventDesigner->package_price
+                ?? (isset($salesReg) && $salesReg ? $salesReg->agreed_price : null)
+                ?? ($package->price ?? 0);
             $designer->amount_pending = $paymentPlan ? $paymentPlan->totalPending() : (float) ($designer->package_price ?? 0);
             $designer->amount_paid = $paymentPlan ? $paymentPlan->totalPaid() : 0;
 
@@ -664,10 +775,24 @@ class AccountingController extends Controller
             ? DesignerPackage::find($eventDesigner->package_id)
             : null;
 
+        // Fallback: buscar en sales_registrations
+        $salesReg = null;
+        if (!$eventDesigner) {
+            $salesReg = SalesRegistration::where('designer_id', $designer->id)
+                ->orderByDesc('created_at')
+                ->first();
+            if ($salesReg) {
+                $event = Event::find($salesReg->event_id);
+                $package = $salesReg->package_id ? DesignerPackage::find($salesReg->package_id) : null;
+            }
+        }
+
         $paymentPlan = DesignerPaymentPlan::where('designer_id', $designer->id)
             ->with('installments')
             ->orderByDesc('created_at')
             ->first();
+
+        $packagePrice = $eventDesigner->package_price ?? ($salesReg?->agreed_price ?? 0);
 
         return response()->json([
             'designer' => [
@@ -691,7 +816,7 @@ class AccountingController extends Controller
                 'id' => $event->id,
                 'name' => $event->name,
                 'looks' => $eventDesigner->looks ?? 0,
-                'package_price' => $eventDesigner->package_price ?? 0,
+                'package_price' => $packagePrice,
                 'model_casting_enabled' => (bool) ($eventDesigner->model_casting_enabled ?? false),
             ] : null,
             'package' => $package ? ['id' => $package->id, 'name' => $package->name, 'price' => (float) $package->price] : null,
@@ -729,7 +854,10 @@ class AccountingController extends Controller
         $filteredEventId = $request->filled('event_id') ? (int) $request->event_id : null;
 
         if ($filteredEventId) {
-            $query->whereHas('eventsAsDesigner', fn($q) => $q->where('events.id', $filteredEventId));
+            $query->where(function ($q) use ($filteredEventId) {
+                $q->whereHas('eventsAsDesigner', fn($eq) => $eq->where('events.id', $filteredEventId))
+                  ->orWhereHas('salesRegistrations', fn($sq) => $sq->where('event_id', $filteredEventId));
+            });
         }
 
         if ($request->filled('search')) {
@@ -762,11 +890,24 @@ class AccountingController extends Controller
                 ? DesignerPackage::find($eventDesigner->package_id)
                 : null;
 
+            $event = $eventDesigner ? Event::find($eventDesigner->event_id) : null;
+
+            // Fallback a sales_registrations
+            $salesRegExport = null;
+            if (!$eventDesigner) {
+                $salesRegExport = SalesRegistration::where('designer_id', $designer->id)
+                    ->when($filteredEventId, fn($q) => $q->where('event_id', $filteredEventId))
+                    ->orderByDesc('created_at')
+                    ->first();
+                if ($salesRegExport) {
+                    $event = Event::find($salesRegExport->event_id);
+                    $package = $salesRegExport->package_id ? DesignerPackage::find($salesRegExport->package_id) : null;
+                }
+            }
+
             $paymentPlan = DesignerPaymentPlan::where('designer_id', $designer->id)
                 ->when($filteredEventId, fn($q) => $q->where('event_id', $filteredEventId))
                 ->first();
-
-            $event = $eventDesigner ? Event::find($eventDesigner->event_id) : null;
 
             $brand = str_replace('"', '""', $designer->designerProfile->brand_name ?? '-');
             $name = str_replace('"', '""', $designer->first_name . ' ' . $designer->last_name);
@@ -775,7 +916,7 @@ class AccountingController extends Controller
                 ? str_replace('"', '""', $designer->designerProfile->salesRep->first_name . ' ' . $designer->designerProfile->salesRep->last_name)
                 : '-';
             $packageName = $package->name ?? '-';
-            $packagePrice = $eventDesigner->package_price ?? ($package->price ?? 0);
+            $packagePrice = $eventDesigner->package_price ?? ($salesRegExport?->agreed_price ?? ($package->price ?? 0));
             $pending = $paymentPlan ? $paymentPlan->totalPending() : (float) $packagePrice;
             $status = match($designer->status) {
                 'active' => 'Activo',
@@ -945,6 +1086,7 @@ class AccountingController extends Controller
         $event = Event::findOrFail($request->event_id);
         $search = $request->get('query', '');
 
+        // Diseñadores asignados al evento (event_designer)
         $designers = $event->designers()
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sub) use ($search) {
@@ -962,7 +1104,29 @@ class AccountingController extends Controller
                 'brand' => $d->designerProfile?->brand_name,
             ]);
 
-        return response()->json($designers);
+        // Diseñadores de sales_registrations no asignados aún
+        $assignedIds = $designers->pluck('id');
+        $salesDesigners = SalesRegistration::where('event_id', $event->id)
+            ->whereNotIn('designer_id', $assignedIds)
+            ->whereHas('designer', function ($q) use ($search) {
+                if ($search) {
+                    $q->where(function ($sub) use ($search) {
+                        $sub->where('first_name', 'ilike', "%{$search}%")
+                            ->orWhere('last_name', 'ilike', "%{$search}%")
+                            ->orWhereHas('designerProfile', fn($p) => $p->where('brand_name', 'ilike', "%{$search}%"));
+                    });
+                }
+            })
+            ->with('designer.designerProfile')
+            ->limit(15)
+            ->get()
+            ->map(fn($reg) => [
+                'id' => $reg->designer->id,
+                'name' => $reg->designer->first_name . ' ' . $reg->designer->last_name,
+                'brand' => $reg->designer->designerProfile?->brand_name,
+            ]);
+
+        return response()->json($designers->concat($salesDesigners)->values());
     }
 
     // =============================================

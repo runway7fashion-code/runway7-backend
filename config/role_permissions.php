@@ -2,7 +2,7 @@
 
 return [
     'admin' => [
-        'sections' => ['dashboard', 'events', 'models', 'designers', 'chats', 'banners', 'users', 'settings', 'accounting', 'accounting_dashboard', 'accounting_payments', 'tickets_dashboard', 'tickets_management', 'activity_logs'],
+        'sections' => ['dashboard', 'events', 'models', 'designers', 'chats', 'banners', 'users', 'settings', 'accounting', 'accounting_dashboard', 'accounting_payments', 'tickets_dashboard', 'tickets_management', 'activity_logs', 'sales_dashboard', 'sales_designers'],
         'label' => 'Administrador',
     ],
     'accounting' => [
@@ -26,7 +26,7 @@ return [
         'label' => 'Relaciones Públicas',
     ],
     'sales' => [
-        'sections' => ['sales_dashboard', 'designers'],
+        'sections' => ['sales_dashboard', 'sales_designers'],
         'label' => 'Ventas',
     ],
     'assistant' => [

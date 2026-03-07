@@ -75,10 +75,10 @@ function sendOnboardingEmail() {
 
 // Status badge
 function statusBadgeClass() {
-    return { active: 'bg-green-50 text-green-700 border-green-200', pending: 'bg-yellow-50 text-yellow-700 border-yellow-200', inactive: 'bg-red-50 text-red-600 border-red-200' }[props.designer.status] ?? 'bg-gray-50 text-gray-600 border-gray-200';
+    return { active: 'bg-green-50 text-green-700 border-green-200', pending: 'bg-yellow-50 text-yellow-700 border-yellow-200', inactive: 'bg-red-50 text-red-600 border-red-200', registered: 'bg-blue-50 text-blue-700 border-blue-200' }[props.designer.status] ?? 'bg-gray-50 text-gray-600 border-gray-200';
 }
 function statusBadgeLabel() {
-    return { active: 'Activo', pending: 'Pendiente', inactive: 'Inactivo' }[props.designer.status] ?? props.designer.status;
+    return { active: 'Activo', pending: 'Pendiente', inactive: 'Inactivo', registered: 'Registrado' }[props.designer.status] ?? props.designer.status;
 }
 
 // Onboarding SMS

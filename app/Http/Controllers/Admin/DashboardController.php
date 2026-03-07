@@ -18,7 +18,7 @@ class DashboardController extends Controller
         return match($user->role) {
             'admin', 'operation' => $this->adminDashboard(),
             'accounting' => redirect()->route('admin.accounting.dashboard'),
-            'sales' => $this->salesDashboard($user),
+            'sales' => redirect()->route('admin.sales.dashboard'),
             default => $this->defaultDashboard($user),
         };
     }
@@ -54,19 +54,6 @@ class DashboardController extends Controller
 
             'active_events' => Event::where('status', 'active')->count(),
             'total_events'  => Event::count(),
-        ];
-
-        return Inertia::render('Admin/Dashboard', compact('stats'));
-    }
-
-    private function salesDashboard(User $user): Response
-    {
-        $stats = [
-            'my_designers' => User::designers()
-                ->whereHas('designerProfile', fn($q) => $q->where('sales_rep_id', $user->id))
-                ->count(),
-            'total_designers' => User::designers()->count(),
-            'active_events'   => Event::where('status', 'active')->count(),
         ];
 
         return Inertia::render('Admin/Dashboard', compact('stats'));

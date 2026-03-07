@@ -45,13 +45,22 @@ watch([search, event, category, pkg, salesRep, materials, country], applyFilters
 
 function statusBadge(status) {
     return {
-        active:   'bg-green-100 text-green-700',
-        inactive: 'bg-red-100 text-red-700',
-        pending:  'bg-yellow-100 text-yellow-700',
+        active:     'bg-green-100 text-green-700',
+        inactive:   'bg-red-100 text-red-700',
+        pending:    'bg-yellow-100 text-yellow-700',
+        registered: 'bg-blue-100 text-blue-700',
     }[status] ?? 'bg-gray-100 text-gray-600';
 }
 
+const showNoPlanModal = ref(false);
+const noPlanDesigner = ref(null);
+
 function updateDesignerStatus(d, newStatus) {
+    if (newStatus === 'pending' && !d.has_payment_plan) {
+        noPlanDesigner.value = d;
+        showNoPlanModal.value = true;
+        return;
+    }
     router.patch(`/admin/designers/${d.id}/status`, { status: newStatus }, { preserveScroll: true });
 }
 
@@ -123,6 +132,7 @@ function fmtEmailSent(dt) {
 
 function sendOnboardingEmail(d, e) {
     e.stopPropagation();
+    if (d.status !== 'pending') return alert(`${d.first_name} debe estar en estado Pendiente para enviar email de onboarding.`);
     if (!confirm(`¿Enviar email de onboarding a ${d.first_name}?`)) return;
     router.post(`/admin/designers/${d.id}/send-onboarding`, {}, { preserveScroll: true });
 }
@@ -132,9 +142,14 @@ function sendPendingOnboarding() {
     router.post('/admin/designers/send-bulk-onboarding', {}, { preserveScroll: true });
 }
 
+function canSendSms(d) {
+    return d.phone && d.status === 'pending';
+}
+
 function sendOnboardingSms(d, e) {
     e.stopPropagation();
     if (!d.phone) return alert(`${d.first_name} no tiene número de teléfono registrado.`);
+    if (d.status !== 'pending') return alert(`${d.first_name} debe estar en estado Pendiente para enviar SMS de onboarding.`);
     if (!confirm(`¿Enviar SMS de onboarding a ${d.first_name}?`)) return;
     router.post(`/admin/designers/${d.id}/send-onboarding-sms`, {}, { preserveScroll: true });
 }
@@ -315,6 +330,7 @@ function submitImport() {
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Materials</th>
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Events</th>
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Status</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Plan</th>
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Último Check-in</th>
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Registro</th>
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Último Login</th>
@@ -325,7 +341,7 @@ function submitImport() {
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         <tr v-if="designers.data.length === 0">
-                            <td colspan="11" class="text-center text-gray-400 py-12">No hay diseñadores registrados.</td>
+                            <td colspan="12" class="text-center text-gray-400 py-12">No hay diseñadores registrados.</td>
                         </tr>
                         <tr v-for="d in designers.data" :key="d.id"
                             class="hover:bg-gray-50 cursor-pointer transition-colors"
@@ -386,9 +402,15 @@ function submitImport() {
                                     @change="updateDesignerStatus(d, $event.target.value)"
                                     :class="statusBadge(d.status)"
                                     class="text-xs font-medium rounded-full px-2 py-0.5 border-0 outline-none cursor-pointer appearance-none">
+                                    <option value="registered">Registrado</option>
                                     <option value="inactive">Inactivo</option>
                                     <option value="pending">Pendiente</option>
                                 </select>
+                            </td>
+                            <!-- Plan de Pagos -->
+                            <td class="px-4 py-3">
+                                <span v-if="d.has_payment_plan" class="text-xs font-medium rounded-full px-2 py-0.5 bg-green-50 text-green-700">Si</span>
+                                <span v-else class="text-xs font-medium rounded-full px-2 py-0.5 bg-red-50 text-red-600">No</span>
                             </td>
                             <!-- Último Check-in -->
                             <td class="px-4 py-3" @click.stop>
@@ -452,12 +474,15 @@ function submitImport() {
                             <td class="px-4 py-3" @click.stop>
                                 <div class="flex items-center gap-2">
                                     <button @click="sendOnboardingSms(d, $event)"
-                                        class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
-                                        :class="{ 'opacity-40 cursor-not-allowed': !d.phone }">
+                                        class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg transition-colors whitespace-nowrap"
+                                        :class="canSendSms(d) ? 'hover:bg-gray-50' : 'opacity-40 cursor-not-allowed'"
+                                        :disabled="!canSendSms(d)">
                                         SMS
                                     </button>
                                     <button @click="sendOnboardingEmail(d, $event)"
-                                        class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap">
+                                        class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg transition-colors whitespace-nowrap"
+                                        :class="d.status === 'pending' ? 'hover:bg-gray-50' : 'opacity-40 cursor-not-allowed'"
+                                        :disabled="d.status !== 'pending'">
                                         Email
                                     </button>
                                     <Link :href="`/admin/designers/${d.id}/edit`"
@@ -822,6 +847,33 @@ function submitImport() {
                         :disabled="!importForm.file || importForm.processing"
                         class="flex-1 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                         {{ importForm.processing ? 'Importando...' : 'Importar' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Modal: Sin Plan de Pagos -->
+    <Teleport to="body">
+        <div v-if="showNoPlanModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="showNoPlanModal = false">
+            <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+                <div class="text-center">
+                    <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Plan de pagos requerido</h3>
+                    <p class="text-sm text-gray-500 mb-1">
+                        No se puede cambiar a <span class="font-medium text-yellow-700">Pendiente</span> al diseñador
+                        <span class="font-semibold text-gray-800">{{ noPlanDesigner?.first_name }} {{ noPlanDesigner?.last_name }}</span>.
+                    </p>
+                    <p class="text-sm text-gray-500 mb-6">
+                        Contabilidad debe asignar un plan de pagos antes de cambiar el estado.
+                    </p>
+                    <button @click="showNoPlanModal = false"
+                        class="px-6 py-2.5 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                        Entendido
                     </button>
                 </div>
             </div>

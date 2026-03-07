@@ -1,0 +1,316 @@
+<script setup>
+import AdminLayout from '@/Layouts/AdminLayout.vue';
+import { Link, router, useForm, usePage } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
+import {
+    DocumentArrowUpIcon,
+    TrashIcon,
+    ArrowDownTrayIcon,
+} from '@heroicons/vue/24/outline';
+
+const props = defineProps({
+    registration: Object,
+});
+
+const page = usePage();
+const isAdmin = computed(() => ['admin', 'operation'].includes(page.props.auth?.user?.role));
+const isSales = computed(() => page.props.auth?.user?.role === 'sales');
+const r = computed(() => props.registration);
+const designer = computed(() => r.value.designer);
+const profile = computed(() => designer.value?.designer_profile);
+
+function statusBadge(s) {
+    return {
+        registered: 'bg-blue-100 text-blue-700 border-blue-200',
+        onboarded:  'bg-purple-100 text-purple-700 border-purple-200',
+        confirmed:  'bg-green-100 text-green-700 border-green-200',
+        cancelled:  'bg-red-100 text-red-700 border-red-200',
+    }[s] ?? 'bg-gray-100 text-gray-600 border-gray-200';
+}
+
+function statusLabel(s) {
+    return {
+        registered: 'Registrado',
+        onboarded:  'Onboarded',
+        confirmed:  'Confirmado',
+        cancelled:  'Cancelado',
+    }[s] ?? s;
+}
+
+// Status transitions
+const statusFlow = {
+    registered: ['onboarded', 'cancelled'],
+    onboarded:  ['confirmed', 'cancelled'],
+    confirmed:  [],
+    cancelled:  [],
+};
+const availableTransitions = computed(() => statusFlow[r.value.status] ?? []);
+
+function changeStatus(newStatus) {
+    const messages = {
+        onboarded: '¿Marcar este registro como "Onboarded"?',
+        confirmed: '¿Confirmar este registro? El diseñador será asignado al evento y activado.',
+        cancelled: '¿Cancelar este registro?',
+    };
+    if (!confirm(messages[newStatus] || `¿Cambiar estado a "${newStatus}"?`)) return;
+
+    router.patch(`/admin/sales/designers/${r.value.id}/status`, { status: newStatus }, { preserveScroll: true });
+}
+
+// Document upload
+const showUploadModal = ref(false);
+const docForm = useForm({
+    file: null,
+    type: 'contract',
+    notes: '',
+});
+const fileInput = ref(null);
+
+function handleFileChange(e) {
+    docForm.file = e.target.files[0];
+}
+
+function submitDocument() {
+    docForm.post(`/admin/sales/designers/${r.value.id}/documents`, {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => {
+            showUploadModal.value = false;
+            docForm.reset();
+            if (fileInput.value) fileInput.value.value = '';
+        },
+    });
+}
+
+function deleteDocument(doc) {
+    if (!confirm(`¿Eliminar el documento "${doc.original_name}"?`)) return;
+    router.delete(`/admin/sales/documents/${doc.id}`, { preserveScroll: true });
+}
+
+function docTypeLabel(type) {
+    return { contract: 'Contrato', payment_proof: 'Comprobante de Pago', other: 'Otro' }[type] ?? type;
+}
+
+function storageUrl(path) {
+    return `/storage/${path}`;
+}
+</script>
+
+<template>
+    <AdminLayout>
+        <template #header>
+            <div class="flex items-center gap-2">
+                <Link href="/admin/sales/designers" class="text-gray-400 hover:text-gray-600 text-sm">&larr; Registros</Link>
+                <span class="text-gray-300">/</span>
+                <h2 class="text-lg font-semibold text-gray-900">{{ designer?.first_name }} {{ designer?.last_name }}</h2>
+            </div>
+        </template>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Main content -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Hero card -->
+                <div class="bg-white rounded-xl border border-gray-200 p-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">{{ designer?.first_name }} {{ designer?.last_name }}</h3>
+                            <p v-if="profile?.brand_name" class="text-gray-500 text-sm">{{ profile.brand_name }}</p>
+                        </div>
+                        <span :class="statusBadge(r.status)" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border">
+                            {{ statusLabel(r.status) }}
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Email</p>
+                            <p class="text-gray-900">{{ designer?.email }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Teléfono</p>
+                            <p class="text-gray-900">{{ designer?.phone || '-' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">País</p>
+                            <p class="text-gray-900">{{ profile?.country || '-' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Instagram</p>
+                            <p class="text-gray-900">{{ profile?.instagram || '-' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Website</p>
+                            <p class="text-gray-900">{{ profile?.website || '-' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Status del Diseñador</p>
+                            <p class="text-gray-900 capitalize">{{ designer?.status }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Event & Package -->
+                <div class="bg-white rounded-xl border border-gray-200 p-6">
+                    <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Evento y Paquete</h4>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Evento</p>
+                            <p class="text-gray-900 font-medium">{{ r.event?.name }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Paquete</p>
+                            <p class="text-gray-900">{{ r.package?.name ?? 'Sin paquete' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Precio Acordado</p>
+                            <p class="text-gray-900 font-bold text-lg">${{ Number(r.agreed_price).toLocaleString() }}</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Vendedor</p>
+                            <p class="text-gray-900">{{ r.sales_rep?.first_name }} {{ r.sales_rep?.last_name }}</p>
+                        </div>
+                    </div>
+                    <div v-if="r.notes" class="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-700">
+                        <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Notas</p>
+                        {{ r.notes }}
+                    </div>
+                </div>
+
+                <!-- Documents -->
+                <div class="bg-white rounded-xl border border-gray-200 p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500">Documentos</h4>
+                        <button @click="showUploadModal = true" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                            <DocumentArrowUpIcon class="h-4 w-4" />
+                            Subir Documento
+                        </button>
+                    </div>
+
+                    <div v-if="!r.documents?.length" class="text-center py-8 text-gray-400 text-sm">
+                        Sin documentos adjuntos
+                    </div>
+                    <div v-else class="space-y-3">
+                        <div v-for="doc in r.documents" :key="doc.id" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">{{ doc.original_name }}</p>
+                                <div class="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-200 text-gray-600 font-medium">{{ docTypeLabel(doc.type) }}</span>
+                                    <span>{{ doc.uploader?.first_name }} {{ doc.uploader?.last_name }}</span>
+                                    <span>{{ new Date(doc.created_at).toLocaleDateString('es-US') }}</span>
+                                </div>
+                                <p v-if="doc.notes" class="text-xs text-gray-500 mt-1">{{ doc.notes }}</p>
+                            </div>
+                            <div class="flex items-center gap-2 ml-3">
+                                <a :href="storageUrl(doc.file_path)" target="_blank" class="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" title="Descargar">
+                                    <ArrowDownTrayIcon class="h-4 w-4" />
+                                </a>
+                                <button @click="deleteDocument(doc)" class="p-1.5 text-gray-400 hover:text-red-600 transition-colors" title="Eliminar">
+                                    <TrashIcon class="h-4 w-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <!-- Status actions -->
+                <div class="bg-white rounded-xl border border-gray-200 p-6">
+                    <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Acciones</h4>
+
+                    <div v-if="availableTransitions.length" class="space-y-2">
+                        <button
+                            v-for="st in availableTransitions"
+                            :key="st"
+                            @click="changeStatus(st)"
+                            class="w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors border"
+                            :class="{
+                                'bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100': st === 'in_review',
+                                'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100': st === 'onboarded',
+                                'bg-green-50 border-green-200 text-green-700 hover:bg-green-100': st === 'confirmed',
+                                'bg-red-50 border-red-200 text-red-700 hover:bg-red-100': st === 'cancelled',
+                            }"
+                        >
+                            {{ {
+                                in_review: 'Enviar a Revisión',
+                                onboarded: 'Marcar Onboarded',
+                                confirmed: 'Confirmar Registro',
+                                cancelled: 'Cancelar Registro',
+                            }[st] }}
+                        </button>
+                    </div>
+                    <p v-else class="text-gray-400 text-sm">No hay acciones disponibles para este estado.</p>
+                </div>
+
+                <!-- Timeline -->
+                <div class="bg-white rounded-xl border border-gray-200 p-6">
+                    <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Línea de Tiempo</h4>
+                    <div class="space-y-4 text-sm">
+                        <div class="flex items-start gap-3">
+                            <div class="w-2 h-2 rounded-full bg-blue-400 mt-1.5 flex-shrink-0"></div>
+                            <div>
+                                <p class="text-gray-900 font-medium">Registrado</p>
+                                <p class="text-gray-400 text-xs">{{ new Date(r.created_at).toLocaleString('es-US') }}</p>
+                                <p class="text-gray-500 text-xs">por {{ r.sales_rep?.first_name }} {{ r.sales_rep?.last_name }}</p>
+                            </div>
+                        </div>
+                        <div v-if="r.onboarded_at" class="flex items-start gap-3">
+                            <div class="w-2 h-2 rounded-full bg-purple-400 mt-1.5 flex-shrink-0"></div>
+                            <div>
+                                <p class="text-gray-900 font-medium">Onboarded</p>
+                                <p class="text-gray-400 text-xs">{{ new Date(r.onboarded_at).toLocaleString('es-US') }}</p>
+                                <p v-if="r.onboarded_by_user" class="text-gray-500 text-xs">por {{ r.onboarded_by_user?.first_name }} {{ r.onboarded_by_user?.last_name }}</p>
+                            </div>
+                        </div>
+                        <div v-if="r.confirmed_at" class="flex items-start gap-3">
+                            <div class="w-2 h-2 rounded-full bg-green-400 mt-1.5 flex-shrink-0"></div>
+                            <div>
+                                <p class="text-gray-900 font-medium">Confirmado</p>
+                                <p class="text-gray-400 text-xs">{{ new Date(r.confirmed_at).toLocaleString('es-US') }}</p>
+                                <p v-if="r.confirmed_by_user" class="text-gray-500 text-xs">por {{ r.confirmed_by_user?.first_name }} {{ r.confirmed_by_user?.last_name }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload document modal -->
+        <Teleport to="body">
+            <div v-if="showUploadModal" class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="showUploadModal = false">
+                <div class="fixed inset-0 bg-black/50"></div>
+                <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6 z-10">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Subir Documento</h3>
+                    <form @submit.prevent="submitDocument" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de documento *</label>
+                            <select v-model="docForm.type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400">
+                                <option value="contract">Contrato</option>
+                                <option value="payment_proof">Comprobante de Pago</option>
+                                <option value="other">Otro</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Archivo *</label>
+                            <input ref="fileInput" type="file" @change="handleFileChange" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                            <p v-if="docForm.errors.file" class="text-red-500 text-xs mt-1">{{ docForm.errors.file }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+                            <textarea v-model="docForm.notes" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400"></textarea>
+                        </div>
+                        <div class="flex items-center gap-3 pt-2">
+                            <button type="submit" :disabled="docForm.processing || !docForm.file" class="px-5 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50">
+                                {{ docForm.processing ? 'Subiendo...' : 'Subir' }}
+                            </button>
+                            <button type="button" @click="showUploadModal = false" class="px-5 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50">
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </Teleport>
+    </AdminLayout>
+</template>

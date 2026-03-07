@@ -1,6 +1,6 @@
 <script setup>
 import { Link, usePage, router } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import {
     HomeIcon,
     CalendarDaysIcon,
@@ -21,6 +21,8 @@ import {
     ChevronDoubleLeftIcon,
     ChevronDoubleRightIcon,
     ChevronRightIcon,
+    BellIcon,
+    CurrencyDollarIcon,
 } from '@heroicons/vue/24/outline';
 
 const page = usePage();
@@ -62,11 +64,79 @@ const accountingItems = computed(() => {
     return items;
 });
 
+const showSales = computed(() => hasSection('sales_dashboard') || hasSection('sales_designers'));
+const salesItems = computed(() => {
+    const items = [];
+    if (hasSection('sales_dashboard')) items.push({ name: 'Dashboard', href: '/admin/sales/dashboard', icon: PresentationChartBarIcon });
+    if (hasSection('sales_designers')) items.push({ name: 'Diseñadores', href: '/admin/sales/designers', icon: PaintBrushIcon });
+    return items;
+});
+
 const showSettings = computed(() => hasSection('settings'));
 const settingsOpen = ref(page.url.startsWith('/admin/settings'));
 const settingsItems = [
     { name: 'Diseñadores', href: '/admin/settings/designers' },
 ];
+
+// Notifications
+const notifications = ref([]);
+const showNotifDropdown = ref(false);
+let notifInterval = null;
+
+async function fetchNotifications() {
+    try {
+        const res = await fetch('/admin/api/notifications', {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.length > notifications.value.length && notifications.value.length > 0) {
+                playNotifSound();
+            }
+            notifications.value = data;
+        }
+    } catch {}
+}
+
+let audioUnlocked = false;
+function unlockAudio() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    document.removeEventListener('click', unlockAudio);
+}
+
+function playNotifSound() {
+    if (!audioUnlocked) return;
+    try {
+        const audio = new Audio('/sounds/notification-sales.mp3');
+        audio.play().catch(() => {});
+    } catch {}
+}
+
+async function markAllRead() {
+    await fetch('/admin/api/notifications/mark-read', { method: 'POST', credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': page.props.csrf_token || document.querySelector('meta[name="csrf-token"]')?.content } });
+    notifications.value = [];
+    showNotifDropdown.value = false;
+}
+
+function closeNotifOnOutsideClick(e) {
+    if (showNotifDropdown.value && !e.target.closest('.relative')) {
+        showNotifDropdown.value = false;
+    }
+}
+
+onMounted(() => {
+    fetchNotifications();
+    notifInterval = setInterval(fetchNotifications, 30000);
+    document.addEventListener('click', closeNotifOnOutsideClick);
+    document.addEventListener('click', unlockAudio);
+});
+onUnmounted(() => {
+    clearInterval(notifInterval);
+    document.removeEventListener('click', closeNotifOnOutsideClick);
+    document.removeEventListener('click', unlockAudio);
+});
 
 function toggleSettings() {
     if (sidebarCollapsed.value) {
@@ -130,6 +200,25 @@ function logout() {
                             class="flex items-center py-2.5 rounded-lg text-sm font-medium transition-all duration-150"
                             :class="[
                                 (sub.href === '/admin/accounting/payments' ? $page.url.startsWith('/admin/accounting/payments') && !$page.url.startsWith('/admin/accounting/payment-records') : sub.href === '/admin/accounting/designers-list' ? $page.url.startsWith('/admin/accounting/designers-list') : $page.url.startsWith(sub.href))
+                                    ? 'bg-yellow-900/30 text-yellow-400'
+                                    : 'text-gray-400 hover:text-white hover:bg-gray-800',
+                                sidebarCollapsed ? 'justify-center px-0' : 'px-3'
+                            ]">
+                            <component :is="sub.icon" :class="['h-5 w-5 flex-shrink-0', sidebarCollapsed ? '' : 'mr-3']" />
+                            <span v-if="!sidebarCollapsed">{{ sub.name }}</span>
+                        </Link>
+                    </div>
+                </template>
+
+                <!-- Ventas -->
+                <template v-if="showSales">
+                    <div class="pt-3 mt-3 border-t border-gray-800">
+                        <p v-if="!sidebarCollapsed" class="px-3 mb-2 text-xs uppercase tracking-widest text-gray-600">Ventas</p>
+                        <Link v-for="sub in salesItems" :key="sub.name" :href="sub.href"
+                            :title="sidebarCollapsed ? sub.name : ''"
+                            class="flex items-center py-2.5 rounded-lg text-sm font-medium transition-all duration-150"
+                            :class="[
+                                $page.url.startsWith(sub.href)
                                     ? 'bg-yellow-900/30 text-yellow-400'
                                     : 'text-gray-400 hover:text-white hover:bg-gray-800',
                                 sidebarCollapsed ? 'justify-center px-0' : 'px-3'
@@ -208,7 +297,30 @@ function logout() {
                 <slot name="header">
                     <h2 class="text-lg font-semibold text-gray-900">Dashboard</h2>
                 </slot>
-                <div class="flex items-center space-x-2">
+                <div class="flex items-center space-x-4">
+                    <!-- Notification bell -->
+                    <div class="relative">
+                        <button @click="showNotifDropdown = !showNotifDropdown" class="relative p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+                            <BellIcon class="h-5 w-5" />
+                            <span v-if="notifications.length" class="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                                {{ notifications.length > 9 ? '9+' : notifications.length }}
+                            </span>
+                        </button>
+                        <div v-if="showNotifDropdown" class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
+                            <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                                <h4 class="text-sm font-semibold text-gray-900">Notificaciones</h4>
+                                <button v-if="notifications.length" @click="markAllRead" class="text-xs text-blue-600 hover:underline">Marcar leídas</button>
+                            </div>
+                            <div class="max-h-72 overflow-y-auto">
+                                <div v-if="!notifications.length" class="px-4 py-6 text-center text-gray-400 text-sm">Sin notificaciones</div>
+                                <div v-for="n in notifications" :key="n.id" class="px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                                    <p class="text-sm font-medium text-gray-900">{{ n.data.title }}</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">{{ n.data.message }}</p>
+                                    <p class="text-xs text-gray-400 mt-1">{{ new Date(n.created_at).toLocaleString('es-US') }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <span class="text-sm text-gray-500">{{ new Date().toLocaleDateString('es-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}</span>
                 </div>
             </header>

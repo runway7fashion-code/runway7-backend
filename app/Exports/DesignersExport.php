@@ -105,9 +105,10 @@ class DesignersExport implements FromCollection, WithHeadings, WithMapping, With
         $events  = $designer->eventsAsDesigner ?? collect();
 
         $statusLabel = [
-            'active'   => 'Activo',
-            'inactive' => 'Inactivo',
-            'pending'  => 'Pendiente',
+            'active'     => 'Activo',
+            'inactive'   => 'Inactivo',
+            'pending'    => 'Pendiente',
+            'registered' => 'Registrado',
         ][$designer->status] ?? $designer->status;
 
         $salesRep = $profile?->salesRep;

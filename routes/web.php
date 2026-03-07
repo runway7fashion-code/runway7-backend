@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\DesignerSettingsController;
 use App\Http\Controllers\Admin\AccountingController;
 use App\Http\Controllers\Admin\PassController;
 use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\SalesController;
 
 Route::get('/', function () {
     return redirect()->route('admin.login');
@@ -174,6 +175,31 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('passes/{pass}/reactivate', [PassController::class, 'reactivate'])->name('passes.reactivate');
             Route::get('api/passes/search-users', [PassController::class, 'searchUsers'])->name('passes.search-users');
         });
+
+        // Ventas - admin, sales
+        Route::prefix('sales')->name('sales.')->group(function () {
+            Route::middleware('section:sales_dashboard')->group(function () {
+                Route::get('dashboard', [SalesController::class, 'dashboard'])->name('dashboard');
+            });
+            Route::middleware('section:sales_designers')->group(function () {
+                Route::get('designers', [SalesController::class, 'index'])->name('designers.index');
+                Route::get('designers/create', [SalesController::class, 'create'])->name('designers.create');
+                Route::post('designers', [SalesController::class, 'store'])->name('designers.store');
+                Route::get('designers/{registration}', [SalesController::class, 'show'])->name('designers.show');
+                Route::patch('designers/{registration}/status', [SalesController::class, 'updateStatus'])->name('designers.update-status');
+                Route::post('designers/{registration}/documents', [SalesController::class, 'uploadDocument'])->name('designers.upload-document');
+                Route::delete('documents/{document}', [SalesController::class, 'deleteDocument'])->name('documents.destroy');
+            });
+        });
+
+        // API de notificaciones (polling)
+        Route::get('api/notifications', function () {
+            return response()->json(request()->user()->unreadNotifications()->limit(20)->get());
+        })->name('api.notifications');
+        Route::post('api/notifications/mark-read', function () {
+            request()->user()->unreadNotifications->markAsRead();
+            return response()->json(['ok' => true]);
+        })->name('api.notifications.mark-read');
 
         // Logs de actividad - solo admin
         Route::middleware('section:activity_logs')->group(function () {

@@ -8,6 +8,7 @@ use App\Models\DesignerCategory;
 use App\Models\DesignerDisplay;
 use App\Models\DesignerMaterial;
 use App\Models\DesignerPackage;
+use App\Models\DesignerPaymentPlan;
 use App\Models\Event;
 use App\Models\FittingSlot;
 use App\Models\Show;
@@ -78,6 +79,17 @@ class DesignerController extends Controller
         }
 
         $designers = $query->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
+
+        // Agregar flag has_payment_plan a cada designer
+        $designerIds = $designers->pluck('id');
+        $withPlan = DesignerPaymentPlan::whereIn('designer_id', $designerIds)
+            ->pluck('designer_id')
+            ->unique()
+            ->toArray();
+        $designers->getCollection()->transform(function ($d) use ($withPlan) {
+            $d->has_payment_plan = in_array($d->id, $withPlan);
+            return $d;
+        });
 
         $events = Event::orderBy('start_date', 'desc')
             ->get(['id', 'name']);
@@ -274,7 +286,11 @@ class DesignerController extends Controller
     {
         $this->authorizeDesigner($designer);
 
-        $request->validate(['status' => 'required|in:inactive,pending']);
+        $request->validate(['status' => 'required|in:registered,inactive,pending']);
+
+        if ($request->status === 'pending' && !DesignerPaymentPlan::where('designer_id', $designer->id)->exists()) {
+            return back()->with('error', 'No se puede cambiar a Pendiente. Contabilidad aún no ha asignado un plan de pagos a este diseñador.');
+        }
 
         $designer->update(['status' => $request->status]);
 

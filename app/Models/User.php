@@ -138,6 +138,7 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function salesRegistrations() { return $this->hasMany(SalesRegistration::class, 'designer_id'); }
     public function designerAssistants() { return $this->hasMany(DesignerAssistant::class, 'designer_id'); }
     public function designerMaterials() { return $this->hasMany(DesignerMaterial::class, 'designer_id'); }
     public function designerDisplays() { return $this->hasMany(DesignerDisplay::class, 'designer_id'); }

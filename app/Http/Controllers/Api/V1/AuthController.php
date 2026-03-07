@@ -39,6 +39,11 @@ class AuthController extends Controller
             return response()->json(['message' => 'Tu aplicación está siendo revisada. Te notificaremos cuando sea aprobada.'], 403);
         }
 
+        if ($user->status === 'registered') {
+            Auth::logout();
+            return response()->json(['message' => 'Tu registro está siendo procesado. Te notificaremos cuando esté listo.'], 403);
+        }
+
         if ($user->status === 'pending') {
             $user->update(['status' => 'active', 'last_login_at' => now()]);
         } else {
