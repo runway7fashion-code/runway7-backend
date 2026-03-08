@@ -11,7 +11,7 @@ class SalesRegistration extends Model
 
     protected $fillable = [
         'sales_rep_id', 'designer_id', 'event_id', 'package_id',
-        'agreed_price', 'notes', 'status',
+        'agreed_price', 'downpayment', 'notes', 'status',
         'onboarded_at', 'onboarded_by', 'confirmed_at', 'confirmed_by',
     ];
 
@@ -19,6 +19,7 @@ class SalesRegistration extends Model
     {
         return [
             'agreed_price'  => 'decimal:2',
+            'downpayment'   => 'decimal:2',
             'onboarded_at'  => 'datetime',
             'confirmed_at'  => 'datetime',
         ];

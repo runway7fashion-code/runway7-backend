@@ -166,6 +166,10 @@ function storageUrl(path) {
                             <p class="text-gray-900 font-bold text-lg">${{ Number(r.agreed_price).toLocaleString() }}</p>
                         </div>
                         <div>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Inicial / Downpayment</p>
+                            <p class="text-gray-900 font-bold text-lg">{{ r.downpayment ? `$${Number(r.downpayment).toLocaleString()}` : '-' }}</p>
+                        </div>
+                        <div>
                             <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Vendedor</p>
                             <p class="text-gray-900">{{ r.sales_rep?.first_name }} {{ r.sales_rep?.last_name }}</p>
                         </div>

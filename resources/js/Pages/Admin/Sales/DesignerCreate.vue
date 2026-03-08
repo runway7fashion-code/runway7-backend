@@ -1,12 +1,40 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, useForm } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
 
 const props = defineProps({
     events: Array,
     packages: Array,
     countries: Array,
 });
+
+const phoneCodes = [
+    { code: '+1', country: 'US/CA', flag: '🇺🇸' },
+    { code: '+52', country: 'MX', flag: '🇲🇽' },
+    { code: '+44', country: 'UK', flag: '🇬🇧' },
+    { code: '+33', country: 'FR', flag: '🇫🇷' },
+    { code: '+39', country: 'IT', flag: '🇮🇹' },
+    { code: '+34', country: 'ES', flag: '🇪🇸' },
+    { code: '+49', country: 'DE', flag: '🇩🇪' },
+    { code: '+55', country: 'BR', flag: '🇧🇷' },
+    { code: '+57', country: 'CO', flag: '🇨🇴' },
+    { code: '+51', country: 'PE', flag: '🇵🇪' },
+    { code: '+54', country: 'AR', flag: '🇦🇷' },
+    { code: '+56', country: 'CL', flag: '🇨🇱' },
+    { code: '+58', country: 'VE', flag: '🇻🇪' },
+    { code: '+593', country: 'EC', flag: '🇪🇨' },
+    { code: '+91', country: 'IN', flag: '🇮🇳' },
+    { code: '+86', country: 'CN', flag: '🇨🇳' },
+    { code: '+81', country: 'JP', flag: '🇯🇵' },
+    { code: '+82', country: 'KR', flag: '🇰🇷' },
+    { code: '+234', country: 'NG', flag: '🇳🇬' },
+    { code: '+27', country: 'ZA', flag: '🇿🇦' },
+    { code: '+971', country: 'AE', flag: '🇦🇪' },
+];
+
+const phoneCode = ref('+1');
+const phoneNumber = ref('');
 
 const form = useForm({
     first_name: '',
@@ -15,15 +43,15 @@ const form = useForm({
     phone: '',
     brand_name: '',
     country: '',
-    website: '',
-    instagram: '',
     event_id: '',
     package_id: '',
     agreed_price: '',
+    downpayment: '',
     notes: '',
 });
 
 function submit() {
+    form.phone = phoneNumber.value ? `${phoneCode.value}${phoneNumber.value}` : '';
     form.post('/admin/sales/designers', {
         preserveScroll: true,
     });
@@ -63,7 +91,12 @@ function submit() {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                            <input v-model="form.phone" type="text" placeholder="+1..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400" />
+                            <div class="flex gap-2">
+                                <select v-model="phoneCode" class="w-28 border border-gray-300 rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-yellow-400">
+                                    <option v-for="pc in phoneCodes" :key="pc.code" :value="pc.code">{{ pc.flag }} {{ pc.code }}</option>
+                                </select>
+                                <input v-model="phoneNumber" type="text" placeholder="Número..." class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400" />
+                            </div>
                             <p v-if="form.errors.phone" class="text-red-500 text-xs mt-1">{{ form.errors.phone }}</p>
                         </div>
                         <div>
@@ -72,19 +105,12 @@ function submit() {
                             <p v-if="form.errors.brand_name" class="text-red-500 text-xs mt-1">{{ form.errors.brand_name }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">País</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">País *</label>
                             <select v-model="form.country" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400">
                                 <option value="">Seleccionar...</option>
                                 <option v-for="c in countries" :key="c" :value="c">{{ c }}</option>
                             </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Website</label>
-                            <input v-model="form.website" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Instagram</label>
-                            <input v-model="form.instagram" type="text" placeholder="@handle" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400" />
+                            <p v-if="form.errors.country" class="text-red-500 text-xs mt-1">{{ form.errors.country }}</p>
                         </div>
                     </div>
                 </div>
@@ -102,15 +128,22 @@ function submit() {
                             <p v-if="form.errors.event_id" class="text-red-500 text-xs mt-1">{{ form.errors.event_id }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Paquete</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Paquete *</label>
                             <select v-model="form.package_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400">
-                                <option value="">Sin paquete</option>
+                                <option value="">Seleccionar paquete...</option>
                                 <option v-for="p in packages" :key="p.id" :value="p.id">{{ p.name }} — ${{ Number(p.price).toLocaleString() }}</option>
                             </select>
+                            <p v-if="form.errors.package_id" class="text-red-500 text-xs mt-1">{{ form.errors.package_id }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Precio Acordado ($)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Precio Acordado ($) *</label>
                             <input v-model="form.agreed_price" type="number" step="0.01" min="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400" />
+                            <p v-if="form.errors.agreed_price" class="text-red-500 text-xs mt-1">{{ form.errors.agreed_price }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Inicial / Downpayment ($) *</label>
+                            <input v-model="form.downpayment" type="number" step="0.01" min="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400" />
+                            <p v-if="form.errors.downpayment" class="text-red-500 text-xs mt-1">{{ form.errors.downpayment }}</p>
                         </div>
                     </div>
                     <div class="mt-4">

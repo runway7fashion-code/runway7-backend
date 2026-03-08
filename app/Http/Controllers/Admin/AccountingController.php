@@ -252,10 +252,18 @@ class AccountingController extends Controller
 
         $packages = DesignerPackage::ordered()->get(['id', 'name', 'price']);
 
+        // Si no tenemos salesReg aún, buscarlo para obtener el downpayment sugerido
+        if (!$salesReg) {
+            $salesReg = SalesRegistration::where('designer_id', $designer->id)
+                ->where('event_id', $event->id)
+                ->first();
+        }
+
         // Datos del evento/paquete desde event_designer o sales_registrations
         $packageId = $eventDesigner ? $eventDesigner->pivot->package_id : $salesReg->package_id;
         $packagePrice = $eventDesigner ? $eventDesigner->pivot->package_price : $salesReg->agreed_price;
         $looks = $eventDesigner ? $eventDesigner->pivot->looks : null;
+        $suggestedDownpayment = $salesReg?->downpayment;
 
         return Inertia::render('Admin/Accounting/DesignerPayment', [
             'designer' => [
@@ -282,6 +290,7 @@ class AccountingController extends Controller
                 'package_name' => $packageId ? DesignerPackage::find($packageId)?->name : null,
                 'package_price' => $packagePrice,
                 'looks' => $looks,
+                'suggested_downpayment' => $suggestedDownpayment ? (float) $suggestedDownpayment : null,
             ],
             'plan' => $plan ? [
                 'id' => $plan->id,

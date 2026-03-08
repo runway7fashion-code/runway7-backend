@@ -100,7 +100,7 @@ class SalesController extends Controller
 
     public function create(): Response
     {
-        $events = Event::whereIn('status', ['published', 'active', 'draft'])
+        $events = Event::whereNotIn('status', ['draft'])
             ->orderBy('start_date', 'desc')
             ->get(['id', 'name']);
 
@@ -121,12 +121,11 @@ class SalesController extends Controller
             'email'       => 'required|email|unique:users',
             'phone'       => 'nullable|string|unique:users,phone',
             'brand_name'  => 'required|string|max:255',
-            'country'     => 'nullable|string|max:255',
-            'website'     => 'nullable|string|max:255',
-            'instagram'   => 'nullable|string|max:255',
+            'country'     => 'required|string|max:255',
             'event_id'    => 'required|exists:events,id',
-            'package_id'  => 'nullable|exists:designer_packages,id',
-            'agreed_price'=> 'nullable|numeric|min:0',
+            'package_id'  => 'required|exists:designer_packages,id',
+            'agreed_price'=> 'required|numeric|min:0',
+            'downpayment' => 'required|numeric|min:0',
             'notes'       => 'nullable|string',
         ], [
             'email.unique' => 'Este email ya está registrado.',
@@ -147,8 +146,6 @@ class SalesController extends Controller
             $user->designerProfile()->create([
                 'brand_name' => $request->brand_name,
                 'country'    => $request->country,
-                'website'    => $request->website,
-                'instagram'  => $request->instagram,
                 'sales_rep_id' => $request->user()->id,
             ]);
 
@@ -158,6 +155,7 @@ class SalesController extends Controller
                 'event_id'     => $request->event_id,
                 'package_id'   => $request->package_id,
                 'agreed_price' => $request->agreed_price ?? 0,
+                'downpayment'  => $request->downpayment,
                 'notes'        => $request->notes,
                 'status'       => 'registered',
             ]);

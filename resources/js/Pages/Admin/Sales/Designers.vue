@@ -90,6 +90,7 @@ function statusLabel(s) {
                             <th class="px-4 py-3 text-left">Evento</th>
                             <th class="px-4 py-3 text-left">Paquete</th>
                             <th class="px-4 py-3 text-right">Precio</th>
+                            <th class="px-4 py-3 text-right">Inicial</th>
                             <th class="px-4 py-3 text-left">Vendedor</th>
                             <th class="px-4 py-3 text-left">Estado</th>
                             <th class="px-4 py-3 text-left">Docs</th>
@@ -105,6 +106,7 @@ function statusLabel(s) {
                             <td class="px-4 py-3 text-gray-600">{{ r.event?.name }}</td>
                             <td class="px-4 py-3 text-gray-600">{{ r.package?.name ?? '-' }}</td>
                             <td class="px-4 py-3 text-right text-gray-900 font-medium">${{ Number(r.agreed_price).toLocaleString() }}</td>
+                            <td class="px-4 py-3 text-right text-gray-600">{{ r.downpayment ? `$${Number(r.downpayment).toLocaleString()}` : '-' }}</td>
                             <td class="px-4 py-3 text-gray-600">{{ r.sales_rep?.first_name }} {{ r.sales_rep?.last_name }}</td>
                             <td class="px-4 py-3">
                                 <span :class="statusBadge(r.status)" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
