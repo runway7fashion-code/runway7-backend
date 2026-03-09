@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, watch, computed } from 'vue';
-import { XMarkIcon, ArrowUpTrayIcon, ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+import { XMarkIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, DevicePhoneMobileIcon, EnvelopeIcon, PencilSquareIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     designers:         Object,
@@ -24,6 +24,7 @@ const pkg      = ref(props.filters.package    ?? '');
 const salesRep  = ref(props.filters.sales_rep  ?? '');
 const materials = ref(props.filters.materials  ?? '');
 const country   = ref(props.filters.country    ?? '');
+const checkin   = ref(props.filters.checkin    ?? '');
 
 let timer = null;
 function applyFilters() {
@@ -37,11 +38,12 @@ function applyFilters() {
             sales_rep: salesRep.value  || undefined,
             materials: materials.value || undefined,
             country:   country.value   || undefined,
+            checkin:   checkin.value    || undefined,
         }, { preserveState: true, replace: true });
     }, 300);
 }
 
-watch([search, event, category, pkg, salesRep, materials, country], applyFilters);
+watch([search, event, category, pkg, salesRep, materials, country, checkin], applyFilters);
 
 function statusBadge(status) {
     return {
@@ -54,14 +56,64 @@ function statusBadge(status) {
 
 const showNoPlanModal = ref(false);
 const noPlanDesigner = ref(null);
+const showNoEventModal = ref(false);
+const noEventDesigner = ref(null);
+const noEventMissing = ref([]);
 
-function updateDesignerStatus(d, newStatus) {
-    if (newStatus === 'pending' && !d.has_payment_plan) {
-        noPlanDesigner.value = d;
-        showNoPlanModal.value = true;
-        return;
+function updateDesignerStatus(d, newStatus, event) {
+    if (newStatus === 'pending') {
+        // Prioridad 1: Plan de pagos
+        if (!d.has_payment_plan) {
+            if (event?.target) event.target.value = d.status;
+            noPlanDesigner.value = d;
+            showNoPlanModal.value = true;
+            return;
+        }
+        // Prioridad 2: Evento (incluye show y fitting)
+        const missing = [];
+        if (!d.has_event) missing.push('No tiene evento asignado.');
+        if (!d.has_show) missing.push('No tiene show asignado (día y hora).');
+        if (!d.has_fitting) missing.push('No tiene fitting asignado.');
+        if (missing.length) {
+            if (event?.target) event.target.value = d.status;
+            noEventDesigner.value = d;
+            noEventMissing.value = missing;
+            showNoEventModal.value = true;
+            return;
+        }
     }
     router.patch(`/admin/designers/${d.id}/status`, { status: newStatus }, { preserveScroll: true });
+}
+
+// Communication log modals
+const showCommModal = ref(false);
+const commModalDesigner = ref(null);
+const commModalType = ref(null); // 'email' or 'sms'
+
+function getCommLogs(d, type) {
+    const channel = type === 'email' ? 'onboarding_email' : 'onboarding_sms';
+    return (d.communication_logs ?? [])
+        .filter(l => l.channel === channel)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+}
+
+function openCommModal(d, type, e) {
+    e.stopPropagation();
+    commModalDesigner.value = d;
+    commModalType.value = type;
+    showCommModal.value = true;
+}
+
+function commStatusLabel(status) {
+    return { queued: 'In queue', sent: 'Sent', failed: 'Failed' }[status] ?? status;
+}
+
+function commStatusClass(status) {
+    return {
+        queued: 'bg-yellow-100 text-yellow-700',
+        sent:   'bg-green-100 text-green-700',
+        failed: 'bg-red-100 text-red-700',
+    }[status] ?? 'bg-gray-100 text-gray-600';
 }
 
 function storageUrl(path) {
@@ -132,8 +184,8 @@ function fmtEmailSent(dt) {
 
 function sendOnboardingEmail(d, e) {
     e.stopPropagation();
-    if (d.status !== 'pending') return alert(`${d.first_name} debe estar en estado Pendiente para enviar email de onboarding.`);
-    if (!confirm(`¿Enviar email de onboarding a ${d.first_name}?`)) return;
+    const label = d.welcome_email_sent_at ? 'reenviar' : 'enviar';
+    if (!confirm(`¿Deseas ${label} email de onboarding a ${d.first_name}?`)) return;
     router.post(`/admin/designers/${d.id}/send-onboarding`, {}, { preserveScroll: true });
 }
 
@@ -143,14 +195,14 @@ function sendPendingOnboarding() {
 }
 
 function canSendSms(d) {
-    return d.phone && d.status === 'pending';
+    return !!d.phone;
 }
 
 function sendOnboardingSms(d, e) {
     e.stopPropagation();
     if (!d.phone) return alert(`${d.first_name} no tiene número de teléfono registrado.`);
-    if (d.status !== 'pending') return alert(`${d.first_name} debe estar en estado Pendiente para enviar SMS de onboarding.`);
-    if (!confirm(`¿Enviar SMS de onboarding a ${d.first_name}?`)) return;
+    const label = d.sms_sent_at ? 'reenviar' : 'enviar';
+    if (!confirm(`¿Deseas ${label} SMS de onboarding a ${d.first_name}?`)) return;
     router.post(`/admin/designers/${d.id}/send-onboarding-sms`, {}, { preserveScroll: true });
 }
 
@@ -318,6 +370,13 @@ function submitImport() {
                     <option value="">Todos los paises</option>
                     <option v-for="c in countries" :key="c" :value="c">{{ c }}</option>
                 </select>
+
+                <select v-model="checkin"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Check-in: Todos</option>
+                    <option value="yes">Con check-in</option>
+                    <option value="no">Sin check-in</option>
+                </select>
             </div>
 
             <!-- Tabla -->
@@ -325,17 +384,16 @@ function submitImport() {
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 border-b border-gray-200">
                         <tr>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Registration</th>
                             <th class="text-left px-5 py-3 font-medium text-gray-500">Designer / Brand</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Contacto</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Contact</th>
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Materials</th>
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Events</th>
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Status</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Plan</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Último Check-in</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Registro</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Último Login</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Último Correo</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Último SMS</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Last Login</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Last Check-in</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Last Email</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Last SMS</th>
                             <th class="px-4 py-3"></th>
                         </tr>
                     </thead>
@@ -346,6 +404,10 @@ function submitImport() {
                         <tr v-for="d in designers.data" :key="d.id"
                             class="hover:bg-gray-50 cursor-pointer transition-colors"
                             @click="router.visit(`/admin/designers/${d.id}`)">
+                            <!-- Registro -->
+                            <td class="px-4 py-3">
+                                <p class="text-xs text-gray-700">{{ fmtDateTime(d.created_at) }}</p>
+                            </td>
                             <!-- Foto + Nombre + Brand -->
                             <td class="px-5 py-3">
                                 <div class="flex items-center gap-3">
@@ -388,29 +450,34 @@ function submitImport() {
                                 <button v-if="d.events_as_designer?.length"
                                     @click="openEventsModal(d, $event)"
                                     class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full hover:bg-blue-100 transition-colors cursor-pointer">
-                                    {{ d.events_as_designer.length }} evento{{ d.events_as_designer.length !== 1 ? 's' : '' }}
+                                    {{ d.events_as_designer.length }} event{{ d.events_as_designer.length !== 1 ? 's' : '' }}
                                 </button>
-                                <span v-else class="text-gray-400 text-xs">Sin eventos</span>
+                                <span v-else class="text-gray-400 text-xs">No events</span>
                             </td>
                             <!-- Estado -->
                             <td class="px-4 py-3" @click.stop>
-                                <span v-if="d.status === 'active'"
-                                    class="text-xs font-medium rounded-full px-2 py-0.5 bg-green-100 text-green-700">
-                                    Activo
-                                </span>
-                                <select v-else :value="d.status"
-                                    @change="updateDesignerStatus(d, $event.target.value)"
-                                    :class="statusBadge(d.status)"
-                                    class="text-xs font-medium rounded-full px-2 py-0.5 border-0 outline-none cursor-pointer appearance-none">
-                                    <option value="registered">Registrado</option>
-                                    <option value="inactive">Inactivo</option>
-                                    <option value="pending">Pendiente</option>
-                                </select>
+                                <div>
+                                    <span v-if="d.status === 'active'"
+                                        class="text-xs font-medium rounded-full px-2 py-0.5 bg-green-100 text-green-700">
+                                        Active
+                                    </span>
+                                    <select v-else :value="d.status"
+                                        @change="updateDesignerStatus(d, $event.target.value, $event)"
+                                        :class="statusBadge(d.status)"
+                                        class="text-xs font-medium rounded-full px-2 py-0.5 border-0 outline-none cursor-pointer appearance-none">
+                                        <option value="registered">Registered</option>
+                                        <option value="inactive">Inactive</option>
+                                        <option value="pending">Pending</option>
+                                    </select>
+                                    <p class="text-[11px] mt-1" :class="d.has_payment_plan ? 'text-green-600' : 'text-red-500'">
+                                        {{ d.has_payment_plan ? 'With a plan' : 'Without a plan' }}
+                                    </p>
+                                </div>
                             </td>
-                            <!-- Plan de Pagos -->
+                            <!-- Último Login -->
                             <td class="px-4 py-3">
-                                <span v-if="d.has_payment_plan" class="text-xs font-medium rounded-full px-2 py-0.5 bg-green-50 text-green-700">Si</span>
-                                <span v-else class="text-xs font-medium rounded-full px-2 py-0.5 bg-red-50 text-red-600">No</span>
+                                <p v-if="d.last_login_at" class="text-xs text-gray-700">{{ fmtDateTime(d.last_login_at) }}</p>
+                                <span v-else class="text-xs text-gray-400">—</span>
                             </td>
                             <!-- Último Check-in -->
                             <td class="px-4 py-3" @click.stop>
@@ -433,61 +500,57 @@ function submitImport() {
                                 </template>
                                 <span v-else class="text-xs text-gray-400">—</span>
                             </td>
-                            <!-- Registro -->
-                            <td class="px-4 py-3">
-                                <p class="text-xs text-gray-700">{{ fmtDateTime(d.created_at) }}</p>
-                            </td>
-                            <!-- Último Login -->
-                            <td class="px-4 py-3">
-                                <p v-if="d.last_login_at" class="text-xs text-gray-700">{{ fmtDateTime(d.last_login_at) }}</p>
-                                <span v-else class="text-xs text-gray-400">—</span>
-                            </td>
                             <!-- Último Correo -->
-                            <td class="px-4 py-3">
-                                <template v-if="d.welcome_email_sent_at">
-                                    <span class="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full font-medium">
-                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                                        </svg>
-                                        {{ fmtEmailSent(d.welcome_email_sent_at) }}
+                            <td class="px-4 py-3" @click.stop>
+                                <button @click="openCommModal(d, 'email', $event)" class="cursor-pointer hover:opacity-80 transition-opacity">
+                                    <template v-if="d.welcome_email_sent_at">
+                                        <span class="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full font-medium">
+                                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                            </svg>
+                                            {{ fmtEmailSent(d.welcome_email_sent_at) }}
+                                        </span>
+                                    </template>
+                                    <span v-else class="inline-flex items-center text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                        Not sent
                                     </span>
-                                </template>
-                                <span v-else class="inline-flex items-center text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                                    No enviado
-                                </span>
+                                </button>
                             </td>
                             <!-- Último SMS -->
-                            <td class="px-4 py-3">
-                                <template v-if="d.sms_sent_at">
-                                    <span class="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full font-medium">
-                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                                        </svg>
-                                        {{ fmtEmailSent(d.sms_sent_at) }}
+                            <td class="px-4 py-3" @click.stop>
+                                <button @click="openCommModal(d, 'sms', $event)" class="cursor-pointer hover:opacity-80 transition-opacity">
+                                    <template v-if="d.sms_sent_at">
+                                        <span class="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full font-medium">
+                                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                            </svg>
+                                            {{ fmtEmailSent(d.sms_sent_at) }}
+                                        </span>
+                                    </template>
+                                    <span v-else class="inline-flex items-center text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                        Not sent
                                     </span>
-                                </template>
-                                <span v-else class="inline-flex items-center text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                                    No enviado
-                                </span>
+                                </button>
                             </td>
                             <!-- Acciones -->
                             <td class="px-4 py-3" @click.stop>
                                 <div class="flex items-center gap-2">
-                                    <button @click="sendOnboardingSms(d, $event)"
-                                        class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg transition-colors whitespace-nowrap"
-                                        :class="canSendSms(d) ? 'hover:bg-gray-50' : 'opacity-40 cursor-not-allowed'"
-                                        :disabled="!canSendSms(d)">
-                                        SMS
-                                    </button>
                                     <button @click="sendOnboardingEmail(d, $event)"
-                                        class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg transition-colors whitespace-nowrap"
-                                        :class="d.status === 'pending' ? 'hover:bg-gray-50' : 'opacity-40 cursor-not-allowed'"
-                                        :disabled="d.status !== 'pending'">
-                                        Email
+                                        class="p-1.5 border border-gray-200 rounded-lg transition-colors hover:bg-gray-50 text-gray-600"
+                                        title="Enviar Email">
+                                        <EnvelopeIcon class="w-4 h-4" />
+                                    </button>
+                                    <button @click="sendOnboardingSms(d, $event)"
+                                        class="p-1.5 border border-gray-200 rounded-lg transition-colors"
+                                        :class="canSendSms(d) ? 'hover:bg-gray-50 text-gray-600' : 'opacity-40 cursor-not-allowed text-gray-400'"
+                                        :disabled="!canSendSms(d)"
+                                        title="Enviar SMS">
+                                        <DevicePhoneMobileIcon class="w-4 h-4" />
                                     </button>
                                     <Link :href="`/admin/designers/${d.id}/edit`"
-                                        class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                                        Editar
+                                        class="p-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-gray-600"
+                                        title="Editar">
+                                        <PencilSquareIcon class="w-4 h-4" />
                                     </Link>
                                 </div>
                             </td>
@@ -853,7 +916,7 @@ function submitImport() {
         </div>
     </Teleport>
 
-    <!-- Modal: Sin Plan de Pagos -->
+    <!-- Modal: Plan de pagos requerido -->
     <Teleport to="body">
         <div v-if="showNoPlanModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="showNoPlanModal = false">
             <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
@@ -874,6 +937,90 @@ function submitImport() {
                     <button @click="showNoPlanModal = false"
                         class="px-6 py-2.5 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
                         Entendido
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Modal: Evento requerido (incluye show y fitting) -->
+    <Teleport to="body">
+        <div v-if="showNoEventModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="showNoEventModal = false">
+            <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+                <div class="text-center">
+                    <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Evento incompleto</h3>
+                    <p class="text-sm text-gray-500 mb-4">
+                        No se puede cambiar a <span class="font-medium text-yellow-700">Pendiente</span> al diseñador
+                        <span class="font-semibold text-gray-800">{{ noEventDesigner?.first_name }} {{ noEventDesigner?.last_name }}</span>:
+                    </p>
+                    <ul class="text-left text-sm space-y-2 mb-6">
+                        <li v-for="(msg, i) in noEventMissing" :key="i" class="flex items-start gap-2">
+                            <span class="mt-0.5 w-4 h-4 rounded-full bg-red-100 text-red-500 flex items-center justify-center flex-shrink-0 text-xs font-bold">&times;</span>
+                            <span class="text-gray-600">{{ msg }}</span>
+                        </li>
+                    </ul>
+                    <button @click="showNoEventModal = false"
+                        class="px-6 py-2.5 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                        Entendido
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Modal: Communication Log (Email / SMS) -->
+    <Teleport to="body">
+        <div v-if="showCommModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="showCommModal = false">
+            <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+                <div class="flex items-center justify-between mb-5">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">
+                            {{ commModalType === 'email' ? 'Email History' : 'SMS History' }}
+                        </h3>
+                        <p class="text-sm text-gray-500">{{ commModalDesigner?.first_name }} {{ commModalDesigner?.last_name }}</p>
+                    </div>
+                    <button @click="showCommModal = false" class="text-gray-400 hover:text-gray-600">
+                        <XMarkIcon class="w-5 h-5" />
+                    </button>
+                </div>
+
+                <!-- Empty state -->
+                <div v-if="!getCommLogs(commModalDesigner, commModalType).length" class="text-center py-8 text-gray-400 text-sm">
+                    No {{ commModalType === 'email' ? 'emails' : 'SMS' }} sent yet
+                </div>
+
+                <!-- Log list -->
+                <div v-else class="space-y-3 max-h-80 overflow-y-auto">
+                    <div v-for="log in getCommLogs(commModalDesigner, commModalType)" :key="log.id"
+                        class="border border-gray-100 rounded-xl p-4"
+                        :class="log.status === 'failed' ? 'bg-red-50/50' : 'bg-gray-50'">
+                        <div class="flex items-center justify-between mb-2">
+                            <span :class="commStatusClass(log.status)"
+                                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
+                                {{ commStatusLabel(log.status) }}
+                            </span>
+                            <span class="text-xs text-gray-400">
+                                {{ new Date(log.sent_at ?? log.created_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) }}
+                            </span>
+                        </div>
+                        <div v-if="log.sender" class="text-xs text-gray-500">
+                            Sent by <span class="font-medium text-gray-700">{{ log.sender.first_name }} {{ log.sender.last_name }}</span>
+                        </div>
+                        <div v-if="log.error_message" class="mt-2 text-xs text-red-600 bg-red-100 rounded-lg p-2">
+                            {{ log.error_message }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-5 flex justify-end">
+                    <button @click="showCommModal = false"
+                        class="px-5 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                        Close
                     </button>
                 </div>
             </div>

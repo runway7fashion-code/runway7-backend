@@ -46,6 +46,13 @@ class AuthController extends Controller
 
         if ($user->status === 'pending') {
             $user->update(['status' => 'active', 'last_login_at' => now()]);
+
+            // Auto-confirmed: actualizar sales_registration al primer login
+            if ($user->role === 'designer') {
+                \App\Models\SalesRegistration::where('designer_id', $user->id)
+                    ->where('status', 'onboarded')
+                    ->update(['status' => 'confirmed', 'confirmed_at' => now()]);
+            }
         } else {
             $user->update(['last_login_at' => now()]);
         }

@@ -10,11 +10,16 @@ import {
 
 const props = defineProps({
     registration: Object,
+    salesReps: Array,
 });
 
 const page = usePage();
 const isAdmin = computed(() => ['admin', 'operation'].includes(page.props.auth?.user?.role));
 const isSales = computed(() => page.props.auth?.user?.role === 'sales');
+const isLider = computed(() => {
+    const u = page.props.auth?.user;
+    return u?.role === 'admin' || u?.sales_type === 'lider';
+});
 const r = computed(() => props.registration);
 const designer = computed(() => r.value.designer);
 const profile = computed(() => designer.value?.designer_profile);
@@ -37,24 +42,18 @@ function statusLabel(s) {
     }[s] ?? s;
 }
 
-// Status transitions
-const statusFlow = {
-    registered: ['onboarded', 'cancelled'],
-    onboarded:  ['confirmed', 'cancelled'],
-    confirmed:  [],
-    cancelled:  [],
-};
-const availableTransitions = computed(() => statusFlow[r.value.status] ?? []);
+// Edit registration (lider only)
+const editForm = useForm({
+    sales_rep_id: props.registration?.sales_rep_id ?? '',
+    notes: props.registration?.notes ?? '',
+});
+const editing = ref(false);
 
-function changeStatus(newStatus) {
-    const messages = {
-        onboarded: '¿Marcar este registro como "Onboarded"?',
-        confirmed: '¿Confirmar este registro? El diseñador será asignado al evento y activado.',
-        cancelled: '¿Cancelar este registro?',
-    };
-    if (!confirm(messages[newStatus] || `¿Cambiar estado a "${newStatus}"?`)) return;
-
-    router.patch(`/admin/sales/designers/${r.value.id}/status`, { status: newStatus }, { preserveScroll: true });
+function submitEdit() {
+    editForm.patch(`/admin/sales/designers/${props.registration.id}`, {
+        preserveScroll: true,
+        onSuccess: () => { editing.value = false; },
+    });
 }
 
 // Document upload
@@ -135,14 +134,6 @@ function storageUrl(path) {
                             <p class="text-gray-900">{{ profile?.country || '-' }}</p>
                         </div>
                         <div>
-                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Instagram</p>
-                            <p class="text-gray-900">{{ profile?.instagram || '-' }}</p>
-                        </div>
-                        <div>
-                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Website</p>
-                            <p class="text-gray-900">{{ profile?.website || '-' }}</p>
-                        </div>
-                        <div>
                             <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Status del Diseñador</p>
                             <p class="text-gray-900 capitalize">{{ designer?.status }}</p>
                         </div>
@@ -170,13 +161,51 @@ function storageUrl(path) {
                             <p class="text-gray-900 font-bold text-lg">{{ r.downpayment ? `$${Number(r.downpayment).toLocaleString()}` : '-' }}</p>
                         </div>
                         <div>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Cuotas</p>
+                            <p class="text-gray-900 font-medium">{{ r.installments_count ?? '-' }}</p>
+                        </div>
+                        <div>
                             <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Vendedor</p>
-                            <p class="text-gray-900">{{ r.sales_rep?.first_name }} {{ r.sales_rep?.last_name }}</p>
+                            <template v-if="isLider && editing">
+                                <select v-model="editForm.sales_rep_id"
+                                    class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                                    <option value="">— Sin asignar —</option>
+                                    <option v-for="rep in salesReps" :key="rep.id" :value="rep.id">{{ rep.first_name }} {{ rep.last_name }}</option>
+                                </select>
+                            </template>
+                            <p v-else class="text-gray-900">{{ r.sales_rep?.first_name }} {{ r.sales_rep?.last_name ?? '—' }}</p>
                         </div>
                     </div>
-                    <div v-if="r.notes" class="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-700">
-                        <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Notas</p>
-                        {{ r.notes }}
+
+                    <!-- Notas -->
+                    <div class="mt-4">
+                        <template v-if="isLider && editing">
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Notas</p>
+                            <textarea v-model="editForm.notes" rows="3"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 resize-none"></textarea>
+                        </template>
+                        <div v-else-if="r.notes" class="p-3 bg-gray-50 rounded-lg text-sm text-gray-700">
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Notas</p>
+                            {{ r.notes }}
+                        </div>
+                    </div>
+
+                    <!-- Acciones edición (lider) -->
+                    <div v-if="isLider" class="mt-4 flex items-center gap-2">
+                        <template v-if="editing">
+                            <button @click="submitEdit" :disabled="editForm.processing"
+                                class="px-4 py-1.5 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50">
+                                {{ editForm.processing ? 'Guardando...' : 'Guardar' }}
+                            </button>
+                            <button @click="editing = false; editForm.reset()"
+                                class="px-4 py-1.5 border border-gray-300 text-gray-600 text-xs rounded-lg hover:bg-gray-50 transition-colors">
+                                Cancelar
+                            </button>
+                        </template>
+                        <button v-else @click="editing = true"
+                            class="px-4 py-1.5 border border-gray-300 text-gray-600 text-xs rounded-lg hover:bg-gray-50 transition-colors">
+                            Editar vendedor / notas
+                        </button>
                     </div>
                 </div>
 
@@ -219,34 +248,6 @@ function storageUrl(path) {
 
             <!-- Sidebar -->
             <div class="space-y-6">
-                <!-- Status actions -->
-                <div class="bg-white rounded-xl border border-gray-200 p-6">
-                    <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Acciones</h4>
-
-                    <div v-if="availableTransitions.length" class="space-y-2">
-                        <button
-                            v-for="st in availableTransitions"
-                            :key="st"
-                            @click="changeStatus(st)"
-                            class="w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors border"
-                            :class="{
-                                'bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100': st === 'in_review',
-                                'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100': st === 'onboarded',
-                                'bg-green-50 border-green-200 text-green-700 hover:bg-green-100': st === 'confirmed',
-                                'bg-red-50 border-red-200 text-red-700 hover:bg-red-100': st === 'cancelled',
-                            }"
-                        >
-                            {{ {
-                                in_review: 'Enviar a Revisión',
-                                onboarded: 'Marcar Onboarded',
-                                confirmed: 'Confirmar Registro',
-                                cancelled: 'Cancelar Registro',
-                            }[st] }}
-                        </button>
-                    </div>
-                    <p v-else class="text-gray-400 text-sm">No hay acciones disponibles para este estado.</p>
-                </div>
-
                 <!-- Timeline -->
                 <div class="bg-white rounded-xl border border-gray-200 p-6">
                     <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Línea de Tiempo</h4>
@@ -264,7 +265,7 @@ function storageUrl(path) {
                             <div>
                                 <p class="text-gray-900 font-medium">Onboarded</p>
                                 <p class="text-gray-400 text-xs">{{ new Date(r.onboarded_at).toLocaleString('es-US') }}</p>
-                                <p v-if="r.onboarded_by_user" class="text-gray-500 text-xs">por {{ r.onboarded_by_user?.first_name }} {{ r.onboarded_by_user?.last_name }}</p>
+                                <p class="text-gray-500 text-xs">Onboarding enviado por operaciones</p>
                             </div>
                         </div>
                         <div v-if="r.confirmed_at" class="flex items-start gap-3">
@@ -272,7 +273,7 @@ function storageUrl(path) {
                             <div>
                                 <p class="text-gray-900 font-medium">Confirmado</p>
                                 <p class="text-gray-400 text-xs">{{ new Date(r.confirmed_at).toLocaleString('es-US') }}</p>
-                                <p v-if="r.confirmed_by_user" class="text-gray-500 text-xs">por {{ r.confirmed_by_user?.first_name }} {{ r.confirmed_by_user?.last_name }}</p>
+                                <p class="text-gray-500 text-xs">Primer inicio de sesión en la app</p>
                             </div>
                         </div>
                     </div>

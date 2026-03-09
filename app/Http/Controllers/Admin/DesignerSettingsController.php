@@ -20,6 +20,20 @@ class DesignerSettingsController extends Controller
         ]);
     }
 
+    public function categories(): Response
+    {
+        return Inertia::render('Admin/Settings/Categories', [
+            'categories' => DesignerCategory::ordered()->get(),
+        ]);
+    }
+
+    public function packages(): Response
+    {
+        return Inertia::render('Admin/Settings/Packages', [
+            'packages' => DesignerPackage::ordered()->get(),
+        ]);
+    }
+
     // --- Categorías ---
 
     public function storeCategory(Request $request)

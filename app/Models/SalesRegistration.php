@@ -11,7 +11,7 @@ class SalesRegistration extends Model
 
     protected $fillable = [
         'sales_rep_id', 'designer_id', 'event_id', 'package_id',
-        'agreed_price', 'downpayment', 'notes', 'status',
+        'agreed_price', 'downpayment', 'installments_count', 'notes', 'status',
         'onboarded_at', 'onboarded_by', 'confirmed_at', 'confirmed_by',
     ];
 

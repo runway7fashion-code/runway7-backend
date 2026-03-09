@@ -402,8 +402,10 @@ function submit() {
                                     <option v-for="c in countryCodes" :key="c.code" :value="c.code">{{ c.label }}</option>
                                 </select>
                                 <input v-model="phoneNumber" type="tel" placeholder="3055550404"
-                                    class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                                    :class="form.errors.phone ? 'border-red-400 ring-2 ring-red-100' : 'border-gray-300'"
+                                    class="flex-1 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
+                            <p v-if="form.errors.phone" class="mt-1 text-red-500 text-xs">{{ form.errors.phone }}</p>
                         </div>
                     </div>
 

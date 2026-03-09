@@ -25,6 +25,7 @@ const form = useForm({
     email: props.user.email,
     phone: props.user.phone || '',
     role: props.user.role,
+    sales_type: props.user.sales_type || '',
     status: props.user.status,
     password: '',
     password_confirmation: '',
@@ -48,6 +49,7 @@ function formatRole(r) {
 
 const isModel = computed(() => form.role === 'model');
 const isDesigner = computed(() => form.role === 'designer');
+const isSales = computed(() => form.role === 'sales');
 const showPressFields = computed(() => form.role === 'press');
 const showSponsorFields = computed(() => form.role === 'sponsor');
 const showProfileSection = computed(() => ['press', 'sponsor'].includes(form.role));
@@ -116,6 +118,14 @@ function submit() {
                                 <option value="active">Activo</option>
                                 <option value="inactive">Inactivo</option>
                                 <option value="pending">Pendiente</option>
+                            </select>
+                        </div>
+                        <div v-if="isSales">
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Tipo de Vendedor *</label>
+                            <select v-model="form.sales_type" class="input bg-white">
+                                <option value="">Seleccionar...</option>
+                                <option value="lider">Líder</option>
+                                <option value="asesor">Asesor</option>
                             </select>
                         </div>
                     </div>

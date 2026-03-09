@@ -45,6 +45,7 @@ const allNavItems = [
     { name: 'Usuarios',     href: '/admin/users',     exact: false, section: 'users',              icon: UsersIcon },
     { name: 'Pases',        href: '/admin/passes',    exact: false, section: 'tickets_management', icon: TicketIcon },
     { name: 'Logs',         href: '/admin/logs',      exact: false, section: 'activity_logs',      icon: DocumentTextIcon },
+    { name: 'Categorías',   href: '/admin/settings/designer-categories', exact: false, section: 'designer_categories', icon: Cog6ToothIcon },
 ];
 
 const navItems = computed(() => allNavItems.filter(item => hasSection(item.section)));
@@ -64,11 +65,13 @@ const accountingItems = computed(() => {
     return items;
 });
 
-const showSales = computed(() => hasSection('sales_dashboard') || hasSection('sales_designers'));
+const isSalesLider = computed(() => user.value?.role === 'sales' && user.value?.sales_type === 'lider');
+const showSales = computed(() => hasSection('sales_dashboard') || hasSection('sales_designers') || hasSection('designer_packages'));
 const salesItems = computed(() => {
     const items = [];
     if (hasSection('sales_dashboard')) items.push({ name: 'Dashboard', href: '/admin/sales/dashboard', icon: PresentationChartBarIcon });
     if (hasSection('sales_designers')) items.push({ name: 'Diseñadores', href: '/admin/sales/designers', icon: PaintBrushIcon });
+    if (hasSection('designer_packages') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Paquetes', href: '/admin/settings/designer-packages', icon: CurrencyDollarIcon });
     return items;
 });
 
@@ -83,6 +86,8 @@ const notifications = ref([]);
 const showNotifDropdown = ref(false);
 let notifInterval = null;
 
+const unreadCount = computed(() => notifications.value.filter(n => !n.read_at).length);
+
 async function fetchNotifications() {
     try {
         const res = await fetch('/admin/api/notifications', {
@@ -91,7 +96,9 @@ async function fetchNotifications() {
         });
         if (res.ok) {
             const data = await res.json();
-            if (data.length > notifications.value.length && notifications.value.length > 0) {
+            const prevUnread = notifications.value.filter(n => !n.read_at).length;
+            const newUnread = data.filter(n => !n.read_at).length;
+            if (newUnread > prevUnread && prevUnread >= 0 && notifications.value.length > 0) {
                 playNotifSound();
             }
             notifications.value = data;
@@ -115,9 +122,25 @@ function playNotifSound() {
 }
 
 async function markAllRead() {
-    await fetch('/admin/api/notifications/mark-read', { method: 'POST', credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': page.props.csrf_token || document.querySelector('meta[name="csrf-token"]')?.content } });
-    notifications.value = [];
-    showNotifDropdown.value = false;
+    const token = page.props.csrf_token
+        || document.querySelector('meta[name="csrf-token"]')?.content
+        || document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1];
+    try {
+        const res = await fetch('/admin/api/notifications/mark-read', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': token,
+            },
+        });
+        if (res.ok) {
+            notifications.value = notifications.value.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() }));
+            showNotifDropdown.value = false;
+        }
+    } catch {}
 }
 
 function closeNotifOnOutsideClick(e) {
@@ -302,19 +325,21 @@ function logout() {
                     <div class="relative">
                         <button @click="showNotifDropdown = !showNotifDropdown" class="relative p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
                             <BellIcon class="h-5 w-5" />
-                            <span v-if="notifications.length" class="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
-                                {{ notifications.length > 9 ? '9+' : notifications.length }}
+                            <span v-if="unreadCount" class="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                                {{ unreadCount > 9 ? '9+' : unreadCount }}
                             </span>
                         </button>
                         <div v-if="showNotifDropdown" class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
                             <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                                 <h4 class="text-sm font-semibold text-gray-900">Notificaciones</h4>
-                                <button v-if="notifications.length" @click="markAllRead" class="text-xs text-blue-600 hover:underline">Marcar leídas</button>
+                                <button v-if="unreadCount" @click="markAllRead" class="text-xs text-blue-600 hover:underline">Marcar leídas</button>
                             </div>
                             <div class="max-h-72 overflow-y-auto">
                                 <div v-if="!notifications.length" class="px-4 py-6 text-center text-gray-400 text-sm">Sin notificaciones</div>
-                                <div v-for="n in notifications" :key="n.id" class="px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                                    <p class="text-sm font-medium text-gray-900">{{ n.data.title }}</p>
+                                <div v-for="n in notifications" :key="n.id"
+                                    class="px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                                    :class="n.read_at ? 'opacity-50' : 'bg-blue-50/40'">
+                                    <p class="text-sm font-medium" :class="n.read_at ? 'text-gray-500' : 'text-gray-900'">{{ n.data.title }}</p>
                                     <p class="text-xs text-gray-500 mt-0.5">{{ n.data.message }}</p>
                                     <p class="text-xs text-gray-400 mt-1">{{ new Date(n.created_at).toLocaleString('es-US') }}</p>
                                 </div>

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Mail\DesignerOnboardingMail;
+use App\Models\CommunicationLog;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -22,6 +23,8 @@ class SendDesignerOnboardingJob implements ShouldQueue
         public int $userId,
         public ?string $eventName = null,
         public array $shows = [],
+        public ?int $sentBy = null,
+        public ?int $logId = null,
     ) {}
 
     public function handle(): void
@@ -38,10 +41,22 @@ class SendDesignerOnboardingJob implements ShouldQueue
             ));
 
         $user->update(['welcome_email_sent_at' => now()]);
+
+        if ($this->logId) {
+            CommunicationLog::where('id', $this->logId)->update([
+                'status' => 'sent', 'error_message' => null, 'sent_at' => now(),
+            ]);
+        }
     }
 
     public function failed(\Throwable $exception): void
     {
         \Illuminate\Support\Facades\Log::error("SendDesignerOnboardingJob failed for user {$this->userId}: " . $exception->getMessage());
+
+        if ($this->logId) {
+            CommunicationLog::where('id', $this->logId)->update([
+                'status' => 'failed', 'error_message' => $exception->getMessage(),
+            ]);
+        }
     }
 }

@@ -19,7 +19,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'first_name', 'last_name', 'email', 'phone', 'password',
-        'role', 'status', 'last_login_at', 'welcome_email_sent_at', 'sms_sent_at', 'profile_picture', 'login_code',
+        'role', 'status', 'sales_type', 'last_login_at', 'welcome_email_sent_at', 'sms_sent_at', 'profile_picture', 'login_code',
     ];
 
     protected $hidden = ['password', 'remember_token', 'login_code'];
@@ -144,6 +144,7 @@ class User extends Authenticatable
     public function designerDisplays() { return $this->hasMany(DesignerDisplay::class, 'designer_id'); }
     public function fittingAssignments() { return $this->hasMany(FittingAssignment::class, 'designer_id'); }
     public function eventPasses() { return $this->hasMany(EventPass::class, 'user_id'); }
+    public function communicationLogs() { return $this->hasMany(CommunicationLog::class); }
 
     public function eventsAsStaff()
     {

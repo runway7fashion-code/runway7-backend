@@ -23,36 +23,94 @@ class SalesController extends Controller
     public function dashboard(Request $request): Response
     {
         $user = $request->user();
-        $isSales = $user->role === 'sales';
+        $isAsesor = $user->role === 'sales' && $user->sales_type !== 'lider';
+        $isLider  = $user->role === 'sales' && $user->sales_type === 'lider';
 
+        // Asesor solo ve lo suyo; líder y admin ven todo
         $baseQuery = fn() => SalesRegistration::query()
-            ->when($isSales, fn($q) => $q->where('sales_rep_id', $user->id));
+            ->when($isAsesor, fn($q) => $q->where('sales_rep_id', $user->id));
+
+        $totalRegistrations = $baseQuery()->count();
+        $confirmed = $baseQuery()->where('status', 'confirmed')->count();
 
         $stats = [
-            'total_registrations' => $baseQuery()->count(),
+            'total_registrations' => $totalRegistrations,
             'registered'          => $baseQuery()->where('status', 'registered')->count(),
             'onboarded'           => $baseQuery()->where('status', 'onboarded')->count(),
-            'confirmed'           => $baseQuery()->where('status', 'confirmed')->count(),
+            'confirmed'           => $confirmed,
             'cancelled'           => $baseQuery()->where('status', 'cancelled')->count(),
-            'active_events'       => Event::where('status', 'active')->count(),
+        ];
+
+        $totalRevenue    = $baseQuery()->where('status', '!=', 'cancelled')->sum('agreed_price');
+        $totalDownpayments = $baseQuery()->where('status', '!=', 'cancelled')->sum('downpayment');
+        $thisMonthCount  = $baseQuery()->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year)->count();
+
+        $topSellers = null;
+        if ($isLider || $user->role === 'admin') {
+            $topSellersData = SalesRegistration::where('status', '!=', 'cancelled')
+                ->selectRaw('sales_rep_id, count(*) as total')
+                ->groupBy('sales_rep_id')
+                ->orderByDesc('total')
+                ->limit(3)
+                ->get();
+
+            $repIds = $topSellersData->pluck('sales_rep_id');
+            $reps = User::whereIn('id', $repIds)->get(['id', 'first_name', 'last_name'])->keyBy('id');
+
+            $topSellers = $topSellersData->map(fn($row) => [
+                'name'  => $reps[$row->sales_rep_id]?->full_name ?? '—',
+                'total' => $row->total,
+            ])->values();
+        }
+
+        $financeStats = [
+            'total_revenue'      => (float) $totalRevenue,
+            'total_downpayments' => (float) $totalDownpayments,
+            'this_month_count'   => $thisMonthCount,
+            'confirmation_rate'  => $totalRegistrations > 0 ? round(($confirmed / $totalRegistrations) * 100) : 0,
+            'top_sellers'        => $topSellers,
         ];
 
         $recentRegistrations = $baseQuery()
-            ->with(['designer:id,first_name,last_name,email', 'event:id,name', 'package:id,name'])
+            ->whereHas('designer')
+            ->with(['designer:id,first_name,last_name,email', 'event:id,name', 'package:id,name', 'salesRep:id,first_name,last_name'])
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();
 
+        // Stats por asesor (solo para líder y admin)
+        $salesRepStats = null;
+        if ($isLider || $user->role === 'admin') {
+            $salesRepStats = User::where('role', 'sales')
+                ->orderBy('first_name')
+                ->get(['id', 'first_name', 'last_name', 'sales_type'])
+                ->map(function ($rep) {
+                    $q = fn() => SalesRegistration::where('sales_rep_id', $rep->id);
+                    return [
+                        'id'         => $rep->id,
+                        'name'       => "{$rep->first_name} {$rep->last_name}",
+                        'sales_type' => $rep->sales_type,
+                        'total'      => $q()->count(),
+                        'registered' => $q()->where('status', 'registered')->count(),
+                        'onboarded'  => $q()->where('status', 'onboarded')->count(),
+                        'confirmed'  => $q()->where('status', 'confirmed')->count(),
+                        'cancelled'  => $q()->where('status', 'cancelled')->count(),
+                    ];
+                });
+        }
+
         return Inertia::render('Admin/Sales/Dashboard', [
             'stats'               => $stats,
+            'financeStats'        => $financeStats,
             'recentRegistrations' => $recentRegistrations,
+            'salesRepStats'       => $salesRepStats,
         ]);
     }
 
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $isSales = $user->role === 'sales';
+        $isAsesor = $user->role === 'sales' && $user->sales_type !== 'lider';
 
         $query = SalesRegistration::with([
             'designer:id,first_name,last_name,email,phone,status',
@@ -61,7 +119,7 @@ class SalesController extends Controller
             'package:id,name',
             'salesRep:id,first_name,last_name',
             'documents',
-        ])->when($isSales, fn($q) => $q->where('sales_rep_id', $user->id));
+        ])->when($isAsesor, fn($q) => $q->where('sales_rep_id', $user->id));
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -98,18 +156,26 @@ class SalesController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
+        $user = $request->user();
+        $isLider = $user->role === 'admin' || $user->sales_type === 'lider';
+
         $events = Event::whereNotIn('status', ['draft'])
             ->orderBy('start_date', 'desc')
             ->get(['id', 'name']);
 
         $packages = DesignerPackage::ordered()->get();
 
+        $salesReps = $isLider
+            ? User::where('role', 'sales')->where('status', 'active')->orderBy('first_name')->get(['id', 'first_name', 'last_name'])
+            : null;
+
         return Inertia::render('Admin/Sales/DesignerCreate', [
             'events'    => $events,
             'packages'  => $packages,
             'countries' => config('countries'),
+            'salesReps' => $salesReps,
         ]);
     }
 
@@ -126,13 +192,25 @@ class SalesController extends Controller
             'package_id'  => 'required|exists:designer_packages,id',
             'agreed_price'=> 'required|numeric|min:0',
             'downpayment' => 'required|numeric|min:0',
-            'notes'       => 'nullable|string',
+            'installments_count' => 'required|integer|min:1|max:12',
+            'notes'           => 'nullable|string',
+            'sales_rep_id'    => 'nullable|exists:users,id',
+            'documents'           => 'nullable|array',
+            'documents.*.file'    => 'required|file|max:10240',
+            'documents.*.type'    => 'required|in:contract,payment_proof,other',
+            'documents.*.notes'   => 'nullable|string|max:500',
         ], [
             'email.unique' => 'Este email ya está registrado.',
             'phone.unique' => 'Este número de teléfono ya está registrado.',
         ]);
 
-        $designer = DB::transaction(function () use ($request) {
+        $currentUser = $request->user();
+        $isLider = $currentUser->role === 'admin' || $currentUser->sales_type === 'lider';
+        $assignedRepId = ($isLider && $request->filled('sales_rep_id'))
+            ? $request->sales_rep_id
+            : $currentUser->id;
+
+        $designer = DB::transaction(function () use ($request, $assignedRepId) {
             $user = User::create([
                 'first_name' => $request->first_name,
                 'last_name'  => $request->last_name,
@@ -144,21 +222,50 @@ class SalesController extends Controller
             ]);
 
             $user->designerProfile()->create([
-                'brand_name' => $request->brand_name,
-                'country'    => $request->country,
-                'sales_rep_id' => $request->user()->id,
+                'brand_name'   => $request->brand_name,
+                'country'      => $request->country,
+                'sales_rep_id' => $assignedRepId,
             ]);
 
             SalesRegistration::create([
-                'sales_rep_id' => $request->user()->id,
+                'sales_rep_id' => $assignedRepId,
                 'designer_id'  => $user->id,
                 'event_id'     => $request->event_id,
                 'package_id'   => $request->package_id,
                 'agreed_price' => $request->agreed_price ?? 0,
                 'downpayment'  => $request->downpayment,
+                'installments_count' => $request->installments_count,
                 'notes'        => $request->notes,
                 'status'       => 'registered',
             ]);
+
+            // Asignar al evento inmediatamente (sin show, eso lo asigna operation)
+            $this->designerService->assignToEvent($user, $request->event_id, [
+                'package_id'    => $request->package_id,
+                'package_price' => $request->agreed_price,
+                'looks'         => 10,
+            ]);
+
+            // Guardar documentos si se subieron
+            if ($request->hasFile('documents')) {
+                $registration = SalesRegistration::where('designer_id', $user->id)
+                    ->where('event_id', $request->event_id)
+                    ->first();
+
+                $docsInput = $request->input('documents', []);
+                foreach ($request->file('documents', []) as $i => $doc) {
+                    if (empty($doc['file'])) continue;
+                    $path = $doc['file']->store("sales/registrations/{$registration->id}", 'public');
+                    SalesDocument::create([
+                        'sales_registration_id' => $registration->id,
+                        'uploaded_by'           => $request->user()->id,
+                        'type'                  => $docsInput[$i]['type'] ?? 'other',
+                        'file_path'             => $path,
+                        'original_name'         => $doc['file']->getClientOriginalName(),
+                        'notes'                 => $docsInput[$i]['notes'] ?? null,
+                    ]);
+                }
+            }
 
             return $user;
         });
@@ -176,7 +283,7 @@ class SalesController extends Controller
     public function show(SalesRegistration $registration): Response
     {
         $user = request()->user();
-        if ($user->role === 'sales' && $registration->sales_rep_id !== $user->id) {
+        if ($user->role === 'sales' && $user->sales_type !== 'lider' && $registration->sales_rep_id !== $user->id) {
             abort(403);
         }
 
@@ -191,15 +298,43 @@ class SalesController extends Controller
             'documents.uploader:id,first_name,last_name',
         ]);
 
+        $salesReps = null;
+        if ($user->role === 'admin' || $user->sales_type === 'lider') {
+            $salesReps = User::where('role', 'sales')->where('status', 'active')->orderBy('first_name')->get(['id', 'first_name', 'last_name']);
+        }
+
         return Inertia::render('Admin/Sales/DesignerShow', [
             'registration' => $registration,
+            'salesReps'    => $salesReps,
         ]);
+    }
+
+    public function update(Request $request, SalesRegistration $registration)
+    {
+        $user = $request->user();
+        $isLider = $user->role === 'admin' || $user->sales_type === 'lider';
+
+        if (!$isLider) {
+            abort(403);
+        }
+
+        $request->validate([
+            'sales_rep_id' => 'nullable|exists:users,id',
+            'notes'        => 'nullable|string',
+        ]);
+
+        $registration->update([
+            'sales_rep_id' => $request->sales_rep_id,
+            'notes'        => $request->notes,
+        ]);
+
+        return back()->with('success', 'Registro actualizado.');
     }
 
     public function uploadDocument(Request $request, SalesRegistration $registration)
     {
         $user = $request->user();
-        if ($user->role === 'sales' && $registration->sales_rep_id !== $user->id) {
+        if ($user->role === 'sales' && $user->sales_type !== 'lider' && $registration->sales_rep_id !== $user->id) {
             abort(403);
         }
 
@@ -231,7 +366,7 @@ class SalesController extends Controller
         $user = request()->user();
         $registration = $document->registration;
 
-        if ($user->role === 'sales' && $registration->sales_rep_id !== $user->id) {
+        if ($user->role === 'sales' && $user->sales_type !== 'lider' && $registration->sales_rep_id !== $user->id) {
             abort(403);
         }
 
@@ -241,50 +376,4 @@ class SalesController extends Controller
         return back()->with('success', 'Documento eliminado.');
     }
 
-    public function updateStatus(Request $request, SalesRegistration $registration)
-    {
-        $request->validate([
-            'status' => 'required|in:registered,onboarded,confirmed,cancelled',
-        ]);
-
-        $newStatus = $request->status;
-        $user = $request->user();
-
-        $updateData = ['status' => $newStatus];
-
-        if ($newStatus === 'onboarded') {
-            $updateData['onboarded_at'] = now();
-            $updateData['onboarded_by'] = $user->id;
-        }
-
-        if ($newStatus === 'confirmed') {
-            $updateData['confirmed_at'] = now();
-            $updateData['confirmed_by'] = $user->id;
-
-            // Al confirmar, asignar el diseñador al evento y cambiar su status a active
-            $this->confirmRegistration($registration);
-        }
-
-        $registration->update($updateData);
-
-        return back()->with('success', 'Estado actualizado.');
-    }
-
-    private function confirmRegistration(SalesRegistration $registration): void
-    {
-        $designer = User::findOrFail($registration->designer_id);
-
-        // Cambiar status del diseñador a active
-        $designer->update(['status' => 'active']);
-
-        // Asignar al evento si no está ya asignado
-        $event = Event::findOrFail($registration->event_id);
-        if (!$event->designers()->where('designer_id', $designer->id)->exists()) {
-            $this->designerService->assignToEvent($designer, $registration->event_id, [
-                'package_id'    => $registration->package_id,
-                'package_price' => $registration->agreed_price,
-                'looks'         => 10,
-            ]);
-        }
-    }
 }

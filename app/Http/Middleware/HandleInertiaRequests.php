@@ -43,6 +43,7 @@ class HandleInertiaRequests extends Middleware
                     'role_label' => config("role_permissions.{$request->user()->role}.label", ''),
                 ]) : null,
             ],
+            'csrf_token' => csrf_token(),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

@@ -39,10 +39,10 @@ function statusBadge(s) {
 
 function statusLabel(s) {
     return {
-        registered: 'Registrado',
+        registered: 'Registered',
         onboarded:  'Onboarded',
-        confirmed:  'Confirmado',
-        cancelled:  'Cancelado',
+        confirmed:  'Confirmed',
+        cancelled:  'Cancelled',
     }[s] ?? s;
 }
 </script>
@@ -50,7 +50,7 @@ function statusLabel(s) {
 <template>
     <AdminLayout>
         <template #header>
-            <h2 class="text-lg font-semibold text-gray-900">Registros de Diseñadores</h2>
+            <h2 class="text-lg font-semibold text-gray-900">Designer Registrations</h2>
         </template>
 
         <div>
@@ -58,51 +58,50 @@ function statusLabel(s) {
             <div class="flex flex-wrap items-center gap-3 mb-6">
                 <div class="relative flex-1 min-w-[200px]">
                     <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input v-model="search" type="text" placeholder="Buscar por nombre, email, marca..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400" />
+                    <input v-model="search" type="text" placeholder="Search by name, email, brand..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400" />
                 </div>
                 <select v-model="status" class="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:ring-2 focus:ring-yellow-400">
-                    <option value="">Todos los estados</option>
-                    <option value="registered">Registrado</option>
+                    <option value="">All statuses</option>
+                    <option value="registered">Registered</option>
                     <option value="onboarded">Onboarded</option>
-                    <option value="confirmed">Confirmado</option>
-                    <option value="cancelled">Cancelado</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="cancelled">Cancelled</option>
                 </select>
                 <select v-model="event" class="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:ring-2 focus:ring-yellow-400">
-                    <option value="">Todos los eventos</option>
+                    <option value="">All events</option>
                     <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
                 </select>
                 <Link href="/admin/sales/designers/create" class="inline-flex items-center gap-2 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
                     <PlusIcon class="h-4 w-4" />
-                    Registrar Diseñador
+                    Register Designer
                 </Link>
             </div>
 
             <!-- Table -->
             <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div v-if="!registrations.data.length" class="p-12 text-center text-gray-400">
-                    No se encontraron registros.
+                    No registrations found.
                 </div>
                 <table v-else class="w-full text-sm">
                     <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-widest">
                         <tr>
-                            <th class="px-4 py-3 text-left">Diseñador</th>
-                            <th class="px-4 py-3 text-left">Marca</th>
-                            <th class="px-4 py-3 text-left">Evento</th>
-                            <th class="px-4 py-3 text-left">Paquete</th>
-                            <th class="px-4 py-3 text-right">Precio</th>
-                            <th class="px-4 py-3 text-right">Inicial</th>
-                            <th class="px-4 py-3 text-left">Vendedor</th>
-                            <th class="px-4 py-3 text-left">Estado</th>
+                            <th class="px-4 py-3 text-left">Designer / Brand</th>
+                            <th class="px-4 py-3 text-left">Event</th>
+                            <th class="px-4 py-3 text-left">Package</th>
+                            <th class="px-4 py-3 text-right">Price</th>
+                            <th class="px-4 py-3 text-right">Down Payment</th>
+                            <th class="px-4 py-3 text-left">Sales Rep</th>
+                            <th class="px-4 py-3 text-left">Status</th>
                             <th class="px-4 py-3 text-left">Docs</th>
-                            <th class="px-4 py-3 text-left">Fecha</th>
+                            <th class="px-4 py-3 text-left">Date</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         <tr v-for="r in registrations.data" :key="r.id" class="hover:bg-gray-50 cursor-pointer" @click="router.visit(`/admin/sales/designers/${r.id}`)">
-                            <td class="px-4 py-3 font-medium text-gray-900">
-                                {{ r.designer?.first_name }} {{ r.designer?.last_name }}
+                            <td class="px-4 py-3">
+                                <p class="font-medium text-gray-900">{{ r.designer?.first_name }} {{ r.designer?.last_name }}</p>
+                                <p class="text-xs text-gray-500">{{ r.designer?.designer_profile?.brand_name ?? '-' }}</p>
                             </td>
-                            <td class="px-4 py-3 text-gray-600">{{ r.designer?.designer_profile?.brand_name ?? '-' }}</td>
                             <td class="px-4 py-3 text-gray-600">{{ r.event?.name }}</td>
                             <td class="px-4 py-3 text-gray-600">{{ r.package?.name ?? '-' }}</td>
                             <td class="px-4 py-3 text-right text-gray-900 font-medium">${{ Number(r.agreed_price).toLocaleString() }}</td>
@@ -114,14 +113,14 @@ function statusLabel(s) {
                                 </span>
                             </td>
                             <td class="px-4 py-3 text-gray-500">{{ r.documents?.length ?? 0 }}</td>
-                            <td class="px-4 py-3 text-gray-400 text-xs">{{ new Date(r.created_at).toLocaleDateString('es-US') }}</td>
+                            <td class="px-4 py-3 text-gray-400 text-xs">{{ new Date(r.created_at).toLocaleDateString('en-US') }}</td>
                         </tr>
                     </tbody>
                 </table>
 
                 <!-- Pagination -->
                 <div v-if="registrations.last_page > 1" class="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-                    <p class="text-xs text-gray-500">Mostrando {{ registrations.from }}-{{ registrations.to }} de {{ registrations.total }}</p>
+                    <p class="text-xs text-gray-500">Showing {{ registrations.from }}-{{ registrations.to }} of {{ registrations.total }}</p>
                     <div class="flex gap-1">
                         <Link v-for="link in registrations.links" :key="link.label"
                             :href="link.url || ''"

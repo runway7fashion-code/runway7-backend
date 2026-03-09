@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\CommunicationLog;
 use App\Models\User;
 use App\Services\TwilioService;
 use Illuminate\Bus\Queueable;
@@ -21,6 +22,8 @@ class SendDesignerOnboardingSmsJob implements ShouldQueue
     public function __construct(
         public int $userId,
         public ?string $eventName = null,
+        public ?int $sentBy = null,
+        public ?int $logId = null,
     ) {}
 
     public function handle(TwilioService $twilio): void
@@ -51,10 +54,22 @@ class SendDesignerOnboardingSmsJob implements ShouldQueue
         $twilio->send($user->phone, $message);
 
         $user->update(['sms_sent_at' => now()]);
+
+        if ($this->logId) {
+            CommunicationLog::where('id', $this->logId)->update([
+                'status' => 'sent', 'error_message' => null, 'sent_at' => now(),
+            ]);
+        }
     }
 
     public function failed(\Throwable $exception): void
     {
         Log::error("SendDesignerOnboardingSmsJob failed for user {$this->userId}: " . $exception->getMessage());
+
+        if ($this->logId) {
+            CommunicationLog::where('id', $this->logId)->update([
+                'status' => 'failed', 'error_message' => $exception->getMessage(),
+            ]);
+        }
     }
 }

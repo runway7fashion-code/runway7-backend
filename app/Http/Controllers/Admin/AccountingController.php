@@ -70,6 +70,7 @@ class AccountingController extends Controller
                 });
             })
             ->with(['designerProfile'])
+            ->orderByDesc('users.created_at')
             ->limit(20)
             ->get()
             ->map(function ($designer) use ($event) {
@@ -89,6 +90,7 @@ class AccountingController extends Controller
                     'has_plan' => $plan !== null,
                     'plan_status' => $plan?->status,
                     'plan_progress' => $plan?->progressPercentage(),
+                    'created_at' => $designer->created_at?->toIso8601String(),
                 ];
             });
 
@@ -105,10 +107,14 @@ class AccountingController extends Controller
                         ->orWhereHas('designerProfile', fn($p) => $p->where('brand_name', 'ilike', "%{$search}%"));
                 });
             })
+            ->orderByDesc('created_at')
             ->limit(20)
             ->get()
-            ->map(function ($reg) {
+            ->map(function ($reg) use ($event) {
                 $d = $reg->designer;
+                $plan = DesignerPaymentPlan::where('designer_id', $d->id)
+                    ->where('event_id', $event->id)
+                    ->first();
                 return [
                     'id' => $d->id,
                     'first_name' => $d->first_name,
@@ -118,13 +124,15 @@ class AccountingController extends Controller
                     'brand_name' => $d->designerProfile?->brand_name,
                     'package_price' => $reg->agreed_price,
                     'package_id' => $reg->package_id,
-                    'has_plan' => false,
-                    'plan_status' => null,
-                    'plan_progress' => null,
+                    'has_plan' => $plan !== null,
+                    'plan_status' => $plan?->status,
+                    'plan_progress' => $plan?->progressPercentage(),
+                    'created_at' => $d->created_at?->toIso8601String(),
                 ];
             });
 
-        return response()->json($designers->concat($salesDesigners)->values());
+        $all = $designers->concat($salesDesigners)->sortByDesc('created_at')->values();
+        return response()->json($all);
     }
 
     public function designersAllEvents(Request $request): JsonResponse
@@ -146,9 +154,9 @@ class AccountingController extends Controller
                 'event_designer.package_price',
                 'event_designer.package_id',
                 'events.name as event_name',
+                'users.created_at as user_created_at',
             ])
-            ->orderBy('events.start_date', 'desc')
-            ->orderBy('users.first_name');
+            ->orderByDesc('users.created_at');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -187,6 +195,7 @@ class AccountingController extends Controller
                 'has_plan' => $plan !== null,
                 'plan_status' => $plan?->status,
                 'plan_progress' => $plan?->progressPercentage(),
+                'created_at' => $row->user_created_at,
             ];
         });
 
@@ -208,6 +217,9 @@ class AccountingController extends Controller
             ->filter(fn($reg) => !in_array($reg->designer_id . '-' . $reg->event_id, $assignedPairs))
             ->map(function ($reg) {
                 $d = $reg->designer;
+                $plan = DesignerPaymentPlan::where('designer_id', $d->id)
+                    ->where('event_id', $reg->event_id)
+                    ->first();
                 return [
                     'id' => $d->id,
                     'first_name' => $d->first_name,
@@ -219,13 +231,15 @@ class AccountingController extends Controller
                     'package_id' => $reg->package_id,
                     'event_id' => $reg->event_id,
                     'event_name' => $reg->event?->name,
-                    'has_plan' => false,
-                    'plan_status' => null,
-                    'plan_progress' => null,
+                    'has_plan' => $plan !== null,
+                    'plan_status' => $plan?->status,
+                    'plan_progress' => $plan?->progressPercentage(),
+                    'created_at' => $d->created_at?->toIso8601String(),
                 ];
             });
 
-        return response()->json($results->concat($salesRegs)->values());
+        $all = $results->concat($salesRegs)->sortByDesc('created_at')->values();
+        return response()->json($all);
     }
 
     public function showDesignerPayment(User $designer, Event $event): Response
@@ -291,6 +305,7 @@ class AccountingController extends Controller
                 'package_price' => $packagePrice,
                 'looks' => $looks,
                 'suggested_downpayment' => $suggestedDownpayment ? (float) $suggestedDownpayment : null,
+                'suggested_installments_count' => $salesReg?->installments_count,
             ],
             'plan' => $plan ? [
                 'id' => $plan->id,

@@ -15,6 +15,7 @@ const form = useForm({
     password: '',
     password_confirmation: '',
     role: 'admin',
+    sales_type: '',
     status: 'pending',
     profile: {},
 });
@@ -40,6 +41,7 @@ function formatRole(r) {
     return r.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
+const isSales = computed(() => form.role === 'sales');
 const showPressFields = computed(() => form.role === 'press');
 const showSponsorFields = computed(() => form.role === 'sponsor');
 const showProfileSection = computed(() => ['press', 'sponsor'].includes(form.role));
@@ -108,6 +110,14 @@ function submit() {
                                 <option value="active">Activo</option>
                                 <option value="inactive">Inactivo</option>
                                 <option value="pending">Pendiente</option>
+                            </select>
+                        </div>
+                        <div v-if="isSales">
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Tipo de Vendedor *</label>
+                            <select v-model="form.sales_type" class="input bg-white">
+                                <option value="">Seleccionar...</option>
+                                <option value="lider">Líder</option>
+                                <option value="asesor">Asesor</option>
                             </select>
                         </div>
                     </div>

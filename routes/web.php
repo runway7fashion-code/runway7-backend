@@ -186,7 +186,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('designers/create', [SalesController::class, 'create'])->name('designers.create');
                 Route::post('designers', [SalesController::class, 'store'])->name('designers.store');
                 Route::get('designers/{registration}', [SalesController::class, 'show'])->name('designers.show');
-                Route::patch('designers/{registration}/status', [SalesController::class, 'updateStatus'])->name('designers.update-status');
+                Route::patch('designers/{registration}', [SalesController::class, 'update'])->name('designers.update');
                 Route::post('designers/{registration}/documents', [SalesController::class, 'uploadDocument'])->name('designers.upload-document');
                 Route::delete('documents/{document}', [SalesController::class, 'deleteDocument'])->name('documents.destroy');
             });
@@ -194,7 +194,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // API de notificaciones (polling)
         Route::get('api/notifications', function () {
-            return response()->json(request()->user()->unreadNotifications()->limit(20)->get());
+            return response()->json(request()->user()->notifications()->limit(30)->latest()->get());
         })->name('api.notifications');
         Route::post('api/notifications/mark-read', function () {
             request()->user()->unreadNotifications->markAsRead();
@@ -210,13 +210,23 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::middleware('section:settings')->group(function () {
             Route::prefix('settings')->name('settings.')->group(function () {
                 Route::get('designers', [DesignerSettingsController::class, 'index'])->name('designers');
-                Route::post('designer-categories', [DesignerSettingsController::class, 'storeCategory'])->name('designer-categories.store');
-                Route::put('designer-categories/{category}', [DesignerSettingsController::class, 'updateCategory'])->name('designer-categories.update');
-                Route::delete('designer-categories/{category}', [DesignerSettingsController::class, 'destroyCategory'])->name('designer-categories.destroy');
-                Route::post('designer-packages', [DesignerSettingsController::class, 'storePackage'])->name('designer-packages.store');
-                Route::put('designer-packages/{package}', [DesignerSettingsController::class, 'updatePackage'])->name('designer-packages.update');
-                Route::delete('designer-packages/{package}', [DesignerSettingsController::class, 'destroyPackage'])->name('designer-packages.destroy');
             });
+        });
+
+        // Categorías de diseñadores - admin, operation
+        Route::middleware('section:designer_categories')->group(function () {
+            Route::get('settings/designer-categories', [DesignerSettingsController::class, 'categories'])->name('settings.categories');
+            Route::post('settings/designer-categories', [DesignerSettingsController::class, 'storeCategory'])->name('settings.designer-categories.store');
+            Route::put('settings/designer-categories/{category}', [DesignerSettingsController::class, 'updateCategory'])->name('settings.designer-categories.update');
+            Route::delete('settings/designer-categories/{category}', [DesignerSettingsController::class, 'destroyCategory'])->name('settings.designer-categories.destroy');
+        });
+
+        // Paquetes de diseñadores - admin, accounting
+        Route::middleware('section:designer_packages')->group(function () {
+            Route::get('settings/designer-packages', [DesignerSettingsController::class, 'packages'])->name('settings.packages');
+            Route::post('settings/designer-packages', [DesignerSettingsController::class, 'storePackage'])->name('settings.designer-packages.store');
+            Route::put('settings/designer-packages/{package}', [DesignerSettingsController::class, 'updatePackage'])->name('settings.designer-packages.update');
+            Route::delete('settings/designer-packages/{package}', [DesignerSettingsController::class, 'destroyPackage'])->name('settings.designer-packages.destroy');
         });
     });
 });

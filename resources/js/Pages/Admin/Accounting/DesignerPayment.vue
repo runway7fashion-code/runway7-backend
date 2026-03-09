@@ -19,7 +19,7 @@ const planForm = useForm({
     event_id: props.event.id,
     total_amount: props.event.package_price || 0,
     downpayment: props.event.suggested_downpayment || 0,
-    installments_count: 3,
+    installments_count: props.event.suggested_installments_count || 3,
     notes: '',
     custom_amounts: null,
     custom_dates: null,
@@ -494,6 +494,7 @@ const paymentMethods = [
                             <input v-model.number="planForm.installments_count" type="number" min="1" max="12"
                                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             <p v-if="planForm.errors.installments_count" class="text-xs text-red-500 mt-1">{{ planForm.errors.installments_count }}</p>
+                            <p v-if="event.suggested_installments_count" class="text-xs text-blue-600 mt-1">Cuotas sugeridas por vendedor: {{ event.suggested_installments_count }}</p>
                         </div>
                     </div>
 

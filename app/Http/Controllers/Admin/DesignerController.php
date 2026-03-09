@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CommunicationLog;
 use App\Models\DesignerAssistant;
 use App\Models\DesignerCategory;
 use App\Models\DesignerDisplay;
@@ -18,6 +19,7 @@ use App\Imports\DesignersImport;
 use App\Services\DesignerService;
 use App\Services\EventService;
 use App\Services\TwilioService;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -39,6 +41,7 @@ class DesignerController extends Controller
             'eventsAsDesigner',
             'designerMaterials',
             'eventPasses' => fn($q) => $q->whereNotNull('checked_in_at')->with('event:id,name,status')->select('id', 'event_id', 'user_id', 'checked_in_at', 'check_in_history'),
+            'communicationLogs' => fn($q) => $q->with('sender:id,first_name,last_name')->orderBy('created_at', 'desc'),
         ]);
 
         if ($request->filled('search')) {
@@ -78,16 +81,35 @@ class DesignerController extends Controller
             }
         }
 
+        if ($request->filled('checkin')) {
+            if ($request->checkin === 'yes') {
+                $query->whereHas('eventPasses', fn($q) => $q->whereNotNull('checked_in_at'));
+            } elseif ($request->checkin === 'no') {
+                $query->whereDoesntHave('eventPasses', fn($q) => $q->whereNotNull('checked_in_at'));
+            }
+        }
+
         $designers = $query->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
 
-        // Agregar flag has_payment_plan a cada designer
+        // Agregar flags de requisitos para cambiar a Pendiente
         $designerIds = $designers->pluck('id');
         $withPlan = DesignerPaymentPlan::whereIn('designer_id', $designerIds)
-            ->pluck('designer_id')
-            ->unique()
-            ->toArray();
-        $designers->getCollection()->transform(function ($d) use ($withPlan) {
+            ->pluck('designer_id')->unique()->toArray();
+        $withEvent = DB::table('event_designer')->whereIn('designer_id', $designerIds)
+            ->pluck('designer_id')->unique()->toArray();
+        $withShow = DB::table('show_designer')
+            ->join('shows', 'shows.id', '=', 'show_designer.show_id')
+            ->whereNotNull('shows.event_day_id')
+            ->whereIn('show_designer.designer_id', $designerIds)
+            ->pluck('show_designer.designer_id')->unique()->toArray();
+        $withFitting = DB::table('fitting_assignments')->whereIn('designer_id', $designerIds)
+            ->pluck('designer_id')->unique()->toArray();
+
+        $designers->getCollection()->transform(function ($d) use ($withPlan, $withEvent, $withShow, $withFitting) {
             $d->has_payment_plan = in_array($d->id, $withPlan);
+            $d->has_event = in_array($d->id, $withEvent);
+            $d->has_show = in_array($d->id, $withShow);
+            $d->has_fitting = in_array($d->id, $withFitting);
             return $d;
         });
 
@@ -126,7 +148,7 @@ class DesignerController extends Controller
             'pendingEmailCount' => $pendingEmailCount,
             'pendingSmsCount'   => $pendingSmsCount,
             'twilioBalance'     => $this->twilioService->getBalance(),
-            'filters'           => $request->only(['search', 'event', 'category', 'package', 'sales_rep', 'materials', 'country']),
+            'filters'           => $request->only(['search', 'event', 'category', 'package', 'sales_rep', 'materials', 'country', 'checkin']),
         ]);
     }
 
@@ -288,8 +310,26 @@ class DesignerController extends Controller
 
         $request->validate(['status' => 'required|in:registered,inactive,pending']);
 
-        if ($request->status === 'pending' && !DesignerPaymentPlan::where('designer_id', $designer->id)->exists()) {
-            return back()->with('error', 'No se puede cambiar a Pendiente. Contabilidad aún no ha asignado un plan de pagos a este diseñador.');
+        if ($request->status === 'pending') {
+            // Prioridad 1: Plan de pagos
+            if (!DesignerPaymentPlan::where('designer_id', $designer->id)->exists()) {
+                return back()->with('error', 'No se puede cambiar a Pendiente. Contabilidad aún no ha asignado un plan de pagos.');
+            }
+
+            // Prioridad 2: Evento completo (evento + show + fitting)
+            $eventErrors = [];
+            if (!$designer->eventsAsDesigner()->exists()) {
+                $eventErrors[] = 'No tiene evento asignado.';
+            }
+            if (!$designer->designedShows()->whereHas('eventDay')->exists()) {
+                $eventErrors[] = 'No tiene show asignado (día y hora).';
+            }
+            if (!$designer->fittingAssignments()->exists()) {
+                $eventErrors[] = 'No tiene fitting asignado.';
+            }
+            if (!empty($eventErrors)) {
+                return back()->with('error', 'No se puede cambiar a Pendiente: ' . implode(' ', $eventErrors));
+            }
         }
 
         $designer->update(['status' => $request->status]);
@@ -305,7 +345,7 @@ class DesignerController extends Controller
             'first_name'      => 'required|string|max:255',
             'last_name'       => 'required|string|max:255',
             'email'           => "required|email|unique:users,email,{$designer->id}",
-            'phone'           => 'nullable|string',
+            'phone'           => "nullable|string|unique:users,phone,{$designer->id}",
             'status'          => 'nullable|in:active,inactive,pending',
             'brand_name'      => 'required|string|max:255',
             'collection_name' => 'nullable|string|max:255',
@@ -318,6 +358,9 @@ class DesignerController extends Controller
             'tracking_link'   => 'nullable|string|max:255',
             'skype'           => 'nullable|string|max:255',
             'social_media'    => 'nullable|array',
+        ], [
+            'phone.unique' => 'Este número de teléfono ya está registrado por otro usuario.',
+            'email.unique' => 'Este email ya está registrado por otro usuario.',
         ]);
 
         $userData = $request->only(['first_name', 'last_name', 'email', 'phone', 'status']);
@@ -645,11 +688,31 @@ class DesignerController extends Controller
                 'show_name'      => $show->name,
             ])->values()->toArray();
 
-        \App\Jobs\SendDesignerOnboardingJob::dispatch(
-            userId:    $designer->id,
-            eventName: $firstEvent?->name,
-            shows:     $shows,
-        );
+        $log = CommunicationLog::create([
+            'user_id' => $designer->id, 'sent_by' => $request->user()->id,
+            'type' => 'email', 'channel' => 'onboarding_email', 'status' => 'queued',
+        ]);
+
+        try {
+            \App\Jobs\SendDesignerOnboardingJob::dispatch(
+                userId:    $designer->id,
+                eventName: $firstEvent?->name,
+                shows:     $shows,
+                sentBy:    $request->user()->id,
+                logId:     $log->id,
+            );
+        } catch (\Throwable $e) {
+            $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+            return back()->with('error', "Error al enviar email a {$designer->full_name}: {$e->getMessage()}");
+        }
+
+        // Auto-onboarded: actualizar status del designer y sales_registration
+        if ($designer->status === 'registered') {
+            $designer->update(['status' => 'pending']);
+        }
+        \App\Models\SalesRegistration::where('designer_id', $designer->id)
+            ->where('status', 'registered')
+            ->update(['status' => 'onboarded', 'onboarded_at' => now(), 'onboarded_by' => $request->user()->id]);
 
         return back()->with('success', "Email de onboarding encolado para {$designer->full_name}.");
     }
@@ -657,7 +720,7 @@ class DesignerController extends Controller
     public function sendBulkOnboardingEmail(Request $request)
     {
         $designers = User::designers()
-            ->where('status', 'pending')
+            ->whereIn('status', ['pending', 'registered'])
             ->whereNull('welcome_email_sent_at')
             ->with(['eventsAsDesigner', 'designedShows.eventDay'])
             ->get();
@@ -676,11 +739,32 @@ class DesignerController extends Controller
                     'show_name'      => $show->name,
                 ])->values()->toArray();
 
-            \App\Jobs\SendDesignerOnboardingJob::dispatch(
-                userId:    $designer->id,
-                eventName: $firstEvent?->name,
-                shows:     $shows,
-            );
+            $log = CommunicationLog::create([
+                'user_id' => $designer->id, 'sent_by' => $request->user()->id,
+                'type' => 'email', 'channel' => 'onboarding_email', 'status' => 'queued',
+            ]);
+
+            try {
+                \App\Jobs\SendDesignerOnboardingJob::dispatch(
+                    userId:    $designer->id,
+                    eventName: $firstEvent?->name,
+                    shows:     $shows,
+                    sentBy:    $request->user()->id,
+                    logId:     $log->id,
+                );
+            } catch (\Throwable $e) {
+                $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+                continue;
+            }
+
+            // Auto-onboarded
+            if ($designer->status === 'registered') {
+                $designer->update(['status' => 'pending']);
+            }
+            \App\Models\SalesRegistration::where('designer_id', $designer->id)
+                ->where('status', 'registered')
+                ->update(['status' => 'onboarded', 'onboarded_at' => now(), 'onboarded_by' => $request->user()->id]);
+
             $count++;
         }
 
@@ -699,21 +783,55 @@ class DesignerController extends Controller
             return back()->with('error', "El teléfono de {$designer->full_name} ({$designer->phone}) debe incluir código de país (ej: +1...).");
         }
 
+        // Validar saldo de Twilio
+        $balance = $this->twilioService->getBalance();
+        if (!$balance || (float) str_replace(',', '', $balance['balance']) <= 0) {
+            $msg = $balance ? "Saldo insuficiente en Twilio ({$balance['balance']} {$balance['currency']})." : 'Saldo insuficiente en Twilio.';
+            return back()->with('error', "$msg Recarga para poder enviar SMS.");
+        }
+
         $designer->load('eventsAsDesigner');
         $firstEvent = $designer->eventsAsDesigner?->first();
 
-        \App\Jobs\SendDesignerOnboardingSmsJob::dispatch(
-            userId:    $designer->id,
-            eventName: $firstEvent?->name,
-        );
+        $log = CommunicationLog::create([
+            'user_id' => $designer->id, 'sent_by' => $request->user()->id,
+            'type' => 'sms', 'channel' => 'onboarding_sms', 'status' => 'queued',
+        ]);
+
+        try {
+            \App\Jobs\SendDesignerOnboardingSmsJob::dispatch(
+                userId:    $designer->id,
+                eventName: $firstEvent?->name,
+                sentBy:    $request->user()->id,
+                logId:     $log->id,
+            );
+        } catch (\Throwable $e) {
+            $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+            return back()->with('error', "Error al enviar SMS a {$designer->full_name}: {$e->getMessage()}");
+        }
+
+        // Auto-onboarded: actualizar status del designer y sales_registration
+        if ($designer->status === 'registered') {
+            $designer->update(['status' => 'pending']);
+        }
+        \App\Models\SalesRegistration::where('designer_id', $designer->id)
+            ->where('status', 'registered')
+            ->update(['status' => 'onboarded', 'onboarded_at' => now(), 'onboarded_by' => $request->user()->id]);
 
         return back()->with('success', "SMS de onboarding encolado para {$designer->full_name}.");
     }
 
     public function sendBulkOnboardingSms(Request $request)
     {
+        // Validar saldo de Twilio
+        $balance = $this->twilioService->getBalance();
+        if (!$balance || (float) str_replace(',', '', $balance['balance']) <= 0) {
+            $msg = $balance ? "Saldo insuficiente en Twilio ({$balance['balance']} {$balance['currency']})." : 'Saldo insuficiente en Twilio.';
+            return back()->with('error', "$msg Recarga para poder enviar SMS.");
+        }
+
         $designers = User::designers()
-            ->where('status', 'pending')
+            ->whereIn('status', ['pending', 'registered'])
             ->whereNotNull('phone')
             ->where('phone', 'like', '+%')
             ->whereNull('sms_sent_at')
@@ -724,10 +842,31 @@ class DesignerController extends Controller
         foreach ($designers as $designer) {
             $firstEvent = $designer->eventsAsDesigner?->first();
 
-            \App\Jobs\SendDesignerOnboardingSmsJob::dispatch(
-                userId:    $designer->id,
-                eventName: $firstEvent?->name,
-            );
+            $log = CommunicationLog::create([
+                'user_id' => $designer->id, 'sent_by' => $request->user()->id,
+                'type' => 'sms', 'channel' => 'onboarding_sms', 'status' => 'queued',
+            ]);
+
+            try {
+                \App\Jobs\SendDesignerOnboardingSmsJob::dispatch(
+                    userId:    $designer->id,
+                    eventName: $firstEvent?->name,
+                    sentBy:    $request->user()->id,
+                    logId:     $log->id,
+                );
+            } catch (\Throwable $e) {
+                $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+                continue;
+            }
+
+            // Auto-onboarded
+            if ($designer->status === 'registered') {
+                $designer->update(['status' => 'pending']);
+            }
+            \App\Models\SalesRegistration::where('designer_id', $designer->id)
+                ->where('status', 'registered')
+                ->update(['status' => 'onboarded', 'onboarded_at' => now(), 'onboarded_by' => $request->user()->id]);
+
             $count++;
         }
 
@@ -743,7 +882,7 @@ class DesignerController extends Controller
 
     private function getEventsWithShows(): \Illuminate\Support\Collection
     {
-        return Event::whereIn('status', ['published', 'active', 'draft'])
+        return Event::whereIn('status', ['published', 'active'])
             ->orderBy('start_date', 'desc')
             ->with([
                 'eventDays' => fn($q) => $q->whereIn('type', ['show_day', 'fitting'])->with(['shows', 'fittingSlots']),

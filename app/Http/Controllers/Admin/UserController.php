@@ -73,6 +73,10 @@ class UserController extends Controller
             'profile' => 'nullable|array',
         ]);
 
+        $request->validate([
+            'sales_type' => 'nullable|required_if:role,sales|in:lider,asesor',
+        ]);
+
         DB::transaction(function () use ($request) {
             $user = User::create([
                 'first_name' => $request->first_name,
@@ -81,6 +85,7 @@ class UserController extends Controller
                 'phone' => $request->phone,
                 'password' => bcrypt($request->password),
                 'role' => $request->role,
+                'sales_type' => $request->role === 'sales' ? $request->sales_type : null,
                 'status' => $request->status,
             ]);
 
@@ -138,6 +143,10 @@ class UserController extends Controller
             'profile' => 'nullable|array',
         ]);
 
+        $request->validate([
+            'sales_type' => 'nullable|required_if:role,sales|in:lider,asesor',
+        ]);
+
         if ($request->filled('password')) {
             $request->validate(['password' => 'min:8|confirmed']);
         }
@@ -149,6 +158,7 @@ class UserController extends Controller
                 'email' => $request->email,
                 'phone' => $request->phone,
                 'role' => $request->role,
+                'sales_type' => $request->role === 'sales' ? $request->sales_type : null,
                 'status' => $request->status,
             ];
 

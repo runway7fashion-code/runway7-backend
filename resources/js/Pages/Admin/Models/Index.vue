@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
-import { EnvelopeIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, XMarkIcon, StarIcon as StarOutline } from '@heroicons/vue/24/outline';
+import { EnvelopeIcon, PencilSquareIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, XMarkIcon, StarIcon as StarOutline } from '@heroicons/vue/24/outline';
 import { StarIcon as StarSolid } from '@heroicons/vue/24/solid';
 import { computed } from 'vue';
 import { VueDatePicker } from '@vuepic/vue-datepicker';
@@ -639,12 +639,14 @@ function fmtEmailSent(dt) {
                             <td class="px-4 py-3" @click.stop>
                                 <div class="flex items-center gap-2">
                                     <button @click="sendWelcomeEmail(m, $event)"
-                                        class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap">
-                                        Email
+                                        class="p-1.5 border border-gray-200 rounded-lg transition-colors hover:bg-gray-50 text-gray-600"
+                                        title="Enviar Email">
+                                        <EnvelopeIcon class="w-4 h-4" />
                                     </button>
                                     <Link :href="`/admin/models/${m.id}/edit`"
-                                        class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                                        Editar
+                                        class="p-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-gray-600"
+                                        title="Editar">
+                                        <PencilSquareIcon class="w-4 h-4" />
                                     </Link>
                                 </div>
                             </td>
