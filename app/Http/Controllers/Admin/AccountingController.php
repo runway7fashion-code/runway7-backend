@@ -12,6 +12,7 @@ use App\Models\PaymentRecord;
 use App\Models\DesignerContactEmail;
 use App\Models\SupportCase;
 use App\Models\SupportCaseAttachment;
+use App\Models\SalesDocument;
 use App\Models\SalesRegistration;
 use App\Models\SupportCaseMessage;
 use App\Models\User;
@@ -343,7 +344,74 @@ class AccountingController extends Controller
             'packages' => $packages,
             'categories' => DesignerCategory::active()->ordered()->get(['id', 'name']),
             'salesReps' => User::where('role', 'sales')->orderBy('first_name')->get(['id', 'first_name', 'last_name']),
+            'documents' => $this->buildDocumentsList($designer, $event, $salesReg, $plan),
         ]);
+    }
+
+    private function buildDocumentsList(User $designer, Event $event, ?SalesRegistration $salesReg, ?DesignerPaymentPlan $plan): array
+    {
+        $docs = [];
+
+        // Documentos subidos por ventas
+        if ($salesReg) {
+            $salesDocs = SalesDocument::where('sales_registration_id', $salesReg->id)
+                ->with('uploader:id,first_name,last_name')
+                ->orderBy('created_at')
+                ->get();
+
+            foreach ($salesDocs as $doc) {
+                $docs[] = [
+                    'source'        => 'sales',
+                    'label'         => $this->docTypeLabel($doc->type),
+                    'original_name' => $doc->original_name,
+                    'url'           => '/storage/' . $doc->file_path,
+                    'notes'         => $doc->notes,
+                    'uploaded_by'   => $doc->uploader ? $doc->uploader->first_name . ' ' . $doc->uploader->last_name : null,
+                    'uploaded_at'   => $doc->created_at?->format('Y-m-d'),
+                ];
+            }
+        }
+
+        // Recibo de downpayment (subido por accounting)
+        if ($plan?->downpayment_receipt) {
+            $docs[] = [
+                'source'        => 'accounting',
+                'label'         => 'Recibo de Downpayment',
+                'original_name' => basename($plan->downpayment_receipt),
+                'url'           => '/storage/' . $plan->downpayment_receipt,
+                'notes'         => null,
+                'uploaded_by'   => null,
+                'uploaded_at'   => $plan->downpayment_paid_at?->format('Y-m-d'),
+            ];
+        }
+
+        // Recibos de cuotas (subidos por accounting)
+        foreach ($plan?->installments ?? [] as $inst) {
+            if ($inst->receipt_url) {
+                $docs[] = [
+                    'source'        => 'accounting',
+                    'label'         => "Recibo Cuota #{$inst->installment_number}",
+                    'original_name' => basename($inst->receipt_url),
+                    'url'           => '/storage/' . $inst->receipt_url,
+                    'notes'         => $inst->payment_reference ?? null,
+                    'uploaded_by'   => $inst->markedByUser ? $inst->markedByUser->first_name . ' ' . $inst->markedByUser->last_name : null,
+                    'uploaded_at'   => $inst->paid_at?->format('Y-m-d'),
+                ];
+            }
+        }
+
+        return $docs;
+    }
+
+    private function docTypeLabel(string $type): string
+    {
+        return match ($type) {
+            'contract'  => 'Contrato',
+            'invoice'   => 'Factura',
+            'id'        => 'Identificación',
+            'receipt'   => 'Recibo',
+            default     => 'Documento',
+        };
     }
 
     public function createPaymentPlan(Request $request)

@@ -58,26 +58,38 @@ function submitEdit() {
 
 // Document upload
 const showUploadModal = ref(false);
-const docForm = useForm({
-    file: null,
-    type: 'contract',
-    notes: '',
-});
-const fileInput = ref(null);
+const docFile       = ref(null);
+const docType       = ref('contract');
+const docNotes      = ref('');
+const docUploading  = ref(false);
+const docErrors     = ref({});
+const fileInput     = ref(null);
 
 function handleFileChange(e) {
-    docForm.file = e.target.files[0];
+    docFile.value = e.target.files[0] ?? null;
 }
 
 function submitDocument() {
-    docForm.post(`/admin/sales/designers/${r.value.id}/documents`, {
+    if (!docFile.value) return;
+    docErrors.value = {};
+    docUploading.value = true;
+
+    const formData = new FormData();
+    formData.append('file',  docFile.value);
+    formData.append('type',  docType.value);
+    formData.append('notes', docNotes.value);
+
+    router.post(`/admin/sales/designers/${r.value.id}/documents`, formData, {
         preserveScroll: true,
-        forceFormData: true,
         onSuccess: () => {
             showUploadModal.value = false;
-            docForm.reset();
+            docFile.value  = null;
+            docType.value  = 'contract';
+            docNotes.value = '';
             if (fileInput.value) fileInput.value.value = '';
         },
+        onError: (errors) => { docErrors.value = errors; },
+        onFinish: () => { docUploading.value = false; },
     });
 }
 
@@ -290,7 +302,7 @@ function storageUrl(path) {
                     <form @submit.prevent="submitDocument" class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de documento *</label>
-                            <select v-model="docForm.type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400">
+                            <select v-model="docType" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400">
                                 <option value="contract">Contrato</option>
                                 <option value="payment_proof">Comprobante de Pago</option>
                                 <option value="other">Otro</option>
@@ -299,15 +311,15 @@ function storageUrl(path) {
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Archivo *</label>
                             <input ref="fileInput" type="file" @change="handleFileChange" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-                            <p v-if="docForm.errors.file" class="text-red-500 text-xs mt-1">{{ docForm.errors.file }}</p>
+                            <p v-if="docErrors.file" class="text-red-500 text-xs mt-1">{{ docErrors.file }}</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Notas</label>
-                            <textarea v-model="docForm.notes" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400"></textarea>
+                            <textarea v-model="docNotes" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400"></textarea>
                         </div>
                         <div class="flex items-center gap-3 pt-2">
-                            <button type="submit" :disabled="docForm.processing || !docForm.file" class="px-5 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50">
-                                {{ docForm.processing ? 'Subiendo...' : 'Subir' }}
+                            <button type="submit" :disabled="docUploading || !docFile" class="px-5 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50">
+                                {{ docUploading ? 'Subiendo...' : 'Subir' }}
                             </button>
                             <button type="button" @click="showUploadModal = false" class="px-5 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50">
                                 Cancelar

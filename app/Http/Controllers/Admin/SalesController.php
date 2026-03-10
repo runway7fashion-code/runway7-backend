@@ -252,13 +252,15 @@ class SalesController extends Controller
             ]);
 
             // Guardar documentos si se subieron
-            if ($request->hasFile('documents')) {
+            // Nota: hasFile() falla con arrays anidados (documents[0][file]), se lee directo
+            $docsFiles = $request->file('documents', []);
+            if (!empty($docsFiles)) {
                 $registration = SalesRegistration::where('designer_id', $user->id)
                     ->where('event_id', $request->event_id)
                     ->first();
 
                 $docsInput = $request->input('documents', []);
-                foreach ($request->file('documents', []) as $i => $doc) {
+                foreach ($docsFiles as $i => $doc) {
                     if (empty($doc['file'])) continue;
                     $path = $doc['file']->store("sales/registrations/{$registration->id}", 'public');
                     SalesDocument::create([
@@ -393,6 +395,225 @@ class SalesController extends Controller
         $document->delete();
 
         return back()->with('success', 'Documento eliminado.');
+    }
+
+    public function history(Request $request): Response
+    {
+        $user = $request->user();
+        $isLider = $user->role === 'admin' || ($user->role === 'sales' && $user->sales_type === 'lider');
+        if (!$isLider) abort(403);
+
+        $year       = (int) ($request->year    ?? now()->year);
+        $eventId    = $request->filled('event')    ? (int) $request->event    : null;
+        $repId      = $request->filled('rep')      ? (int) $request->rep      : null;
+
+        // Base query with filters
+        $base = fn() => SalesRegistration::query()
+            ->whereHas('designer')
+            ->whereYear('sales_registrations.created_at', $year)
+            ->when($eventId, fn($q) => $q->where('event_id', $eventId))
+            ->when($repId,   fn($q) => $q->where('sales_rep_id', $repId));
+
+        // ── KPI cards ──────────────────────────────────────────────────
+        $total      = $base()->count();
+        $confirmed  = $base()->where('status', 'confirmed')->count();
+        $cancelled  = $base()->where('status', 'cancelled')->count();
+        $revenue    = (float) $base()->where('status', '!=', 'cancelled')->sum('agreed_price');
+        $downpay    = (float) $base()->where('status', '!=', 'cancelled')->sum('downpayment');
+        $avgDeal    = ($total - $cancelled) > 0 ? round($revenue / ($total - $cancelled), 2) : 0;
+        $confRate   = $total > 0 ? round(($confirmed / $total) * 100) : 0;
+
+        // Best month (most registrations)
+        $byMonth = $base()
+            ->selectRaw('EXTRACT(MONTH FROM created_at)::int as month, COUNT(*) as cnt')
+            ->groupBy('month')
+            ->orderByDesc('cnt')
+            ->first();
+        $monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        $bestMonth  = $byMonth ? $monthNames[$byMonth->month - 1] : '—';
+
+        // ── Monthly series (12 months) ──────────────────────────────────
+        $monthlyRegs = array_fill(0, 12, 0);
+        $monthlyRev  = array_fill(0, 12, 0.0);
+
+        $regsByMonth = $base()
+            ->selectRaw('EXTRACT(MONTH FROM created_at)::int as month, COUNT(*) as cnt')
+            ->groupBy('month')
+            ->get()->keyBy('month');
+
+        $revByMonth = $base()
+            ->where('status', '!=', 'cancelled')
+            ->selectRaw('EXTRACT(MONTH FROM created_at)::int as month, SUM(agreed_price) as total')
+            ->groupBy('month')
+            ->get()->keyBy('month');
+
+        for ($m = 1; $m <= 12; $m++) {
+            $monthlyRegs[$m - 1] = (int)   ($regsByMonth[$m]->cnt   ?? 0);
+            $monthlyRev[$m - 1]  = (float) ($revByMonth[$m]->total  ?? 0);
+        }
+
+        // ── Sales rep ranking ────────────────────────────────────────────
+        $reps = User::where('role', 'sales')
+            ->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name', 'sales_type']);
+
+        $repRanking = $reps->map(function ($rep) use ($base, $year, $eventId) {
+            $q = fn() => SalesRegistration::whereHas('designer')
+                ->whereYear('sales_registrations.created_at', $year)
+                ->when($eventId, fn($q) => $q->where('event_id', $eventId))
+                ->where('sales_rep_id', $rep->id);
+
+            $total     = $q()->count();
+            $confirmed = $q()->where('status', 'confirmed')->count();
+            $cancelled = $q()->where('status', 'cancelled')->count();
+            $revenue   = (float) $q()->where('status', '!=', 'cancelled')->sum('agreed_price');
+
+            return [
+                'id'               => $rep->id,
+                'name'             => $rep->full_name,
+                'sales_type'       => $rep->sales_type,
+                'total'            => $total,
+                'confirmed'        => $confirmed,
+                'cancelled'        => $cancelled,
+                'revenue'          => $revenue,
+                'confirmation_rate'=> $total > 0 ? round(($confirmed / $total) * 100) : 0,
+            ];
+        })
+        ->filter(fn($r) => $r['total'] > 0)
+        ->sortByDesc('total')
+        ->values();
+
+        // ── Status distribution ──────────────────────────────────────────
+        $statusDist = [
+            'registered' => $base()->where('status', 'registered')->count(),
+            'onboarded'  => $base()->where('status', 'onboarded')->count(),
+            'confirmed'  => $confirmed,
+            'cancelled'  => $cancelled,
+        ];
+
+        // ── Packages breakdown ───────────────────────────────────────────
+        $packageBreakdown = $base()
+            ->join('designer_packages', 'designer_packages.id', '=', 'sales_registrations.package_id')
+            ->selectRaw('designer_packages.name as package_name, COUNT(*) as cnt, SUM(sales_registrations.agreed_price) as revenue')
+            ->groupBy('designer_packages.name')
+            ->orderByDesc('cnt')
+            ->get()
+            ->map(fn($r) => [
+                'name'    => $r->package_name,
+                'count'   => (int) $r->cnt,
+                'revenue' => (float) $r->revenue,
+            ])
+            ->values();
+
+        // ── Table (paginated) ────────────────────────────────────────────
+        $tableQuery = SalesRegistration::with([
+            'designer:id,first_name,last_name,email',
+            'designer.designerProfile:id,user_id,brand_name',
+            'event:id,name',
+            'package:id,name',
+            'salesRep:id,first_name,last_name',
+        ])
+        ->whereHas('designer')
+        ->whereYear('sales_registrations.created_at', $year)
+        ->when($eventId, fn($q) => $q->where('event_id', $eventId))
+        ->when($repId,   fn($q) => $q->where('sales_rep_id', $repId));
+
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $tableQuery->whereHas('designer', fn($q) =>
+                $q->where('first_name', 'ilike', "%{$s}%")
+                  ->orWhere('last_name',  'ilike', "%{$s}%")
+                  ->orWhereHas('designerProfile', fn($p) => $p->where('brand_name', 'ilike', "%{$s}%"))
+            );
+        }
+
+        $table = $tableQuery->orderBy('sales_registrations.created_at', 'desc')
+            ->paginate(15)
+            ->withQueryString();
+
+        // ── Filter options ───────────────────────────────────────────────
+        $availableYears = SalesRegistration::selectRaw('EXTRACT(YEAR FROM created_at)::int as year')
+            ->groupBy('year')->orderByDesc('year')->pluck('year');
+
+        $availableEvents = Event::whereIn('id',
+            SalesRegistration::whereYear('created_at', $year)->select('event_id')->distinct()
+        )->orderBy('start_date', 'desc')->get(['id', 'name']);
+
+        $availableReps = User::where('role', 'sales')
+            ->orderBy('first_name')->get(['id', 'first_name', 'last_name']);
+
+        return Inertia::render('Admin/Sales/History', [
+            'kpis' => [
+                'total'             => $total,
+                'revenue'           => $revenue,
+                'downpayments'      => $downpay,
+                'avg_deal'          => $avgDeal,
+                'confirmation_rate' => $confRate,
+                'best_month'        => $bestMonth,
+            ],
+            'monthly_regs'       => $monthlyRegs,
+            'monthly_revenue'    => $monthlyRev,
+            'rep_ranking'        => $repRanking,
+            'status_dist'        => $statusDist,
+            'package_breakdown'  => $packageBreakdown,
+            'table'              => $table,
+            'filters' => [
+                'year'   => $year,
+                'event'  => $eventId,
+                'rep'    => $repId,
+                'search' => $request->search,
+            ],
+            'available_years'  => $availableYears,
+            'available_events' => $availableEvents,
+            'available_reps'   => $availableReps,
+        ]);
+    }
+
+    public function historyExport(Request $request)
+    {
+        $user = $request->user();
+        $isLider = $user->role === 'admin' || ($user->role === 'sales' && $user->sales_type === 'lider');
+        if (!$isLider) abort(403);
+
+        $year    = (int) ($request->year ?? now()->year);
+        $eventId = $request->filled('event') ? (int) $request->event : null;
+        $repId   = $request->filled('rep')   ? (int) $request->rep   : null;
+
+        $rows = SalesRegistration::with([
+            'designer:id,first_name,last_name,email',
+            'designer.designerProfile:id,user_id,brand_name',
+            'event:id,name',
+            'package:id,name',
+            'salesRep:id,first_name,last_name',
+        ])
+        ->whereHas('designer')
+        ->whereYear('sales_registrations.created_at', $year)
+        ->when($eventId, fn($q) => $q->where('event_id', $eventId))
+        ->when($repId,   fn($q) => $q->where('sales_rep_id', $repId))
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+        $csv = "Date,Designer,Brand,Email,Event,Package,Sales Rep,Status,Agreed Price,Downpayment\n";
+        foreach ($rows as $r) {
+            $csv .= implode(',', [
+                $r->created_at->format('Y-m-d'),
+                "\"{$r->designer?->full_name}\"",
+                "\"{$r->designer?->designerProfile?->brand_name}\"",
+                $r->designer?->email,
+                "\"{$r->event?->name}\"",
+                "\"{$r->package?->name}\"",
+                "\"{$r->salesRep?->full_name}\"",
+                $r->status,
+                $r->agreed_price,
+                $r->downpayment,
+            ]) . "\n";
+        }
+
+        $filename = "sales-history-{$year}.csv";
+        return response($csv, 200, [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
     }
 
 }

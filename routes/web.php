@@ -180,6 +180,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::prefix('sales')->name('sales.')->group(function () {
             Route::middleware('section:sales_dashboard')->group(function () {
                 Route::get('dashboard', [SalesController::class, 'dashboard'])->name('dashboard');
+                Route::get('history', [SalesController::class, 'history'])->name('history');
+                Route::get('history/export', [SalesController::class, 'historyExport'])->name('history.export');
             });
             Route::middleware('section:sales_designers')->group(function () {
                 Route::get('designers', [SalesController::class, 'index'])->name('designers.index');

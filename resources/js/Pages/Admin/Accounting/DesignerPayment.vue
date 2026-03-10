@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
-import { ChevronLeftIcon, PencilSquareIcon } from '@heroicons/vue/24/outline';
+import { ChevronLeftIcon, PencilSquareIcon, DocumentArrowDownIcon, FolderOpenIcon, ArrowTopRightOnSquareIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     designer: Object,
@@ -11,6 +11,7 @@ const props = defineProps({
     packages: Array,
     categories: Array,
     salesReps: Array,
+    documents: { type: Array, default: () => [] },
 });
 
 // --- Crear Plan ---
@@ -188,40 +189,6 @@ function submitEdit() {
     });
 }
 
-// --- Downpayment Modal ---
-const showDownpaymentModal = ref(false);
-const downpaymentForm = useForm({ receipt: null });
-
-function submitDownpayment() {
-    downpaymentForm.post(`/admin/accounting/payments/plans/${props.plan?.id}/downpayment-paid`, {
-        onSuccess: () => { showDownpaymentModal.value = false; },
-        forceFormData: true,
-    });
-}
-
-// --- Installment Modal ---
-const showInstallmentModal = ref(false);
-const selectedInstallment = ref(null);
-const installmentForm = useForm({
-    payment_method: '',
-    payment_reference: '',
-    receipt: null,
-    notes: '',
-});
-
-function openInstallmentModal(inst) {
-    selectedInstallment.value = inst;
-    installmentForm.reset();
-    showInstallmentModal.value = true;
-}
-
-function submitInstallment() {
-    installmentForm.post(`/admin/accounting/payments/installments/${selectedInstallment.value.id}/mark-paid`, {
-        onSuccess: () => { showInstallmentModal.value = false; },
-        forceFormData: true,
-    });
-}
-
 // --- Upload Receipt Modal ---
 const showUploadModal = ref(false);
 const uploadInstallment = ref(null);
@@ -317,14 +284,7 @@ function submitDesignerEdit() {
     });
 }
 
-const paymentMethods = [
-    { value: 'wire_transfer', label: 'Transferencia bancaria' },
-    { value: 'venmo', label: 'Venmo' },
-    { value: 'zelle', label: 'Zelle' },
-    { value: 'cash', label: 'Efectivo' },
-    { value: 'check', label: 'Cheque' },
-    { value: 'other', label: 'Otro' },
-];
+
 </script>
 
 <template>
@@ -462,6 +422,49 @@ const paymentMethods = [
                         </button>
                     </div>
                 </form>
+            </div>
+
+            <!-- Documentos -->
+            <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                <div class="flex items-center gap-2 mb-4">
+                    <FolderOpenIcon class="w-5 h-5 text-gray-400" />
+                    <h4 class="font-bold text-gray-900">Documentos</h4>
+                    <span class="ml-auto text-xs text-gray-400">{{ documents.length }} archivo{{ documents.length !== 1 ? 's' : '' }}</span>
+                </div>
+
+                <div v-if="documents.length === 0" class="text-center py-8 text-gray-400">
+                    <FolderOpenIcon class="w-10 h-10 mx-auto mb-2 text-gray-200" />
+                    <p class="text-sm">No hay documentos cargados aún</p>
+                </div>
+
+                <div v-else class="divide-y divide-gray-100">
+                    <div v-for="(doc, i) in documents" :key="i"
+                        class="flex items-center gap-3 py-3">
+                        <!-- Badge de origen -->
+                        <span :class="doc.source === 'sales'
+                            ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                            : 'bg-amber-50 text-amber-700 border border-amber-100'"
+                            class="flex-shrink-0 text-[10px] font-semibold uppercase px-2 py-0.5 rounded">
+                            {{ doc.source === 'sales' ? 'Ventas' : 'Contabilidad' }}
+                        </span>
+                        <!-- Info -->
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-medium text-gray-900 truncate">{{ doc.label }}</p>
+                            <p class="text-xs text-gray-400 truncate">
+                                {{ doc.original_name }}
+                                <span v-if="doc.uploaded_by"> · {{ doc.uploaded_by }}</span>
+                                <span v-if="doc.uploaded_at"> · {{ doc.uploaded_at }}</span>
+                            </p>
+                            <p v-if="doc.notes" class="text-xs text-gray-500 mt-0.5 italic truncate">{{ doc.notes }}</p>
+                        </div>
+                        <!-- Descargar -->
+                        <a :href="doc.url" target="_blank" download
+                            class="flex-shrink-0 flex items-center gap-1 text-xs text-gray-500 hover:text-black border border-gray-200 hover:border-gray-400 px-2 py-1.5 rounded-lg transition">
+                            <DocumentArrowDownIcon class="w-4 h-4" />
+                            <span>Ver</span>
+                        </a>
+                    </div>
+                </div>
             </div>
 
             <!-- SIN PLAN: Formulario de creación -->
@@ -714,11 +717,12 @@ const paymentMethods = [
                             <span v-if="plan.downpayment_paid_at" class="text-xs text-gray-400">{{ plan.downpayment_paid_at }}</span>
                             <a v-if="plan.downpayment_receipt" :href="`/storage/${plan.downpayment_receipt}`" target="_blank"
                                 class="text-xs text-blue-600 hover:underline">Ver comprobante</a>
-                            <button v-if="plan.downpayment_status === 'pending'"
-                                @click="showDownpaymentModal = true"
-                                class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition">
-                                Marcar Pagado
-                            </button>
+                            <a v-if="plan.downpayment_status === 'pending'"
+                                :href="`/admin/accounting/payment-records?event_id=${event.id}&payment_type=downpayment`"
+                                class="inline-flex items-center gap-1.5 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition">
+                                <ArrowTopRightOnSquareIcon class="w-3.5 h-3.5" />
+                                Registrar en Pagos
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -765,11 +769,12 @@ const paymentMethods = [
                                 </td>
                                 <td class="py-3">
                                     <div class="flex items-center gap-2">
-                                        <button v-if="inst.status === 'pending' || inst.status === 'overdue' || inst.status === 'partial'"
-                                            @click="openInstallmentModal(inst)"
-                                            class="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-green-700 transition">
+                                        <a v-if="inst.status === 'pending' || inst.status === 'overdue' || inst.status === 'partial'"
+                                            :href="`/admin/accounting/payment-records?event_id=${event.id}&payment_type=installment`"
+                                            class="inline-flex items-center gap-1 bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-green-700 transition">
+                                            <ArrowTopRightOnSquareIcon class="w-3 h-3" />
                                             Registrar Pago
-                                        </button>
+                                        </a>
                                         <button v-if="inst.status === 'paid' && !inst.receipt_url"
                                             @click="openUploadModal(inst)"
                                             class="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-50 transition">
@@ -788,75 +793,6 @@ const paymentMethods = [
                 </div>
             </template>
         </div>
-
-        <!-- Modal: Downpayment -->
-        <Teleport to="body">
-            <div v-if="showDownpaymentModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="showDownpaymentModal = false">
-                <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
-                    <h4 class="font-bold text-gray-900 mb-4">Marcar Downpayment como Pagado</h4>
-                    <p class="text-sm text-gray-500 mb-4">Monto: <strong>{{ fmt(plan?.downpayment) }}</strong></p>
-                    <form @submit.prevent="submitDownpayment">
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Comprobante (opcional)</label>
-                            <input type="file" accept=".jpg,.jpeg,.png,.pdf" @input="downpaymentForm.receipt = $event.target.files[0]"
-                                class="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" />
-                        </div>
-                        <div class="flex justify-end gap-3">
-                            <button type="button" @click="showDownpaymentModal = false"
-                                class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancelar</button>
-                            <button type="submit" :disabled="downpaymentForm.processing"
-                                class="bg-green-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition disabled:opacity-50">
-                                {{ downpaymentForm.processing ? 'Guardando...' : 'Confirmar Pago' }}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </Teleport>
-
-        <!-- Modal: Registrar pago cuota -->
-        <Teleport to="body">
-            <div v-if="showInstallmentModal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="showInstallmentModal = false">
-                <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
-                    <h4 class="font-bold text-gray-900 mb-1">Registrar Pago</h4>
-                    <p class="text-sm text-gray-500 mb-4">Cuota #{{ selectedInstallment?.number }} — <strong>{{ fmt(selectedInstallment?.amount) }}</strong></p>
-                    <form @submit.prevent="submitInstallment" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Metodo de Pago *</label>
-                            <select v-model="installmentForm.payment_method"
-                                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="">Seleccionar...</option>
-                                <option v-for="m in paymentMethods" :key="m.value" :value="m.value">{{ m.label }}</option>
-                            </select>
-                            <p v-if="installmentForm.errors.payment_method" class="text-xs text-red-500 mt-1">{{ installmentForm.errors.payment_method }}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Referencia (opcional)</label>
-                            <input v-model="installmentForm.payment_reference" type="text" placeholder="Numero de transaccion..."
-                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Comprobante (opcional)</label>
-                            <input type="file" accept=".jpg,.jpeg,.png,.pdf" @input="installmentForm.receipt = $event.target.files[0]"
-                                class="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Notas (opcional)</label>
-                            <textarea v-model="installmentForm.notes" rows="2"
-                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10"></textarea>
-                        </div>
-                        <div class="flex justify-end gap-3 pt-2">
-                            <button type="button" @click="showInstallmentModal = false"
-                                class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancelar</button>
-                            <button type="submit" :disabled="installmentForm.processing"
-                                class="bg-green-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition disabled:opacity-50">
-                                {{ installmentForm.processing ? 'Guardando...' : 'Confirmar Pago' }}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </Teleport>
 
         <!-- Modal: Subir recibo -->
         <Teleport to="body">

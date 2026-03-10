@@ -23,6 +23,7 @@ import {
     ChevronRightIcon,
     BellIcon,
     CurrencyDollarIcon,
+    ChartBarIcon,
 } from '@heroicons/vue/24/outline';
 
 const page = usePage();
@@ -70,6 +71,7 @@ const showSales = computed(() => hasSection('sales_dashboard') || hasSection('sa
 const salesItems = computed(() => {
     const items = [];
     if (hasSection('sales_dashboard')) items.push({ name: 'Dashboard', href: '/admin/sales/dashboard', icon: PresentationChartBarIcon });
+    if (hasSection('sales_dashboard') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Sales History', href: '/admin/sales/history', icon: ChartBarIcon });
     if (hasSection('sales_designers')) items.push({ name: 'Diseñadores', href: '/admin/sales/designers', icon: PaintBrushIcon });
     if (hasSection('designer_packages') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Paquetes', href: '/admin/settings/designer-packages', icon: CurrencyDollarIcon });
     return items;
