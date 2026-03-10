@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import { XMarkIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, DevicePhoneMobileIcon, EnvelopeIcon, PencilSquareIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -44,6 +44,15 @@ function applyFilters() {
 }
 
 watch([search, event, category, pkg, salesRep, materials, country, checkin], applyFilters);
+
+function onNotification(e) {
+    const type = e.detail?.data?.type;
+    if (['payment_plan_assigned', 'designer_status_changed', 'new_designer_registered'].includes(type)) {
+        router.reload({ preserveScroll: true });
+    }
+}
+onMounted(() => window.addEventListener('notification:received', onNotification));
+onUnmounted(() => window.removeEventListener('notification:received', onNotification));
 
 function statusBadge(status) {
     return {

@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { router } from '@inertiajs/vue3';
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { MagnifyingGlassIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -62,8 +62,20 @@ function planStatusClass(status) {
     return { active: 'bg-blue-50 text-blue-700', completed: 'bg-green-50 text-green-700', cancelled: 'bg-red-50 text-red-600' }[status] ?? 'bg-gray-50 text-gray-600';
 }
 
+function onNotification(e) {
+    const type = e.detail?.data?.type;
+    if (['payment_plan_assigned', 'new_designer_registered'].includes(type)) {
+        fetchDesigners();
+    }
+}
+
 onMounted(() => {
     fetchDesigners();
+    window.addEventListener('notification:received', onNotification);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('notification:received', onNotification);
 });
 </script>
 

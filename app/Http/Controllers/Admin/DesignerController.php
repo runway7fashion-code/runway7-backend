@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Exports\DesignersExport;
 use App\Imports\DesignersImport;
 use App\Services\DesignerService;
+use App\Notifications\DesignerStatusChanged;
 use App\Services\EventService;
 use App\Services\TwilioService;
 use Illuminate\Support\Facades\DB;
@@ -333,6 +334,14 @@ class DesignerController extends Controller
         }
 
         $designer->update(['status' => $request->status]);
+
+        if ($request->status === 'pending') {
+            $salesUsers = User::where('role', 'sales')->where('status', 'active')->get();
+            $designer->loadMissing('designerProfile');
+            foreach ($salesUsers as $salesUser) {
+                $salesUser->notify(new DesignerStatusChanged($designer, 'pending'));
+            }
+        }
 
         return back()->with('success', 'Estado actualizado.');
     }

@@ -100,6 +100,12 @@ async function fetchNotifications() {
             const newUnread = data.filter(n => !n.read_at).length;
             if (newUnread > prevUnread && prevUnread >= 0 && notifications.value.length > 0) {
                 playNotifSound();
+                // Disparar eventos DOM para que las páginas refresquen según el tipo
+                const prevIds = new Set(notifications.value.map(n => n.id));
+                data.filter(n => !n.read_at && !prevIds.has(n.id)).forEach(n => {
+                    window.dispatchEvent(new CustomEvent('notification:received', { detail: n }));
+                    if (document.hidden) showSystemNotification(n);
+                });
             }
             notifications.value = data;
         }
@@ -110,6 +116,7 @@ let audioUnlocked = false;
 function unlockAudio() {
     if (audioUnlocked) return;
     audioUnlocked = true;
+    requestNotifPermission();
     document.removeEventListener('click', unlockAudio);
 }
 
@@ -118,6 +125,25 @@ function playNotifSound() {
     try {
         const audio = new Audio('/sounds/notification-sales.mp3');
         audio.play().catch(() => {});
+    } catch {}
+}
+
+// Solicitar permiso para notificaciones del sistema al primer click
+async function requestNotifPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+        await Notification.requestPermission();
+    }
+}
+
+function showSystemNotification(notif) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    try {
+        const n = new Notification(notif.data?.title ?? 'Nueva notificación', {
+            body: notif.data?.message ?? '',
+            icon: '/favicon.ico',
+            tag: notif.id, // evita duplicados
+        });
+        n.onclick = () => { window.focus(); n.close(); };
     } catch {}
 }
 

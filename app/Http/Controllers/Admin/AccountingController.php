@@ -17,6 +17,8 @@ use App\Models\SupportCaseMessage;
 use App\Models\User;
 use App\Services\AccountingService;
 use Carbon\Carbon;
+use App\Notifications\DesignerStatusChanged;
+use App\Notifications\PaymentPlanAssigned;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -143,6 +145,7 @@ class AccountingController extends Controller
             ->join('users', 'users.id', '=', 'event_designer.designer_id')
             ->join('events', 'events.id', '=', 'event_designer.event_id')
             ->leftJoin('designer_profiles', 'designer_profiles.user_id', '=', 'users.id')
+            ->whereNull('users.deleted_at')
             ->select([
                 'users.id as designer_id',
                 'users.first_name',
@@ -371,6 +374,12 @@ class AccountingController extends Controller
                 $request->custom_dates,
             );
 
+            $designer = User::with('designerProfile')->find($request->designer_id);
+            $notifyUsers = User::whereIn('role', ['admin', 'operation'])->get();
+            foreach ($notifyUsers as $notifyUser) {
+                $notifyUser->notify(new PaymentPlanAssigned($designer, $request->user()));
+            }
+
             return back()->with('success', 'Plan de pagos creado exitosamente.');
         } catch (\Exception $e) {
             return back()->withErrors(['plan' => $e->getMessage()]);
@@ -464,7 +473,16 @@ class AccountingController extends Controller
             'package_id' => 'nullable|exists:designer_packages,id',
         ]);
 
+        $oldStatus = $designer->status;
         $designer->update($request->only(['first_name', 'last_name', 'email', 'phone', 'status']));
+
+        if ($request->filled('status') && $request->status === 'active' && $oldStatus !== 'active') {
+            $salesUsers = User::where('role', 'sales')->where('status', 'active')->get();
+            $designer->loadMissing('designerProfile');
+            foreach ($salesUsers as $salesUser) {
+                $salesUser->notify(new DesignerStatusChanged($designer, 'active'));
+            }
+        }
 
         $designer->designerProfile?->update($request->only(['brand_name', 'category_id', 'sales_rep_id']));
 

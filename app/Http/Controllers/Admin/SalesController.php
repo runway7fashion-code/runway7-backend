@@ -8,6 +8,7 @@ use App\Models\Event;
 use App\Models\SalesDocument;
 use App\Models\SalesRegistration;
 use App\Models\User;
+use App\Jobs\SendDesignerWelcomeSalesJob;
 use App\Notifications\NewDesignerRegistered;
 use App\Services\DesignerService;
 use Illuminate\Http\Request;
@@ -27,7 +28,9 @@ class SalesController extends Controller
         $isLider  = $user->role === 'sales' && $user->sales_type === 'lider';
 
         // Asesor solo ve lo suyo; líder y admin ven todo
+        // whereHas('designer') excluye registrations de designers soft-deleted o huérfanos
         $baseQuery = fn() => SalesRegistration::query()
+            ->whereHas('designer')
             ->when($isAsesor, fn($q) => $q->where('sales_rep_id', $user->id));
 
         $totalRegistrations = $baseQuery()->count();
@@ -47,7 +50,8 @@ class SalesController extends Controller
 
         $topSellers = null;
         if ($isLider || $user->role === 'admin') {
-            $topSellersData = SalesRegistration::where('status', '!=', 'cancelled')
+            $topSellersData = SalesRegistration::whereHas('designer')
+                ->where('status', '!=', 'cancelled')
                 ->selectRaw('sales_rep_id, count(*) as total')
                 ->groupBy('sales_rep_id')
                 ->orderByDesc('total')
@@ -85,7 +89,7 @@ class SalesController extends Controller
                 ->orderBy('first_name')
                 ->get(['id', 'first_name', 'last_name', 'sales_type'])
                 ->map(function ($rep) {
-                    $q = fn() => SalesRegistration::where('sales_rep_id', $rep->id);
+                    $q = fn() => SalesRegistration::whereHas('designer')->where('sales_rep_id', $rep->id);
                     return [
                         'id'         => $rep->id,
                         'name'       => "{$rep->first_name} {$rep->last_name}",
@@ -119,7 +123,8 @@ class SalesController extends Controller
             'package:id,name',
             'salesRep:id,first_name,last_name',
             'documents',
-        ])->when($isAsesor, fn($q) => $q->where('sales_rep_id', $user->id));
+        ])->whereHas('designer')
+          ->when($isAsesor, fn($q) => $q->where('sales_rep_id', $user->id));
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -270,10 +275,24 @@ class SalesController extends Controller
             return $user;
         });
 
+        // Correo de bienvenida al designer (from: designers@runway7fashion.com)
+        $eventName = Event::find($request->event_id)?->name;
+        $brandName = $designer->designerProfile?->brand_name;
+        SendDesignerWelcomeSalesJob::dispatch($designer->id, $brandName, $eventName);
+
         // Notificar a operaciones y admin
-        $notifyUsers = User::whereIn('role', ['admin', 'operation', 'accounting'])->get();
+        $notifyUsers = User::where(function ($q) use ($currentUser) {
+            $q->whereIn('role', ['admin', 'operation', 'accounting'])
+              ->orWhere(function ($q2) use ($currentUser) {
+                  // Líderes de ventas (excepto si el creador ya es lider, para no auto-notificar)
+                  $q2->where('role', 'sales')
+                     ->where('sales_type', 'lider')
+                     ->where('id', '!=', $currentUser->id);
+              });
+        })->get();
+
         foreach ($notifyUsers as $notifyUser) {
-            $notifyUser->notify(new NewDesignerRegistered($designer, $request->user()));
+            $notifyUser->notify(new NewDesignerRegistered($designer, $currentUser));
         }
 
         return redirect()->route('admin.sales.designers.index')

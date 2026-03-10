@@ -7,6 +7,8 @@ use App\Http\Controllers\Controller;
 use App\Jobs\SendRegistrationEmailJob;
 use App\Jobs\SendWelcomeEmailJob;
 use App\Models\Event;
+use App\Models\User;
+use App\Notifications\NewModelRegistered;
 use App\Services\ActivityLogService;
 use App\Services\ModelService;
 use App\Services\ShopifyOrderService;
@@ -194,6 +196,11 @@ class ModelRegistrationController extends Controller
                 "Registro público: {$model->first_name} {$model->last_name} para {$event->name}" . ($hasValidOrder ? " (Shopify order #{$orderNumber})" : ''),
                 ['source' => 'wordpress', 'event_id' => $event->id, 'shopify_order' => $orderNumber]
             );
+
+            $notifyUsers = User::whereIn('role', ['admin', 'operation'])->get();
+            foreach ($notifyUsers as $notifyUser) {
+                $notifyUser->notify(new NewModelRegistered($model, $event->name, $hasValidOrder));
+            }
 
             if ($hasValidOrder) {
                 // Fast-track: enviar welcome email con credenciales

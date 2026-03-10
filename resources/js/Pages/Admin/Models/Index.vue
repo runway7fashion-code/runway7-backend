@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { EnvelopeIcon, PencilSquareIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, XMarkIcon, StarIcon as StarOutline } from '@heroicons/vue/24/outline';
 import { StarIcon as StarSolid } from '@heroicons/vue/24/solid';
 import { computed } from 'vue';
@@ -331,6 +331,16 @@ function fmtEmailSent(dt) {
     const d = new Date(dt);
     return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
 }
+
+function onNotification(e) {
+    const type = e.detail?.data?.type;
+    if (type === 'new_model_registered') {
+        router.reload({ preserveScroll: true });
+    }
+}
+
+onMounted(() => window.addEventListener('notification:received', onNotification));
+onUnmounted(() => window.removeEventListener('notification:received', onNotification));
 </script>
 
 <template>
