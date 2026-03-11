@@ -12,6 +12,7 @@ use App\Models\DesignerPackage;
 use App\Models\DesignerPaymentPlan;
 use App\Models\Event;
 use App\Models\FittingSlot;
+use App\Models\SalesRegistration;
 use App\Models\Show;
 use App\Models\User;
 use App\Exports\DesignersExport;
@@ -270,8 +271,23 @@ class DesignerController extends Controller
             'eventPasses',
         ]);
 
+        $salesDocs = SalesRegistration::where('designer_id', $designer->id)
+            ->with(['documents' => fn($q) => $q->where('type', 'contract')])
+            ->get()
+            ->flatMap(fn($r) => $r->documents)
+            ->map(fn($d) => [
+                'id'            => $d->id,
+                'type'          => $d->type,
+                'original_name' => $d->original_name,
+                'url'           => '/storage/' . $d->file_path,
+                'notes'         => $d->notes,
+                'created_at'    => $d->created_at->format('d M Y'),
+            ])
+            ->values();
+
         return Inertia::render('Admin/Designers/Show', [
-            'designer' => $this->formatDesignerForView($designer),
+            'designer'  => $this->formatDesignerForView($designer),
+            'salesDocs' => $salesDocs,
         ]);
     }
 

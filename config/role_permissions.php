@@ -10,7 +10,7 @@ return [
         'label' => 'Contabilidad',
     ],
     'operation' => [
-        'sections' => ['events', 'models', 'designers', 'chats', 'designer_categories'],
+        'sections' => ['dashboard', 'events', 'models', 'designers', 'chats', 'designer_categories'],
         'label' => 'Operaciones',
     ],
     'tickets_manager' => [

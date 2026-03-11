@@ -3,11 +3,19 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import QrCode from '@/Components/QrCode.vue';
-import { ArrowLeftIcon, EnvelopeIcon, ChevronLeftIcon, ChevronRightIcon, XMarkIcon, ArrowRightIcon, TrashIcon, DevicePhoneMobileIcon } from '@heroicons/vue/24/outline';
+import { ArrowLeftIcon, EnvelopeIcon, ChevronLeftIcon, ChevronRightIcon, XMarkIcon, ArrowRightIcon, TrashIcon, DevicePhoneMobileIcon, ArrowDownTrayIcon, DocumentTextIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     designer: Object,
+    salesDocs: { type: Array, default: () => [] },
 });
+
+const docTypeLabel = (type) => ({
+    contract:    'Contrato',
+    invoice:     'Factura',
+    id_document: 'ID',
+    other:       'Otro',
+})[type] ?? type;
 
 const profile    = props.designer.designer_profile;
 const events     = props.designer.events     ?? [];
@@ -234,6 +242,18 @@ const socialLinks = computed(() => {
                                     Eliminar
                                 </button>
                             </div>
+                        </div>
+
+                        <!-- Documentos de Sales -->
+                        <div v-if="salesDocs.length" class="mt-3 flex flex-wrap gap-2">
+                            <a v-for="doc in salesDocs" :key="doc.id"
+                                :href="doc.url" target="_blank" download
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-colors">
+                                <DocumentTextIcon class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                <span class="font-medium text-gray-500">{{ docTypeLabel(doc.type) }}:</span>
+                                <span class="truncate max-w-[140px]">{{ doc.original_name }}</span>
+                                <ArrowDownTrayIcon class="w-3 h-3 text-gray-400 flex-shrink-0" />
+                            </a>
                         </div>
 
                         <div class="mt-3 flex flex-wrap gap-3 text-sm">
