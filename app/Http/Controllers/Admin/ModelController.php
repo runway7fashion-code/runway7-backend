@@ -54,6 +54,10 @@ class ModelController extends Controller
             $query->whereHas('modelProfile', fn($q) => $q->where('gender', $request->gender));
         }
 
+        if ($request->filled('ethnicity')) {
+            $query->whereHas('modelProfile', fn($q) => $q->where('ethnicity', $request->ethnicity));
+        }
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -282,7 +286,7 @@ class ModelController extends Controller
             'models'             => $models,
             'events'             => $events,
             'designers'          => $designers,
-            'filters'            => $request->only(['event', 'compcard', 'gender', 'search', 'email_sent', 'test_model', 'casting_time', 'casting_status', 'designer', 'status']),
+            'filters'            => $request->only(['event', 'compcard', 'gender', 'ethnicity', 'search', 'email_sent', 'test_model', 'casting_time', 'casting_status', 'designer', 'status']),
             'castingTimes'       => $castingTimes,
             'pendingEmailCount'  => $pendingEmailCount,
         ]);

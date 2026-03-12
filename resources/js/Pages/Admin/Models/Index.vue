@@ -21,6 +21,7 @@ const search         = ref(props.filters.search         ?? '');
 const event          = ref(props.filters.event          ?? '');
 const compcard       = ref(props.filters.compcard       ?? '');
 const gender         = ref(props.filters.gender         ?? '');
+const ethnicity      = ref(props.filters.ethnicity      ?? '');
 const email_sent     = ref(props.filters.email_sent     ?? '');
 const test_model     = ref(props.filters.test_model     ?? '');
 const casting_time   = ref(props.filters.casting_time   ?? '');
@@ -79,6 +80,7 @@ function applyFilters() {
             event:           event.value          || undefined,
             compcard:        compcard.value       || undefined,
             gender:          gender.value         || undefined,
+            ethnicity:       ethnicity.value      || undefined,
             email_sent:      email_sent.value     || undefined,
             test_model:      test_model.value     || undefined,
             casting_time:    casting_time.value   || undefined,
@@ -93,7 +95,7 @@ function applyFilters() {
         }, { preserveState: true, replace: true });
     }, 300);
 }
-watch([search, event, compcard, gender, email_sent, test_model, casting_time, casting_status, designer, status, sort_name, registeredRange, checkinRange], applyFilters);
+watch([search, event, compcard, gender, ethnicity, email_sent, test_model, casting_time, casting_status, designer, status, sort_name, registeredRange, checkinRange], applyFilters);
 
 function toggleSortName() {
     if (sort_name.value === 'asc') sort_name.value = 'desc';
@@ -114,6 +116,7 @@ const exportUrl = computed(() => {
     if (event.value)          params.set('event',          event.value);
     if (compcard.value)       params.set('compcard',       compcard.value);
     if (gender.value)         params.set('gender',         gender.value);
+    if (ethnicity.value)      params.set('ethnicity',      ethnicity.value);
     if (email_sent.value)     params.set('email_sent',     email_sent.value);
     if (test_model.value)     params.set('test_model',     test_model.value);
     if (casting_time.value)   params.set('casting_time',   casting_time.value);
@@ -474,6 +477,18 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <option value="female">Femenino</option>
                     <option value="male">Masculino</option>
                     <option value="non_binary">No binario</option>
+                </select>
+
+                <select v-model="ethnicity"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Todas las etnias</option>
+                    <option value="asian">Asiática</option>
+                    <option value="black">Negra</option>
+                    <option value="caucasian">Caucásica</option>
+                    <option value="hispanic">Hispana / Latina</option>
+                    <option value="middle_eastern">Medio Oriente</option>
+                    <option value="mixed">Mixta</option>
+                    <option value="other">Otra</option>
                 </select>
 
                 <select v-model="compcard"
