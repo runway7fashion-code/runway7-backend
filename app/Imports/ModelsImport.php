@@ -80,10 +80,10 @@ class ModelsImport implements ToCollection, WithHeadingRow
                     'password'   => Hash::make(Str::random(16)),
                     'role'       => 'model',
                     'status'     => 'pending',
-                    'login_code' => null,
                 ]);
 
-                ModelProfile::firstOrCreate(['user_id' => $user->id]);
+                $profile = ModelProfile::firstOrCreate(['user_id' => $user->id]);
+                $this->updateProfile($profile, $row);
                 $this->summary['created']++;
                 $isNew = true;
             } else {
@@ -93,6 +93,10 @@ class ModelsImport implements ToCollection, WithHeadingRow
                 if ($lastName)  $updates['last_name']  = $lastName;
                 if ($phone)     $updates['phone']      = $phone;
                 if ($updates)   $user->update($updates);
+
+                // Update profile fields if provided
+                $profile = ModelProfile::firstOrCreate(['user_id' => $user->id]);
+                $this->updateProfile($profile, $row);
                 $this->summary['updated']++;
             }
 
@@ -129,6 +133,39 @@ class ModelsImport implements ToCollection, WithHeadingRow
                 }
             }
         });
+    }
+
+    private function updateProfile(ModelProfile $profile, array $row): void
+    {
+        $map = [
+            'age'        => 'age',
+            'gender'     => 'gender',
+            'city'       => 'location',
+            'location'   => 'location',
+            'height'     => 'height',
+            'bust'       => 'bust',
+            'waist'      => 'waist',
+            'hips'       => 'hips',
+            'shoe_size'  => 'shoe_size',
+            'dress_size' => 'dress_size',
+            'ethnicity'  => 'ethnicity',
+            'hair'       => 'hair',
+            'body_type'  => 'body_type',
+            'instagram'  => 'instagram',
+            'agency'     => 'agency',
+        ];
+
+        $updates = [];
+        foreach ($map as $excelCol => $profileField) {
+            $value = trim((string) ($row[$excelCol] ?? ''));
+            if ($value !== '') {
+                $updates[$profileField] = $value;
+            }
+        }
+
+        if (!empty($updates)) {
+            $profile->update($updates);
+        }
     }
 
     /**

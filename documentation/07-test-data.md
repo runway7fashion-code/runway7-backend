@@ -35,10 +35,10 @@ $this->call([
 | `sales@runway7.com` | `password123` | sales | Diseñadores |
 
 ### Modelos
-| Email / Login Code | Password | Nombre | Comp Card |
-|-------------------|----------|--------|-----------|
-| `sofia.rivera@models.com` / `MOD001` | `runway7` | Sofia Rivera | Completo (4 fotos) |
-| `isabella.chen@models.com` / `MOD002` | `runway7` | Isabella Chen | Incompleto (2 fotos) |
+| Email | Password | Nombre | Comp Card |
+|-------|----------|--------|-----------|
+| `sofia.rivera@models.com` | `runway7` | Sofia Rivera | Completo (4 fotos) |
+| `isabella.chen@models.com` | `runway7` | Isabella Chen | Incompleto (2 fotos) |
 
 ### Diseñadores
 | Email | Password | Marca | Categoría |

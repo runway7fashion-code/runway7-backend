@@ -256,10 +256,10 @@ function deleteModel() {
                         <h4 class="font-bold text-gray-900 mb-4">Medidas</h4>
                         <div class="grid grid-cols-3 gap-4">
                             <div v-for="(item, i) in [
-                                { label: 'Altura', value: profile.height ? profile.height + ' cm' : '—' },
-                                { label: 'Busto/Pecho', value: profile.bust ? profile.bust + ' cm' : '—' },
-                                { label: 'Cintura', value: profile.waist ? profile.waist + ' cm' : '—' },
-                                { label: 'Cadera', value: profile.hips ? profile.hips + ' cm' : '—' },
+                                { label: 'Height', value: profile.height ? profile.height + ' in' : '—' },
+                                { label: 'Bust/Chest', value: profile.bust ? profile.bust + ' in' : '—' },
+                                { label: 'Waist', value: profile.waist ? profile.waist + ' in' : '—' },
+                                { label: 'Hips', value: profile.hips ? profile.hips + ' in' : '—' },
                                 { label: 'Talla zapato', value: profile.shoe_size || '—' },
                                 { label: 'Talla ropa', value: profile.dress_size || '—' },
                             ]" :key="i"

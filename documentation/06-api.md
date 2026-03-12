@@ -48,29 +48,6 @@ Login con email y password.
 
 ---
 
-### POST `/api/v1/auth/login-code`
-Login con código de kiosko (para modelos, diseñadores, etc.).
-
-**Rate limit:** 10 intentos/minuto por IP
-
-**Request:**
-```json
-{
-    "code": "MOD001"
-}
-```
-
-**Response 200:** Igual que `/auth/login`
-
-**Response 401:**
-```json
-{
-    "message": "Código inválido."
-}
-```
-
----
-
 ### GET `/api/v1/me`
 Retorna el usuario autenticado.
 
@@ -87,7 +64,6 @@ Retorna el usuario autenticado.
     "role": "model",
     "status": "active",
     "profile_picture": null,
-    "login_code": "MOD001",
     "model_profile": {
         "height": 175.00,
         "bust": 86.00,

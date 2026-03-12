@@ -41,6 +41,8 @@ const form = useForm({
     send_welcome_email: false,
 });
 
+const ageOptions = Array.from({ length: 63 }, (_, i) => i + 18); // 18-80
+
 const selectedEvent = computed(() => props.events.find(e => e.id == form.event_id) ?? null);
 const castingSlots  = computed(() => selectedEvent.value?.casting_day?.slots ?? []);
 
@@ -134,8 +136,11 @@ function submit() {
                     <div class="grid grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Edad</label>
-                            <input v-model="form.age" type="number" min="16" max="80"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            <select v-model="form.age"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                                <option value="">— Seleccionar —</option>
+                                <option v-for="a in ageOptions" :key="a" :value="a">{{ a }}</option>
+                            </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Género</label>
@@ -216,17 +221,17 @@ function submit() {
 
                     <div class="grid grid-cols-3 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Altura (cm)</label>
-                            <input v-model="form.height" type="number" step="0.1" min="140" max="220"
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Height (in)</label>
+                            <input v-model="form.height" type="number" step="0.1" min="55" max="87"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Busto / Pecho (cm)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Bust / Chest (in)</label>
                             <input v-model="form.bust" type="number" step="0.1"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Cintura (cm)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Waist (in)</label>
                             <input v-model="form.waist" type="number" step="0.1"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
@@ -234,7 +239,7 @@ function submit() {
 
                     <div class="grid grid-cols-3 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Cadera (cm)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Hips (in)</label>
                             <input v-model="form.hips" type="number" step="0.1"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
@@ -315,13 +320,6 @@ function submit() {
                         Este evento no tiene día de casting configurado.
                     </div>
 
-                    <div class="border-t border-gray-100 pt-4">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input v-model="form.send_welcome_email" type="checkbox"
-                                class="rounded border-gray-300 text-black focus:ring-black/20" />
-                            <span class="text-sm text-gray-700">Enviar email de bienvenida al crear</span>
-                        </label>
-                    </div>
                 </div>
 
                 <!-- Botones -->

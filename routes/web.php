@@ -45,6 +45,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Rutas sin {model} deben ir antes del resource
             Route::get('models/export', [ModelController::class, 'exportModels'])->name('models.export');
             Route::post('models/import', [ModelController::class, 'importModels'])->name('models.import');
+            Route::get('models/import-template', [ModelController::class, 'downloadImportTemplate'])->name('models.import-template');
             Route::post('models/send-pending-emails', [ModelController::class, 'sendPendingWelcomeEmails'])->name('models.send-pending-emails');
             Route::resource('models', ModelController::class);
             Route::post('models/{model}/assign-event', [ModelController::class, 'assignEvent'])->name('models.assign-event');

@@ -145,10 +145,60 @@ function submitImport() {
 }
 
 // --- Acciones por fila ---
-function sendWelcomeEmail(m, e) {
+function canSendEmail(m) {
+    return m.status === 'pending' && !!m.email;
+}
+
+// Modal historial de correos
+const emailHistoryModel = ref(null);
+
+function openEmailHistory(m, e) {
     e.stopPropagation();
-    if (!confirm(`¿Enviar email de bienvenida a ${m.first_name}?`)) return;
-    router.post(`/admin/models/${m.id}/send-welcome-email`, {}, { preserveScroll: true });
+    emailHistoryModel.value = m;
+}
+
+function getEmailLogs(m) {
+    return (m?.communication_logs ?? [])
+        .filter(l => l.channel === 'welcome_email')
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+}
+
+function commStatusLabel(status) {
+    return { queued: 'En cola', sent: 'Enviado', failed: 'Fallido' }[status] ?? status;
+}
+
+function commStatusClass(status) {
+    return {
+        queued: 'bg-yellow-100 text-yellow-700',
+        sent:   'bg-green-100 text-green-700',
+        failed: 'bg-red-100 text-red-700',
+    }[status] ?? 'bg-gray-100 text-gray-600';
+}
+
+// Modal de selección de evento para email
+const emailModalModel   = ref(null);
+const emailModalEventId = ref(null);
+
+function openEmailModal(m, e) {
+    e.stopPropagation();
+    const events = m.events_as_model_with_casting ?? [];
+    if (events.length === 1) {
+        // Solo un evento → enviar directo sin modal
+        emailModalEventId.value = events[0].id;
+        confirmSendWelcomeEmail(m);
+        return;
+    }
+    emailModalModel.value   = m;
+    emailModalEventId.value = events[0]?.id ?? null;
+}
+
+function confirmSendWelcomeEmail(m) {
+    const model = m ?? emailModalModel.value;
+    router.post(`/admin/models/${model.id}/send-welcome-email`,
+        { event_id: emailModalEventId.value },
+        { preserveScroll: true }
+    );
+    emailModalModel.value = null;
 }
 
 function updateModelStatus(m, newStatus) {
@@ -633,23 +683,27 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                 <p v-if="m.last_login_at" class="text-xs text-gray-700">{{ fmtLogin(m.last_login_at) }}</p>
                                 <span v-else class="text-xs text-gray-400">—</span>
                             </td>
-                            <td class="px-4 py-3">
-                                <template v-if="m.welcome_email_sent_at">
-                                    <span class="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full font-medium">
-                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                                        </svg>
-                                        {{ fmtEmailSent(m.welcome_email_sent_at) }}
+                            <td class="px-4 py-3" @click.stop>
+                                <button @click="openEmailHistory(m, $event)" class="hover:opacity-80 transition-opacity">
+                                    <template v-if="m.welcome_email_sent_at">
+                                        <span class="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full font-medium">
+                                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                            </svg>
+                                            {{ fmtEmailSent(m.welcome_email_sent_at) }}
+                                        </span>
+                                    </template>
+                                    <span v-else class="inline-flex items-center text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                        No enviado
                                     </span>
-                                </template>
-                                <span v-else class="inline-flex items-center text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                                    No enviado
-                                </span>
+                                </button>
                             </td>
                             <td class="px-4 py-3" @click.stop>
                                 <div class="flex items-center gap-2">
-                                    <button @click="sendWelcomeEmail(m, $event)"
-                                        class="p-1.5 border border-gray-200 rounded-lg transition-colors hover:bg-gray-50 text-gray-600"
+                                    <button @click="openEmailModal(m, $event)"
+                                        class="p-1.5 border border-gray-200 rounded-lg transition-colors"
+                                        :class="canSendEmail(m) ? 'hover:bg-gray-50 text-gray-600' : 'opacity-40 cursor-not-allowed text-gray-400'"
+                                        :disabled="!canSendEmail(m)"
                                         title="Enviar Email">
                                         <EnvelopeIcon class="w-4 h-4" />
                                     </button>
@@ -1139,17 +1193,36 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     </button>
                 </div>
 
+                <!-- Download template -->
+                <div class="mb-4">
+                    <a href="/admin/models/import-template"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-xl transition-colors">
+                        <ArrowDownTrayIcon class="w-4 h-4" />
+                        Download Template (.xlsx)
+                    </a>
+                    <p class="mt-2 text-xs text-gray-500">The template includes all accepted columns with example data.</p>
+                </div>
+
                 <!-- Formato esperado -->
                 <div class="bg-gray-50 rounded-xl p-4 mb-5 text-xs text-gray-600">
-                    <p class="font-semibold text-gray-800 mb-2">Columnas del Excel:</p>
+                    <p class="font-semibold text-gray-800 mb-2">Accepted columns:</p>
                     <div class="grid grid-cols-2 gap-1">
-                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">email</span> <span class="text-red-500">*obligatorio</span></span>
-                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">first_name</span> o <span class="font-mono bg-white border border-gray-200 px-1 rounded">nombre</span></span>
-                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">last_name</span> o <span class="font-mono bg-white border border-gray-200 px-1 rounded">apellido</span></span>
-                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">phone</span> / <span class="font-mono bg-white border border-gray-200 px-1 rounded">telefono</span></span>
-                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">casting_time</span> (ej: 09:00)</span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">email</span> <span class="text-red-500">*required</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">first_name</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">last_name</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">phone</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">age</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">gender</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">city</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">height</span> (inches)</span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">bust</span> / <span class="font-mono bg-white border border-gray-200 px-1 rounded">waist</span> / <span class="font-mono bg-white border border-gray-200 px-1 rounded">hips</span> (in)</span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">shoe_size</span> / <span class="font-mono bg-white border border-gray-200 px-1 rounded">dress_size</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">ethnicity</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">hair</span> / <span class="font-mono bg-white border border-gray-200 px-1 rounded">body_type</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">instagram</span> / <span class="font-mono bg-white border border-gray-200 px-1 rounded">agency</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">casting_time</span> (09:00)</span>
                     </div>
-                    <p class="mt-2 text-gray-500">Formatos: <strong>.xlsx, .xls, .csv</strong></p>
+                    <p class="mt-2 text-gray-500">Formats: <strong>.xlsx, .xls, .csv</strong></p>
                 </div>
 
                 <!-- Selector de evento -->
@@ -1187,6 +1260,98 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         :disabled="!importForm.file || importForm.processing"
                         class="flex-1 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                         {{ importForm.processing ? 'Importando...' : 'Importar' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Modal: Historial de correos -->
+    <Teleport to="body">
+        <div v-if="emailHistoryModel" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="emailHistoryModel = null">
+            <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+                <div class="flex items-center justify-between mb-5">
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900">Historial de correos</h3>
+                        <p class="text-sm text-gray-500">{{ emailHistoryModel.first_name }} {{ emailHistoryModel.last_name }}</p>
+                    </div>
+                    <button @click="emailHistoryModel = null" class="text-gray-400 hover:text-gray-600">
+                        <XMarkIcon class="w-5 h-5" />
+                    </button>
+                </div>
+
+                <div v-if="!getEmailLogs(emailHistoryModel).length" class="text-center py-8 text-gray-400 text-sm italic">
+                    No se han enviado correos aún.
+                </div>
+
+                <div v-else class="space-y-3 max-h-80 overflow-y-auto">
+                    <div v-for="log in getEmailLogs(emailHistoryModel)" :key="log.id"
+                        class="border border-gray-100 rounded-xl p-4"
+                        :class="log.status === 'failed' ? 'bg-red-50/50' : 'bg-gray-50'">
+                        <div class="flex items-center justify-between mb-2">
+                            <span :class="commStatusClass(log.status)"
+                                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">
+                                {{ commStatusLabel(log.status) }}
+                            </span>
+                            <span class="text-xs text-gray-400">
+                                {{ new Date(log.sent_at ?? log.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' }) }}
+                            </span>
+                        </div>
+                        <div v-if="log.sender" class="text-xs text-gray-500">
+                            Enviado por <span class="font-medium text-gray-700">{{ log.sender.first_name }} {{ log.sender.last_name }}</span>
+                        </div>
+                        <div v-if="log.error_message" class="mt-2 text-xs text-red-600 bg-red-100 rounded-lg p-2">
+                            {{ log.error_message }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-5 flex justify-end">
+                    <button @click="emailHistoryModel = null"
+                        class="px-5 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Modal: Seleccionar evento para email de bienvenida -->
+    <Teleport to="body">
+        <div v-if="emailModalModel" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="emailModalModel = null">
+            <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-bold text-gray-900">Seleccionar evento</h3>
+                    <button @click="emailModalModel = null" class="text-gray-400 hover:text-gray-600">
+                        <XMarkIcon class="w-5 h-5" />
+                    </button>
+                </div>
+                <p class="text-sm text-gray-500 mb-4">
+                    ¿A qué evento pertenece el email de bienvenida para
+                    <span class="font-semibold text-gray-800">{{ emailModalModel.first_name }} {{ emailModalModel.last_name }}</span>?
+                </p>
+                <div class="space-y-2 mb-5">
+                    <label v-for="evt in (emailModalModel.events_as_model_with_casting ?? [])" :key="evt.id"
+                        class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-colors"
+                        :class="emailModalEventId === evt.id ? 'border-black bg-gray-50' : 'border-gray-200 hover:border-gray-300'">
+                        <input type="radio" :value="evt.id" v-model="emailModalEventId" class="accent-black" />
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">{{ evt.name }}</p>
+                            <p v-if="evt.pivot?.casting_time" class="text-xs text-gray-400">
+                                Casting: {{ evt.pivot.casting_time }}
+                            </p>
+                        </div>
+                    </label>
+                </div>
+                <div class="flex gap-3">
+                    <button @click="emailModalModel = null"
+                        class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancelar
+                    </button>
+                    <button @click="confirmSendWelcomeEmail(null)"
+                        :disabled="!emailModalEventId"
+                        class="flex-1 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                        Enviar Email
                     </button>
                 </div>
             </div>

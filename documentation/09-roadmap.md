@@ -59,7 +59,6 @@
 - [x] Foto de perfil
 - [x] Medidas y datos del perfil
 - [x] Asignación a eventos
-- [x] Código de login para kiosko (`login_code`)
 
 ### Módulo Diseñadores
 - [x] CRUD completo

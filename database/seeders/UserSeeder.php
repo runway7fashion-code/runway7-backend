@@ -61,7 +61,6 @@ class UserSeeder extends Seeder
             'password'   => bcrypt('runway7'),
             'role'       => 'model',
             'status'     => 'active',
-            'login_code' => 'MOD001',
         ]);
 
         ModelProfile::create([
@@ -100,7 +99,6 @@ class UserSeeder extends Seeder
             'password'   => bcrypt('runway7'),
             'role'       => 'model',
             'status'     => 'active',
-            'login_code' => 'MOD002',
         ]);
 
         ModelProfile::create([
@@ -138,7 +136,6 @@ class UserSeeder extends Seeder
             'password'   => bcrypt('runway7'),
             'role'       => 'model',
             'status'     => 'pending',
-            'login_code' => 'MOD003',
         ]);
 
         ModelProfile::create([
@@ -172,7 +169,6 @@ class UserSeeder extends Seeder
             'password'   => bcrypt('runway7'),
             'role'       => 'model',
             'status'     => 'pending',
-            'login_code' => 'MOD004',
         ]);
 
         ModelProfile::create([
@@ -206,7 +202,6 @@ class UserSeeder extends Seeder
             'password'   => bcrypt('runway7'),
             'role'       => 'model',
             'status'     => 'pending',
-            'login_code' => 'MOD005',
         ]);
 
         ModelProfile::create([
@@ -232,38 +227,38 @@ class UserSeeder extends Seeder
         ]);
 
         // --- Modelos adicionales 6–35 (password: runway7) ---
-        // [first, last, email, phone, code, status, birth, age, gender, loc, agency, insta, p#, h, bust, waist, hips, shoe, dress, ethn, hair, body]
+        // [first, last, email, phone, status, birth, age, gender, loc, agency, insta, p#, h, bust, waist, hips, shoe, dress, ethn, hair, body]
         $extraModels = [
-            ['Daniela', 'Ortiz', 'daniela.ortiz@models.com', '+1-305-555-0601', 'MOD006', 'active', '1999-03-12', 26, 'female', 'Miami, FL', 'Ford Models', '@daniela.ortiz', 6, 174, 85, 60, 88, '8', 'S', 'hispanic', 'brown', 'slim'],
-            ['Marco', 'Rivera', 'marco.rivera@models.com', '+1-212-555-0602', 'MOD007', 'active', '2000-06-18', 25, 'male', 'New York, NY', 'IMG Models', '@marco.rivera', 7, 188, 98, 80, 93, '11', 'M', 'hispanic', 'black', 'athletic'],
-            ['Lina', 'Park', 'lina.park@models.com', '+1-646-555-0603', 'MOD008', 'active', '2001-02-25', 25, 'female', 'Manhattan, NY', 'Elite Model Management', '@lina.park', 8, 176, 82, 58, 86, '8', 'XS', 'asian', 'black', 'slim'],
-            ['Emma', 'Thompson', 'emma.thompson@models.com', '+1-310-555-0604', 'MOD009', 'active', '1998-11-07', 27, 'female', 'Los Angeles, CA', 'Next Management', '@emma.thompson', 9, 178, 84, 60, 88, '9', 'S', 'caucasian', 'blonde', 'slim'],
-            ['Valentina', 'Cruz', 'valentina.cruz@models.com', '+1-786-555-0605', 'MOD010', 'active', '2000-01-20', 26, 'female', 'Miami, FL', 'Wilhelmina Models', '@valentina.cruz', 10, 175, 86, 61, 89, '8', 'S', 'hispanic', 'brown', 'slim'],
-            ['Zara', 'Ahmed', 'zara.ahmed@models.com', '+1-917-555-0606', 'MOD011', 'active', '1999-08-14', 26, 'female', 'Brooklyn, NY', 'Storm Models', '@zara.ahmed', 11, 177, 83, 59, 87, '8.5', 'XS', 'middle_eastern', 'black', 'slim'],
-            ['Mia', 'Santos', 'mia.santos@models.com', '+1-305-555-0607', 'MOD012', 'active', '2001-05-30', 24, 'female', 'Miami, FL', 'DNA Model Management', '@mia.santos', 12, 173, 85, 61, 89, '7.5', 'S', 'hispanic', 'brown', 'athletic'],
-            ['Yuki', 'Tanaka', 'yuki.tanaka@models.com', '+1-415-555-0608', 'MOD013', 'pending', '2000-12-03', 25, 'female', 'San Francisco, CA', 'Ford Models', '@yuki.tanaka', 13, 172, 80, 57, 85, '7', 'XS', 'asian', 'black', 'slim'],
-            ['Olivia', 'White', 'olivia.white@models.com', '+1-323-555-0609', 'MOD014', 'active', '1999-07-22', 26, 'female', 'Los Angeles, CA', 'The Society Management', '@olivia.white', 14, 180, 84, 60, 88, '9', 'S', 'caucasian', 'red', 'slim'],
-            ['Amara', 'Diallo', 'amara.diallo@models.com', '+1-347-555-0610', 'MOD015', 'active', '2001-09-15', 24, 'female', 'Brooklyn, NY', 'IMG Models', '@amara.diallo', 15, 181, 82, 58, 86, '9.5', 'XS', 'black', 'black', 'slim'],
-            ['Andre', 'Baptiste', 'andre.baptiste@models.com', '+1-786-555-0611', 'MOD016', 'active', '2000-04-08', 25, 'male', 'Miami, FL', 'Elite Model Management', '@andre.baptiste', 16, 190, 100, 82, 95, '11.5', 'L', 'black', 'black', 'athletic'],
-            ['Chloe', 'Martin', 'chloe.martin@models.com', '+1-212-555-0612', 'MOD017', 'active', '1998-10-19', 27, 'female', 'Manhattan, NY', 'Women Management', '@chloe.martin', 17, 179, 83, 59, 87, '9', 'XS', 'caucasian', 'blonde', 'slim'],
-            ['Priya', 'Sharma', 'priya.sharma@models.com', '+1-718-555-0613', 'MOD018', 'pending', '2001-01-11', 25, 'female', 'Queens, NY', 'Heroes Model Management', '@priya.sharma', 18, 174, 82, 58, 86, '7.5', 'XS', 'asian', 'black', 'slim'],
-            ['Adriana', 'Lopez', 'adriana.lopez@models.com', '+1-305-555-0614', 'MOD019', 'active', '1999-06-25', 26, 'female', 'Miami, FL', 'Ford Models', '@adriana.lopez', 19, 175, 86, 61, 89, '8', 'S', 'hispanic', 'brown', 'athletic'],
-            ['Naomi', 'Scott', 'naomi.scott@models.com', '+1-646-555-0615', 'MOD020', 'active', '2000-03-17', 25, 'female', 'New York, NY', 'DNA Model Management', '@naomi.scott', 20, 178, 84, 60, 88, '8.5', 'S', 'mixed', 'brown', 'slim'],
-            ['Sara', 'Kim', 'sara.kim@models.com', '+1-917-555-0616', 'MOD021', 'active', '2001-07-04', 24, 'female', 'Manhattan, NY', 'IMG Models', '@sara.kim', 21, 173, 81, 57, 85, '7.5', 'XS', 'asian', 'black', 'slim'],
-            ['Bianca', 'Rossi', 'bianca.rossi@models.com', '+1-212-555-0617', 'MOD022', 'active', '1999-11-28', 26, 'female', 'New York, NY', 'Next Management', '@bianca.rossi', 22, 177, 84, 60, 88, '8.5', 'S', 'caucasian', 'brown', 'slim'],
-            ['Fatima', 'Hassan', 'fatima.hassan@models.com', '+1-347-555-0618', 'MOD023', 'pending', '2000-08-09', 25, 'female', 'Brooklyn, NY', 'Storm Models', '@fatima.hassan', 23, 176, 83, 59, 87, '8', 'XS', 'middle_eastern', 'black', 'slim'],
-            ['Kai', 'Nakamura', 'kai.nakamura@models.com', '+1-323-555-0619', 'MOD024', 'active', '2001-04-16', 24, 'male', 'Los Angeles, CA', 'Wilhelmina Models', '@kai.nakamura', 24, 185, 96, 78, 91, '10.5', 'M', 'asian', 'black', 'athletic'],
-            ['Elena', 'Volkov', 'elena.volkov@models.com', '+1-646-555-0620', 'MOD025', 'active', '1998-12-01', 27, 'female', 'Manhattan, NY', 'The Society Management', '@elena.volkov', 25, 180, 83, 58, 86, '9', 'XS', 'caucasian', 'blonde', 'slim'],
-            ['Catalina', 'Reyes', 'catalina.reyes@models.com', '+1-786-555-0621', 'MOD026', 'active', '2000-05-14', 25, 'female', 'Miami, FL', 'Elite Model Management', '@catalina.reyes', 26, 174, 85, 61, 89, '8', 'S', 'hispanic', 'brown', 'slim'],
-            ['Nia', 'Brooks', 'nia.brooks@models.com', '+1-718-555-0622', 'MOD027', 'active', '2001-10-23', 24, 'female', 'Brooklyn, NY', 'DNA Model Management', '@nia.brooks', 27, 179, 82, 58, 86, '9', 'XS', 'black', 'black', 'slim'],
-            ['Mei', 'Lin', 'mei.lin@models.com', '+1-415-555-0623', 'MOD028', 'pending', '2000-02-07', 26, 'female', 'San Francisco, CA', 'IMG Models', '@mei.lin', 28, 175, 81, 57, 85, '7.5', 'XS', 'asian', 'black', 'slim'],
-            ['Jordan', 'Ellis', 'jordan.ellis@models.com', '+1-212-555-0624', 'MOD029', 'active', '1999-09-30', 26, 'male', 'New York, NY', 'Ford Models', '@jordan.ellis', 29, 187, 97, 79, 92, '11', 'M', 'mixed', 'brown', 'athletic'],
-            ['Gabriela', 'Mendez', 'gabriela.mendez@models.com', '+1-305-555-0625', 'MOD030', 'active', '2001-06-12', 24, 'female', 'Miami, FL', 'Wilhelmina Models', '@gabriela.mendez', 30, 173, 86, 62, 90, '8', 'S', 'hispanic', 'brown', 'athletic'],
-            ['Sienna', 'James', 'sienna.james@models.com', '+1-646-555-0626', 'MOD031', 'active', '2000-11-19', 25, 'female', 'New York, NY', 'Women Management', '@sienna.james', 31, 177, 83, 59, 87, '8.5', 'S', 'mixed', 'brown', 'slim'],
-            ['Leila', 'Nazari', 'leila.nazari@models.com', '+1-917-555-0627', 'MOD032', 'pending', '1999-04-05', 26, 'female', 'Manhattan, NY', 'Heroes Model Management', '@leila.nazari', 32, 176, 82, 58, 86, '8', 'XS', 'middle_eastern', 'brown', 'slim'],
-            ['Harper', 'Davis', 'harper.davis@models.com', '+1-310-555-0628', 'MOD033', 'active', '2001-08-21', 24, 'female', 'Los Angeles, CA', 'Next Management', '@harper.davis', 33, 178, 84, 60, 88, '8.5', 'S', 'caucasian', 'red', 'slim'],
-            ['Xiomara', 'Vega', 'xiomara.vega@models.com', '+1-786-555-0629', 'MOD034', 'active', '2000-07-03', 25, 'female', 'Miami, FL', 'Storm Models', '@xiomara.vega', 34, 175, 85, 61, 89, '8', 'S', 'hispanic', 'black', 'slim'],
-            ['Tiana', 'Moore', 'tiana.moore@models.com', '+1-347-555-0630', 'MOD035', 'active', '2001-03-26', 24, 'female', 'Brooklyn, NY', 'Elite Model Management', '@tiana.moore', 35, 180, 83, 59, 87, '9', 'S', 'black', 'black', 'athletic'],
+            ['Daniela', 'Ortiz', 'daniela.ortiz@models.com', '+1-305-555-0601', 'active', '1999-03-12', 26, 'female', 'Miami, FL', 'Ford Models', '@daniela.ortiz', 6, 174, 85, 60, 88, '8', 'S', 'hispanic', 'brown', 'slim'],
+            ['Marco', 'Rivera', 'marco.rivera@models.com', '+1-212-555-0602', 'active', '2000-06-18', 25, 'male', 'New York, NY', 'IMG Models', '@marco.rivera', 7, 188, 98, 80, 93, '11', 'M', 'hispanic', 'black', 'athletic'],
+            ['Lina', 'Park', 'lina.park@models.com', '+1-646-555-0603', 'active', '2001-02-25', 25, 'female', 'Manhattan, NY', 'Elite Model Management', '@lina.park', 8, 176, 82, 58, 86, '8', 'XS', 'asian', 'black', 'slim'],
+            ['Emma', 'Thompson', 'emma.thompson@models.com', '+1-310-555-0604', 'active', '1998-11-07', 27, 'female', 'Los Angeles, CA', 'Next Management', '@emma.thompson', 9, 178, 84, 60, 88, '9', 'S', 'caucasian', 'blonde', 'slim'],
+            ['Valentina', 'Cruz', 'valentina.cruz@models.com', '+1-786-555-0605', 'active', '2000-01-20', 26, 'female', 'Miami, FL', 'Wilhelmina Models', '@valentina.cruz', 10, 175, 86, 61, 89, '8', 'S', 'hispanic', 'brown', 'slim'],
+            ['Zara', 'Ahmed', 'zara.ahmed@models.com', '+1-917-555-0606', 'active', '1999-08-14', 26, 'female', 'Brooklyn, NY', 'Storm Models', '@zara.ahmed', 11, 177, 83, 59, 87, '8.5', 'XS', 'middle_eastern', 'black', 'slim'],
+            ['Mia', 'Santos', 'mia.santos@models.com', '+1-305-555-0607', 'active', '2001-05-30', 24, 'female', 'Miami, FL', 'DNA Model Management', '@mia.santos', 12, 173, 85, 61, 89, '7.5', 'S', 'hispanic', 'brown', 'athletic'],
+            ['Yuki', 'Tanaka', 'yuki.tanaka@models.com', '+1-415-555-0608', 'pending', '2000-12-03', 25, 'female', 'San Francisco, CA', 'Ford Models', '@yuki.tanaka', 13, 172, 80, 57, 85, '7', 'XS', 'asian', 'black', 'slim'],
+            ['Olivia', 'White', 'olivia.white@models.com', '+1-323-555-0609', 'active', '1999-07-22', 26, 'female', 'Los Angeles, CA', 'The Society Management', '@olivia.white', 14, 180, 84, 60, 88, '9', 'S', 'caucasian', 'red', 'slim'],
+            ['Amara', 'Diallo', 'amara.diallo@models.com', '+1-347-555-0610', 'active', '2001-09-15', 24, 'female', 'Brooklyn, NY', 'IMG Models', '@amara.diallo', 15, 181, 82, 58, 86, '9.5', 'XS', 'black', 'black', 'slim'],
+            ['Andre', 'Baptiste', 'andre.baptiste@models.com', '+1-786-555-0611', 'active', '2000-04-08', 25, 'male', 'Miami, FL', 'Elite Model Management', '@andre.baptiste', 16, 190, 100, 82, 95, '11.5', 'L', 'black', 'black', 'athletic'],
+            ['Chloe', 'Martin', 'chloe.martin@models.com', '+1-212-555-0612', 'active', '1998-10-19', 27, 'female', 'Manhattan, NY', 'Women Management', '@chloe.martin', 17, 179, 83, 59, 87, '9', 'XS', 'caucasian', 'blonde', 'slim'],
+            ['Priya', 'Sharma', 'priya.sharma@models.com', '+1-718-555-0613', 'pending', '2001-01-11', 25, 'female', 'Queens, NY', 'Heroes Model Management', '@priya.sharma', 18, 174, 82, 58, 86, '7.5', 'XS', 'asian', 'black', 'slim'],
+            ['Adriana', 'Lopez', 'adriana.lopez@models.com', '+1-305-555-0614', 'active', '1999-06-25', 26, 'female', 'Miami, FL', 'Ford Models', '@adriana.lopez', 19, 175, 86, 61, 89, '8', 'S', 'hispanic', 'brown', 'athletic'],
+            ['Naomi', 'Scott', 'naomi.scott@models.com', '+1-646-555-0615', 'active', '2000-03-17', 25, 'female', 'New York, NY', 'DNA Model Management', '@naomi.scott', 20, 178, 84, 60, 88, '8.5', 'S', 'mixed', 'brown', 'slim'],
+            ['Sara', 'Kim', 'sara.kim@models.com', '+1-917-555-0616', 'active', '2001-07-04', 24, 'female', 'Manhattan, NY', 'IMG Models', '@sara.kim', 21, 173, 81, 57, 85, '7.5', 'XS', 'asian', 'black', 'slim'],
+            ['Bianca', 'Rossi', 'bianca.rossi@models.com', '+1-212-555-0617', 'active', '1999-11-28', 26, 'female', 'New York, NY', 'Next Management', '@bianca.rossi', 22, 177, 84, 60, 88, '8.5', 'S', 'caucasian', 'brown', 'slim'],
+            ['Fatima', 'Hassan', 'fatima.hassan@models.com', '+1-347-555-0618', 'pending', '2000-08-09', 25, 'female', 'Brooklyn, NY', 'Storm Models', '@fatima.hassan', 23, 176, 83, 59, 87, '8', 'XS', 'middle_eastern', 'black', 'slim'],
+            ['Kai', 'Nakamura', 'kai.nakamura@models.com', '+1-323-555-0619', 'active', '2001-04-16', 24, 'male', 'Los Angeles, CA', 'Wilhelmina Models', '@kai.nakamura', 24, 185, 96, 78, 91, '10.5', 'M', 'asian', 'black', 'athletic'],
+            ['Elena', 'Volkov', 'elena.volkov@models.com', '+1-646-555-0620', 'active', '1998-12-01', 27, 'female', 'Manhattan, NY', 'The Society Management', '@elena.volkov', 25, 180, 83, 58, 86, '9', 'XS', 'caucasian', 'blonde', 'slim'],
+            ['Catalina', 'Reyes', 'catalina.reyes@models.com', '+1-786-555-0621', 'active', '2000-05-14', 25, 'female', 'Miami, FL', 'Elite Model Management', '@catalina.reyes', 26, 174, 85, 61, 89, '8', 'S', 'hispanic', 'brown', 'slim'],
+            ['Nia', 'Brooks', 'nia.brooks@models.com', '+1-718-555-0622', 'active', '2001-10-23', 24, 'female', 'Brooklyn, NY', 'DNA Model Management', '@nia.brooks', 27, 179, 82, 58, 86, '9', 'XS', 'black', 'black', 'slim'],
+            ['Mei', 'Lin', 'mei.lin@models.com', '+1-415-555-0623', 'pending', '2000-02-07', 26, 'female', 'San Francisco, CA', 'IMG Models', '@mei.lin', 28, 175, 81, 57, 85, '7.5', 'XS', 'asian', 'black', 'slim'],
+            ['Jordan', 'Ellis', 'jordan.ellis@models.com', '+1-212-555-0624', 'active', '1999-09-30', 26, 'male', 'New York, NY', 'Ford Models', '@jordan.ellis', 29, 187, 97, 79, 92, '11', 'M', 'mixed', 'brown', 'athletic'],
+            ['Gabriela', 'Mendez', 'gabriela.mendez@models.com', '+1-305-555-0625', 'active', '2001-06-12', 24, 'female', 'Miami, FL', 'Wilhelmina Models', '@gabriela.mendez', 30, 173, 86, 62, 90, '8', 'S', 'hispanic', 'brown', 'athletic'],
+            ['Sienna', 'James', 'sienna.james@models.com', '+1-646-555-0626', 'active', '2000-11-19', 25, 'female', 'New York, NY', 'Women Management', '@sienna.james', 31, 177, 83, 59, 87, '8.5', 'S', 'mixed', 'brown', 'slim'],
+            ['Leila', 'Nazari', 'leila.nazari@models.com', '+1-917-555-0627', 'pending', '1999-04-05', 26, 'female', 'Manhattan, NY', 'Heroes Model Management', '@leila.nazari', 32, 176, 82, 58, 86, '8', 'XS', 'middle_eastern', 'brown', 'slim'],
+            ['Harper', 'Davis', 'harper.davis@models.com', '+1-310-555-0628', 'active', '2001-08-21', 24, 'female', 'Los Angeles, CA', 'Next Management', '@harper.davis', 33, 178, 84, 60, 88, '8.5', 'S', 'caucasian', 'red', 'slim'],
+            ['Xiomara', 'Vega', 'xiomara.vega@models.com', '+1-786-555-0629', 'active', '2000-07-03', 25, 'female', 'Miami, FL', 'Storm Models', '@xiomara.vega', 34, 175, 85, 61, 89, '8', 'S', 'hispanic', 'black', 'slim'],
+            ['Tiana', 'Moore', 'tiana.moore@models.com', '+1-347-555-0630', 'active', '2001-03-26', 24, 'female', 'Brooklyn, NY', 'Elite Model Management', '@tiana.moore', 35, 180, 83, 59, 87, '9', 'S', 'black', 'black', 'athletic'],
         ];
 
         foreach ($extraModels as $m) {
@@ -274,29 +269,28 @@ class UserSeeder extends Seeder
                 'phone'      => $m[3],
                 'password'   => bcrypt('runway7'),
                 'role'       => 'model',
-                'status'     => $m[5],
-                'login_code' => $m[4],
+                'status'     => $m[4],
             ]);
 
             ModelProfile::create([
                 'user_id'              => $user->id,
-                'birth_date'           => $m[6],
-                'age'                  => $m[7],
-                'gender'               => $m[8],
-                'location'             => $m[9],
-                'agency'               => $m[10],
+                'birth_date'           => $m[5],
+                'age'                  => $m[6],
+                'gender'               => $m[7],
+                'location'             => $m[8],
+                'agency'               => $m[9],
                 'is_agency'            => true,
-                'instagram'            => $m[11],
-                'participation_number' => $m[12],
-                'height'               => $m[13],
-                'bust'                 => $m[14],
-                'waist'                => $m[15],
-                'hips'                 => $m[16],
-                'shoe_size'            => $m[17],
-                'dress_size'           => $m[18],
-                'ethnicity'            => $m[19],
-                'hair'                 => $m[20],
-                'body_type'            => $m[21],
+                'instagram'            => $m[10],
+                'participation_number' => $m[11],
+                'height'               => $m[12],
+                'bust'                 => $m[13],
+                'waist'                => $m[14],
+                'hips'                 => $m[15],
+                'shoe_size'            => $m[16],
+                'dress_size'           => $m[17],
+                'ethnicity'            => $m[18],
+                'hair'                 => $m[19],
+                'body_type'            => $m[20],
                 'compcard_completed'   => false,
             ]);
         }

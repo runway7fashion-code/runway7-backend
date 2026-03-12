@@ -7,6 +7,7 @@ use App\Exports\ModelsExport;
 use App\Http\Controllers\Controller;
 use App\Imports\ModelsImport;
 use App\Jobs\SendWelcomeEmailJob;
+use App\Models\CommunicationLog;
 use App\Models\Event;
 use App\Models\EventPass;
 use App\Models\FittingAssignment;
@@ -32,6 +33,7 @@ class ModelController extends Controller
         $query = User::models()->with([
             'modelProfile',
             'eventsAsModelWithCasting',
+            'communicationLogs' => fn($q) => $q->where('channel', 'welcome_email')->with('sender')->orderByDesc('created_at'),
         ]);
 
         if ($request->filled('event')) {
@@ -641,16 +643,29 @@ class ModelController extends Controller
     {
         $this->authorizeModel($model);
 
-        // Obtener primer evento asignado para incluir datos en el email
         $model->load(['eventsAsModelWithCasting.eventDays' => fn($q) => $q->where('type', 'casting')]);
-        $firstEvent  = $model->eventsAsModelWithCasting?->first();
-        $castingDay  = $firstEvent?->eventDays?->first();
+
+        // Usar el evento seleccionado por el usuario, o el primero si no se especificó
+        $eventId    = $request->input('event_id');
+        $event      = $eventId
+            ? $model->eventsAsModelWithCasting?->firstWhere('id', $eventId)
+            : $model->eventsAsModelWithCasting?->first();
+        $castingDay = $event?->eventDays?->first();
+
+        $log = CommunicationLog::create([
+            'user_id'  => $model->id,
+            'sent_by'  => $request->user()->id,
+            'type'     => 'email',
+            'channel'  => 'welcome_email',
+            'status'   => 'queued',
+        ]);
 
         SendWelcomeEmailJob::dispatch(
             userId:      $model->id,
-            eventName:   $firstEvent?->name,
-            castingTime: $firstEvent?->pivot?->casting_time,
+            eventName:   $event?->name,
+            castingTime: $event?->pivot?->casting_time,
             castingDate: $castingDay?->date?->format('Y-m-d'),
+            logId:       $log->id,
         );
 
         $this->activityLog->log(
@@ -673,6 +688,11 @@ class ModelController extends Controller
             emailSent: $request->input('email_sent'),
             testModel: $request->input('test_model'),
         ), $filename);
+    }
+
+    public function downloadImportTemplate()
+    {
+        return Excel::download(new \App\Exports\ModelsTemplateExport(), 'models_import_template.xlsx');
     }
 
     public function importModels(Request $request)

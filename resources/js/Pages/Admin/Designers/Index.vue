@@ -82,7 +82,6 @@ function updateDesignerStatus(d, newStatus, event) {
         const missing = [];
         if (!d.has_event) missing.push('No tiene evento asignado.');
         if (!d.has_show) missing.push('No tiene show asignado (día y hora).');
-        if (!d.has_fitting) missing.push('No tiene fitting asignado.');
         if (missing.length) {
             if (event?.target) event.target.value = d.status;
             noEventDesigner.value = d;
@@ -203,8 +202,12 @@ function sendPendingOnboarding() {
     router.post('/admin/designers/send-bulk-onboarding', {}, { preserveScroll: true });
 }
 
+function canSendEmail(d) {
+    return d.status === 'pending' && !!d.email;
+}
+
 function canSendSms(d) {
-    return !!d.phone;
+    return d.status === 'pending' && !!d.phone;
 }
 
 function sendOnboardingSms(d, e) {
@@ -545,7 +548,9 @@ function submitImport() {
                             <td class="px-4 py-3" @click.stop>
                                 <div class="flex items-center gap-2">
                                     <button @click="sendOnboardingEmail(d, $event)"
-                                        class="p-1.5 border border-gray-200 rounded-lg transition-colors hover:bg-gray-50 text-gray-600"
+                                        class="p-1.5 border border-gray-200 rounded-lg transition-colors"
+                                        :class="canSendEmail(d) ? 'hover:bg-gray-50 text-gray-600' : 'opacity-40 cursor-not-allowed text-gray-400'"
+                                        :disabled="!canSendEmail(d)"
                                         title="Enviar Email">
                                         <EnvelopeIcon class="w-4 h-4" />
                                     </button>

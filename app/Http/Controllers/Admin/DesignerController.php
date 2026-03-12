@@ -341,9 +341,6 @@ class DesignerController extends Controller
             if (!$designer->designedShows()->whereHas('eventDay')->exists()) {
                 $eventErrors[] = 'No tiene show asignado (día y hora).';
             }
-            if (!$designer->fittingAssignments()->exists()) {
-                $eventErrors[] = 'No tiene fitting asignado.';
-            }
             if (!empty($eventErrors)) {
                 return back()->with('error', 'No se puede cambiar a Pendiente: ' . implode(' ', $eventErrors));
             }

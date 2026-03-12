@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Mail\WelcomeModelMail;
+use App\Models\CommunicationLog;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -26,6 +27,7 @@ class SendWelcomeEmailJob implements ShouldQueue
         public ?string $eventName = null,
         public ?string $castingTime = null,
         public ?string $castingDate = null,
+        public ?int $logId = null,
     ) {}
 
     public function handle(): void
@@ -33,9 +35,6 @@ class SendWelcomeEmailJob implements ShouldQueue
         $user = User::find($this->userId);
 
         if (!$user) return;
-
-        // Doble chequeo: si ya se envió en otro job, saltar
-        if ($user->welcome_email_sent_at) return;
 
         Mail::to($user->email, "{$user->first_name} {$user->last_name}")
             ->send(new WelcomeModelMail(
@@ -46,10 +45,20 @@ class SendWelcomeEmailJob implements ShouldQueue
             ));
 
         $user->update(['welcome_email_sent_at' => now()]);
+
+        if ($this->logId) {
+            CommunicationLog::where('id', $this->logId)
+                ->update(['status' => 'sent', 'sent_at' => now()]);
+        }
     }
 
     public function failed(\Throwable $exception): void
     {
         \Illuminate\Support\Facades\Log::error("SendWelcomeEmailJob failed for user {$this->userId}: " . $exception->getMessage());
+
+        if ($this->logId) {
+            CommunicationLog::where('id', $this->logId)
+                ->update(['status' => 'failed', 'error_message' => $exception->getMessage()]);
+        }
     }
 }

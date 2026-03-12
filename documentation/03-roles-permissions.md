@@ -182,6 +182,5 @@ function hasSection(section) {
 ### API REST (Sanctum)
 - Tokens de API (Personal Access Tokens)
 - Login con email/password: `POST /api/v1/auth/login`
-- Login con código kiosko: `POST /api/v1/auth/login-code`
 - Rate limiting: 10 intentos por minuto
 - Todas las rutas protegidas usan `auth:sanctum`
