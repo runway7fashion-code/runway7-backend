@@ -37,7 +37,8 @@ function bodyTypeLabel(b) {
     return { slim: 'Delgada', athletic: 'Atlética', average: 'Promedio', curvy: 'Curvy', plus_size: 'Plus Size' }[b] ?? '—';
 }
 
-function castingStatusLabel(s) {
+function castingStatusLabel(s, gender = null) {
+    if (s === 'rejected') return gender === 'male' ? 'Rechazado' : 'Rechazada';
     return { scheduled: 'Agendada', checked_in: 'Hizo check-in', selected: 'Seleccionada', no_show: 'No se presentó' }[s] ?? s ?? '—';
 }
 
@@ -311,10 +312,10 @@ function deleteModel() {
                                                 'text-yellow-600': evt.casting_status === 'scheduled',
                                                 'text-blue-600': evt.casting_status === 'checked_in',
                                                 'text-green-600': evt.casting_status === 'selected',
-                                                'text-red-500': evt.casting_status === 'no_show',
+                                                'text-red-500': evt.casting_status === 'no_show' || evt.casting_status === 'rejected',
                                             }"
                                             class="font-medium">
-                                            · {{ castingStatusLabel(evt.casting_status) }}
+                                            · {{ castingStatusLabel(evt.casting_status, profile?.gender) }}
                                         </span>
                                     </span>
                                 </div>

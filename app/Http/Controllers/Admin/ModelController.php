@@ -835,6 +835,29 @@ class ModelController extends Controller
         return back()->with('success', 'Estado actualizado.');
     }
 
+    public function updateEventCastingStatus(Request $request, User $model, Event $event)
+    {
+        $this->authorizeModel($model);
+
+        $request->validate([
+            'casting_status' => 'required|in:scheduled,checked_in,selected,no_show,rejected',
+        ]);
+
+        $pivot = DB::table('event_model')
+            ->where('model_id', $model->id)
+            ->where('event_id', $event->id)
+            ->first();
+
+        abort_unless($pivot, 404, 'La modelo no está asignada a este evento.');
+
+        DB::table('event_model')
+            ->where('model_id', $model->id)
+            ->where('event_id', $event->id)
+            ->update(['casting_status' => $request->casting_status]);
+
+        return back()->with('success', 'Estado de casting actualizado.');
+    }
+
     // --- Helpers ---
 
     private function authorizeModel(User $model): void

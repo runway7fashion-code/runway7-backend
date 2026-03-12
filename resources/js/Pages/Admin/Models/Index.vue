@@ -189,7 +189,8 @@ function openEmailModal(m, e) {
         return;
     }
     emailModalModel.value   = m;
-    emailModalEventId.value = events[0]?.id ?? null;
+    const firstAvailable = events.find(ev => ev.pivot?.casting_status !== 'rejected');
+    emailModalEventId.value = firstAvailable?.id ?? null;
 }
 
 function confirmSendWelcomeEmail(m) {
@@ -216,6 +217,13 @@ const selectedModel = ref(null);
 function openEventsModal(model, e) {
     e.stopPropagation();
     selectedModel.value = model;
+}
+
+function updateCastingStatus(model, eventId, newStatus) {
+    router.patch(`/admin/models/${model.id}/events/${eventId}/casting-status`,
+        { casting_status: newStatus },
+        { preserveScroll: true }
+    );
 }
 
 function eventStatusBadge(status) {
@@ -262,7 +270,11 @@ function formatTime(t) {
     return t.length > 5 ? t.substring(0, 5) : t;
 }
 
-function castingStatusInfo(status) {
+function castingStatusInfo(status, gender = null) {
+    if (status === 'rejected') {
+        const label = gender === 'male' ? 'Rechazado' : 'Rechazada';
+        return { label, color: 'text-red-500', dot: 'bg-red-400' };
+    }
     return {
         scheduled:  { label: 'Agendada',        color: 'text-gray-500',  dot: 'bg-gray-400' },
         checked_in: { label: 'Check-in',         color: 'text-blue-600',  dot: 'bg-blue-500' },
@@ -502,6 +514,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <option value="checked_in">Check-in</option>
                     <option value="selected">Seleccionada</option>
                     <option value="no_show">No se presentó</option>
+                    <option value="rejected">Rechazada/o</option>
                 </select>
 
                 <select v-model="status"
@@ -989,26 +1002,31 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                         </div>
                                     </div>
 
-                                    <!-- Estado casting -->
-                                    <div class="flex items-center gap-2">
+                                    <!-- Estado casting (editable) -->
+                                    <div class="flex items-center gap-2 col-span-2">
                                         <div class="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center flex-shrink-0">
                                             <svg class="w-3.5 h-3.5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                                             </svg>
                                         </div>
-                                        <div>
-                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Estado casting</p>
-                                            <template v-if="ev.pivot?.casting_time">
-                                                <div class="flex items-center gap-1">
-                                                    <span :class="castingStatusInfo(ev.pivot?.casting_status).dot"
-                                                        class="w-1.5 h-1.5 rounded-full flex-shrink-0"></span>
-                                                    <span :class="castingStatusInfo(ev.pivot?.casting_status).color"
-                                                        class="text-xs font-medium">
-                                                        {{ castingStatusInfo(ev.pivot?.casting_status).label }}
-                                                    </span>
-                                                </div>
-                                            </template>
-                                            <span v-else class="text-xs text-gray-400">—</span>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-[10px] text-gray-400 leading-none mb-1">Estado casting</p>
+                                            <select
+                                                :value="ev.pivot?.casting_status"
+                                                @change="updateCastingStatus(selectedModel, ev.id, $event.target.value)"
+                                                class="w-full border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                                                :class="{
+                                                    'border-green-300 bg-green-50 text-green-700': ev.pivot?.casting_status === 'selected',
+                                                    'border-red-300 bg-red-50 text-red-600': ev.pivot?.casting_status === 'no_show' || ev.pivot?.casting_status === 'rejected',
+                                                    'border-blue-300 bg-blue-50 text-blue-700': ev.pivot?.casting_status === 'checked_in',
+                                                    'border-gray-300 bg-white text-gray-600': ev.pivot?.casting_status === 'scheduled',
+                                                }">
+                                                <option value="scheduled">Agendada</option>
+                                                <option value="checked_in">Check-in</option>
+                                                <option value="selected">Seleccionada</option>
+                                                <option value="no_show">No se presentó</option>
+                                                <option value="rejected">{{ selectedModel?.model_profile?.gender === 'male' ? 'Rechazado' : 'Rechazada' }}</option>
+                                            </select>
                                         </div>
                                     </div>
 
@@ -1332,12 +1350,21 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 </p>
                 <div class="space-y-2 mb-5">
                     <label v-for="evt in (emailModalModel.events_as_model_with_casting ?? [])" :key="evt.id"
-                        class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-colors"
-                        :class="emailModalEventId === evt.id ? 'border-black bg-gray-50' : 'border-gray-200 hover:border-gray-300'">
-                        <input type="radio" :value="evt.id" v-model="emailModalEventId" class="accent-black" />
-                        <div>
-                            <p class="text-sm font-medium text-gray-900">{{ evt.name }}</p>
-                            <p v-if="evt.pivot?.casting_time" class="text-xs text-gray-400">
+                        class="flex items-center gap-3 p-3 border rounded-xl transition-colors"
+                        :class="evt.pivot?.casting_status === 'rejected'
+                            ? 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'
+                            : emailModalEventId === evt.id
+                                ? 'border-black bg-gray-50 cursor-pointer'
+                                : 'border-gray-200 hover:border-gray-300 cursor-pointer'">
+                        <input type="radio" :value="evt.id" v-model="emailModalEventId"
+                            :disabled="evt.pivot?.casting_status === 'rejected'"
+                            class="accent-black" />
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium" :class="evt.pivot?.casting_status === 'rejected' ? 'text-gray-400' : 'text-gray-900'">{{ evt.name }}</p>
+                            <p v-if="evt.pivot?.casting_status === 'rejected'" class="text-xs text-red-400 font-medium">
+                                {{ emailModalModel.model_profile?.gender === 'male' ? 'Rechazado' : 'Rechazada' }}
+                            </p>
+                            <p v-else-if="evt.pivot?.casting_time" class="text-xs text-gray-400">
                                 Casting: {{ evt.pivot.casting_time }}
                             </p>
                         </div>
