@@ -369,11 +369,34 @@ class ModelService
     public function deleteModel(User $user): void
     {
         DB::transaction(function () use ($user) {
+            // Decrementar booked en casting_slots por cada evento con horario asignado
+            $eventRows = DB::table('event_model')
+                ->where('model_id', $user->id)
+                ->whereNotNull('casting_time')
+                ->get(['event_id', 'casting_time']);
+
+            foreach ($eventRows as $row) {
+                $castingDayId = DB::table('event_days')
+                    ->where('event_id', $row->event_id)
+                    ->where('type', 'casting')
+                    ->value('id');
+
+                if ($castingDayId) {
+                    DB::table('casting_slots')
+                        ->where('event_day_id', $castingDayId)
+                        ->where('time', $row->casting_time)
+                        ->where('booked', '>', 0)
+                        ->decrement('booked');
+                }
+            }
+
+            // Eliminar passes de la modelo (nullOnDelete los dejaría huérfanos)
+            DB::table('event_passes')->where('user_id', $user->id)->delete();
+
             // Eliminar toda la carpeta del storage (foto de perfil + comp card)
             Storage::disk('public')->deleteDirectory("models/{$user->id}");
 
-            // Hard delete: elimina definitivamente de la BD (cascade borra model_profile,
-            // event_model, show_model, event_passes, device_tokens automáticamente)
+            // Hard delete: cascade borra model_profile, event_model, show_model, device_tokens
             $user->forceDelete();
         });
     }

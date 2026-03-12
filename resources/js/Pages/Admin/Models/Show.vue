@@ -164,10 +164,6 @@ function deleteModel() {
                                     class="text-xs font-medium rounded-lg px-3 py-1.5">
                                     {{ statusBadgeLabel(model.status) }}
                                 </span>
-                                <button @click="sendWelcomeEmail"
-                                    class="px-3 py-1.5 border border-gray-200 rounded-lg text-xs hover:bg-gray-50 transition-colors">
-                                    Enviar Email
-                                </button>
                                 <Link :href="`/admin/models/${model.id}/edit`"
                                     class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
                                     Editar
@@ -307,7 +303,7 @@ function deleteModel() {
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                         Casting: {{ evt.casting_time ?? 'No asignado' }}
-                                        <span v-if="evt.casting_time && evt.casting_status"
+                                        <span v-if="evt.casting_status"
                                             :class="{
                                                 'text-yellow-600': evt.casting_status === 'scheduled',
                                                 'text-blue-600': evt.casting_status === 'checked_in',

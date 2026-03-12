@@ -850,10 +850,52 @@ class ModelController extends Controller
 
         abort_unless($pivot, 404, 'La modelo no está asignada a este evento.');
 
+        $previousStatus  = $pivot->casting_status;
+        $newStatus       = $request->casting_status;
+        $castingTime     = $pivot->casting_time;
+
         DB::table('event_model')
             ->where('model_id', $model->id)
             ->where('event_id', $event->id)
-            ->update(['casting_status' => $request->casting_status]);
+            ->update(['casting_status' => $newStatus]);
+
+        if ($newStatus === 'rejected' && $previousStatus !== 'rejected') {
+            // Liberar el casting slot si tenía horario asignado
+            if ($castingTime) {
+                $castingDayId = DB::table('event_days')
+                    ->where('event_id', $event->id)
+                    ->where('type', 'casting')
+                    ->value('id');
+
+                if ($castingDayId) {
+                    DB::table('casting_slots')
+                        ->where('event_day_id', $castingDayId)
+                        ->where('time', $castingTime)
+                        ->where('booked', '>', 0)
+                        ->decrement('booked');
+                }
+
+                DB::table('event_model')
+                    ->where('model_id', $model->id)
+                    ->where('event_id', $event->id)
+                    ->update(['casting_time' => null]);
+            }
+
+            // Cancelar pass solo si está activo (no tocar los ya usados)
+            DB::table('event_passes')
+                ->where('user_id', $model->id)
+                ->where('event_id', $event->id)
+                ->where('status', 'active')
+                ->update(['status' => 'cancelled']);
+
+        } elseif ($previousStatus === 'rejected' && $newStatus !== 'rejected') {
+            // Reactivar pass solo si fue cancelado (no tocar los usados)
+            DB::table('event_passes')
+                ->where('user_id', $model->id)
+                ->where('event_id', $event->id)
+                ->where('status', 'cancelled')
+                ->update(['status' => 'active']);
+        }
 
         return back()->with('success', 'Estado de casting actualizado.');
     }
