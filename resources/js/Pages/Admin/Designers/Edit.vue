@@ -166,6 +166,17 @@ const assistants = computed(() => props.designer.assistants ?? []);
 const newAssistant = ref({ full_name: '', document_id: '', phone: '', email: '' });
 const assistantEventId = ref(designerEvents.value[0]?.id ?? '');
 
+const assistantEventLimit = computed(() => {
+    const evt = designerEvents.value.find(e => e.id == assistantEventId.value);
+    return evt?.assistants ?? null;
+});
+const assistantEventCount = computed(() =>
+    assistants.value.filter(a => a.event_id == assistantEventId.value).length
+);
+const assistantLimitReached = computed(() =>
+    assistantEventLimit.value !== null && assistantEventCount.value >= assistantEventLimit.value
+);
+
 function addAssistant() {
     if (!newAssistant.value.full_name || !assistantEventId.value) return;
     router.post(`/admin/designers/${props.designer.id}/assistants`, {
@@ -707,7 +718,14 @@ function submit() {
 
                 <!-- Tab 3: Asistentes -->
                 <div v-show="activeTab === 3" class="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
-                    <h4 class="font-semibold text-gray-800">Asistentes</h4>
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-semibold text-gray-800">Asistentes</h4>
+                        <span v-if="assistantEventLimit !== null"
+                            :class="assistantLimitReached ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-gray-50 text-gray-500 border border-gray-200'"
+                            class="text-xs font-medium px-2.5 py-1 rounded-full">
+                            {{ assistantEventCount }} / {{ assistantEventLimit }} para este evento
+                        </span>
+                    </div>
 
                     <!-- Lista actual -->
                     <div v-if="assistants.length === 0" class="text-sm text-gray-400 italic">Sin asistentes registrados.</div>
@@ -729,8 +747,18 @@ function submit() {
                     <!-- Agregar nuevo -->
                     <div class="border-t border-gray-100 pt-4 space-y-3">
                         <h5 class="text-sm font-medium text-gray-700">Agregar asistente</h5>
+
+                        <!-- Aviso límite alcanzado -->
+                        <div v-if="assistantLimitReached"
+                            class="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+                            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                            </svg>
+                            Límite alcanzado — este diseñador tiene <strong class="mx-1">{{ assistantEventLimit }}</strong> asistente(s) negociado(s) para este evento.
+                        </div>
+
                         <div class="grid grid-cols-2 gap-3">
-                            <div>
+                            <div class="col-span-2">
                                 <label class="block text-xs text-gray-500 mb-1">Evento *</label>
                                 <select v-model="assistantEventId"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
@@ -743,6 +771,11 @@ function submit() {
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
                             <div>
+                                <label class="block text-xs text-gray-500 mb-1">Email *</label>
+                                <input v-model="newAssistant.email" type="email"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
+                            <div>
                                 <label class="block text-xs text-gray-500 mb-1">Documento ID</label>
                                 <input v-model="newAssistant.document_id" type="text"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
@@ -752,14 +785,9 @@ function submit() {
                                 <input v-model="newAssistant.phone" type="tel"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
-                            <div>
-                                <label class="block text-xs text-gray-500 mb-1">Email</label>
-                                <input v-model="newAssistant.email" type="email"
-                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
-                            </div>
                         </div>
                         <button type="button" @click="addAssistant"
-                            :disabled="!newAssistant.full_name || !assistantEventId"
+                            :disabled="!newAssistant.full_name || !assistantEventId || !newAssistant.email || assistantLimitReached"
                             class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors">
                             + Agregar Asistente
                         </button>

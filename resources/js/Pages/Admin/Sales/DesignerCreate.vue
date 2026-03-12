@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, useForm } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { DocumentArrowUpIcon, TrashIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -50,9 +50,21 @@ const form = useForm({
     agreed_price: '',
     downpayment: '',
     installments_count: 3,
+    looks: '',
+    assistants: '',
     notes: '',
     sales_rep_id: '',
     documents: [],
+});
+
+const selectedPackage = computed(() => props.packages?.find(p => p.id == form.package_id) ?? null);
+
+watch(() => form.package_id, () => {
+    if (selectedPackage.value) {
+        form.looks = selectedPackage.value.default_looks;
+        form.assistants = selectedPackage.value.default_assistants;
+        if (!form.agreed_price) form.agreed_price = selectedPackage.value.price;
+    }
 });
 
 // Documents
@@ -210,6 +222,19 @@ function submit() {
                                     </select>
                                     <p v-if="form.errors.package_id" class="err">{{ form.errors.package_id }}</p>
                                 </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Looks negociados *</label>
+                                    <input v-model="form.looks" type="number" min="1" max="100" class="input" placeholder="Ej. 10" />
+                                    <p v-if="form.errors.looks" class="err">{{ form.errors.looks }}</p>
+                                    <p v-if="selectedPackage" class="text-xs text-gray-400 mt-1">Default del paquete: {{ selectedPackage.default_looks }}</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Asistentes negociados *</label>
+                                    <input v-model="form.assistants" type="number" min="0" max="20" class="input" placeholder="Ej. 2" />
+                                    <p v-if="form.errors.assistants" class="err">{{ form.errors.assistants }}</p>
+                                    <p v-if="selectedPackage" class="text-xs text-gray-400 mt-1">Default del paquete: {{ selectedPackage.default_assistants }}</p>
+                                </div>
+
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Precio Acordado ($) *</label>
                                     <input v-model="form.agreed_price" type="number" step="0.01" min="0" class="input" />

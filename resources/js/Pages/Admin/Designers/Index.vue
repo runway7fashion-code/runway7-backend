@@ -190,11 +190,33 @@ function fmtEmailSent(dt) {
     return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+// --- Modales de envío de email / SMS ---
+const emailModalDesigner = ref(null);
+const emailModalEventId  = ref(null);
+const smsModalDesigner   = ref(null);
+const smsModalEventId    = ref(null);
+
 function sendOnboardingEmail(d, e) {
     e.stopPropagation();
-    const label = d.welcome_email_sent_at ? 'reenviar' : 'enviar';
-    if (!confirm(`¿Deseas ${label} email de onboarding a ${d.first_name}?`)) return;
-    router.post(`/admin/designers/${d.id}/send-onboarding`, {}, { preserveScroll: true });
+    const events = d.events_as_designer ?? [];
+    if (events.length <= 1) {
+        // Un solo evento o sin evento — enviar directo
+        router.post(`/admin/designers/${d.id}/send-onboarding`,
+            { event_id: events[0]?.id ?? null },
+            { preserveScroll: true }
+        );
+    } else {
+        emailModalEventId.value = events[0]?.id ?? null;
+        emailModalDesigner.value = d;
+    }
+}
+
+function confirmSendEmail() {
+    const d = emailModalDesigner.value;
+    router.post(`/admin/designers/${d.id}/send-onboarding`,
+        { event_id: emailModalEventId.value },
+        { preserveScroll: true, onSuccess: () => { emailModalDesigner.value = null; } }
+    );
 }
 
 function sendPendingOnboarding() {
@@ -213,9 +235,24 @@ function canSendSms(d) {
 function sendOnboardingSms(d, e) {
     e.stopPropagation();
     if (!d.phone) return alert(`${d.first_name} no tiene número de teléfono registrado.`);
-    const label = d.sms_sent_at ? 'reenviar' : 'enviar';
-    if (!confirm(`¿Deseas ${label} SMS de onboarding a ${d.first_name}?`)) return;
-    router.post(`/admin/designers/${d.id}/send-onboarding-sms`, {}, { preserveScroll: true });
+    const events = d.events_as_designer ?? [];
+    if (events.length <= 1) {
+        router.post(`/admin/designers/${d.id}/send-onboarding-sms`,
+            { event_id: events[0]?.id ?? null },
+            { preserveScroll: true }
+        );
+    } else {
+        smsModalEventId.value = events[0]?.id ?? null;
+        smsModalDesigner.value = d;
+    }
+}
+
+function confirmSendSms() {
+    const d = smsModalDesigner.value;
+    router.post(`/admin/designers/${d.id}/send-onboarding-sms`,
+        { event_id: smsModalEventId.value },
+        { preserveScroll: true, onSuccess: () => { smsModalDesigner.value = null; } }
+    );
 }
 
 function sendPendingSms() {
@@ -1035,6 +1072,73 @@ function submitImport() {
                     <button @click="showCommModal = false"
                         class="px-5 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
                         Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Modal: Selección de evento para EMAIL -->
+    <Teleport to="body">
+        <div v-if="emailModalDesigner" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="emailModalDesigner = null">
+            <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+                <div class="bg-black px-6 py-5">
+                    <h3 class="text-base font-semibold text-white">Enviar Email de Onboarding</h3>
+                    <p class="text-white/60 text-sm mt-0.5">{{ emailModalDesigner.first_name }} {{ emailModalDesigner.last_name }}</p>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Seleccionar Evento</label>
+                        <select v-model="emailModalEventId" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-white">
+                            <option v-for="ev in emailModalDesigner.events_as_designer" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
+                        </select>
+                    </div>
+                    <!-- Nota asistentes -->
+                    <div class="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-700">
+                        <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                        </svg>
+                        <span>También se enviará el correo a los <strong>asistentes registrados</strong> en este evento.</span>
+                    </div>
+                </div>
+                <div class="px-6 pb-6 flex gap-3">
+                    <button @click="confirmSendEmail"
+                        :disabled="!emailModalEventId"
+                        class="flex-1 px-4 py-2.5 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-40 transition-colors">
+                        Enviar Email
+                    </button>
+                    <button @click="emailModalDesigner = null"
+                        class="px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Modal: Selección de evento para SMS -->
+    <Teleport to="body">
+        <div v-if="smsModalDesigner" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="smsModalDesigner = null">
+            <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+                <div class="bg-black px-6 py-5">
+                    <h3 class="text-base font-semibold text-white">Enviar SMS de Onboarding</h3>
+                    <p class="text-white/60 text-sm mt-0.5">{{ smsModalDesigner.first_name }} {{ smsModalDesigner.last_name }}</p>
+                </div>
+                <div class="p-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Seleccionar Evento</label>
+                    <select v-model="smsModalEventId" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-white">
+                        <option v-for="ev in smsModalDesigner.events_as_designer" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
+                    </select>
+                </div>
+                <div class="px-6 pb-6 flex gap-3">
+                    <button @click="confirmSendSms"
+                        :disabled="!smsModalEventId"
+                        class="flex-1 px-4 py-2.5 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-40 transition-colors">
+                        Enviar SMS
+                    </button>
+                    <button @click="smsModalDesigner = null"
+                        class="px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                        Cancelar
                     </button>
                 </div>
             </div>

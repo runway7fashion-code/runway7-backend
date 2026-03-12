@@ -222,16 +222,6 @@ const socialLinks = computed(() => {
                                     class="px-2.5 py-1 rounded-full text-xs font-medium border">
                                     {{ statusBadgeLabel() }}
                                 </span>
-                                <button @click="sendOnboardingSms" :disabled="sendingSms"
-                                    class="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center gap-1.5">
-                                    <DevicePhoneMobileIcon class="w-3.5 h-3.5" />
-                                    {{ sendingSms ? 'Enviando...' : 'SMS' }}
-                                </button>
-                                <button @click="sendOnboardingEmail" :disabled="sendingOnboarding"
-                                    class="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center gap-1.5">
-                                    <EnvelopeIcon class="w-3.5 h-3.5" />
-                                    {{ sendingOnboarding ? 'Enviando...' : 'Email' }}
-                                </button>
                                 <Link :href="`/admin/designers/${designer.id}/edit`"
                                     class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
                                     Editar
@@ -489,7 +479,14 @@ const socialLinks = computed(() => {
 
                     <!-- Asistentes del evento -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-5">
-                        <h4 class="font-bold text-gray-900 mb-3">Asistentes</h4>
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-bold text-gray-900">Asistentes</h4>
+                            <span v-if="selectedEvent?.assistants != null"
+                                :class="tabAssistants.length >= selectedEvent.assistants ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-500'"
+                                class="text-xs font-medium px-2 py-0.5 rounded-full">
+                                {{ tabAssistants.length }} / {{ selectedEvent.assistants }}
+                            </span>
+                        </div>
                         <div v-if="tabAssistants.length === 0" class="text-sm text-gray-400 italic">Sin asistentes.</div>
                         <div v-for="a in tabAssistants" :key="a.id"
                             class="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">

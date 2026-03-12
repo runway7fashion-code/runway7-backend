@@ -198,6 +198,8 @@ class SalesController extends Controller
             'agreed_price'=> 'required|numeric|min:0',
             'downpayment' => 'required|numeric|min:0',
             'installments_count' => 'required|integer|min:1|max:12',
+            'looks'           => 'nullable|integer|min:1|max:100',
+            'assistants'      => 'nullable|integer|min:0|max:20',
             'notes'           => 'nullable|string',
             'sales_rep_id'    => 'nullable|exists:users,id',
             'documents'           => 'nullable|array',
@@ -245,10 +247,12 @@ class SalesController extends Controller
             ]);
 
             // Asignar al evento inmediatamente (sin show, eso lo asigna operation)
+            $package = DesignerPackage::find($request->package_id);
             $this->designerService->assignToEvent($user, $request->event_id, [
                 'package_id'    => $request->package_id,
                 'package_price' => $request->agreed_price,
-                'looks'         => 10,
+                'looks'         => $request->filled('looks') ? (int) $request->looks : ($package?->default_looks ?? 10),
+                'assistants'    => $request->filled('assistants') ? (int) $request->assistants : ($package?->default_assistants ?? 1),
             ]);
 
             // Guardar documentos si se subieron

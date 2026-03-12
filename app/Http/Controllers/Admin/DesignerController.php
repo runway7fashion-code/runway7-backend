@@ -610,7 +610,7 @@ class DesignerController extends Controller
             'full_name'   => 'required|string|max:255',
             'document_id' => 'nullable|string|max:255',
             'phone'       => 'nullable|string|max:255',
-            'email'       => 'nullable|email|max:255',
+            'email'       => 'required|email|max:255',
         ]);
 
         try {
@@ -697,11 +697,18 @@ class DesignerController extends Controller
     {
         $this->authorizeDesigner($designer);
 
-        $designer->load('eventsAsDesigner', 'designedShows.eventDay');
-        $firstEvent = $designer->eventsAsDesigner?->first();
+        $designer->load(['eventsAsDesigner', 'designedShows.eventDay', 'designerAssistants', 'designerProfile']);
+
+        // Seleccionar el evento indicado (o el primero si no se especifica)
+        $eventId = $request->input('event_id');
+        $selectedEvent = $eventId
+            ? $designer->eventsAsDesigner->firstWhere('id', $eventId)
+            : $designer->eventsAsDesigner->first();
 
         $shows = $designer->designedShows
-            ->filter(fn($show) => $show->eventDay && $show->pivot->status !== 'cancelled')
+            ->filter(fn($show) => $show->eventDay
+                && $show->pivot->status !== 'cancelled'
+                && (!$eventId || $show->eventDay->event_id == $eventId))
             ->sortBy([fn($a, $b) => $a->eventDay->date <=> $b->eventDay->date, fn($a, $b) => $a->scheduled_time <=> $b->scheduled_time])
             ->map(fn($show) => [
                 'day_label'      => $show->eventDay->label,
@@ -718,7 +725,7 @@ class DesignerController extends Controller
         try {
             \App\Jobs\SendDesignerOnboardingJob::dispatch(
                 userId:    $designer->id,
-                eventName: $firstEvent?->name,
+                eventName: $selectedEvent?->name,
                 shows:     $shows,
                 sentBy:    $request->user()->id,
                 logId:     $log->id,
@@ -726,6 +733,22 @@ class DesignerController extends Controller
         } catch (\Throwable $e) {
             $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
             return back()->with('error', "Error al enviar email a {$designer->full_name}: {$e->getMessage()}");
+        }
+
+        // Enviar email a los asistentes del evento seleccionado
+        $assistants = $designer->designerAssistants
+            ->filter(fn($a) => $a->user_id && (!$eventId || $a->event_id == $eventId));
+
+        foreach ($assistants as $assistant) {
+            $assistantUser = \App\Models\User::find($assistant->user_id);
+            if ($assistantUser) {
+                \App\Jobs\SendAssistantOnboardingJob::dispatch(
+                    assistantUserId: $assistantUser->id,
+                    designerName:    $designer->full_name,
+                    brandName:       $designer->designerProfile?->brand_name,
+                    eventName:       $selectedEvent?->name,
+                );
+            }
         }
 
         // Auto-onboarded: actualizar status del designer y sales_registration
@@ -736,7 +759,13 @@ class DesignerController extends Controller
             ->where('status', 'registered')
             ->update(['status' => 'onboarded', 'onboarded_at' => now(), 'onboarded_by' => $request->user()->id]);
 
-        return back()->with('success', "Email de onboarding encolado para {$designer->full_name}.");
+        $assistantCount = $assistants->count();
+        $msg = "Email de onboarding encolado para {$designer->full_name}";
+        if ($assistantCount > 0) {
+            $msg .= " y {$assistantCount} asistente(s)";
+        }
+
+        return back()->with('success', $msg . '.');
     }
 
     public function sendBulkOnboardingEmail(Request $request)
@@ -813,7 +842,10 @@ class DesignerController extends Controller
         }
 
         $designer->load('eventsAsDesigner');
-        $firstEvent = $designer->eventsAsDesigner?->first();
+        $eventId = $request->input('event_id');
+        $firstEvent = $eventId
+            ? $designer->eventsAsDesigner->firstWhere('id', $eventId)
+            : $designer->eventsAsDesigner->first();
 
         $log = CommunicationLog::create([
             'user_id' => $designer->id, 'sent_by' => $request->user()->id,
@@ -988,6 +1020,7 @@ class DesignerController extends Controller
                 'status'                => $event->status,
                 'package_id'            => $event->pivot->package_id,
                 'looks'                 => $event->pivot->looks,
+                'assistants'            => $event->pivot->assistants,
                 'model_casting_enabled' => $event->pivot->model_casting_enabled,
                 'package_price'         => $event->pivot->package_price,
                 'notes'                 => $event->pivot->notes,
