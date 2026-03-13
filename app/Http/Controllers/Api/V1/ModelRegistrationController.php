@@ -50,6 +50,16 @@ class ModelRegistrationController extends Controller
             ], 201);
         }
 
+        // Sanitizar Instagram: extraer solo el username sin URL, @, ni query params
+        if ($request->filled('instagram')) {
+            $ig = $request->input('instagram');
+            $ig = strtok($ig, '?'); // Quitar query params (?igsh=...)
+            $ig = preg_replace('#^https?://(www\.)?instagram\.com/#i', '', $ig);
+            $ig = rtrim($ig, '/');
+            $ig = ltrim($ig, '@');
+            $request->merge(['instagram' => $ig]);
+        }
+
         // Determinar si es re-registro (email ya existe)
         $existingUser = User::where('email', $request->input('email'))->first();
 

@@ -144,7 +144,15 @@ class ModelsImport implements ToCollection, WithHeadingRow
         // Campos de texto directo
         foreach (['age' => 'age', 'city' => 'location', 'location' => 'location', 'shoe_size' => 'shoe_size', 'dress_size' => 'dress_size', 'instagram' => 'instagram', 'agency' => 'agency'] as $excelCol => $profileField) {
             $value = trim((string) ($row[$excelCol] ?? ''));
-            if ($value !== '') $updates[$profileField] = $value;
+            if ($value !== '') {
+                if ($profileField === 'instagram') {
+                    $value = strtok($value, '?');
+                    $value = preg_replace('#^https?://(www\.)?instagram\.com/#i', '', $value);
+                    $value = rtrim($value, '/');
+                    $value = ltrim($value, '@');
+                }
+                $updates[$profileField] = $value;
+            }
         }
 
         // Campos numéricos (extraer solo el número)

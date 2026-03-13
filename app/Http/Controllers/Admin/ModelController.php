@@ -312,6 +312,8 @@ class ModelController extends Controller
 
     public function store(Request $request)
     {
+        $this->sanitizeInstagram($request);
+
         $request->validate([
             'first_name'  => 'required|string|max:255',
             'last_name'   => 'required|string|max:255',
@@ -416,6 +418,7 @@ class ModelController extends Controller
     public function update(Request $request, User $model)
     {
         $this->authorizeModel($model);
+        $this->sanitizeInstagram($request);
 
         $request->validate([
             'first_name'  => 'required|string|max:255',
@@ -916,6 +919,18 @@ class ModelController extends Controller
     }
 
     // --- Helpers ---
+
+    private function sanitizeInstagram(Request $request): void
+    {
+        if ($request->filled('instagram')) {
+            $ig = $request->input('instagram');
+            $ig = strtok($ig, '?');
+            $ig = preg_replace('#^https?://(www\.)?instagram\.com/#i', '', $ig);
+            $ig = rtrim($ig, '/');
+            $ig = ltrim($ig, '@');
+            $request->merge(['instagram' => $ig]);
+        }
+    }
 
     private function authorizeModel(User $model): void
     {
