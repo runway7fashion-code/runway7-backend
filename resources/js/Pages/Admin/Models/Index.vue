@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
-import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import { EnvelopeIcon, PencilSquareIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, XMarkIcon, StarIcon as StarOutline } from '@heroicons/vue/24/outline';
 import { StarIcon as StarSolid } from '@heroicons/vue/24/solid';
 import { computed } from 'vue';
@@ -22,6 +22,8 @@ const event          = ref(props.filters.event          ?? '');
 const compcard       = ref(props.filters.compcard       ?? '');
 const gender         = ref(props.filters.gender         ?? '');
 const ethnicity      = ref(props.filters.ethnicity      ?? '');
+const is_agency      = ref(props.filters.is_agency      ?? '');
+const is_top         = ref(props.filters.is_top         ?? '');
 const email_sent     = ref(props.filters.email_sent     ?? '');
 const test_model     = ref(props.filters.test_model     ?? '');
 const casting_time   = ref(props.filters.casting_time   ?? '');
@@ -81,6 +83,8 @@ function applyFilters() {
             compcard:        compcard.value       || undefined,
             gender:          gender.value         || undefined,
             ethnicity:       ethnicity.value      || undefined,
+            is_agency:       is_agency.value      || undefined,
+            is_top:          is_top.value         || undefined,
             email_sent:      email_sent.value     || undefined,
             test_model:      test_model.value     || undefined,
             casting_time:    casting_time.value   || undefined,
@@ -95,7 +99,7 @@ function applyFilters() {
         }, { preserveState: true, replace: true });
     }, 300);
 }
-watch([search, event, compcard, gender, ethnicity, email_sent, test_model, casting_time, casting_status, designer, status, sort_name, registeredRange, checkinRange], applyFilters);
+watch([search, event, compcard, gender, ethnicity, is_agency, is_top, email_sent, test_model, casting_time, casting_status, designer, status, sort_name, registeredRange, checkinRange], applyFilters);
 
 function toggleSortName() {
     if (sort_name.value === 'asc') sort_name.value = 'desc';
@@ -117,6 +121,8 @@ const exportUrl = computed(() => {
     if (compcard.value)       params.set('compcard',       compcard.value);
     if (gender.value)         params.set('gender',         gender.value);
     if (ethnicity.value)      params.set('ethnicity',      ethnicity.value);
+    if (is_agency.value)      params.set('is_agency',      is_agency.value);
+    if (is_top.value)         params.set('is_top',         is_top.value);
     if (email_sent.value)     params.set('email_sent',     email_sent.value);
     if (test_model.value)     params.set('test_model',     test_model.value);
     if (casting_time.value)   params.set('casting_time',   casting_time.value);
@@ -149,7 +155,8 @@ function submitImport() {
 
 // --- Acciones por fila ---
 function canSendEmail(m) {
-    return m.status === 'pending' && !!m.email;
+    const hasEventWithCasting = (m.events_as_model_with_casting ?? []).some(e => e.pivot?.casting_time);
+    return m.status === 'pending' && !!m.email && hasEventWithCasting;
 }
 
 // Modal historial de correos
@@ -205,7 +212,21 @@ function confirmSendWelcomeEmail(m) {
     emailModalModel.value = null;
 }
 
+const statusAlertModel = ref(null);
+
 function updateModelStatus(m, newStatus) {
+    if (newStatus === 'pending') {
+        const hasEventWithCasting = (m.events_as_model_with_casting ?? []).some(e => e.pivot?.casting_time);
+        if (!hasEventWithCasting) {
+            statusAlertModel.value = m;
+            // Revert select to original value
+            nextTick(() => {
+                const sel = document.querySelector(`[data-status-select="${m.id}"]`);
+                if (sel) sel.value = m.status;
+            });
+            return;
+        }
+    }
     router.patch(`/admin/models/${m.id}/status`, { status: newStatus }, { preserveScroll: true });
 }
 
@@ -491,6 +512,20 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <option value="other">Otra</option>
                 </select>
 
+                <select v-model="is_agency"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Agencia: todas</option>
+                    <option value="yes">Con agencia</option>
+                    <option value="no">Sin agencia</option>
+                </select>
+
+                <select v-model="is_top"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Top: todas</option>
+                    <option value="yes">Solo Top</option>
+                    <option value="no">No Top</option>
+                </select>
+
                 <select v-model="compcard"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
                     <option value="">Comp card: todos</option>
@@ -677,6 +712,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                 <!-- Pendiente / Inactivo: selector editable -->
                                 <select v-else :value="m.status"
                                     @change="updateModelStatus(m, $event.target.value)"
+                                    :data-status-select="m.id"
                                     :class="statusBadge(m.status)"
                                     class="text-xs font-medium rounded-full px-2 py-0.5 border-0 outline-none cursor-pointer appearance-none">
                                     <option value="inactive">Inactivo</option>
@@ -759,6 +795,29 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
             </div>
         </div>
     </AdminLayout>
+
+    <!-- Modal: Alerta estado pendiente sin evento/casting -->
+    <Teleport to="body">
+        <div v-if="statusAlertModel" class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/60" @click="statusAlertModel = null"></div>
+            <div class="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-6 z-10 text-center">
+                <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">No se puede cambiar a Pendiente</h3>
+                <p class="text-sm text-gray-600 mb-5">
+                    La modelo <span class="font-medium">{{ statusAlertModel.first_name }} {{ statusAlertModel.last_name }}</span>
+                    no tiene un evento con horario de casting asignado. Asígnale un evento y casting primero.
+                </p>
+                <button @click="statusAlertModel = null"
+                    class="px-5 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                    Entendido
+                </button>
+            </div>
+        </div>
+    </Teleport>
 
     <!-- Modal: Historial de Check-ins -->
     <Teleport to="body">

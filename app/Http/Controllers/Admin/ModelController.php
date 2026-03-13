@@ -58,6 +58,14 @@ class ModelController extends Controller
             $query->whereHas('modelProfile', fn($q) => $q->where('ethnicity', $request->ethnicity));
         }
 
+        if ($request->filled('is_agency')) {
+            $query->whereHas('modelProfile', fn($q) => $q->where('is_agency', $request->is_agency === 'yes'));
+        }
+
+        if ($request->filled('is_top')) {
+            $query->whereHas('modelProfile', fn($q) => $q->where('is_top', $request->is_top === 'yes'));
+        }
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -250,6 +258,7 @@ class ModelController extends Controller
         $pendingEmailCount = User::models()
             ->where('status', 'pending')
             ->whereNull('welcome_email_sent_at')
+            ->whereHas('eventsAsModelWithCasting', fn($q) => $q->whereNotNull('event_model.casting_time'))
             ->count();
 
         // Obtener horarios de casting desde casting_slots (solo cuando hay evento seleccionado)
@@ -286,7 +295,7 @@ class ModelController extends Controller
             'models'             => $models,
             'events'             => $events,
             'designers'          => $designers,
-            'filters'            => $request->only(['event', 'compcard', 'gender', 'ethnicity', 'search', 'email_sent', 'test_model', 'casting_time', 'casting_status', 'designer', 'status']),
+            'filters'            => $request->only(['event', 'compcard', 'gender', 'ethnicity', 'is_agency', 'is_top', 'search', 'email_sent', 'test_model', 'casting_time', 'casting_status', 'designer', 'status']),
             'castingTimes'       => $castingTimes,
             'pendingEmailCount'  => $pendingEmailCount,
         ]);
@@ -410,7 +419,7 @@ class ModelController extends Controller
 
         $request->validate([
             'first_name'  => 'required|string|max:255',
-            'last_name'   => 'required|string|max:255',
+            'last_name'   => 'nullable|string|max:255',
             'email'       => "required|email|unique:users,email,{$model->id}",
             'phone'       => "nullable|string|unique:users,phone,{$model->id}",
             'status'      => 'nullable|in:inactive,pending,applicant',
@@ -435,6 +444,7 @@ class ModelController extends Controller
         ]);
 
         $userData = $request->only(['first_name', 'last_name', 'email', 'phone']);
+        $userData['last_name'] = $userData['last_name'] ?? '';
         $profileData = $request->only([
             'instagram', 'age', 'gender', 'location', 'ethnicity', 'hair', 'body_type',
             'height', 'bust', 'chest', 'waist', 'hips', 'shoe_size', 'dress_size',
@@ -726,6 +736,7 @@ class ModelController extends Controller
         $pending = User::models()
             ->where('status', 'pending')
             ->whereNull('welcome_email_sent_at')
+            ->whereHas('eventsAsModelWithCasting', fn($q) => $q->whereNotNull('event_model.casting_time'))
             ->with(['eventsAsModelWithCasting.eventDays' => fn($q) => $q->where('type', 'casting')])
             ->get();
 

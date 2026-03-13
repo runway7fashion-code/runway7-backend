@@ -228,7 +228,7 @@ function submit() {
                             <p v-if="form.errors.first_name" class="mt-1 text-red-500 text-xs">{{ form.errors.first_name }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
                             <input v-model="form.last_name" type="text"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
