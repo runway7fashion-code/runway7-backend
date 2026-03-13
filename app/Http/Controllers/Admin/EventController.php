@@ -65,6 +65,9 @@ class EventController extends Controller
             'days.*.date'  => 'required|date',
             'days.*.label' => 'required|string',
             'days.*.type'  => 'required|in:setup,casting,show_day,ceremony,other,fitting',
+            'days.*.casting_slots'          => 'nullable|array',
+            'days.*.casting_slots.*.time'     => 'required|string',
+            'days.*.casting_slots.*.capacity' => 'required|integer|min:1',
             'time_slots'            => 'nullable|array',
             'apply_same_schedule'   => 'boolean',
         ]);

@@ -36,15 +36,20 @@ class EventService
                     'order'       => $index,
                 ]);
 
-                if ($eventDay->isCasting()
-                    && isset($day['casting_start'], $day['casting_end'], $day['casting_interval'])) {
-                    $this->generateCastingSlots(
-                        $eventDay,
-                        $day['casting_start'],
-                        $day['casting_end'],
-                        (int) $day['casting_interval'],
-                        (int) ($day['casting_capacity'] ?? 50)
-                    );
+                if ($eventDay->isCasting()) {
+                    if (!empty($day['casting_slots'])) {
+                        // Usar slots personalizados
+                        $this->createCustomCastingSlots($eventDay, $day['casting_slots']);
+                    } elseif (isset($day['casting_start'], $day['casting_end'], $day['casting_interval'])) {
+                        // Generar automáticamente por intervalo
+                        $this->generateCastingSlots(
+                            $eventDay,
+                            $day['casting_start'],
+                            $day['casting_end'],
+                            (int) $day['casting_interval'],
+                            (int) ($day['casting_capacity'] ?? 50)
+                        );
+                    }
                 }
 
                 // Fitting slots: para días tipo "fitting" o show_day con fitting configurado
@@ -106,6 +111,35 @@ class EventService
         });
 
         return $count;
+    }
+
+    public function createCustomCastingSlots(EventDay $day, array $slots): int
+    {
+        $newTimes = [];
+        foreach ($slots as $slot) {
+            $time = substr($slot['time'], 0, 5);
+            $capacity = (int) ($slot['capacity'] ?? 50);
+            $newTimes[] = $time;
+            CastingSlot::firstOrCreate(
+                ['event_day_id' => $day->id, 'time' => $time],
+                ['capacity' => $capacity, 'booked' => 0]
+            );
+        }
+
+        // Eliminar slots que ya no están (solo sin bookings)
+        $day->castingSlots()
+            ->whereNotIn('time', $newTimes)
+            ->where('booked', 0)
+            ->delete();
+
+        // Actualizar capacidad individual
+        foreach ($slots as $slot) {
+            $day->castingSlots()
+                ->where('time', substr($slot['time'], 0, 5))
+                ->update(['capacity' => (int) ($slot['capacity'] ?? 50)]);
+        }
+
+        return count($slots);
     }
 
     public function generateCastingSlots(EventDay $day, string $startTime, string $endTime, int $intervalMinutes, int $capacity = 50): int
