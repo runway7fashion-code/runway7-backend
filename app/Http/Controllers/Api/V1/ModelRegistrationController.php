@@ -235,10 +235,18 @@ class ModelRegistrationController extends Controller
                 return $user;
             });
 
-            // Auto-assign casting slot: merch/agencia → primer slot
+            // Auto-assign casting slot según prioridad:
+            // Slot 1: merch (Shopify order) o agencia prioritaria (Fanny/CG/FMA)
+            // Slot 3+: agencia no prioritaria o sin agencia
             $hasAgency = !empty($validated['agency_name']);
-            if ($hasValidOrder || $hasAgency) {
+            if ($hasValidOrder) {
                 $this->modelService->autoAssignCastingSlot($model, $eventId, startFromPosition: 1);
+            } elseif ($hasAgency) {
+                $isPriorityAgency = (bool) preg_match('/\b(fanny|cg|fma|fanny\'s|cgmodels)\b/i', $validated['agency_name']);
+                $slotPosition = $isPriorityAgency ? 1 : 3;
+                $this->modelService->autoAssignCastingSlot($model, $eventId, startFromPosition: $slotPosition);
+            } else {
+                $this->modelService->autoAssignCastingSlot($model, $eventId, startFromPosition: 3);
             }
 
             $event = Event::find($eventId);
