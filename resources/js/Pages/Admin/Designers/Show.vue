@@ -103,6 +103,7 @@ function sendOnboardingSms() {
 
 // Delete designer
 const showDeleteModal = ref(false);
+const previewDoc = ref(null);
 function deleteDesigner() {
     router.delete(`/admin/designers/${props.designer.id}`, {
         onSuccess: () => showDeleteModal.value = false,
@@ -236,14 +237,14 @@ const socialLinks = computed(() => {
 
                         <!-- Documentos de Sales -->
                         <div v-if="salesDocs.length" class="mt-3 flex flex-wrap gap-2">
-                            <a v-for="doc in salesDocs" :key="doc.id"
-                                :href="doc.url" target="_blank" download
-                                class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-colors">
+                            <button v-for="doc in salesDocs" :key="doc.id"
+                                @click="previewDoc = doc"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-colors cursor-pointer">
                                 <DocumentTextIcon class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                                 <span class="font-medium text-gray-500">{{ docTypeLabel(doc.type) }}:</span>
                                 <span class="truncate max-w-[140px]">{{ doc.original_name }}</span>
-                                <ArrowDownTrayIcon class="w-3 h-3 text-gray-400 flex-shrink-0" />
-                            </a>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
                         </div>
 
                         <div class="mt-3 flex flex-wrap gap-3 text-sm">
@@ -548,6 +549,37 @@ const socialLinks = computed(() => {
                     <p v-if="passModal.valid_days_labels" class="text-xs text-gray-500 font-medium">Días válidos</p>
                     <p v-if="passModal.valid_days_labels" class="text-xs text-gray-400 mt-0.5">{{ passModal.valid_days_labels }}</p>
                     <p v-else class="text-xs text-gray-400">Válido todos los días</p>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Modal: Previsualización de documento -->
+    <Teleport to="body">
+        <div v-if="previewDoc" class="fixed inset-0 z-50 flex items-center justify-center p-6">
+            <div class="absolute inset-0 bg-black/60" @click="previewDoc = null"></div>
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden z-10">
+                <!-- Header -->
+                <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <DocumentTextIcon class="w-5 h-5 text-gray-400 flex-shrink-0" />
+                        <span class="text-sm font-medium text-gray-500">{{ docTypeLabel(previewDoc.type) }}:</span>
+                        <span class="text-sm text-gray-800 truncate">{{ previewDoc.original_name }}</span>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <a :href="previewDoc.url" download
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
+                            <ArrowDownTrayIcon class="w-3.5 h-3.5" />
+                            Descargar
+                        </a>
+                        <button @click="previewDoc = null" class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                            <XMarkIcon class="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
+                <!-- PDF Viewer -->
+                <div class="flex-1 bg-gray-100">
+                    <iframe :src="previewDoc.url" class="w-full h-full border-0"></iframe>
                 </div>
             </div>
         </div>
