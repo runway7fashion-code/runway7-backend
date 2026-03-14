@@ -246,7 +246,14 @@ function openEventsModal(model, e) {
 function updateCastingStatus(model, eventId, newStatus) {
     router.patch(`/admin/models/${model.id}/events/${eventId}/casting-status`,
         { casting_status: newStatus },
-        { preserveScroll: true }
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                // Refrescar selectedModel con los datos actualizados de props
+                const fresh = props.models.data.find(m => m.id === model.id);
+                if (fresh) selectedModel.value = fresh;
+            },
+        }
     );
 }
 

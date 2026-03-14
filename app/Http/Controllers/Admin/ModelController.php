@@ -804,11 +804,15 @@ class ModelController extends Controller
 
         // Auto-assign casting slot cuando cambia de applicant → pending
         if ($oldStatus === 'applicant' && $request->status === 'pending') {
-            $isTop = $model->modelProfile?->is_top ?? false;
-            $startSlot = $isTop ? 2 : 3;
+            $profile = $model->modelProfile;
+            $isTop = $profile?->is_top ?? false;
+            $isPriorityAgency = $profile?->agency
+                && preg_match('/\b(fanny|cg|fma|fanny\'s|cgmodels)\b/i', $profile->agency);
+
+            $startSlot = $isPriorityAgency ? 1 : ($isTop ? 2 : 3);
 
             foreach ($model->eventsAsModelWithCasting as $event) {
-                if ($isTop || !$event->pivot->casting_time) {
+                if ($isPriorityAgency || $isTop || !$event->pivot->casting_time) {
                     $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot);
                 }
             }
@@ -821,9 +825,10 @@ class ModelController extends Controller
                     $this->modelService->removeCastingSlot($model, $event->id);
                 }
 
-                // Marcar como rejected en el evento
+                // Marcar como rejected en el evento y en casting
                 $event->models()->updateExistingPivot($model->id, [
                     'status' => 'rejected',
+                    'casting_status' => 'rejected',
                 ]);
 
                 // Cancelar pases activos
@@ -907,6 +912,12 @@ class ModelController extends Controller
                     ->update(['casting_time' => null]);
             }
 
+            // Marcar como rejected en el evento
+            DB::table('event_model')
+                ->where('model_id', $model->id)
+                ->where('event_id', $event->id)
+                ->update(['status' => 'rejected']);
+
             // Cancelar pass solo si está activo (no tocar los ya usados)
             DB::table('event_passes')
                 ->where('user_id', $model->id)
@@ -915,6 +926,12 @@ class ModelController extends Controller
                 ->update(['status' => 'cancelled']);
 
         } elseif ($previousStatus === 'rejected' && $newStatus !== 'rejected') {
+            // Restaurar estado en evento a invited
+            DB::table('event_model')
+                ->where('model_id', $model->id)
+                ->where('event_id', $event->id)
+                ->update(['status' => 'invited']);
+
             // Reactivar pass solo si fue cancelado (no tocar los usados)
             DB::table('event_passes')
                 ->where('user_id', $model->id)
