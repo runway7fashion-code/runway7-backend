@@ -26,7 +26,32 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('banners', [App\Http\Controllers\Api\V1\BannerController::class, 'index'])->name('banners');
 
         // Events / Fittings
+        Route::get('events', [App\Http\Controllers\Api\V1\EventController::class, 'index'])->name('events.index');
+        Route::get('events/{event}', [App\Http\Controllers\Api\V1\EventController::class, 'show'])->name('events.show');
         Route::get('my-fittings', [App\Http\Controllers\Api\V1\EventController::class, 'myFittings'])->name('my-fittings');
+
+        // Shows
+        Route::get('my-shows', [App\Http\Controllers\Api\V1\ShowController::class, 'myShows'])->name('shows.my');
+        Route::post('shows/{show}/confirm', [App\Http\Controllers\Api\V1\ShowController::class, 'confirm'])->name('shows.confirm');
+        Route::post('shows/{show}/reject', [App\Http\Controllers\Api\V1\ShowController::class, 'reject'])->name('shows.reject');
+
+        // Payments
+        Route::get('my-payments', [App\Http\Controllers\Api\V1\PaymentController::class, 'myPayments'])->name('payments.my');
+        Route::get('my-payments/{plan}', [App\Http\Controllers\Api\V1\PaymentController::class, 'show'])->name('payments.show');
+
+        // Tickets / Passes / Check-in
+        Route::get('my-passes', [App\Http\Controllers\Api\V1\TicketController::class, 'myPasses'])->name('passes.my');
+        Route::get('my-tickets', [App\Http\Controllers\Api\V1\TicketController::class, 'myTickets'])->name('tickets.my');
+        Route::post('check-in/scan', [App\Http\Controllers\Api\V1\TicketController::class, 'scan'])->name('checkin.scan');
+
+        // Profile
+        Route::put('profile', [App\Http\Controllers\Api\V1\ProfileController::class, 'update'])->name('profile.update');
+        Route::post('profile/photo', [App\Http\Controllers\Api\V1\ProfileController::class, 'uploadPhoto'])->name('profile.photo');
+        Route::post('profile/picture', [App\Http\Controllers\Api\V1\ProfileController::class, 'uploadProfilePicture'])->name('profile.picture');
+
+        // Notifications / Device Tokens
+        Route::post('device-tokens', [App\Http\Controllers\Api\V1\NotificationController::class, 'registerToken'])->name('device-tokens.register');
+        Route::delete('device-tokens', [App\Http\Controllers\Api\V1\NotificationController::class, 'removeToken'])->name('device-tokens.remove');
 
         // Casting
         Route::get('my-casting', [App\Http\Controllers\Api\V1\CastingController::class, 'myCasting'])->name('my-casting');
