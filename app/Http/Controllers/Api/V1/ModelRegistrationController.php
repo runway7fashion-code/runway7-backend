@@ -63,8 +63,9 @@ class ModelRegistrationController extends Controller
         // Determinar si es re-registro (email ya existe)
         $existingUser = User::where('email', $request->input('email'))->first();
 
-        // Fotos: obligatorias solo para nuevos registros, opcionales para re-registros
-        $photoRule = $existingUser ? 'nullable|image|max:1536' : 'required|image|max:1536';
+        // Fotos: profile_picture y photo_1 obligatorias para nuevos registros, el resto siempre opcional
+        $requiredPhotoRule = $existingUser ? 'nullable|image|max:1536' : 'required|image|max:1536';
+        $optionalPhotoRule = 'nullable|image|max:1536';
 
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
@@ -88,11 +89,11 @@ class ModelRegistrationController extends Controller
             'agency_name'  => 'nullable|string|max:255',
             'order_number' => 'nullable|string|max:50',
 
-            'profile_picture' => $photoRule,
-            'photo_1'         => $photoRule,
-            'photo_2'         => $photoRule,
-            'photo_3'         => $photoRule,
-            'photo_4'         => $photoRule,
+            'profile_picture' => $requiredPhotoRule,
+            'photo_1'         => $requiredPhotoRule,
+            'photo_2'         => $optionalPhotoRule,
+            'photo_3'         => $optionalPhotoRule,
+            'photo_4'         => $optionalPhotoRule,
         ], [
             'first_name.required'      => 'First name is required.',
             'last_name.required'       => 'Last name is required.',
@@ -122,13 +123,10 @@ class ModelRegistrationController extends Controller
             'photo_1.required'         => 'Headshot photo is required.',
             'photo_1.image'            => 'Headshot must be an image.',
             'photo_1.max'              => 'Headshot must not exceed 1.5MB.',
-            'photo_2.required'         => 'Full body front photo is required.',
             'photo_2.image'            => 'Full body front must be an image.',
             'photo_2.max'              => 'Full body front must not exceed 1.5MB.',
-            'photo_3.required'         => 'Full body side photo is required.',
             'photo_3.image'            => 'Full body side must be an image.',
             'photo_3.max'              => 'Full body side must not exceed 1.5MB.',
-            'photo_4.required'         => 'Creative/Editorial photo is required.',
             'photo_4.image'            => 'Creative/Editorial must be an image.',
             'photo_4.max'              => 'Creative/Editorial must not exceed 1.5MB.',
         ]);
@@ -227,9 +225,11 @@ class ModelRegistrationController extends Controller
                 // Subir foto de perfil
                 $this->modelService->uploadProfilePicture($user, $request->file('profile_picture'));
 
-                // Subir comp card photos
+                // Subir comp card photos (solo las que se enviaron)
                 foreach (range(1, 4) as $position) {
-                    $this->modelService->uploadCompCardPhoto($user, $position, $request->file("photo_{$position}"));
+                    if ($request->hasFile("photo_{$position}")) {
+                        $this->modelService->uploadCompCardPhoto($user, $position, $request->file("photo_{$position}"));
+                    }
                 }
 
                 return $user;
