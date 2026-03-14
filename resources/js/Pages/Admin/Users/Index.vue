@@ -119,6 +119,7 @@ function deleteUser(user) {
                 <table class="w-full">
                     <thead class="bg-gray-50 border-b border-gray-200">
                         <tr>
+                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider w-12">ID</th>
                             <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Usuario</th>
                             <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Rol</th>
                             <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Categoría</th>
@@ -129,6 +130,7 @@ function deleteUser(user) {
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         <tr v-for="user in users.data" :key="user.id" class="hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-4 text-sm text-gray-500 font-mono">{{ user.id }}</td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center space-x-3">
                                     <div class="w-9 h-9 rounded-full bg-black flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
@@ -172,7 +174,7 @@ function deleteUser(user) {
                             </td>
                         </tr>
                         <tr v-if="users.data.length === 0">
-                            <td colspan="6" class="px-6 py-12 text-center text-gray-400 text-sm">
+                            <td colspan="7" class="px-6 py-12 text-center text-gray-400 text-sm">
                                 No se encontraron usuarios con los filtros aplicados.
                             </td>
                         </tr>

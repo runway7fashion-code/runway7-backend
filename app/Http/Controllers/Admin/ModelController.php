@@ -774,7 +774,15 @@ class ModelController extends Controller
 
         // Reasignar slot si la modelo tiene casting_time en algún evento
         if (in_array($model->status, ['pending', 'applicant'])) {
-            $targetSlot = $wasTop ? 3 : 2; // quitó top → slot 3+, puso top → slot 2
+            $isPriorityAgency = $profile->agency
+                && preg_match('/\b(fanny|cg|fma|fanny\'s|cgmodels)\b/i', $profile->agency);
+
+            if ($isPriorityAgency) {
+                $targetSlot = 1; // Agencias prioritarias siempre en slot 1
+            } else {
+                $targetSlot = $wasTop ? 3 : 2; // quitó top → slot 3+, puso top → slot 2
+            }
+
             foreach ($model->eventsAsModelWithCasting as $event) {
                 if ($event->pivot->casting_time) {
                     $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $targetSlot);

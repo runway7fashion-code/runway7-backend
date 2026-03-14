@@ -332,15 +332,18 @@ class EventService
                             'fitting_interval' => $dayData['fitting_interval'] ?? null,
                         ]);
 
-                        if ($dayData['type'] === 'casting'
-                            && isset($dayData['casting_start'], $dayData['casting_end'], $dayData['casting_interval'])) {
-                            $this->generateCastingSlots(
-                                $day,
-                                $dayData['casting_start'],
-                                $dayData['casting_end'],
-                                (int) $dayData['casting_interval'],
-                                (int) ($dayData['casting_capacity'] ?? 50)
-                            );
+                        if ($dayData['type'] === 'casting') {
+                            if (!empty($dayData['casting_slots'])) {
+                                $this->createCustomCastingSlots($day, $dayData['casting_slots']);
+                            } elseif (isset($dayData['casting_start'], $dayData['casting_end'], $dayData['casting_interval'])) {
+                                $this->generateCastingSlots(
+                                    $day,
+                                    $dayData['casting_start'],
+                                    $dayData['casting_end'],
+                                    (int) $dayData['casting_interval'],
+                                    (int) ($dayData['casting_capacity'] ?? 50)
+                                );
+                            }
                         }
 
                         if (isset($dayData['fitting_start'], $dayData['fitting_end'], $dayData['fitting_interval'])) {
@@ -368,15 +371,18 @@ class EventService
                         'fitting_interval' => $dayData['fitting_interval'] ?? null,
                     ]);
 
-                    if ($newDay->isCasting()
-                        && isset($dayData['casting_start'], $dayData['casting_end'], $dayData['casting_interval'])) {
-                        $this->generateCastingSlots(
-                            $newDay,
-                            $dayData['casting_start'],
-                            $dayData['casting_end'],
-                            (int) $dayData['casting_interval'],
-                            (int) ($dayData['casting_capacity'] ?? 50)
-                        );
+                    if ($newDay->isCasting()) {
+                        if (!empty($dayData['casting_slots'])) {
+                            $this->createCustomCastingSlots($newDay, $dayData['casting_slots']);
+                        } elseif (isset($dayData['casting_start'], $dayData['casting_end'], $dayData['casting_interval'])) {
+                            $this->generateCastingSlots(
+                                $newDay,
+                                $dayData['casting_start'],
+                                $dayData['casting_end'],
+                                (int) $dayData['casting_interval'],
+                                (int) ($dayData['casting_capacity'] ?? 50)
+                            );
+                        }
                     }
 
                     if (isset($dayData['fitting_start'], $dayData['fitting_end'], $dayData['fitting_interval'])) {

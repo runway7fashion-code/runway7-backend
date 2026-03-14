@@ -142,6 +142,9 @@ class EventController extends Controller
             'status'             => 'required|in:draft,published,active,completed,cancelled',
             'model_number_start' => 'required|integer|min:1',
             'days'               => 'required|array|min:1',
+            'days.*.casting_slots'          => 'nullable|array',
+            'days.*.casting_slots.*.time'     => 'required|string',
+            'days.*.casting_slots.*.capacity' => 'required|integer|min:1',
         ]);
 
         $this->eventService->updateEvent(
