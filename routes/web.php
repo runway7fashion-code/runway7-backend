@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\DesignerController;
 use App\Http\Controllers\Admin\DesignerSettingsController;
 use App\Http\Controllers\Admin\AccountingController;
 use App\Http\Controllers\Admin\PassController;
+use App\Http\Controllers\Admin\VolunteerController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\SalesController;
 
@@ -83,6 +84,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('designers/send-bulk-onboarding', [DesignerController::class, 'sendBulkOnboardingEmail'])->name('designers.send-bulk-onboarding');
             Route::post('designers/{designer}/send-onboarding-sms', [DesignerController::class, 'sendOnboardingSms'])->name('designers.send-onboarding-sms');
             Route::post('designers/send-bulk-onboarding-sms', [DesignerController::class, 'sendBulkOnboardingSms'])->name('designers.send-bulk-onboarding-sms');
+        });
+
+        // Voluntarios - admin, operation
+        Route::middleware('section:volunteers')->group(function () {
+            Route::get('volunteers/export', [VolunteerController::class, 'exportVolunteers'])->name('volunteers.export');
+            Route::post('volunteers/import', [VolunteerController::class, 'importVolunteers'])->name('volunteers.import');
+            Route::resource('volunteers', VolunteerController::class)->only(['index', 'create', 'store', 'destroy']);
         });
 
         // Eventos - admin, operation

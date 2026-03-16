@@ -108,6 +108,7 @@ class User extends Authenticatable
     // --- Profiles ---
     public function modelProfile() { return $this->hasOne(ModelProfile::class); }
     public function designerProfile() { return $this->hasOne(DesignerProfile::class); }
+    public function volunteerProfile() { return $this->hasOne(VolunteerProfile::class); }
     public function pressProfile() { return $this->hasOne(PressProfile::class); }
     public function sponsorProfile() { return $this->hasOne(SponsorProfile::class); }
 
