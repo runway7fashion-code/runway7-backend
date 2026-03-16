@@ -60,8 +60,13 @@ class ModelRegistrationController extends Controller
             $request->merge(['instagram' => $ig]);
         }
 
-        // Determinar si es re-registro (email ya existe)
-        $existingUser = User::where('email', $request->input('email'))->first();
+        // Determinar si es re-registro (email ya existe, incluir soft-deleted)
+        $existingUser = User::withTrashed()->where('email', $request->input('email'))->first();
+
+        // Si está soft-deleted, restaurar
+        if ($existingUser && $existingUser->trashed()) {
+            $existingUser->restore();
+        }
 
         // Fotos: profile_picture y photo_1 obligatorias para nuevos registros, el resto siempre opcional
         $requiredPhotoRule = $existingUser ? 'nullable|image|max:1536' : 'required|image|max:1536';
@@ -132,6 +137,14 @@ class ModelRegistrationController extends Controller
         ]);
 
         $eventId = (int) $validated['event_id'];
+
+        // Rechazar si el email ya existe con otro rol
+        if ($existingUser && $existingUser->role !== 'model') {
+            return response()->json([
+                'message' => 'This email is already registered with a different role.',
+                'errors' => ['email' => ['This email is already registered as ' . $existingUser->role . '. Please use a different email or contact us at operations@runway7fashion.com']],
+            ], 422);
+        }
 
         // Si la modelo ya existe, verificar si ya está asignada al mismo evento
         if ($existingUser) {

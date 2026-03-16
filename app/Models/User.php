@@ -109,6 +109,7 @@ class User extends Authenticatable
     public function modelProfile() { return $this->hasOne(ModelProfile::class); }
     public function designerProfile() { return $this->hasOne(DesignerProfile::class); }
     public function volunteerProfile() { return $this->hasOne(VolunteerProfile::class); }
+    public function volunteerSchedules() { return $this->hasMany(VolunteerSchedule::class); }
     public function pressProfile() { return $this->hasOne(PressProfile::class); }
     public function sponsorProfile() { return $this->hasOne(SponsorProfile::class); }
 
@@ -152,7 +153,7 @@ class User extends Authenticatable
     public function eventsAsStaff()
     {
         return $this->belongsToMany(Event::class, 'event_staff', 'user_id', 'event_id')
-            ->withPivot(['assigned_role', 'status', 'checked_in_at', 'notes'])
+            ->withPivot(['assigned_role', 'status', 'checked_in_at', 'notes', 'area', 'casting_status'])
             ->withTimestamps();
     }
 

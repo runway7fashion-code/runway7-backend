@@ -10,6 +10,23 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('models/events', [App\Http\Controllers\Api\V1\ModelRegistrationController::class, 'events']);
         Route::post('volunteers/register', [App\Http\Controllers\Api\V1\VolunteerRegistrationController::class, 'store']);
         Route::get('volunteers/events', [App\Http\Controllers\Api\V1\VolunteerRegistrationController::class, 'events']);
+        Route::post('check-email', function (\Illuminate\Http\Request $request) {
+            $request->validate(['email' => 'required|email', 'role' => 'required|string']);
+            $user = \App\Models\User::withTrashed()->where('email', $request->email)->first();
+            if ($user && $user->trashed()) {
+                return response()->json(['available' => true]);
+            }
+            if (!$user) {
+                return response()->json(['available' => true]);
+            }
+            if ($user->role !== $request->role) {
+                return response()->json([
+                    'available' => false,
+                    'message' => 'This email is already registered as ' . $user->role . '. Please use a different email or contact us at operations@runway7fashion.com',
+                ]);
+            }
+            return response()->json(['available' => true, 'existing' => true]);
+        });
     });
 
     Route::middleware('auth:sanctum')->group(function () {

@@ -6,7 +6,9 @@ use App\Enums\ActivityAction;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendVolunteerRegistrationEmailJob;
 use App\Models\Event;
+use App\Models\EventPass;
 use App\Models\User;
+use App\Notifications\NewVolunteerRegistered;
 use App\Services\ActivityLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -54,8 +56,13 @@ class VolunteerRegistrationController extends Controller
             $request->merge(['instagram' => $ig]);
         }
 
-        // Verificar si ya existe
-        $existingUser = User::where('email', $request->input('email'))->first();
+        // Verificar si ya existe (incluir soft-deleted)
+        $existingUser = User::withTrashed()->where('email', $request->input('email'))->first();
+
+        // Si está soft-deleted, restaurar
+        if ($existingUser && $existingUser->trashed()) {
+            $existingUser->restore();
+        }
 
         $validated = $request->validate([
             'first_name'              => 'required|string|max:255',
@@ -94,6 +101,14 @@ class VolunteerRegistrationController extends Controller
         ]);
 
         $eventId = (int) $validated['event_id'];
+
+        // Rechazar si el email ya existe con otro rol
+        if ($existingUser && $existingUser->role !== 'volunteer') {
+            return response()->json([
+                'message' => 'This email is already registered with a different role.',
+                'errors' => ['email' => ['This email is already registered as ' . $existingUser->role . '. Please use a different email or contact us at operations@runway7fashion.com']],
+            ], 422);
+        }
 
         // Verificar si ya está asignado a este evento
         if ($existingUser) {
@@ -146,6 +161,17 @@ class VolunteerRegistrationController extends Controller
                         'status'        => 'assigned',
                     ]);
 
+                    // Generar pase
+                    EventPass::create([
+                        'event_id'     => $eventId,
+                        'user_id'      => $existingUser->id,
+                        'qr_code'      => EventPass::generateQrCode(),
+                        'pass_type'    => 'volunteer',
+                        'holder_name'  => $existingUser->full_name,
+                        'holder_email' => $existingUser->email,
+                        'status'       => 'active',
+                    ]);
+
                     return $existingUser;
                 }
 
@@ -179,6 +205,17 @@ class VolunteerRegistrationController extends Controller
                     'status'        => 'assigned',
                 ]);
 
+                // Generar pase
+                EventPass::create([
+                    'event_id'     => $eventId,
+                    'user_id'      => $user->id,
+                    'qr_code'      => EventPass::generateQrCode(),
+                    'pass_type'    => 'volunteer',
+                    'holder_name'  => $user->full_name,
+                    'holder_email' => $user->email,
+                    'status'       => 'active',
+                ]);
+
                 return $user;
             });
 
@@ -191,6 +228,12 @@ class VolunteerRegistrationController extends Controller
                     . "{$user->first_name} {$user->last_name} para {$event->name}",
                 ['source' => 'wordpress', 'event_id' => $event->id, 're_registration' => $isReRegistration]
             );
+
+            // Notificar a admin y operation
+            $notifyUsers = User::whereIn('role', ['admin', 'operation'])->get();
+            foreach ($notifyUsers as $notifyUser) {
+                $notifyUser->notify(new NewVolunteerRegistered($user, $event->name));
+            }
 
             // Enviar email de confirmación solo para nuevos registros
             if (!$isReRegistration) {

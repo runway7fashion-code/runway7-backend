@@ -68,6 +68,8 @@ class VolunteersExport implements FromCollection, WithHeadings, WithMapping, Wit
             'Contribución',
             'Resume Link',
             'Eventos',
+            'Área',
+            'Estado en Evento',
             'Estado',
             'Fecha Registro',
         ];
@@ -125,8 +127,14 @@ class VolunteersExport implements FromCollection, WithHeadings, WithMapping, Wit
             $profile?->contribution ?? '',
             $profile?->resume_link ?? '',
             $events->pluck('name')->join(', '),
+            $events->pluck('pivot.area')->filter()->join(', '),
+            $events->pluck('pivot.status')->map(fn ($s) => [
+                'assigned' => 'Agendado', 'checked_in' => 'Check-in',
+                'no_show' => 'No se presentó', 'rejected' => 'Rechazado',
+                'completed' => 'Completado',
+            ][$s] ?? $s)->join(', '),
             $statusLabel,
-            $user->created_at?->format('d/m/Y'),
+            $user->created_at?->format('d/m/Y H:i'),
         ];
     }
 

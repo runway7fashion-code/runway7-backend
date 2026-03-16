@@ -90,7 +90,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::middleware('section:volunteers')->group(function () {
             Route::get('volunteers/export', [VolunteerController::class, 'exportVolunteers'])->name('volunteers.export');
             Route::post('volunteers/import', [VolunteerController::class, 'importVolunteers'])->name('volunteers.import');
-            Route::resource('volunteers', VolunteerController::class)->only(['index', 'create', 'store', 'destroy']);
+            Route::post('volunteers/send-bulk-onboarding', [VolunteerController::class, 'sendBulkOnboardingEmails'])->name('volunteers.send-bulk-onboarding');
+            Route::post('volunteers/send-bulk-onboarding-sms', [VolunteerController::class, 'sendBulkOnboardingSms'])->name('volunteers.send-bulk-onboarding-sms');
+            Route::resource('volunteers', VolunteerController::class);
+            Route::patch('volunteers/{volunteer}/status', [VolunteerController::class, 'updateStatus'])->name('volunteers.update-status');
+            Route::post('volunteers/{volunteer}/assign-event', [VolunteerController::class, 'assignEvent'])->name('volunteers.assign-event');
+            Route::delete('volunteers/{volunteer}/remove-event/{event}', [VolunteerController::class, 'removeEvent'])->name('volunteers.remove-event');
+            Route::patch('volunteers/{volunteer}/events/{event}/area', [VolunteerController::class, 'updateEventArea'])->name('volunteers.update-event-area');
+            Route::patch('volunteers/{volunteer}/events/{event}/status', [VolunteerController::class, 'updateEventStatus'])->name('volunteers.update-event-status');
+            Route::post('volunteers/{volunteer}/schedules', [VolunteerController::class, 'addSchedule'])->name('volunteers.add-schedule');
+            Route::delete('volunteers/{volunteer}/schedules/{schedule}', [VolunteerController::class, 'removeSchedule'])->name('volunteers.remove-schedule');
+            Route::post('volunteers/{volunteer}/send-onboarding', [VolunteerController::class, 'sendOnboardingEmail'])->name('volunteers.send-onboarding');
+            Route::post('volunteers/{volunteer}/send-onboarding-sms', [VolunteerController::class, 'sendOnboardingSms'])->name('volunteers.send-onboarding-sms');
         });
 
         // Eventos - admin, operation
