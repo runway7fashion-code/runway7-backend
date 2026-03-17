@@ -124,22 +124,28 @@ class VolunteerController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'first_name'             => 'required|string|max:255',
-            'last_name'              => 'required|string|max:255',
-            'email'                  => 'required|email|unique:users,email',
-            'phone'                  => 'nullable|string|unique:users,phone',
-            'age'                    => 'nullable|integer|min:18|max:80',
-            'gender'                 => 'nullable|in:female,male,non_binary',
-            'location'               => 'nullable|string|max:255',
-            'instagram'              => 'nullable|string|max:255',
-            'tshirt_size'            => 'nullable|in:XS,S,M,L,XL,XXL',
-            'experience'             => 'nullable|in:none,some,experienced',
-            'comfortable_fast_paced' => 'nullable|in:multitask,structured',
-            'full_availability'      => 'nullable|in:yes,no,partially',
-            'contribution'           => 'nullable|string|max:1000',
-            'resume_link'            => 'nullable|url|max:500',
-            'notes'                  => 'nullable|string|max:2000',
-            'event_id'               => 'nullable|exists:events,id',
+            'first_name'                              => 'required|string|max:255',
+            'last_name'                               => 'required|string|max:255',
+            'email'                                   => 'required|email|unique:users,email',
+            'phone'                                   => 'nullable|string|unique:users,phone',
+            'age'                                     => 'nullable|integer|min:18|max:80',
+            'gender'                                  => 'nullable|in:female,male,non_binary',
+            'location'                                => 'nullable|string|max:255',
+            'instagram'                               => 'nullable|string|max:255',
+            'tshirt_size'                             => 'nullable|in:XS,S,M,L,XL,XXL',
+            'experience'                              => 'nullable|in:none,some,experienced',
+            'comfortable_fast_paced'                  => 'nullable|in:multitask,structured',
+            'full_availability'                       => 'nullable|in:yes,no,partially',
+            'contribution'                            => 'nullable|string|max:1000',
+            'resume_link'                             => 'nullable|url|max:500',
+            'notes'                                   => 'nullable|string|max:2000',
+            'assignments'                             => 'nullable|array',
+            'assignments.*.event_id'                  => 'required|exists:events,id',
+            'assignments.*.area'                      => 'nullable|string|max:255',
+            'assignments.*.schedules'                 => 'nullable|array',
+            'assignments.*.schedules.*.event_day_id'  => 'required|exists:event_days,id',
+            'assignments.*.schedules.*.start_time'    => 'required|date_format:H:i',
+            'assignments.*.schedules.*.end_time'      => 'required|date_format:H:i',
         ], [
             'email.unique' => 'Este correo ya está registrado en el sistema.',
             'phone.unique' => 'Este teléfono ya está registrado en el sistema.',
@@ -176,11 +182,37 @@ class VolunteerController extends Controller
                 $user->volunteerProfile()->create($profileData);
             }
 
-            if (!empty($validated['event_id'])) {
-                $user->eventsAsStaff()->attach($validated['event_id'], [
+            foreach ($validated['assignments'] ?? [] as $assignment) {
+                $eventId = (int) $assignment['event_id'];
+
+                $user->eventsAsStaff()->attach($eventId, [
                     'assigned_role' => 'volunteer',
                     'status'        => 'assigned',
+                    'area'          => $assignment['area'] ?? null,
                 ]);
+
+                EventPass::create([
+                    'event_id'     => $eventId,
+                    'user_id'      => $user->id,
+                    'issued_by'    => auth()->id(),
+                    'qr_code'      => EventPass::generateQrCode(),
+                    'pass_type'    => 'volunteer',
+                    'holder_name'  => $user->full_name,
+                    'holder_email' => $user->email,
+                    'valid_days'   => null,
+                    'issued_at'    => now(),
+                    'status'       => 'active',
+                ]);
+
+                foreach ($assignment['schedules'] ?? [] as $sch) {
+                    VolunteerSchedule::create([
+                        'user_id'      => $user->id,
+                        'event_id'     => $eventId,
+                        'event_day_id' => $sch['event_day_id'],
+                        'start_time'   => $sch['start_time'],
+                        'end_time'     => $sch['end_time'],
+                    ]);
+                }
             }
         } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
             $message = str_contains($e->getMessage(), 'phone')

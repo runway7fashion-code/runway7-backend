@@ -1,7 +1,8 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { PlusIcon, TrashIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     events: Array,
@@ -16,7 +17,7 @@ const form = useForm({
     email: '',
     phone: '',
     age: '',
-    gender: 'female',
+    gender: '',
     location: '',
     instagram: '',
     // Pestaña 2 - Detalles voluntario
@@ -27,8 +28,8 @@ const form = useForm({
     contribution: '',
     resume_link: '',
     notes: '',
-    // Pestaña 3 - Evento
-    event_id: '',
+    // Pestaña 3 - Eventos
+    assignments: [],
 });
 
 const ageOptions = Array.from({ length: 63 }, (_, i) => i + 18);
@@ -43,6 +44,44 @@ const usStates = [
     'Virginia','Washington','Washington D.C.','West Virginia','Wisconsin','Wyoming',
     'Puerto Rico','Outside the U.S.',
 ];
+
+const eventStatusLabels = { draft: 'Borrador', published: 'Publicado', active: 'Activo', completed: 'Completado' };
+
+// IDs ya seleccionados (para evitar duplicados)
+const selectedEventIds = computed(() => form.assignments.map(a => a.event_id).filter(Boolean));
+
+function availableEventsFor(idx) {
+    const current = form.assignments[idx]?.event_id;
+    return props.events.filter(e => e.id == current || !selectedEventIds.value.includes(e.id));
+}
+
+function getEventDays(eventId) {
+    const ev = props.events.find(e => e.id == eventId);
+    return ev?.event_days ?? [];
+}
+
+function addAssignment() {
+    form.assignments.push({ event_id: '', area: '', schedules: [] });
+}
+
+function removeAssignment(idx) {
+    form.assignments.splice(idx, 1);
+}
+
+function addSchedule(idx) {
+    form.assignments[idx].schedules.push({ event_day_id: '', start_time: '', end_time: '' });
+}
+
+function removeSchedule(idx, si) {
+    form.assignments[idx].schedules.splice(si, 1);
+}
+
+function formatDayDate(date) {
+    if (!date) return '—';
+    const d = new Date(String(date).substring(0, 10) + 'T12:00:00');
+    if (isNaN(d)) return date;
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
 
 function submit() {
     form.post('/admin/volunteers');
@@ -65,13 +104,17 @@ function submit() {
                 <button v-for="tab in [
                     { n: 1, label: 'Datos Personales' },
                     { n: 2, label: 'Detalles Voluntario' },
-                    { n: 3, label: 'Evento' },
+                    { n: 3, label: 'Eventos' },
                 ]" :key="tab.n"
                     type="button"
                     @click="activeTab = tab.n"
                     class="flex-1 py-2 text-sm font-medium rounded-lg transition-all"
                     :class="activeTab === tab.n ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'">
                     {{ tab.label }}
+                    <span v-if="tab.n === 3 && form.assignments.length > 0"
+                        class="ml-1 bg-black text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                        {{ form.assignments.length }}
+                    </span>
                 </button>
             </div>
 
@@ -123,6 +166,7 @@ function submit() {
                             <label class="block text-sm font-medium text-gray-700 mb-1">Género</label>
                             <select v-model="form.gender"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                                <option value="">— Seleccionar —</option>
                                 <option value="female">Femenino</option>
                                 <option value="male">Masculino</option>
                                 <option value="non_binary">No binario</option>
@@ -224,19 +268,97 @@ function submit() {
                     </div>
                 </div>
 
-                <!-- Pestaña 3: Evento -->
-                <div v-show="activeTab === 3" class="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Asignar a evento</label>
-                        <select v-model="form.event_id"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                            <option value="">— Sin asignar —</option>
-                            <option v-for="e in events" :key="e.id" :value="e.id">
-                                {{ e.name }} — {{ { draft: 'Borrador', published: 'Publicado', active: 'Activo', completed: 'Completado' }[e.status] ?? e.status }}
-                            </option>
-                        </select>
-                        <p v-if="form.errors.event_id" class="mt-1 text-red-500 text-xs">{{ form.errors.event_id }}</p>
+                <!-- Pestaña 3: Eventos -->
+                <div v-show="activeTab === 3" class="space-y-4">
+
+                    <!-- Estado vacío -->
+                    <div v-if="form.assignments.length === 0"
+                        class="bg-white rounded-2xl border border-dashed border-gray-300 p-8 text-center">
+                        <p class="text-gray-400 text-sm mb-3">No hay eventos asignados todavía</p>
+                        <button type="button" @click="addAssignment"
+                            class="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
+                            <PlusIcon class="w-4 h-4" /> Agregar evento
+                        </button>
                     </div>
+
+                    <!-- Card por evento -->
+                    <div v-for="(assignment, idx) in form.assignments" :key="idx"
+                        class="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
+
+                        <!-- Header card -->
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-semibold text-gray-700">Evento {{ idx + 1 }}</span>
+                            <button type="button" @click="removeAssignment(idx)"
+                                class="text-red-400 hover:text-red-600 transition-colors">
+                                <TrashIcon class="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <!-- Selector de evento -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Evento</label>
+                            <select v-model="assignment.event_id"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                                <option value="">— Seleccionar —</option>
+                                <option v-for="e in availableEventsFor(idx)" :key="e.id" :value="e.id">
+                                    {{ e.name }} — {{ eventStatusLabels[e.status] ?? e.status }}
+                                </option>
+                            </select>
+                            <p v-if="form.errors[`assignments.${idx}.event_id`]" class="mt-1 text-red-500 text-xs">
+                                {{ form.errors[`assignments.${idx}.event_id`] }}
+                            </p>
+                        </div>
+
+                        <!-- Área (solo si hay evento seleccionado) -->
+                        <div v-if="assignment.event_id">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Área <span class="text-gray-400 font-normal">(opcional)</span></label>
+                            <input v-model="assignment.area" type="text"
+                                placeholder="ej: Backstage, Registration, Front of House..."
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                        </div>
+
+                        <!-- Horarios (solo si hay evento seleccionado) -->
+                        <div v-if="assignment.event_id">
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="text-sm font-medium text-gray-700">Horarios <span class="text-gray-400 font-normal">(opcional)</span></label>
+                                <button type="button" @click="addSchedule(idx)"
+                                    class="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-black border border-gray-300 rounded-lg px-2.5 py-1.5 hover:bg-gray-50 transition-colors">
+                                    <PlusIcon class="w-3 h-3" /> Agregar día
+                                </button>
+                            </div>
+
+                            <!-- Mensaje si no hay event_days -->
+                            <p v-if="getEventDays(assignment.event_id).length === 0"
+                                class="text-xs text-gray-400 italic">Este evento no tiene días configurados.</p>
+
+                            <!-- Lista de horarios -->
+                            <div v-for="(sch, si) in assignment.schedules" :key="si"
+                                class="flex items-center gap-2 mb-2">
+                                <select v-model="sch.event_day_id"
+                                    class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                                    <option value="">— Día —</option>
+                                    <option v-for="day in getEventDays(assignment.event_id)" :key="day.id" :value="day.id">
+                                        {{ formatDayDate(day.date) }} — {{ day.label }}
+                                    </option>
+                                </select>
+                                <input v-model="sch.start_time" type="time"
+                                    class="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                                <span class="text-gray-400 text-xs">a</span>
+                                <input v-model="sch.end_time" type="time"
+                                    class="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                                <button type="button" @click="removeSchedule(idx, si)"
+                                    class="text-red-400 hover:text-red-600 transition-colors flex-shrink-0">
+                                    <TrashIcon class="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botón agregar otro evento -->
+                    <button v-if="form.assignments.length > 0" type="button" @click="addAssignment"
+                        class="w-full py-2.5 border border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
+                        <PlusIcon class="w-4 h-4" /> Agregar otro evento
+                    </button>
                 </div>
 
                 <!-- Botones -->

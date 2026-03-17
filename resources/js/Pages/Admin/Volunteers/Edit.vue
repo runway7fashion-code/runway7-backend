@@ -391,7 +391,7 @@ function formatTime(t) {
                             <select v-model="scheduleForm.event_day_id" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm">
                                 <option value="">Seleccionar...</option>
                                 <option v-for="day in selectedEventDays" :key="day.id" :value="day.id">
-                                    {{ formatDayDate(day.date) }} — {{ day.type }}
+                                    {{ formatDayDate(day.date) }} — {{ day.label }}
                                 </option>
                             </select>
                         </div>
