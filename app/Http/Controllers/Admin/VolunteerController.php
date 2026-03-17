@@ -127,7 +127,7 @@ class VolunteerController extends Controller
             'first_name'             => 'required|string|max:255',
             'last_name'              => 'required|string|max:255',
             'email'                  => 'required|email|unique:users,email',
-            'phone'                  => 'required|string',
+            'phone'                  => 'required|string|unique:users,phone',
             'age'                    => 'required|integer|min:18|max:80',
             'gender'                 => 'required|in:female,male,non_binary',
             'location'               => 'required|string|max:255',
@@ -140,39 +140,52 @@ class VolunteerController extends Controller
             'resume_link'            => 'nullable|url|max:500',
             'notes'                  => 'nullable|string|max:2000',
             'event_id'               => 'nullable|exists:events,id',
+        ], [
+            'email.unique' => 'Este correo ya está registrado en el sistema.',
+            'phone.unique' => 'Este teléfono ya está registrado en el sistema.',
         ]);
 
         $this->sanitizeInstagram($validated);
 
-        $user = User::create([
-            'first_name' => $validated['first_name'],
-            'last_name'  => $validated['last_name'],
-            'email'      => $validated['email'],
-            'phone'      => $validated['phone'],
-            'role'       => 'volunteer',
-            'status'     => 'applicant',
-            'password'   => Hash::make('runway7'),
-        ]);
-
-        $user->volunteerProfile()->create([
-            'age'                    => $validated['age'],
-            'gender'                 => $validated['gender'],
-            'tshirt_size'            => $validated['tshirt_size'],
-            'experience'             => $validated['experience'],
-            'comfortable_fast_paced' => $validated['comfortable_fast_paced'],
-            'full_availability'      => $validated['full_availability'],
-            'contribution'           => $validated['contribution'] ?? null,
-            'resume_link'            => $validated['resume_link'] ?? null,
-            'instagram'              => $validated['instagram'] ?? null,
-            'location'               => $validated['location'],
-            'notes'                  => $validated['notes'] ?? null,
-        ]);
-
-        if (!empty($validated['event_id'])) {
-            $user->eventsAsStaff()->attach($validated['event_id'], [
-                'assigned_role' => 'volunteer',
-                'status'        => 'assigned',
+        try {
+            $user = User::create([
+                'first_name' => $validated['first_name'],
+                'last_name'  => $validated['last_name'],
+                'email'      => $validated['email'],
+                'phone'      => $validated['phone'],
+                'role'       => 'volunteer',
+                'status'     => 'applicant',
+                'password'   => Hash::make('runway7'),
             ]);
+
+            $user->volunteerProfile()->create([
+                'age'                    => $validated['age'],
+                'gender'                 => $validated['gender'],
+                'tshirt_size'            => $validated['tshirt_size'],
+                'experience'             => $validated['experience'],
+                'comfortable_fast_paced' => $validated['comfortable_fast_paced'],
+                'full_availability'      => $validated['full_availability'],
+                'contribution'           => $validated['contribution'] ?? null,
+                'resume_link'            => $validated['resume_link'] ?? null,
+                'instagram'              => $validated['instagram'] ?? null,
+                'location'               => $validated['location'],
+                'notes'                  => $validated['notes'] ?? null,
+            ]);
+
+            if (!empty($validated['event_id'])) {
+                $user->eventsAsStaff()->attach($validated['event_id'], [
+                    'assigned_role' => 'volunteer',
+                    'status'        => 'assigned',
+                ]);
+            }
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            $message = str_contains($e->getMessage(), 'phone')
+                ? 'Este teléfono ya está registrado en el sistema.'
+                : 'Este correo ya está registrado en el sistema.';
+            return back()->withInput()->with('error', $message);
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->withInput()->with('error', 'Ocurrió un error inesperado al crear el voluntario. Por favor intenta de nuevo.');
         }
 
         return redirect()->route('admin.volunteers.show', $user)
@@ -208,7 +221,7 @@ class VolunteerController extends Controller
             'first_name'             => 'required|string|max:255',
             'last_name'              => 'nullable|string|max:255',
             'email'                  => "required|email|unique:users,email,{$volunteer->id}",
-            'phone'                  => 'nullable|string',
+            'phone'                  => "nullable|string|unique:users,phone,{$volunteer->id}",
             'age'                    => 'nullable|integer|min:18|max:80',
             'gender'                 => 'nullable|in:female,male,non_binary',
             'location'               => 'nullable|string|max:255',
@@ -220,28 +233,36 @@ class VolunteerController extends Controller
             'contribution'           => 'nullable|string|max:1000',
             'resume_link'            => 'nullable|url|max:500',
             'notes'                  => 'nullable|string|max:2000',
+        ], [
+            'email.unique' => 'Este correo ya está registrado en el sistema.',
+            'phone.unique' => 'Este teléfono ya está registrado en el sistema.',
         ]);
 
         $this->sanitizeInstagram($validated);
 
-        $volunteer->update([
-            'first_name' => $validated['first_name'],
-            'last_name'  => $validated['last_name'] ?? '',
-            'email'      => $validated['email'],
-            'phone'      => $validated['phone'] ?? null,
-        ]);
+        try {
+            $volunteer->update([
+                'first_name' => $validated['first_name'],
+                'last_name'  => $validated['last_name'] ?? '',
+                'email'      => $validated['email'],
+                'phone'      => $validated['phone'] ?? null,
+            ]);
 
-        $profileFields = [
-            'age', 'gender', 'tshirt_size', 'experience', 'comfortable_fast_paced',
-            'full_availability', 'contribution', 'resume_link', 'instagram', 'location', 'notes',
-        ];
+            $profileFields = [
+                'age', 'gender', 'tshirt_size', 'experience', 'comfortable_fast_paced',
+                'full_availability', 'contribution', 'resume_link', 'instagram', 'location', 'notes',
+            ];
 
-        $profileData = collect($validated)->only($profileFields)->toArray();
+            $profileData = collect($validated)->only($profileFields)->toArray();
 
-        $volunteer->volunteerProfile()->updateOrCreate(
-            ['user_id' => $volunteer->id],
-            $profileData,
-        );
+            $volunteer->volunteerProfile()->updateOrCreate(
+                ['user_id' => $volunteer->id],
+                $profileData,
+            );
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->withInput()->with('error', 'Ocurrió un error inesperado al actualizar el voluntario. Por favor intenta de nuevo.');
+        }
 
         return redirect()->route('admin.volunteers.show', $volunteer)
             ->with('success', 'Voluntario actualizado correctamente.');
