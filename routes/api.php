@@ -63,6 +63,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('my-tickets', [App\Http\Controllers\Api\V1\TicketController::class, 'myTickets'])->name('tickets.my');
         Route::post('check-in/scan', [App\Http\Controllers\Api\V1\TicketController::class, 'scan'])->name('checkin.scan');
 
+        // Kiosk attendance check-in
+        Route::post('kiosk/checkin', [App\Http\Controllers\Api\V1\KioskCheckinController::class, 'checkin'])->name('kiosk.checkin');
+
         // Profile
         Route::put('profile', [App\Http\Controllers\Api\V1\ProfileController::class, 'update'])->name('profile.update');
         Route::post('profile/photo', [App\Http\Controllers\Api\V1\ProfileController::class, 'uploadPhoto'])->name('profile.photo');

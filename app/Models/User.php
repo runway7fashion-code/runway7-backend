@@ -149,6 +149,7 @@ class User extends Authenticatable
     public function designerDisplays() { return $this->hasMany(DesignerDisplay::class, 'designer_id'); }
     public function fittingAssignments() { return $this->hasMany(FittingAssignment::class, 'designer_id'); }
     public function eventPasses() { return $this->hasMany(EventPass::class, 'user_id'); }
+    public function checkins()    { return $this->hasMany(Checkin::class); }
 
     public function eventsAsStaff()
     {

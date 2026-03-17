@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\PassController;
 use App\Http\Controllers\Admin\VolunteerController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\SalesController;
+use App\Http\Controllers\Admin\AttendanceController;
 
 Route::get('/', function () {
     return redirect()->route('admin.login');
@@ -84,6 +85,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('designers/send-bulk-onboarding', [DesignerController::class, 'sendBulkOnboardingEmail'])->name('designers.send-bulk-onboarding');
             Route::post('designers/{designer}/send-onboarding-sms', [DesignerController::class, 'sendOnboardingSms'])->name('designers.send-onboarding-sms');
             Route::post('designers/send-bulk-onboarding-sms', [DesignerController::class, 'sendBulkOnboardingSms'])->name('designers.send-bulk-onboarding-sms');
+        });
+
+        // Asistencia - admin, operation
+        Route::middleware('section:attendance')->group(function () {
+            Route::get('attendance/export', [AttendanceController::class, 'export'])->name('attendance.export');
+            Route::get('attendance/event-days/{event}', [AttendanceController::class, 'eventDays'])->name('attendance.event-days');
+            Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+            Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
+            Route::delete('attendance/{checkin}', [AttendanceController::class, 'destroy'])->name('attendance.destroy');
         });
 
         // Voluntarios - admin, operation
