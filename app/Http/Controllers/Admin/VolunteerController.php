@@ -206,7 +206,7 @@ class VolunteerController extends Controller
             'volunteerSchedules.eventDay',
         ]);
 
-        $events = Event::where('status', 'active')
+        $events = Event::where('status', '!=', 'cancelled')
             ->with('eventDays')
             ->orderBy('start_date')
             ->get();

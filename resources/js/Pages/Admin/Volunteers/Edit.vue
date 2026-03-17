@@ -285,7 +285,9 @@ function formatTime(t) {
                             <select v-model="assignForm.event_id"
                                 class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm">
                                 <option value="">Seleccionar evento...</option>
-                                <option v-for="ev in events" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
+                                <option v-for="ev in events" :key="ev.id" :value="ev.id">
+                                    {{ ev.name }} — {{ { draft: 'Borrador', published: 'Publicado', active: 'Activo', completed: 'Completado' }[ev.status] ?? ev.status }}
+                                </option>
                             </select>
                             <input v-model="assignForm.area" type="text" placeholder="Área"
                                 class="w-36 border border-gray-300 rounded-lg px-3 py-2.5 text-sm" />
