@@ -337,7 +337,9 @@ function deleteVolunteer() {
                             <label class="block text-sm font-medium text-gray-700 mb-1">Evento</label>
                             <select v-model="assignForm.event_id" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm">
                                 <option value="">Seleccionar...</option>
-                                <option v-for="ev in events" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
+                                <option v-for="ev in events" :key="ev.id" :value="ev.id">
+                                    {{ ev.name }} — {{ { draft: 'Borrador', published: 'Publicado', active: 'Activo', completed: 'Completado' }[ev.status] ?? ev.status }}
+                                </option>
                             </select>
                         </div>
                         <div>

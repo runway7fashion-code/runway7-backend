@@ -98,7 +98,7 @@ class VolunteerController extends Controller
             'communicationLogs' => fn ($q) => $q->latest()->limit(20),
         ]);
 
-        $events = Event::where('status', 'active')
+        $events = Event::where('status', '!=', 'cancelled')
             ->with('eventDays')
             ->orderBy('start_date')
             ->get();
