@@ -15,11 +15,12 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 class AttendanceExport implements FromCollection, WithHeadings, WithMapping, WithStyles, ShouldAutoSize
 {
     public function __construct(
-        private readonly ?string $eventId    = null,
-        private readonly ?string $eventDayId = null,
-        private readonly ?string $role       = null,
-        private readonly ?string $method     = null,
-        private readonly ?string $search     = null,
+        private readonly ?string $eventId         = null,
+        private readonly ?string $eventDayId      = null,
+        private readonly ?string $role            = null,
+        private readonly ?string $method          = null,
+        private readonly ?string $search          = null,
+        private readonly ?array  $restrictToRoles = null,
     ) {}
 
     public function collection(): Collection
@@ -29,6 +30,11 @@ class AttendanceExport implements FromCollection, WithHeadings, WithMapping, Wit
         if ($this->eventId)    $query->where('event_id', $this->eventId);
         if ($this->eventDayId) $query->where('event_day_id', $this->eventDayId);
         if ($this->method)     $query->where('method', $this->method);
+
+        if ($this->restrictToRoles) {
+            $restricted = $this->restrictToRoles;
+            $query->whereHas('user', fn ($q) => $q->whereIn('role', $restricted));
+        }
 
         if ($this->role) {
             $query->whereHas('user', fn ($q) => $q->where('role', $this->role));

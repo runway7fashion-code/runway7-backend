@@ -15,6 +15,9 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class AttendanceController extends Controller
 {
+    /** Roles visibles para el rol 'operation' */
+    private const OPERATION_ROLES = ['designer', 'model', 'media', 'volunteer'];
+
     public function index(Request $request): Response
     {
         $query = Checkin::with([
@@ -23,6 +26,11 @@ class AttendanceController extends Controller
             'eventDay:id,date,label',
             'creator:id,first_name,last_name',
         ]);
+
+        // Operation solo ve designers, models, media y voluntarios
+        if (auth()->user()->role === 'operation') {
+            $query->whereHas('user', fn ($q) => $q->whereIn('role', self::OPERATION_ROLES));
+        }
 
         if ($request->filled('event_id')) {
             $query->where('event_id', $request->event_id);
@@ -70,18 +78,23 @@ class AttendanceController extends Controller
             ? EventDay::where('event_id', $request->event_id)->orderBy('date')->get(['id', 'date', 'label'])
             : collect();
 
-        // Resumen del día actual
-        $todayCount  = Checkin::whereDate('checked_at', today())->count();
-        $entryCount  = Checkin::whereDate('checked_at', today())->where('type', 'entry')->count();
-        $exitCount   = Checkin::whereDate('checked_at', today())->where('type', 'exit')->count();
-        $singleCount = Checkin::whereDate('checked_at', today())->where('type', 'single')->count();
+        // Resumen del día actual (respetando restricción de operation)
+        $isOperation = auth()->user()->role === 'operation';
+        $summaryBase = fn () => Checkin::whereDate('checked_at', today())
+            ->when($isOperation, fn ($q) => $q->whereHas('user', fn ($u) => $u->whereIn('role', self::OPERATION_ROLES)));
+
+        $todayCount  = $summaryBase()->count();
+        $entryCount  = $summaryBase()->where('type', 'entry')->count();
+        $exitCount   = $summaryBase()->where('type', 'exit')->count();
+        $singleCount = $summaryBase()->where('type', 'single')->count();
 
         return Inertia::render('Admin/Attendance/Index', [
-            'checkins'   => $checkins,
-            'filters'    => $request->only(['event_id', 'event_day_id', 'role', 'method', 'type', 'search']),
-            'events'     => $events,
-            'event_days' => $eventDays,
-            'summary'    => compact('todayCount', 'entryCount', 'exitCount', 'singleCount'),
+            'checkins'        => $checkins,
+            'filters'         => $request->only(['event_id', 'event_day_id', 'role', 'method', 'type', 'search']),
+            'events'          => $events,
+            'event_days'      => $eventDays,
+            'summary'         => compact('todayCount', 'entryCount', 'exitCount', 'singleCount'),
+            'allowed_roles'   => $isOperation ? self::OPERATION_ROLES : null,
         ]);
     }
 
@@ -148,12 +161,15 @@ class AttendanceController extends Controller
     {
         $filename = 'asistencia_' . now()->format('Ymd_His') . '.xlsx';
 
+        $isOperation = auth()->user()->role === 'operation';
+
         return Excel::download(new AttendanceExport(
-            eventId:    $request->input('event_id'),
-            eventDayId: $request->input('event_day_id'),
-            role:       $request->input('role'),
-            method:     $request->input('method'),
-            search:     $request->input('search'),
+            eventId:          $request->input('event_id'),
+            eventDayId:       $request->input('event_day_id'),
+            role:             $request->input('role'),
+            method:           $request->input('method'),
+            search:           $request->input('search'),
+            restrictToRoles:  $isOperation ? self::OPERATION_ROLES : null,
         ), $filename);
     }
 

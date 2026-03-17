@@ -5,11 +5,12 @@ import { ref, watch } from 'vue';
 import { MagnifyingGlassIcon, ArrowDownTrayIcon, PlusIcon, TrashIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
-    checkins:   Object,
-    filters:    Object,
-    events:     Array,
-    event_days: Array,
-    summary:    Object,
+    checkins:      Object,
+    filters:       Object,
+    events:        Array,
+    event_days:    Array,
+    summary:       Object,
+    allowed_roles: Array, // null = sin restricción (admin), array = roles permitidos (operation)
 });
 
 // ─── Filtros ───────────────────────────────────────────────────────────────
@@ -144,22 +145,28 @@ function initials(c) {
 <template>
     <AdminLayout>
         <template #header>
-            <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-gray-900">Asistencia</h2>
-                <div class="flex gap-2">
-                    <button @click="showModal = true"
-                        class="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
-                        <PlusIcon class="w-4 h-4" /> Registrar manual
-                    </button>
-                    <button @click="exportData"
-                        class="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors">
-                        <ArrowDownTrayIcon class="w-4 h-4" /> Exportar
-                    </button>
-                </div>
-            </div>
+            <h2 class="text-lg font-semibold text-gray-900">Asistencia</h2>
         </template>
 
         <div class="space-y-5">
+
+            <!-- Título y acciones -->
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-900">Asistencia</h3>
+                    <p class="text-gray-500 text-sm mt-1">{{ checkins.total }} marcaciones en total</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button @click="exportData"
+                        class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
+                        <ArrowDownTrayIcon class="w-4 h-4 text-gray-500" /> Exportar Excel
+                    </button>
+                    <button @click="showModal = true"
+                        class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
+                        + Registrar manual
+                    </button>
+                </div>
+            </div>
 
             <!-- Resumen del día -->
             <div class="grid grid-cols-4 gap-4">
@@ -206,13 +213,27 @@ function initials(c) {
                     <select v-model="role"
                         class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                         <option value="">Todos los roles</option>
-                        <option value="volunteer">Voluntario</option>
-                        <option value="staff">Staff</option>
-                        <option value="model">Modelo</option>
-                        <option value="designer">Diseñador</option>
-                        <option value="media">Media</option>
-                        <option value="vip">VIP</option>
-                        <option value="press">Prensa</option>
+                        <template v-if="!allowed_roles || allowed_roles.includes('volunteer')">
+                            <option value="volunteer">Voluntario</option>
+                        </template>
+                        <template v-if="!allowed_roles || allowed_roles.includes('staff')">
+                            <option value="staff">Staff</option>
+                        </template>
+                        <template v-if="!allowed_roles || allowed_roles.includes('model')">
+                            <option value="model">Modelo</option>
+                        </template>
+                        <template v-if="!allowed_roles || allowed_roles.includes('designer')">
+                            <option value="designer">Diseñador</option>
+                        </template>
+                        <template v-if="!allowed_roles || allowed_roles.includes('media')">
+                            <option value="media">Media</option>
+                        </template>
+                        <template v-if="!allowed_roles || allowed_roles.includes('vip')">
+                            <option value="vip">VIP</option>
+                        </template>
+                        <template v-if="!allowed_roles || allowed_roles.includes('press')">
+                            <option value="press">Prensa</option>
+                        </template>
                     </select>
                     <!-- Tipo -->
                     <select v-model="type"
