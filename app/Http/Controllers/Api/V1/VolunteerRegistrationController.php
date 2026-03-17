@@ -68,13 +68,13 @@ class VolunteerRegistrationController extends Controller
             'age'                     => 'required|integer|min:18|max:80',
             'gender'                  => 'required|in:female,male,non_binary',
             'location'                => 'required|string|max:255',
-            'instagram'               => 'nullable|string|max:255',
+            'instagram'               => 'required|string|max:255',
             'tshirt_size'             => 'required|in:XS,S,M,L,XL,XXL',
             'experience'              => 'required|in:none,some,experienced',
             'comfortable_fast_paced'  => 'required|in:multitask,structured',
             'full_availability'       => 'required|in:yes,no,partially',
             'contribution'            => 'required|string|max:1000',
-            'resume_link'             => 'nullable|url|max:500',
+            'resume_link'             => 'required|url|max:500',
             'event_id'                => 'required|exists:events,id',
         ], [
             'first_name.required'             => 'First name is required.',
@@ -93,6 +93,8 @@ class VolunteerRegistrationController extends Controller
             'contribution.required'           => 'Please tell us how you would contribute.',
             'event_id.required'               => 'Please select an event.',
             'event_id.exists'                 => 'The selected event is not valid.',
+            'instagram.required'              => 'Instagram username is required.',
+            'resume_link.required'            => 'Resume link is required.',
             'resume_link.url'                 => 'Please enter a valid URL for your resume.',
         ]);
 
