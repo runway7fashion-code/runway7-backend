@@ -3,6 +3,7 @@
 namespace App\Imports;
 
 use App\Models\User;
+use App\Support\InstagramSanitizer;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -41,14 +42,7 @@ class VolunteersImport implements ToCollection, WithHeadingRow
         $lastName  = trim($row['last_name'] ?? $row['apellido'] ?? '');
         $phone     = trim($row['phone'] ?? $row['telefono'] ?? '');
 
-        // Sanitizar Instagram
-        $instagram = trim($row['instagram'] ?? '');
-        if ($instagram) {
-            $instagram = strtok($instagram, '?');
-            $instagram = preg_replace('#^https?://(www\.)?instagram\.com/#i', '', $instagram);
-            $instagram = rtrim($instagram, '/');
-            $instagram = ltrim($instagram, '@');
-        }
+        $instagram = InstagramSanitizer::sanitize($row['instagram'] ?? null);
 
         $user = User::where('email', $email)->first();
 

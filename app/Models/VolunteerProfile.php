@@ -13,7 +13,9 @@ class VolunteerProfile extends Model
 
     protected function casts(): array
     {
-        return [];
+        return [
+            'age' => 'integer',
+        ];
     }
 
     public function user()

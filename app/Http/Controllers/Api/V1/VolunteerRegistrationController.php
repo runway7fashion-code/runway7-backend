@@ -10,6 +10,7 @@ use App\Models\EventPass;
 use App\Models\User;
 use App\Notifications\NewVolunteerRegistered;
 use App\Services\ActivityLogService;
+use App\Support\InstagramSanitizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,14 +48,9 @@ class VolunteerRegistrationController extends Controller
         }
 
         // Sanitizar Instagram
-        if ($request->filled('instagram')) {
-            $ig = $request->input('instagram');
-            $ig = strtok($ig, '?');
-            $ig = preg_replace('#^https?://(www\.)?instagram\.com/#i', '', $ig);
-            $ig = rtrim($ig, '/');
-            $ig = ltrim($ig, '@');
-            $request->merge(['instagram' => $ig]);
-        }
+        $request->merge([
+            'instagram' => InstagramSanitizer::sanitize($request->input('instagram')),
+        ]);
 
         // Verificar si ya existe (incluir soft-deleted)
         $existingUser = User::withTrashed()->where('email', $request->input('email'))->first();
@@ -169,6 +165,7 @@ class VolunteerRegistrationController extends Controller
                         'pass_type'    => 'volunteer',
                         'holder_name'  => $existingUser->full_name,
                         'holder_email' => $existingUser->email,
+                        'issued_at'    => now(),
                         'status'       => 'active',
                     ]);
 
@@ -213,6 +210,7 @@ class VolunteerRegistrationController extends Controller
                     'pass_type'    => 'volunteer',
                     'holder_name'  => $user->full_name,
                     'holder_email' => $user->email,
+                    'issued_at'    => now(),
                     'status'       => 'active',
                 ]);
 
@@ -235,10 +233,8 @@ class VolunteerRegistrationController extends Controller
                 $notifyUser->notify(new NewVolunteerRegistered($user, $event->name));
             }
 
-            // Enviar email de confirmación solo para nuevos registros
-            if (!$isReRegistration) {
-                SendVolunteerRegistrationEmailJob::dispatch($user->id, $event->name);
-            }
+            // Enviar email de confirmación (siempre, incluyendo re-registros para nuevo evento)
+            SendVolunteerRegistrationEmailJob::dispatch($user->id, $event->name);
 
             $message = $isReRegistration
                 ? 'You have been successfully registered for this new event!'

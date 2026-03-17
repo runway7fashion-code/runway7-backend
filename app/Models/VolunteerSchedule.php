@@ -10,6 +10,14 @@ class VolunteerSchedule extends Model
         'user_id', 'event_id', 'event_day_id', 'start_time', 'end_time',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'start_time' => 'string',
+            'end_time'   => 'string',
+        ];
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

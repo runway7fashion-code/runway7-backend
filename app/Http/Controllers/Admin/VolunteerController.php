@@ -10,6 +10,7 @@ use App\Models\EventPass;
 use App\Models\User;
 use App\Models\VolunteerSchedule;
 use App\Services\TwilioService;
+use App\Support\InstagramSanitizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -341,7 +342,8 @@ class VolunteerController extends Controller
             'pass_type'    => 'volunteer',
             'holder_name'  => $volunteer->full_name,
             'holder_email' => $volunteer->email,
-            'valid_days'   => null, // válido todos los días
+            'valid_days'   => null,
+            'issued_at'    => now(),
             'status'       => 'active',
         ]);
 
@@ -696,13 +698,6 @@ class VolunteerController extends Controller
 
     private function sanitizeInstagram(array &$data): void
     {
-        if (!empty($data['instagram'])) {
-            $ig = $data['instagram'];
-            $ig = strtok($ig, '?');
-            $ig = preg_replace('#^https?://(www\.)?instagram\.com/#i', '', $ig);
-            $ig = rtrim($ig, '/');
-            $ig = ltrim($ig, '@');
-            $data['instagram'] = $ig;
-        }
+        $data['instagram'] = InstagramSanitizer::sanitize($data['instagram'] ?? null);
     }
 }
