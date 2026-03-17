@@ -296,7 +296,6 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                     <div>
                                         <p class="font-medium text-gray-900">{{ vol.first_name }} {{ vol.last_name }}</p>
                                         <p class="text-gray-500 text-xs">{{ vol.email }}</p>
-                                        <p v-if="vol.volunteer_profile?.instagram" class="text-gray-400 text-xs">@{{ vol.volunteer_profile.instagram }}</p>
                                     </div>
                                 </div>
                             </td>
