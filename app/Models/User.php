@@ -153,7 +153,7 @@ class User extends Authenticatable
     public function eventsAsStaff()
     {
         return $this->belongsToMany(Event::class, 'event_staff', 'user_id', 'event_id')
-            ->withPivot(['assigned_role', 'status', 'checked_in_at', 'notes', 'area', 'casting_status'])
+            ->withPivot(['assigned_role', 'status', 'checked_in_at', 'notes', 'area'])
             ->withTimestamps();
     }
 
