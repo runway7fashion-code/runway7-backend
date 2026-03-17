@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Exports\VolunteersExport;
 use App\Http\Controllers\Controller;
+use App\Models\Checkin;
 use App\Models\CommunicationLog;
 use App\Models\Event;
 use App\Models\EventPass;
@@ -11,6 +12,7 @@ use App\Models\User;
 use App\Models\VolunteerSchedule;
 use App\Services\TwilioService;
 use App\Support\InstagramSanitizer;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -103,9 +105,28 @@ class VolunteerController extends Controller
             ->orderBy('start_date')
             ->get();
 
+        // Elegibilidad de certificado por evento
+        $certificates = $volunteer->eventsAsStaff->mapWithKeys(function ($event) use ($volunteer) {
+            $scheduledDayIds = VolunteerSchedule::where('user_id', $volunteer->id)
+                ->where('event_id', $event->id)
+                ->pluck('event_day_id');
+
+            if ($scheduledDayIds->isEmpty()) {
+                return [$event->id => false];
+            }
+
+            $attendedDayIds = Checkin::where('user_id', $volunteer->id)
+                ->whereIn('event_day_id', $scheduledDayIds)
+                ->pluck('event_day_id')
+                ->unique();
+
+            return [$event->id => $scheduledDayIds->diff($attendedDayIds)->isEmpty()];
+        });
+
         return Inertia::render('Admin/Volunteers/Show', [
-            'volunteer' => $volunteer,
-            'events'    => $events,
+            'volunteer'    => $volunteer,
+            'events'       => $events,
+            'certificates' => $certificates,
         ]);
     }
 
@@ -319,6 +340,42 @@ class VolunteerController extends Controller
 
         return redirect()->route('admin.volunteers.index')
             ->with('success', 'Voluntario eliminado correctamente.');
+    }
+
+    // ──────────────────────────────────────────────
+    //  Certificado
+    // ──────────────────────────────────────────────
+
+    public function certificate(User $volunteer, Event $event)
+    {
+        // Días programados para este voluntario en este evento
+        $scheduledDayIds = VolunteerSchedule::where('user_id', $volunteer->id)
+            ->where('event_id', $event->id)
+            ->pluck('event_day_id');
+
+        if ($scheduledDayIds->isEmpty()) {
+            abort(403, 'Este voluntario no tiene días asignados en este evento.');
+        }
+
+        // Días con checkin registrado
+        $attendedDayIds = Checkin::where('user_id', $volunteer->id)
+            ->whereIn('event_day_id', $scheduledDayIds)
+            ->pluck('event_day_id')
+            ->unique();
+
+        $missing = $scheduledDayIds->diff($attendedDayIds);
+        if ($missing->isNotEmpty()) {
+            abort(403, 'El voluntario no asistió a todos los días asignados.');
+        }
+
+        $pdf = Pdf::loadView('pdf.volunteer_certificate', [
+            'volunteer' => $volunteer,
+            'event'     => $event,
+        ])->setPaper('letter', 'landscape');
+
+        $filename = 'certificado_' . Str::slug($volunteer->full_name) . '_' . Str::slug($event->name) . '.pdf';
+
+        return $pdf->download($filename);
     }
 
     // ──────────────────────────────────────────────
