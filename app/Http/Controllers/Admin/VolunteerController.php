@@ -252,7 +252,7 @@ class VolunteerController extends Controller
 
         DB::transaction(function () use ($volunteer) {
             $volunteer->volunteerSchedules()->delete();
-            $volunteer->volunteerProfile?->forceDelete();
+            $volunteer->volunteerProfile?->delete();
             $volunteer->eventsAsStaff()->detach();
             DB::table('event_passes')->where('user_id', $volunteer->id)->delete();
             DB::table('communication_logs')->where('user_id', $volunteer->id)->delete();
