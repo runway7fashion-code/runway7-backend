@@ -102,7 +102,7 @@ function submit() {
                             <p v-if="form.errors.email" class="mt-1 text-red-500 text-xs">{{ form.errors.email }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
                             <input v-model="form.phone" type="tel"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             <p v-if="form.errors.phone" class="mt-1 text-red-500 text-xs">{{ form.errors.phone }}</p>
@@ -111,7 +111,7 @@ function submit() {
 
                     <div class="grid grid-cols-3 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Edad *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Edad</label>
                             <select v-model="form.age"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                                 <option value="">— Seleccionar —</option>
@@ -120,7 +120,7 @@ function submit() {
                             <p v-if="form.errors.age" class="mt-1 text-red-500 text-xs">{{ form.errors.age }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Género *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Género</label>
                             <select v-model="form.gender"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                                 <option value="female">Femenino</option>
@@ -137,7 +137,7 @@ function submit() {
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Ubicación *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
                         <select v-model="form.location"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                             <option value="">— Seleccionar —</option>
@@ -153,7 +153,7 @@ function submit() {
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Talla Camiseta *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Talla Camiseta</label>
                             <select v-model="form.tshirt_size"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                                 <option value="">— Seleccionar —</option>
@@ -167,7 +167,7 @@ function submit() {
                             <p v-if="form.errors.tshirt_size" class="mt-1 text-red-500 text-xs">{{ form.errors.tshirt_size }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Experiencia *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Experiencia</label>
                             <select v-model="form.experience"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                                 <option value="">— Seleccionar —</option>
@@ -181,7 +181,7 @@ function submit() {
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Estilo de trabajo *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Estilo de trabajo</label>
                             <select v-model="form.comfortable_fast_paced"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                                 <option value="">— Seleccionar —</option>
@@ -191,7 +191,7 @@ function submit() {
                             <p v-if="form.errors.comfortable_fast_paced" class="mt-1 text-red-500 text-xs">{{ form.errors.comfortable_fast_paced }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Disponibilidad *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Disponibilidad</label>
                             <select v-model="form.full_availability"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                                 <option value="">— Seleccionar —</option>
@@ -231,7 +231,9 @@ function submit() {
                         <select v-model="form.event_id"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                             <option value="">— Sin asignar —</option>
-                            <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
+                            <option v-for="e in events" :key="e.id" :value="e.id">
+                                {{ e.name }} — {{ { draft: 'Borrador', published: 'Publicado', active: 'Activo', completed: 'Completado' }[e.status] ?? e.status }}
+                            </option>
                         </select>
                         <p v-if="form.errors.event_id" class="mt-1 text-red-500 text-xs">{{ form.errors.event_id }}</p>
                     </div>

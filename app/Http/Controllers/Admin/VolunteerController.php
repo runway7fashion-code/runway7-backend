@@ -111,7 +111,7 @@ class VolunteerController extends Controller
 
     public function create(): Response
     {
-        $events = Event::where('status', 'active')
+        $events = Event::where('status', '!=', 'cancelled')
             ->with('eventDays')
             ->orderBy('start_date')
             ->get();
@@ -127,15 +127,15 @@ class VolunteerController extends Controller
             'first_name'             => 'required|string|max:255',
             'last_name'              => 'required|string|max:255',
             'email'                  => 'required|email|unique:users,email',
-            'phone'                  => 'required|string|unique:users,phone',
-            'age'                    => 'required|integer|min:18|max:80',
-            'gender'                 => 'required|in:female,male,non_binary',
-            'location'               => 'required|string|max:255',
+            'phone'                  => 'nullable|string|unique:users,phone',
+            'age'                    => 'nullable|integer|min:18|max:80',
+            'gender'                 => 'nullable|in:female,male,non_binary',
+            'location'               => 'nullable|string|max:255',
             'instagram'              => 'nullable|string|max:255',
-            'tshirt_size'            => 'required|in:XS,S,M,L,XL,XXL',
-            'experience'             => 'required|in:none,some,experienced',
-            'comfortable_fast_paced' => 'required|in:multitask,structured',
-            'full_availability'      => 'required|in:yes,no,partially',
+            'tshirt_size'            => 'nullable|in:XS,S,M,L,XL,XXL',
+            'experience'             => 'nullable|in:none,some,experienced',
+            'comfortable_fast_paced' => 'nullable|in:multitask,structured',
+            'full_availability'      => 'nullable|in:yes,no,partially',
             'contribution'           => 'nullable|string|max:1000',
             'resume_link'            => 'nullable|url|max:500',
             'notes'                  => 'nullable|string|max:2000',
@@ -152,25 +152,29 @@ class VolunteerController extends Controller
                 'first_name' => $validated['first_name'],
                 'last_name'  => $validated['last_name'],
                 'email'      => $validated['email'],
-                'phone'      => $validated['phone'],
+                'phone'      => $validated['phone'] ?? null,
                 'role'       => 'volunteer',
                 'status'     => 'applicant',
                 'password'   => Hash::make('runway7'),
             ]);
 
-            $user->volunteerProfile()->create([
-                'age'                    => $validated['age'],
-                'gender'                 => $validated['gender'],
-                'tshirt_size'            => $validated['tshirt_size'],
-                'experience'             => $validated['experience'],
-                'comfortable_fast_paced' => $validated['comfortable_fast_paced'],
-                'full_availability'      => $validated['full_availability'],
+            $profileData = array_filter([
+                'age'                    => $validated['age'] ?? null,
+                'gender'                 => $validated['gender'] ?? null,
+                'tshirt_size'            => $validated['tshirt_size'] ?? null,
+                'experience'             => $validated['experience'] ?? null,
+                'comfortable_fast_paced' => $validated['comfortable_fast_paced'] ?? null,
+                'full_availability'      => $validated['full_availability'] ?? null,
                 'contribution'           => $validated['contribution'] ?? null,
                 'resume_link'            => $validated['resume_link'] ?? null,
                 'instagram'              => $validated['instagram'] ?? null,
-                'location'               => $validated['location'],
+                'location'               => $validated['location'] ?? null,
                 'notes'                  => $validated['notes'] ?? null,
-            ]);
+            ], fn ($v) => $v !== null);
+
+            if (!empty($profileData)) {
+                $user->volunteerProfile()->create($profileData);
+            }
 
             if (!empty($validated['event_id'])) {
                 $user->eventsAsStaff()->attach($validated['event_id'], [
