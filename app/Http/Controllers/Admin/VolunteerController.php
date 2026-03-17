@@ -483,13 +483,6 @@ class VolunteerController extends Controller
             return back()->with('error', 'Solo se puede enviar onboarding a voluntarios con estado Pendiente.');
         }
 
-        $volunteer->load('eventsAsStaff');
-
-        $eventId = $request->input('event_id');
-        $selectedEvent = $eventId
-            ? $volunteer->eventsAsStaff->firstWhere('id', $eventId)
-            : $volunteer->eventsAsStaff->first();
-
         $log = CommunicationLog::create([
             'user_id' => $volunteer->id,
             'sent_by' => $request->user()->id,
@@ -500,10 +493,9 @@ class VolunteerController extends Controller
 
         try {
             \App\Jobs\SendVolunteerOnboardingJob::dispatch(
-                userId:    $volunteer->id,
-                eventName: $selectedEvent?->name,
-                sentBy:    $request->user()->id,
-                logId:     $log->id,
+                userId:  $volunteer->id,
+                sentBy:  $request->user()->id,
+                logId:   $log->id,
             );
         } catch (\Throwable $e) {
             $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
@@ -523,13 +515,10 @@ class VolunteerController extends Controller
             ->where('status', 'pending')
             ->whereNull('welcome_email_sent_at')
             ->whereHas('eventsAsStaff')
-            ->with('eventsAsStaff')
             ->get();
 
         $count = 0;
         foreach ($volunteers as $volunteer) {
-            $firstEvent = $volunteer->eventsAsStaff?->first();
-
             $log = CommunicationLog::create([
                 'user_id' => $volunteer->id,
                 'sent_by' => $request->user()->id,
@@ -540,10 +529,9 @@ class VolunteerController extends Controller
 
             try {
                 \App\Jobs\SendVolunteerOnboardingJob::dispatch(
-                    userId:    $volunteer->id,
-                    eventName: $firstEvent?->name,
-                    sentBy:    $request->user()->id,
-                    logId:     $log->id,
+                    userId:  $volunteer->id,
+                    sentBy:  $request->user()->id,
+                    logId:   $log->id,
                 );
             } catch (\Throwable $e) {
                 $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
@@ -586,12 +574,6 @@ class VolunteerController extends Controller
             return back()->with('error', "$msg Recarga para poder enviar SMS.");
         }
 
-        $volunteer->load('eventsAsStaff');
-        $eventId = $request->input('event_id');
-        $firstEvent = $eventId
-            ? $volunteer->eventsAsStaff->firstWhere('id', $eventId)
-            : $volunteer->eventsAsStaff->first();
-
         $log = CommunicationLog::create([
             'user_id' => $volunteer->id,
             'sent_by' => $request->user()->id,
@@ -602,10 +584,9 @@ class VolunteerController extends Controller
 
         try {
             \App\Jobs\SendVolunteerOnboardingSmsJob::dispatch(
-                userId:    $volunteer->id,
-                eventName: $firstEvent?->name,
-                sentBy:    $request->user()->id,
-                logId:     $log->id,
+                userId:  $volunteer->id,
+                sentBy:  $request->user()->id,
+                logId:   $log->id,
             );
         } catch (\Throwable $e) {
             $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
@@ -633,13 +614,10 @@ class VolunteerController extends Controller
             ->where('phone', 'like', '+%')
             ->whereNull('sms_sent_at')
             ->whereHas('eventsAsStaff')
-            ->with('eventsAsStaff')
             ->get();
 
         $count = 0;
         foreach ($volunteers as $volunteer) {
-            $firstEvent = $volunteer->eventsAsStaff?->first();
-
             $log = CommunicationLog::create([
                 'user_id' => $volunteer->id,
                 'sent_by' => $request->user()->id,
@@ -650,10 +628,9 @@ class VolunteerController extends Controller
 
             try {
                 \App\Jobs\SendVolunteerOnboardingSmsJob::dispatch(
-                    userId:    $volunteer->id,
-                    eventName: $firstEvent?->name,
-                    sentBy:    $request->user()->id,
-                    logId:     $log->id,
+                    userId:  $volunteer->id,
+                    sentBy:  $request->user()->id,
+                    logId:   $log->id,
                 );
             } catch (\Throwable $e) {
                 $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);

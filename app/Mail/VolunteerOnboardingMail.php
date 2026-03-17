@@ -15,8 +15,7 @@ class VolunteerOnboardingMail extends Mailable
 
     public function __construct(
         public User $volunteer,
-        public ?string $eventName = null,
-        public array $schedules = [],
+        public array $events = [],
     ) {}
 
     public function envelope(): Envelope

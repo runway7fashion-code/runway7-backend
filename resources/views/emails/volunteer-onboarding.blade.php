@@ -147,34 +147,37 @@
         <p class="greeting">Welcome, {{ $volunteer->first_name }}!</p>
 
         <p class="text">
-            Congratulations! You have been selected as a volunteer for <strong>Runway 7 Fashion</strong>{{ $eventName ? ' at ' . $eventName : '' }}.
+            Congratulations! You have been selected as a volunteer for <strong>Runway 7 Fashion</strong>.
             We're excited to have you on our team! Below you'll find everything you need to get started.
         </p>
 
-        @if($eventName || count($schedules) > 0)
-        <div class="info-box">
-            @if($eventName)
-            <div class="info-row">
-                <span class="info-label">Event</span>
-                <span class="info-value">{{ $eventName }}</span>
-            </div>
-            @endif
-            <div class="info-row">
-                <span class="info-label">Role</span>
-                <span class="info-value">Volunteer</span>
-            </div>
-            @foreach($schedules as $schedule)
-            <div class="info-row">
-                <span class="info-label">{{ $schedule['day'] }}</span>
-                <span class="info-value">
-                    {{ \Carbon\Carbon::parse($schedule['start'])->format('g:i A') }} — {{ \Carbon\Carbon::parse($schedule['end'])->format('g:i A') }}
-                    @if($schedule['area'])
-                        <span style="color:#D4AF37; font-size:12px;"> ({{ $schedule['area'] }})</span>
-                    @endif
-                </span>
+        @if(count($events) > 0)
+            @foreach($events as $eventItem)
+            <div class="info-box" style="margin-bottom: {{ !$loop->last ? '16px' : '28px' }};">
+                <div class="info-row">
+                    <span class="info-label">Event</span>
+                    <span class="info-value">{{ $eventItem['name'] }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Role</span>
+                    <span class="info-value">Volunteer</span>
+                </div>
+                @if($eventItem['area'])
+                <div class="info-row">
+                    <span class="info-label">Area</span>
+                    <span class="info-value">{{ $eventItem['area'] }}</span>
+                </div>
+                @endif
+                @foreach($eventItem['schedules'] as $schedule)
+                <div class="info-row">
+                    <span class="info-label">{{ $schedule['day'] }}</span>
+                    <span class="info-value">
+                        {{ \Carbon\Carbon::parse($schedule['start'])->format('g:i A') }} — {{ \Carbon\Carbon::parse($schedule['end'])->format('g:i A') }}
+                    </span>
+                </div>
+                @endforeach
             </div>
             @endforeach
-        </div>
         @endif
 
         <p class="text" style="margin-bottom: 16px;">

@@ -21,45 +21,51 @@ class SendVolunteerOnboardingJob implements ShouldQueue
 
     public function __construct(
         public int $userId,
-        public ?string $eventName = null,
         public ?int $sentBy = null,
         public ?int $logId = null,
     ) {}
 
     public function handle(): void
     {
-        $user = User::with('volunteerSchedules.eventDay')->find($this->userId);
+        $user = User::with([
+            'volunteerSchedules.eventDay',
+            'eventsAsStaff' => fn ($q) => $q->wherePivot('status', 'assigned'),
+        ])->find($this->userId);
 
         if (!$user) return;
 
-        // Obtener schedules para el email
-        $schedules = $user->volunteerSchedules
-            ->sortBy(fn ($s) => $s->eventDay?->date)
-            ->map(function ($s) {
-                $date = $s->eventDay?->date;
-                $dayLabel = $date instanceof \Carbon\Carbon
-                    ? $date->format('l, M d')
-                    : ($date ? \Carbon\Carbon::parse($date)->format('l, M d') : null);
+        // Construir array de eventos con sus horarios agrupados
+        $events = $user->eventsAsStaff->map(function ($event) use ($user) {
+            $area = $event->pivot->area;
 
-                // Obtener area del evento (event_staff pivot)
-                $area = \Illuminate\Support\Facades\DB::table('event_staff')
-                    ->where('user_id', $s->user_id)
-                    ->where('event_id', $s->event_id)
-                    ->value('area');
+            $schedules = $user->volunteerSchedules
+                ->where('event_id', $event->id)
+                ->sortBy(fn ($s) => $s->eventDay?->date)
+                ->map(function ($s) use ($area) {
+                    $date = $s->eventDay?->date;
+                    $dayLabel = $date instanceof \Carbon\Carbon
+                        ? $date->format('l, M d')
+                        : ($date ? \Carbon\Carbon::parse($date)->format('l, M d') : null);
 
-                return [
-                    'day'   => $dayLabel,
-                    'start' => $s->start_time,
-                    'end'   => $s->end_time,
-                    'area'  => $area,
-                ];
-            })->values()->toArray();
+                    return [
+                        'day'   => $dayLabel,
+                        'start' => $s->start_time,
+                        'end'   => $s->end_time,
+                        'area'  => $area,
+                    ];
+                })->values()->toArray();
+
+            return [
+                'name'      => $event->name,
+                'area'      => $area,
+                'schedules' => $schedules,
+            ];
+        })->values()->toArray();
 
         Mail::to($user->email, "{$user->first_name} {$user->last_name}")
             ->send(new VolunteerOnboardingMail(
                 volunteer: $user,
-                eventName: $this->eventName,
-                schedules: $schedules,
+                events: $events,
             ));
 
         $user->update(['welcome_email_sent_at' => now()]);
