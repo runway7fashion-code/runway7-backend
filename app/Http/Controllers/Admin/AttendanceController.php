@@ -22,7 +22,7 @@ class AttendanceController extends Controller
     {
         $query = Checkin::with([
             'user',
-            'event:id,name',
+            'event:id,name,timezone',
             'eventDay:id,date,label',
             'creator:id,first_name,last_name',
         ]);
@@ -137,12 +137,16 @@ class AttendanceController extends Controller
             $request->merge(['type' => 'single']);
         }
 
+        $event = Event::findOrFail($request->event_id);
+        $tz = $event->timezone ?? 'America/New_York';
+        $checkedAt = \Carbon\Carbon::createFromFormat('Y-m-d\TH:i', $request->checked_at, $tz)->utc();
+
         Checkin::create([
             'user_id'      => $user->id,
             'event_id'     => $request->event_id,
             'event_day_id' => $request->event_day_id,
             'type'         => $request->type,
-            'checked_at'   => $request->checked_at,
+            'checked_at'   => $checkedAt,
             'method'       => 'manual',
             'notes'        => $request->notes,
             'created_by'   => auth()->id(),
@@ -180,6 +184,116 @@ class AttendanceController extends Controller
                 ->orderBy('date')
                 ->get(['id', 'date', 'label'])
         );
+    }
+
+    public function userSearch(Request $request)
+    {
+        $q = trim($request->input('q', ''));
+
+        if (strlen($q) < 2) {
+            return response()->json([]);
+        }
+
+        $users = User::where('status', 'active')
+            ->where(function ($query) use ($q) {
+                $query->where('first_name', 'ilike', "%{$q}%")
+                    ->orWhere('last_name', 'ilike', "%{$q}%")
+                    ->orWhere('email', 'ilike', "%{$q}%")
+                    ->orWhere('phone', 'ilike', "%{$q}%")
+                    ->orWhereHas('volunteerProfile', fn ($s) => $s->where('instagram', 'ilike', "%{$q}%"))
+                    ->orWhereHas('modelProfile',     fn ($s) => $s->where('instagram', 'ilike', "%{$q}%"))
+                    ->orWhereHas('designerProfile',  fn ($s) => $s->where('instagram', 'ilike', "%{$q}%")
+                                                                   ->orWhere('brand_name', 'ilike', "%{$q}%"));
+            })
+            ->with(['designerProfile:user_id,brand_name'])
+            ->limit(8)
+            ->get(['id', 'first_name', 'last_name', 'email', 'role']);
+
+        return response()->json($users->map(fn ($u) => [
+            'id'         => $u->id,
+            'name'       => $u->full_name,
+            'email'      => $u->email,
+            'role'       => $u->role,
+            'brand_name' => $u->designerProfile?->brand_name,
+        ]));
+    }
+
+    public function userEvents(Request $request)
+    {
+        $userId = $request->input('user_id');
+
+        if (!$userId) {
+            return response()->json(['error' => 'Selecciona un usuario.'], 422);
+        }
+
+        $user = User::find($userId);
+
+        if (!$user) {
+            return response()->json(['error' => 'Usuario no encontrado.'], 404);
+        }
+
+        if ($user->status !== 'active') {
+            return response()->json([
+                'error' => "El usuario no tiene estado activo (estado actual: {$user->status}).",
+            ], 422);
+        }
+
+        $events = $this->getValidEventsForUser($user);
+
+        return response()->json([
+            'events'           => $events,
+            'needs_entry_exit' => Checkin::needsEntryExit($user),
+        ]);
+    }
+
+    private function getValidEventsForUser(User $user): array
+    {
+        $role = $user->role;
+
+        if (in_array($role, ['volunteer', 'staff'])) {
+            return \DB::table('event_staff')
+                ->join('events', 'events.id', '=', 'event_staff.event_id')
+                ->where('event_staff.user_id', $user->id)
+                ->whereIn('event_staff.status', ['assigned', 'checked_in'])
+                ->whereNotIn('events.status', ['cancelled'])
+                ->get(['events.id', 'events.name', 'events.timezone'])
+                ->map(fn ($e) => ['id' => $e->id, 'name' => $e->name, 'timezone' => $e->timezone])
+                ->toArray();
+        }
+
+        if ($role === 'model') {
+            return \DB::table('show_model')
+                ->join('shows', 'shows.id', '=', 'show_model.show_id')
+                ->join('events', 'events.id', '=', 'shows.event_id')
+                ->where('show_model.model_id', $user->id)
+                ->where('show_model.status', 'confirmed')
+                ->where('events.status', 'active')
+                ->distinct()
+                ->get(['events.id', 'events.name', 'events.timezone'])
+                ->map(fn ($e) => ['id' => $e->id, 'name' => $e->name, 'timezone' => $e->timezone])
+                ->toArray();
+        }
+
+        if ($role === 'designer') {
+            return \DB::table('event_designer')
+                ->join('events', 'events.id', '=', 'event_designer.event_id')
+                ->where('event_designer.designer_id', $user->id)
+                ->where('event_designer.status', 'confirmed')
+                ->whereIn('events.status', ['published', 'active'])
+                ->get(['events.id', 'events.name', 'events.timezone'])
+                ->map(fn ($e) => ['id' => $e->id, 'name' => $e->name, 'timezone' => $e->timezone])
+                ->toArray();
+        }
+
+        // media y otros roles → event_passes activos
+        return \DB::table('event_passes')
+            ->join('events', 'events.id', '=', 'event_passes.event_id')
+            ->where('event_passes.user_id', $user->id)
+            ->where('event_passes.status', 'active')
+            ->whereNotIn('events.status', ['cancelled'])
+            ->get(['events.id', 'events.name', 'events.timezone'])
+            ->map(fn ($e) => ['id' => $e->id, 'name' => $e->name, 'timezone' => $e->timezone])
+            ->toArray();
     }
 
     // ──────────────────────────────────────────────

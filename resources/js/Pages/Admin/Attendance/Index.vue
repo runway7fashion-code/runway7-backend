@@ -71,8 +71,15 @@ function exportData() {
 }
 
 // ─── Modal marcación manual ────────────────────────────────────────────────
-const showModal  = ref(false);
-const modalDays  = ref([]);
+const showModal      = ref(false);
+const modalDays      = ref([]);
+const modalEvents    = ref([]);
+const needsEntryExit = ref(true);
+
+const userSearch     = ref('');
+const searchResults  = ref([]);
+const searchLoading  = ref(false);
+const selectedUser   = ref(null);
 
 const manualForm = useForm({
     user_id:      '',
@@ -83,19 +90,108 @@ const manualForm = useForm({
     notes:        '',
 });
 
+function resetModal() {
+    showModal.value = false;
+    manualForm.reset();
+    manualForm.checked_at = new Date().toISOString().slice(0, 16);
+    modalDays.value = [];
+    modalEvents.value = [];
+    userSearch.value = '';
+    searchResults.value = [];
+    searchLoading.value = false;
+    selectedUser.value = null;
+    needsEntryExit.value = true;
+}
+
+let userSearchTimer;
+watch(userSearch, val => {
+    selectedUser.value = null;
+    searchResults.value = [];
+    manualForm.user_id = '';
+    manualForm.event_id = '';
+    manualForm.event_day_id = '';
+    modalEvents.value = [];
+    modalDays.value = [];
+    clearTimeout(userSearchTimer);
+    if (!val || val.length < 2) return;
+    searchLoading.value = true;
+    userSearchTimer = setTimeout(() => doSearch(val), 400);
+});
+
+async function doSearch(q) {
+    try {
+        const res = await fetch(`/admin/attendance/user-search?q=${encodeURIComponent(q)}`, {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        searchResults.value = await res.json();
+    } catch { searchResults.value = []; }
+    finally { searchLoading.value = false; }
+}
+
+async function selectUser(user) {
+    selectedUser.value = user;
+    searchResults.value = [];
+    manualForm.user_id = user.id;
+    manualForm.event_id = '';
+    manualForm.event_day_id = '';
+    modalDays.value = [];
+
+    try {
+        const res = await fetch(`/admin/attendance/user-events?user_id=${user.id}`, {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await res.json();
+        if (!res.ok) { selectedUser.value = { ...user, error: data.error }; return; }
+        modalEvents.value = data.events;
+        needsEntryExit.value = data.needs_entry_exit;
+        if (!data.needs_entry_exit) manualForm.type = 'single';
+        // Autoseleccionar evento si solo hay uno
+        if (data.events.length === 1) {
+            manualForm.event_id = String(data.events[0].id);
+        }
+    } catch { selectedUser.value = { ...user, error: 'Error de conexión.' }; }
+}
+
+function nowInTimezone(tz) {
+    try {
+        const now = new Date();
+        const parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', hour12: false,
+        }).formatToParts(now);
+        const p = {};
+        parts.forEach(({ type, value }) => p[type] = value);
+        return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+    } catch {
+        return new Date().toISOString().slice(0, 16);
+    }
+}
+
 watch(() => manualForm.event_id, async (val) => {
     manualForm.event_day_id = '';
     modalDays.value = [];
     if (!val) return;
+
+    // Actualizar fecha/hora según timezone del evento seleccionado
+    const selectedEvent = modalEvents.value.find(e => String(e.id) === String(val));
+    if (selectedEvent?.timezone) {
+        manualForm.checked_at = nowInTimezone(selectedEvent.timezone);
+    }
+
     const res = await fetch(`/admin/attendance/event-days/${val}`, {
         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
     });
-    modalDays.value = await res.json();
+    const days = await res.json();
+    modalDays.value = days;
+    // Autoseleccionar día si solo hay uno
+    if (days.length === 1) {
+        manualForm.event_day_id = String(days[0].id);
+    }
 });
 
 function submitManual() {
     manualForm.post('/admin/attendance', {
-        onSuccess: () => { showModal.value = false; manualForm.reset(); },
+        onSuccess: () => resetModal(),
     });
 }
 
@@ -129,13 +225,12 @@ const typeColors  = {
 };
 const methodColors = { kiosk: 'bg-blue-50 text-blue-600', manual: 'bg-gray-100 text-gray-500' };
 
-function formatTime(dt) {
+function formatDate(dt, tz) {
     if (!dt) return '—';
-    return new Date(dt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
-}
-function formatDate(dt) {
-    if (!dt) return '—';
-    return new Date(dt).toLocaleDateString('es', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return new Date(dt).toLocaleDateString('es', {
+        timeZone: tz || undefined,
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
 }
 function initials(c) {
     return (c.user?.first_name?.[0] ?? '') + (c.user?.last_name?.[0] ?? '');
@@ -314,7 +409,7 @@ function initials(c) {
                             </td>
                             <!-- Hora -->
                             <td class="px-4 py-3 text-gray-700 font-mono text-sm">
-                                {{ formatDate(c.checked_at) }}
+                                {{ formatDate(c.checked_at, c.event?.timezone) }}
                             </td>
                             <!-- Método -->
                             <td class="px-4 py-3">
@@ -362,25 +457,74 @@ function initials(c) {
                     </div>
 
                     <form @submit.prevent="submitManual" class="space-y-3">
-                        <!-- User ID -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">ID o Email del usuario</label>
-                            <input v-model="manualForm.user_id" type="text" placeholder="ID del usuario"
+                        <!-- Buscar usuario -->
+                        <div class="relative">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Buscar usuario</label>
+                            <input v-if="!selectedUser" v-model="userSearch" type="text"
+                                placeholder="Nombre, apellido, email, teléfono, instagram, marca..."
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
-                            <p v-if="manualForm.errors.user_id" class="text-red-500 text-xs mt-1">{{ manualForm.errors.user_id }}</p>
+
+                            <!-- Usuario seleccionado -->
+                            <div v-if="selectedUser"
+                                class="flex items-center justify-between px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-full bg-black flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                        {{ selectedUser.name[0] }}
+                                    </div>
+                                    <div class="text-xs">
+                                        <span class="font-medium text-gray-900">{{ selectedUser.name }}</span>
+                                        <span v-if="selectedUser.brand_name" class="text-gray-500 ml-1">· {{ selectedUser.brand_name }}</span>
+                                        <span class="text-gray-400 ml-1">· {{ selectedUser.role }}</span>
+                                    </div>
+                                </div>
+                                <button type="button" @click="selectedUser = null; modalEvents = []; manualForm.user_id = ''; manualForm.event_id = ''"
+                                    class="text-gray-400 hover:text-red-500 ml-2">
+                                    <XMarkIcon class="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            <!-- Error de eventos -->
+                            <p v-if="selectedUser?.error" class="text-red-500 text-xs mt-1">{{ selectedUser.error }}</p>
+
+                            <!-- Resultados de búsqueda -->
+                            <div v-if="searchLoading" class="text-gray-400 text-xs mt-1">Buscando...</div>
+                            <div v-if="searchResults.length > 0"
+                                class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                                <button v-for="u in searchResults" :key="u.id" type="button"
+                                    @click="selectUser(u)"
+                                    class="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 text-left border-b border-gray-100 last:border-0">
+                                    <div class="w-7 h-7 rounded-full bg-black flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                        {{ u.name[0] }}
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium text-gray-900 truncate">
+                                            {{ u.name }}
+                                            <span v-if="u.brand_name" class="text-gray-400 font-normal"> · {{ u.brand_name }}</span>
+                                        </p>
+                                        <p class="text-xs text-gray-400 truncate">{{ u.email }} · {{ u.role }}</p>
+                                    </div>
+                                </button>
+                            </div>
+                            <p v-if="!searchLoading && userSearch.length >= 2 && searchResults.length === 0 && !selectedUser"
+                                class="text-gray-400 text-xs mt-1">No se encontraron usuarios activos.</p>
                         </div>
-                        <!-- Evento -->
-                        <div>
+
+                        <!-- Evento (solo si usuario seleccionado) -->
+                        <div v-if="selectedUser && !selectedUser.error">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Evento</label>
-                            <select v-model="manualForm.event_id"
+                            <div v-if="modalEvents.length === 0" class="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                                Este usuario no tiene eventos válidos para registrar asistencia.
+                            </div>
+                            <select v-else v-model="manualForm.event_id"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                                 <option value="">— Seleccionar —</option>
-                                <option v-for="ev in events" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
+                                <option v-for="ev in modalEvents" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
                             </select>
                             <p v-if="manualForm.errors.event_id" class="text-red-500 text-xs mt-1">{{ manualForm.errors.event_id }}</p>
                         </div>
+
                         <!-- Día -->
-                        <div>
+                        <div v-if="selectedUser && manualForm.event_id">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Día</label>
                             <select v-model="manualForm.event_day_id" :disabled="modalDays.length === 0"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 disabled:opacity-40">
@@ -389,37 +533,40 @@ function initials(c) {
                             </select>
                             <p v-if="manualForm.errors.event_day_id" class="text-red-500 text-xs mt-1">{{ manualForm.errors.event_day_id }}</p>
                         </div>
-                        <!-- Tipo -->
-                        <div>
+
+                        <!-- Tipo (solo para volunteer/staff) -->
+                        <div v-if="selectedUser && manualForm.event_id && needsEntryExit">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
                             <select v-model="manualForm.type"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                                 <option value="entry">Entrada</option>
                                 <option value="exit">Salida</option>
-                                <option value="single">Asistencia única</option>
                             </select>
                         </div>
+
                         <!-- Fecha/hora -->
-                        <div>
+                        <div v-if="selectedUser && manualForm.event_id">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Fecha y hora</label>
                             <input v-model="manualForm.checked_at" type="datetime-local"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             <p v-if="manualForm.errors.checked_at" class="text-red-500 text-xs mt-1">{{ manualForm.errors.checked_at }}</p>
                         </div>
+
                         <!-- Notas -->
-                        <div>
+                        <div v-if="selectedUser && manualForm.event_id">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Notas <span class="text-gray-400 font-normal">(opcional)</span></label>
                             <input v-model="manualForm.notes" type="text"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
 
                         <div class="flex gap-3 pt-1">
-                            <button type="button" @click="showModal = false; manualForm.reset()"
+                            <button type="button" @click="resetModal"
                                 class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                                 Cancelar
                             </button>
-                            <button type="submit" :disabled="manualForm.processing"
-                                class="flex-1 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-60">
+                            <button type="submit"
+                                :disabled="manualForm.processing || !selectedUser || !manualForm.event_id || !manualForm.event_day_id"
+                                class="flex-1 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
                                 Registrar
                             </button>
                         </div>

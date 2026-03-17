@@ -90,6 +90,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Asistencia - admin, operation
         Route::middleware('section:attendance')->group(function () {
             Route::get('attendance/export', [AttendanceController::class, 'export'])->name('attendance.export');
+            Route::get('attendance/user-search', [AttendanceController::class, 'userSearch'])->name('attendance.user-search');
+            Route::get('attendance/user-events', [AttendanceController::class, 'userEvents'])->name('attendance.user-events');
             Route::get('attendance/event-days/{event}', [AttendanceController::class, 'eventDays'])->name('attendance.event-days');
             Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
             Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
