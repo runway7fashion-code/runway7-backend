@@ -337,6 +337,8 @@ class ModelController extends Controller
             'is_agency'   => 'boolean',
             'is_test_model' => 'boolean',
             'notes'       => 'nullable|string',
+            'referral_source'       => 'nullable|in:instagram,tiktok,facebook,friends_family,agency,other',
+            'referral_source_other' => 'nullable|string|max:255',
             'event_id'    => 'nullable|exists:events,id',
             'casting_time'=> 'nullable|string',
             'send_welcome_email' => 'boolean',
@@ -347,6 +349,7 @@ class ModelController extends Controller
             'instagram', 'age', 'gender', 'location', 'ethnicity', 'hair', 'body_type',
             'height', 'bust', 'chest', 'waist', 'hips', 'shoe_size', 'dress_size',
             'agency', 'is_agency', 'is_test_model', 'notes',
+            'referral_source', 'referral_source_other',
         ]);
 
         $model = $this->modelService->createModel(
@@ -444,6 +447,8 @@ class ModelController extends Controller
             'is_agency'   => 'boolean',
             'is_test_model' => 'boolean',
             'notes'       => 'nullable|string',
+            'referral_source'       => 'nullable|in:instagram,tiktok,facebook,friends_family,agency,other',
+            'referral_source_other' => 'nullable|string|max:255',
         ]);
 
         $userData = $request->only(['first_name', 'last_name', 'email', 'phone']);
@@ -452,6 +457,7 @@ class ModelController extends Controller
             'instagram', 'age', 'gender', 'location', 'ethnicity', 'hair', 'body_type',
             'height', 'bust', 'chest', 'waist', 'hips', 'shoe_size', 'dress_size',
             'agency', 'is_agency', 'is_test_model', 'notes',
+            'referral_source', 'referral_source_other',
         ]);
 
         $oldStatus = $model->status;

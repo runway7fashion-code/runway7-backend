@@ -95,6 +95,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('attendance/event-days/{event}', [AttendanceController::class, 'eventDays'])->name('attendance.event-days');
             Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
             Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
+            Route::put('attendance/{checkin}', [AttendanceController::class, 'update'])->name('attendance.update');
             Route::delete('attendance/{checkin}', [AttendanceController::class, 'destroy'])->name('attendance.destroy');
         });
 

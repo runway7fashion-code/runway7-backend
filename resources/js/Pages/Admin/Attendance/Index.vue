@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
-import { MagnifyingGlassIcon, ArrowDownTrayIcon, PlusIcon, TrashIcon, XMarkIcon } from '@heroicons/vue/24/outline';
+import { MagnifyingGlassIcon, ArrowDownTrayIcon, PlusIcon, TrashIcon, XMarkIcon, PencilSquareIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     checkins:      Object,
@@ -192,6 +192,45 @@ watch(() => manualForm.event_id, async (val) => {
 function submitManual() {
     manualForm.post('/admin/attendance', {
         onSuccess: () => resetModal(),
+    });
+}
+
+// ─── Editar marcación ──────────────────────────────────────────────────────
+const showEditModal  = ref(false);
+const editingCheckin = ref(null);
+
+const editForm = useForm({
+    type:       '',
+    checked_at: '',
+    notes:      '',
+});
+
+function openEditModal(c) {
+    editingCheckin.value = c;
+    const tz = c.event?.timezone;
+    editForm.type       = c.type;
+    editForm.notes      = c.notes ?? '';
+    editForm.checked_at = tz
+        ? formatForInput(c.checked_at, tz)
+        : c.checked_at?.slice(0, 16) ?? '';
+    showEditModal.value = true;
+}
+
+function formatForInput(dt, tz) {
+    try {
+        const parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', hour12: false,
+        }).formatToParts(new Date(dt));
+        const p = {};
+        parts.forEach(({ type, value }) => p[type] = value);
+        return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+    } catch { return dt?.slice(0, 16) ?? ''; }
+}
+
+function submitEdit() {
+    editForm.put(`/admin/attendance/${editingCheckin.value.id}`, {
+        onSuccess: () => { showEditModal.value = false; editingCheckin.value = null; },
     });
 }
 
@@ -423,10 +462,16 @@ function initials(c) {
                             </td>
                             <!-- Acciones -->
                             <td class="px-4 py-3 text-right">
-                                <button @click="deleteCheckin(c.id)"
-                                    class="text-gray-300 hover:text-red-500 transition-colors">
-                                    <TrashIcon class="w-4 h-4" />
-                                </button>
+                                <div class="flex items-center justify-end gap-2">
+                                    <button @click="openEditModal(c)"
+                                        class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors">
+                                        <PencilSquareIcon class="w-4 h-4" />
+                                    </button>
+                                    <button @click="deleteCheckin(c.id)"
+                                        class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors">
+                                        <TrashIcon class="w-4 h-4" />
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
@@ -568,6 +613,66 @@ function initials(c) {
                                 :disabled="manualForm.processing || !selectedUser || !manualForm.event_id || !manualForm.event_day_id"
                                 class="flex-1 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
                                 Registrar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- Modal editar marcación -->
+        <Teleport to="body">
+            <div v-if="showEditModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showEditModal = false" />
+                <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-semibold text-gray-900">Editar marcación</h3>
+                        <button @click="showEditModal = false" class="text-gray-400 hover:text-gray-600">
+                            <XMarkIcon class="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    <!-- Usuario (solo lectura) -->
+                    <div class="bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-600">
+                        <span class="font-medium text-gray-800">{{ editingCheckin?.user?.first_name }} {{ editingCheckin?.user?.last_name }}</span>
+                        · {{ editingCheckin?.event?.name }}
+                    </div>
+
+                    <form @submit.prevent="submitEdit" class="space-y-4">
+                        <!-- Tipo -->
+                        <div v-if="editingCheckin && ['volunteer','staff'].includes(editingCheckin.user?.role)">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                            <select v-model="editForm.type"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                                <option value="entry">Entrada</option>
+                                <option value="exit">Salida</option>
+                            </select>
+                        </div>
+
+                        <!-- Fecha y hora -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha y hora</label>
+                            <input v-model="editForm.checked_at" type="datetime-local"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            <p v-if="editForm.errors.checked_at" class="text-red-500 text-xs mt-1">{{ editForm.errors.checked_at }}</p>
+                        </div>
+
+                        <!-- Notas -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Notas <span class="text-gray-400 font-normal">(opcional)</span></label>
+                            <input v-model="editForm.notes" type="text"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10"
+                                placeholder="Agregar nota..." />
+                        </div>
+
+                        <div class="flex gap-3 pt-1">
+                            <button type="button" @click="showEditModal = false"
+                                class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+                                Cancelar
+                            </button>
+                            <button type="submit" :disabled="editForm.processing"
+                                class="flex-1 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
+                                Guardar
                             </button>
                         </div>
                     </form>

@@ -155,6 +155,27 @@ class AttendanceController extends Controller
         return back()->with('success', 'Marcación registrada correctamente.');
     }
 
+    public function update(Request $request, Checkin $checkin)
+    {
+        $request->validate([
+            'type'       => 'required|in:entry,exit,single',
+            'checked_at' => 'required|date',
+            'notes'      => 'nullable|string|max:500',
+        ]);
+
+        $event = Event::findOrFail($checkin->event_id);
+        $tz = $event->timezone ?? 'America/New_York';
+        $checkedAt = \Carbon\Carbon::createFromFormat('Y-m-d\TH:i', $request->checked_at, $tz)->utc();
+
+        $checkin->update([
+            'type'       => $request->type,
+            'checked_at' => $checkedAt,
+            'notes'      => $request->notes,
+        ]);
+
+        return back()->with('success', 'Marcación actualizada.');
+    }
+
     public function destroy(Checkin $checkin)
     {
         $checkin->delete();

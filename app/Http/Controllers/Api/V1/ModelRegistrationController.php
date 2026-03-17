@@ -91,8 +91,10 @@ class ModelRegistrationController extends Controller
             'shoe_size'  => 'required|string|max:20',
             'dress_size' => 'required|in:XXS,XS,S,M,L,XL,XXL',
             'event_id'   => 'required|exists:events,id',
-            'agency_name'  => 'nullable|string|max:255',
-            'order_number' => 'nullable|string|max:50',
+            'agency_name'           => 'nullable|string|max:255',
+            'order_number'          => 'nullable|string|max:50',
+            'referral_source'       => 'nullable|in:instagram,tiktok,facebook,friends_family,agency,other',
+            'referral_source_other' => 'nullable|string|max:255',
 
             'profile_picture' => $requiredPhotoRule,
             'photo_1'         => $requiredPhotoRule,
@@ -207,6 +209,13 @@ class ModelRegistrationController extends Controller
                 if (!empty($validated['agency_name'])) {
                     $profileData['agency'] = $validated['agency_name'];
                     $profileData['is_agency'] = true;
+                }
+
+                if (!empty($validated['referral_source'])) {
+                    $profileData['referral_source'] = $validated['referral_source'];
+                    if ($validated['referral_source'] === 'other' && !empty($validated['referral_source_other'])) {
+                        $profileData['referral_source_other'] = $validated['referral_source_other'];
+                    }
                 }
 
                 if ($existingUser) {

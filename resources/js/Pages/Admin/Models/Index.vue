@@ -779,7 +779,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                         <EnvelopeIcon class="w-4 h-4" />
                                     </button>
                                     <Link :href="`/admin/models/${m.id}/edit`"
-                                        class="p-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-gray-600"
+                                        class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
                                         title="Editar">
                                         <PencilSquareIcon class="w-4 h-4" />
                                     </Link>

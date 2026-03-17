@@ -203,12 +203,12 @@ function deleteVolunteer() {
 
                         <!-- Contact -->
                         <div class="mt-3 flex flex-wrap gap-3 text-sm">
-                            <a :href="`mailto:${volunteer.email}`" class="flex items-center gap-1.5 text-gray-600 hover:text-black">
+                            <span class="flex items-center gap-1.5 text-gray-600">
                                 <EnvelopeIcon class="w-4 h-4" /> {{ volunteer.email }}
-                            </a>
-                            <a v-if="volunteer.phone" :href="`tel:${volunteer.phone}`" class="flex items-center gap-1.5 text-gray-600 hover:text-black">
+                            </span>
+                            <span v-if="volunteer.phone" class="flex items-center gap-1.5 text-gray-600">
                                 <PhoneIcon class="w-4 h-4" /> {{ volunteer.phone }}
-                            </a>
+                            </span>
                             <a v-if="profile?.instagram" :href="`https://instagram.com/${profile.instagram}`" target="_blank"
                                 class="flex items-center gap-1 text-pink-600 hover:text-pink-700">
                                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">

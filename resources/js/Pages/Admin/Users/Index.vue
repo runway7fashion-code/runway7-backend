@@ -161,13 +161,13 @@ function deleteUser(user) {
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end space-x-1">
-                                    <Link :href="`/admin/users/${user.id}`" class="text-gray-400 hover:text-gray-700 p-1.5 rounded hover:bg-gray-100 transition-colors" title="Ver detalle">
+                                    <Link :href="`/admin/users/${user.id}`" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors" title="Ver detalle">
                                         <EyeIcon class="w-4 h-4" />
                                     </Link>
-                                    <Link :href="`/admin/users/${user.id}/edit`" class="text-gray-400 hover:text-gray-700 p-1.5 rounded hover:bg-gray-100 transition-colors" title="Editar">
+                                    <Link :href="`/admin/users/${user.id}/edit`" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors" title="Editar">
                                         <PencilSquareIcon class="w-4 h-4" />
                                     </Link>
-                                    <button @click="deleteUser(user)" class="text-gray-400 hover:text-red-500 p-1.5 rounded hover:bg-red-50 transition-colors" title="Eliminar">
+                                    <button @click="deleteUser(user)" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors" title="Eliminar">
                                         <TrashIcon class="w-4 h-4" />
                                     </button>
                                 </div>

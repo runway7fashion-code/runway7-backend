@@ -144,10 +144,10 @@ function formatPrice(val) {
                             </td>
                             <td class="px-6 py-3">
                                 <div class="flex items-center justify-end gap-1">
-                                    <button @click="startEditPackage(pkg)" class="text-gray-400 hover:text-gray-700 p-1.5 rounded hover:bg-gray-100 transition-colors" title="Editar">
+                                    <button @click="startEditPackage(pkg)" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors" title="Editar">
                                         <PencilSquareIcon class="w-4 h-4" />
                                     </button>
-                                    <button @click="deletePackage(pkg)" class="text-gray-400 hover:text-red-500 p-1.5 rounded hover:bg-red-50 transition-colors" title="Eliminar">
+                                    <button @click="deletePackage(pkg)" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors" title="Eliminar">
                                         <TrashIcon class="w-4 h-4" />
                                     </button>
                                 </div>

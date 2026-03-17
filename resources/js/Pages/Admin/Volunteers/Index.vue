@@ -324,7 +324,6 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                     ]">
                                     <option value="applicant">Aplicante</option>
                                     <option value="pending">Pendiente</option>
-                                    <option value="active">Activo</option>
                                     <option value="inactive">Inactivo</option>
                                 </select>
                             </td>
@@ -355,7 +354,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                         title="Enviar SMS onboarding">
                                         <DevicePhoneMobileIcon class="w-4 h-4" />
                                     </button>
-                                    <Link :href="`/admin/volunteers/${vol.id}/edit`" class="text-gray-400 hover:text-gray-700 p-1.5 rounded hover:bg-gray-100 transition-colors cursor-pointer" title="Editar">
+                                    <Link :href="`/admin/volunteers/${vol.id}/edit`" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors cursor-pointer" title="Editar">
                                         <PencilSquareIcon class="w-4 h-4" />
                                     </Link>
                                 </div>

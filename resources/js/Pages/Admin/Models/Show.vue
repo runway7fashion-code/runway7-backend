@@ -270,6 +270,17 @@ function deleteModel() {
 
                 <!-- Columna derecha: Eventos y Shows -->
                 <div class="space-y-6">
+                    <!-- Cómo se enteró -->
+                    <div v-if="profile?.referral_source" class="bg-white rounded-2xl border border-gray-200 p-5">
+                        <h4 class="font-bold text-gray-900 mb-2">¿Cómo se enteró?</h4>
+                        <p class="text-sm text-gray-700">{{
+                            { instagram: 'Instagram', tiktok: 'TikTok', facebook: 'Facebook',
+                              friends_family: 'Amigos o Familia', agency: 'Agencia', other: 'Otro' }[profile.referral_source] ?? profile.referral_source
+                        }}</p>
+                        <p v-if="profile.referral_source === 'other' && profile.referral_source_other"
+                            class="text-sm text-gray-500 mt-1 italic">{{ profile.referral_source_other }}</p>
+                    </div>
+
                     <!-- Eventos asignados -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-5">
                         <h4 class="font-bold text-gray-900 mb-4">Eventos</h4>
