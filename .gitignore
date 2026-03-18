@@ -19,6 +19,7 @@
 /storage/*.key
 *.pem
 /storage/pail
+/storage/fonts
 /vendor
 Homestead.json
 Homestead.yaml
