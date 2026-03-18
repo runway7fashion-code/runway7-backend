@@ -175,7 +175,7 @@ class User extends Authenticatable
     public function eventsAsModelWithCasting()
     {
         return $this->belongsToMany(Event::class, 'event_model', 'model_id', 'event_id')
-            ->withPivot(['participation_number', 'casting_time', 'casting_checked_in_at', 'casting_status', 'status', 'checked_in_at'])
+            ->withPivot(['participation_number', 'casting_time', 'casting_checked_in_at', 'casting_status', 'status', 'checked_in_at', 'shopify_order_number'])
             ->withTimestamps();
     }
 
