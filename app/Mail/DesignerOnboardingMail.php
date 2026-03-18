@@ -15,8 +15,7 @@ class DesignerOnboardingMail extends Mailable
 
     public function __construct(
         public User $designer,
-        public ?string $eventName = null,
-        public array $shows = [],
+        public array $events = [],
     ) {}
 
     public function envelope(): Envelope

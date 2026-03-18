@@ -21,26 +21,51 @@ class SendDesignerOnboardingJob implements ShouldQueue
 
     public function __construct(
         public int $userId,
-        public ?string $eventName = null,
-        public array $shows = [],
         public ?int $sentBy = null,
         public ?int $logId = null,
     ) {}
 
     public function handle(): void
     {
-        $user = User::find($this->userId);
+        $designer = User::with([
+            'eventsAsDesigner',
+            'designedShows.eventDay',
+        ])->find($this->userId);
 
-        if (!$user) return;
+        if (!$designer) return;
 
-        Mail::to($user->email, "{$user->first_name} {$user->last_name}")
+        // Construir array de eventos con sus shows agrupados
+        $events = $designer->eventsAsDesigner->map(function ($event) use ($designer) {
+            $shows = $designer->designedShows
+                ->filter(fn ($show) => $show->eventDay
+                    && $show->pivot->status !== 'cancelled'
+                    && $show->eventDay->event_id == $event->id)
+                ->sortBy([
+                    fn ($a, $b) => $a->eventDay->date <=> $b->eventDay->date,
+                    fn ($a, $b) => $a->scheduled_time <=> $b->scheduled_time,
+                ])
+                ->map(fn ($show) => [
+                    'day_label'      => $show->eventDay->label,
+                    'day_date'       => $show->eventDay->date instanceof \Carbon\Carbon
+                        ? $show->eventDay->date->format('Y-m-d')
+                        : $show->eventDay->date,
+                    'scheduled_time' => $show->scheduled_time,
+                    'show_name'      => $show->name,
+                ])->values()->toArray();
+
+            return [
+                'name'  => $event->name,
+                'shows' => $shows,
+            ];
+        })->values()->toArray();
+
+        Mail::to($designer->email, "{$designer->first_name} {$designer->last_name}")
             ->send(new DesignerOnboardingMail(
-                designer:  $user,
-                eventName: $this->eventName,
-                shows:     $this->shows,
+                designer: $designer,
+                events:   $events,
             ));
 
-        $user->update(['welcome_email_sent_at' => now()]);
+        $designer->update(['welcome_email_sent_at' => now()]);
 
         if ($this->logId) {
             CommunicationLog::where('id', $this->logId)->update([

@@ -21,14 +21,15 @@ class SendDesignerOnboardingSmsJob implements ShouldQueue
 
     public function __construct(
         public int $userId,
-        public ?string $eventName = null,
         public ?int $sentBy = null,
         public ?int $logId = null,
     ) {}
 
     public function handle(TwilioService $twilio): void
     {
-        $user = User::find($this->userId);
+        $user = User::with([
+            'eventsAsDesigner',
+        ])->find($this->userId);
 
         if (!$user || !$user->phone) return;
 
@@ -38,8 +39,9 @@ class SendDesignerOnboardingSmsJob implements ShouldQueue
             return;
         }
 
-        $name = $user->first_name;
-        $event = $this->eventName ? " for {$this->eventName}" : '';
+        $name       = $user->first_name;
+        $eventNames = $user->eventsAsDesigner->pluck('name')->toArray();
+        $event      = count($eventNames) > 0 ? ' for ' . implode(', ', $eventNames) : '';
 
         $appStore  = config('services.app_stores.apple');
         $playStore = config('services.app_stores.google');

@@ -223,26 +223,24 @@
 
         <p class="text">
             Thank you for joining <strong>Runway 7 Fashion</strong> as a designer.
-            We're thrilled to have you showcase your collection{{ $eventName ? ' at ' . $eventName : '' }}.
+            We're thrilled to have you showcase your collection{{ count($events) > 0 ? ' at ' . implode(' &amp; ', array_column($events, 'name')) : '' }}.
             Below you'll find everything you need to get started.
         </p>
 
-        @if($eventName || count($shows) > 0)
+        @foreach($events as $event)
         <div class="info-box">
-            @if($eventName)
             <div class="info-row">
                 <span class="info-label">Event</span>
-                <span class="info-value">{{ $eventName }}</span>
+                <span class="info-value">{{ $event['name'] }}</span>
             </div>
-            @endif
-            @foreach($shows as $show)
+            @foreach($event['shows'] as $show)
             <div class="info-row">
                 <span class="info-label">{{ $show['day_label'] }}</span>
                 <span class="info-value">{{ \Carbon\Carbon::parse($show['day_date'])->format('l, F j') }} — {{ \Carbon\Carbon::parse($show['scheduled_time'])->format('g:i A') }}</span>
             </div>
             @endforeach
         </div>
-        @endif
+        @endforeach
 
         <p class="text" style="margin-bottom: 16px;">
             <strong>Getting started is easy:</strong>

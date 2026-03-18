@@ -697,25 +697,7 @@ class DesignerController extends Controller
     {
         $this->authorizeDesigner($designer);
 
-        $designer->load(['eventsAsDesigner', 'designedShows.eventDay', 'designerAssistants', 'designerProfile']);
-
-        // Seleccionar el evento indicado (o el primero si no se especifica)
-        $eventId = $request->input('event_id');
-        $selectedEvent = $eventId
-            ? $designer->eventsAsDesigner->firstWhere('id', $eventId)
-            : $designer->eventsAsDesigner->first();
-
-        $shows = $designer->designedShows
-            ->filter(fn($show) => $show->eventDay
-                && $show->pivot->status !== 'cancelled'
-                && (!$eventId || $show->eventDay->event_id == $eventId))
-            ->sortBy([fn($a, $b) => $a->eventDay->date <=> $b->eventDay->date, fn($a, $b) => $a->scheduled_time <=> $b->scheduled_time])
-            ->map(fn($show) => [
-                'day_label'      => $show->eventDay->label,
-                'day_date'       => $show->eventDay->date->format('Y-m-d'),
-                'scheduled_time' => $show->scheduled_time,
-                'show_name'      => $show->name,
-            ])->values()->toArray();
+        $designer->load(['eventsAsDesigner', 'designerAssistants', 'designerProfile']);
 
         $log = CommunicationLog::create([
             'user_id' => $designer->id, 'sent_by' => $request->user()->id,
@@ -724,18 +706,21 @@ class DesignerController extends Controller
 
         try {
             \App\Jobs\SendDesignerOnboardingJob::dispatch(
-                userId:    $designer->id,
-                eventName: $selectedEvent?->name,
-                shows:     $shows,
-                sentBy:    $request->user()->id,
-                logId:     $log->id,
+                userId: $designer->id,
+                sentBy: $request->user()->id,
+                logId:  $log->id,
             );
         } catch (\Throwable $e) {
             $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
             return back()->with('error', "Error al enviar email a {$designer->full_name}: {$e->getMessage()}");
         }
 
-        // Enviar email a los asistentes del evento seleccionado
+        // Enviar email a los asistentes (filtrado por evento si se especifica)
+        $eventId = $request->input('event_id');
+        $selectedEvent = $eventId
+            ? $designer->eventsAsDesigner->firstWhere('id', $eventId)
+            : $designer->eventsAsDesigner->first();
+
         $assistants = $designer->designerAssistants
             ->filter(fn($a) => $a->user_id && (!$eventId || $a->event_id == $eventId));
 
@@ -773,23 +758,10 @@ class DesignerController extends Controller
         $designers = User::designers()
             ->whereIn('status', ['pending', 'registered'])
             ->whereNull('welcome_email_sent_at')
-            ->with(['eventsAsDesigner', 'designedShows.eventDay'])
             ->get();
 
         $count = 0;
         foreach ($designers as $designer) {
-            $firstEvent = $designer->eventsAsDesigner?->first();
-
-            $shows = $designer->designedShows
-                ->filter(fn($show) => $show->eventDay && $show->pivot->status !== 'cancelled')
-                ->sortBy([fn($a, $b) => $a->eventDay->date <=> $b->eventDay->date, fn($a, $b) => $a->scheduled_time <=> $b->scheduled_time])
-                ->map(fn($show) => [
-                    'day_label'      => $show->eventDay->label,
-                    'day_date'       => $show->eventDay->date->format('Y-m-d'),
-                    'scheduled_time' => $show->scheduled_time,
-                    'show_name'      => $show->name,
-                ])->values()->toArray();
-
             $log = CommunicationLog::create([
                 'user_id' => $designer->id, 'sent_by' => $request->user()->id,
                 'type' => 'email', 'channel' => 'onboarding_email', 'status' => 'queued',
@@ -797,11 +769,9 @@ class DesignerController extends Controller
 
             try {
                 \App\Jobs\SendDesignerOnboardingJob::dispatch(
-                    userId:    $designer->id,
-                    eventName: $firstEvent?->name,
-                    shows:     $shows,
-                    sentBy:    $request->user()->id,
-                    logId:     $log->id,
+                    userId: $designer->id,
+                    sentBy: $request->user()->id,
+                    logId:  $log->id,
                 );
             } catch (\Throwable $e) {
                 $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
@@ -841,12 +811,6 @@ class DesignerController extends Controller
             return back()->with('error', "$msg Recarga para poder enviar SMS.");
         }
 
-        $designer->load('eventsAsDesigner');
-        $eventId = $request->input('event_id');
-        $firstEvent = $eventId
-            ? $designer->eventsAsDesigner->firstWhere('id', $eventId)
-            : $designer->eventsAsDesigner->first();
-
         $log = CommunicationLog::create([
             'user_id' => $designer->id, 'sent_by' => $request->user()->id,
             'type' => 'sms', 'channel' => 'onboarding_sms', 'status' => 'queued',
@@ -854,10 +818,9 @@ class DesignerController extends Controller
 
         try {
             \App\Jobs\SendDesignerOnboardingSmsJob::dispatch(
-                userId:    $designer->id,
-                eventName: $firstEvent?->name,
-                sentBy:    $request->user()->id,
-                logId:     $log->id,
+                userId: $designer->id,
+                sentBy: $request->user()->id,
+                logId:  $log->id,
             );
         } catch (\Throwable $e) {
             $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
@@ -889,13 +852,10 @@ class DesignerController extends Controller
             ->whereNotNull('phone')
             ->where('phone', 'like', '+%')
             ->whereNull('sms_sent_at')
-            ->with('eventsAsDesigner')
             ->get();
 
         $count = 0;
         foreach ($designers as $designer) {
-            $firstEvent = $designer->eventsAsDesigner?->first();
-
             $log = CommunicationLog::create([
                 'user_id' => $designer->id, 'sent_by' => $request->user()->id,
                 'type' => 'sms', 'channel' => 'onboarding_sms', 'status' => 'queued',
@@ -903,10 +863,9 @@ class DesignerController extends Controller
 
             try {
                 \App\Jobs\SendDesignerOnboardingSmsJob::dispatch(
-                    userId:    $designer->id,
-                    eventName: $firstEvent?->name,
-                    sentBy:    $request->user()->id,
-                    logId:     $log->id,
+                    userId: $designer->id,
+                    sentBy: $request->user()->id,
+                    logId:  $log->id,
                 );
             } catch (\Throwable $e) {
                 $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
