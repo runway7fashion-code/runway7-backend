@@ -83,9 +83,9 @@ class VolunteerCertificateController extends Controller
             ->distinct()
             ->count('event_day_id');
 
-        // < 3 días asignados: asistencia 100% requerida
-        // >= 3 días asignados: puede faltar máximo 1 día
-        $required = $scheduledCount < 3 ? $scheduledCount : $scheduledCount - 1;
+        // 1-2 días asignados: asistencia 100% requerida
+        // 3+ días asignados: mínimo 2 días de asistencia
+        $required = $scheduledCount <= 2 ? $scheduledCount : 2;
 
         return $attendedCount >= $required;
     }
