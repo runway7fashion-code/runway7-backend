@@ -144,6 +144,18 @@ class ModelController extends Controller
             });
         }
 
+        if ($request->filled('merch')) {
+            if ($request->merch === 'with') {
+                $query->whereHas('eventsAsModelWithCasting', fn($q) =>
+                    $q->whereNotNull('event_model.shopify_order_number')
+                );
+            } elseif ($request->merch === 'without') {
+                $query->whereDoesntHave('eventsAsModelWithCasting', fn($q) =>
+                    $q->whereNotNull('event_model.shopify_order_number')
+                );
+            }
+        }
+
         if ($request->filled('sort_name')) {
             $dir = $request->sort_name === 'asc' ? 'asc' : 'desc';
             $query->orderBy('first_name', $dir)->orderBy('last_name', $dir);
@@ -295,7 +307,7 @@ class ModelController extends Controller
             'models'             => $models,
             'events'             => $events,
             'designers'          => $designers,
-            'filters'            => $request->only(['event', 'compcard', 'gender', 'ethnicity', 'is_agency', 'is_top', 'search', 'email_sent', 'test_model', 'casting_time', 'casting_status', 'designer', 'status']),
+            'filters'            => $request->only(['event', 'compcard', 'gender', 'ethnicity', 'is_agency', 'is_top', 'search', 'email_sent', 'test_model', 'casting_time', 'casting_status', 'designer', 'status', 'merch']),
             'castingTimes'       => $castingTimes,
             'pendingEmailCount'  => $pendingEmailCount,
         ]);
@@ -1018,6 +1030,7 @@ class ModelController extends Controller
                 'casting_checked_in_at' => $event->pivot->casting_checked_in_at,
                 'participation_number'  => $event->pivot->participation_number,
                 'model_status'          => $event->pivot->status,
+                'shopify_order_number'  => $event->pivot->shopify_order_number,
                 'pass'                  => $passMap->has($event->id) ? (function () use ($passMap, $event, $dayMap) {
                     $p = $passMap[$event->id];
                     return [

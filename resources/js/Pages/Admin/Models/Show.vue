@@ -271,14 +271,23 @@ function deleteModel() {
                 <!-- Columna derecha: Eventos y Shows -->
                 <div class="space-y-6">
                     <!-- Cómo se enteró -->
-                    <div v-if="profile?.referral_source" class="bg-white rounded-2xl border border-gray-200 p-5">
+                    <div v-if="profile?.referral_source || events.some(e => e.shopify_order_number)"
+                        class="bg-white rounded-2xl border border-gray-200 p-5">
                         <h4 class="font-bold text-gray-900 mb-2">¿Cómo se enteró?</h4>
-                        <p class="text-sm text-gray-700">{{
-                            { instagram: 'Instagram', tiktok: 'TikTok', facebook: 'Facebook',
-                              friends_family: 'Amigos o Familia', agency: 'Agencia', other: 'Otro' }[profile.referral_source] ?? profile.referral_source
-                        }}</p>
-                        <p v-if="profile.referral_source === 'other' && profile.referral_source_other"
-                            class="text-sm text-gray-500 mt-1 italic">{{ profile.referral_source_other }}</p>
+                        <template v-if="profile?.referral_source">
+                            <p class="text-sm text-gray-700">{{
+                                { instagram: 'Instagram', tiktok: 'TikTok', facebook: 'Facebook',
+                                  friends_family: 'Amigos o Familia', agency: 'Agencia', other: 'Otro' }[profile.referral_source] ?? profile.referral_source
+                            }}</p>
+                            <p v-if="profile.referral_source === 'other' && profile.referral_source_other"
+                                class="text-sm text-gray-500 mt-1 italic">{{ profile.referral_source_other }}</p>
+                        </template>
+                        <template v-for="ev in events.filter(e => e.shopify_order_number)" :key="ev.id">
+                            <div class="mt-2 flex items-center gap-2 flex-wrap">
+                                <span class="text-xs text-gray-500">Merch{{ events.filter(e => e.shopify_order_number).length > 1 ? ` (${ev.name})` : '' }}:</span>
+                                <span class="font-mono text-sm font-semibold text-gray-900">#{{ ev.shopify_order_number }}</span>
+                            </div>
+                        </template>
                     </div>
 
                     <!-- Eventos asignados -->

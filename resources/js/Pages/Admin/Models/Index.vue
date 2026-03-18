@@ -31,6 +31,7 @@ const casting_status = ref(props.filters.casting_status ?? '');
 const designer       = ref(props.filters.designer       ?? '');
 const status         = ref(props.filters.status         ?? '');
 const sort_name      = ref(props.filters.sort_name      ?? '');
+const merch          = ref(props.filters.merch          ?? '');
 
 // Date range filters — value is [Date, Date] or null
 function parseRange(from, to) {
@@ -92,6 +93,7 @@ function applyFilters() {
             designer:        designer.value       || undefined,
             status:          status.value         || undefined,
             sort_name:       sort_name.value      || undefined,
+            merch:           merch.value          || undefined,
             registered_from: registeredRange.value ? fmtDate(registeredRange.value[0]) : undefined,
             registered_to:   registeredRange.value ? fmtDate(registeredRange.value[1]) : undefined,
             checkin_from:    checkinRange.value    ? fmtDate(checkinRange.value[0])    : undefined,
@@ -99,7 +101,7 @@ function applyFilters() {
         }, { preserveState: true, replace: true });
     }, 300);
 }
-watch([search, event, compcard, gender, ethnicity, is_agency, is_top, email_sent, test_model, casting_time, casting_status, designer, status, sort_name, registeredRange, checkinRange], applyFilters);
+watch([search, event, compcard, gender, ethnicity, is_agency, is_top, email_sent, test_model, casting_time, casting_status, designer, status, sort_name, merch, registeredRange, checkinRange], applyFilters);
 
 function toggleSortName() {
     if (sort_name.value === 'asc') sort_name.value = 'desc';
@@ -129,6 +131,7 @@ const exportUrl = computed(() => {
     if (casting_status.value) params.set('casting_status', casting_status.value);
     if (designer.value)       params.set('designer',       designer.value);
     if (status.value)         params.set('status',         status.value);
+    if (merch.value)          params.set('merch',          merch.value);
     const qs = params.toString();
     return '/admin/models/export' + (qs ? '?' + qs : '');
 });
@@ -545,6 +548,13 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <option value="">Correo: todos</option>
                     <option value="sent">Correo enviado</option>
                     <option value="not_sent">Correo no enviado</option>
+                </select>
+
+                <select v-model="merch"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Merch: todos</option>
+                    <option value="with">Con código</option>
+                    <option value="without">Sin código</option>
                 </select>
 
                 <select v-model="test_model"
