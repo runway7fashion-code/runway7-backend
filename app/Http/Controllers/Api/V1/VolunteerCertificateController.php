@@ -76,11 +76,17 @@ class VolunteerCertificateController extends Controller
 
         if ($scheduledDayIds->isEmpty()) return false;
 
-        $attendedDayIds = Checkin::where('user_id', $userId)
-            ->whereIn('event_day_id', $scheduledDayIds)
-            ->pluck('event_day_id')
-            ->unique();
+        $scheduledCount = $scheduledDayIds->count();
 
-        return $scheduledDayIds->diff($attendedDayIds)->isEmpty();
+        $attendedCount = Checkin::where('user_id', $userId)
+            ->whereIn('event_day_id', $scheduledDayIds)
+            ->distinct()
+            ->count('event_day_id');
+
+        // < 3 días asignados: asistencia 100% requerida
+        // >= 3 días asignados: puede faltar máximo 1 día
+        $required = $scheduledCount < 3 ? $scheduledCount : $scheduledCount - 1;
+
+        return $attendedCount >= $required;
     }
 }

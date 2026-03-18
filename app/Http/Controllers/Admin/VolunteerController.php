@@ -115,12 +115,18 @@ class VolunteerController extends Controller
                 return [$event->id => false];
             }
 
-            $attendedDayIds = Checkin::where('user_id', $volunteer->id)
-                ->whereIn('event_day_id', $scheduledDayIds)
-                ->pluck('event_day_id')
-                ->unique();
+            $scheduledCount = $scheduledDayIds->count();
 
-            return [$event->id => $scheduledDayIds->diff($attendedDayIds)->isEmpty()];
+            $attendedCount = Checkin::where('user_id', $volunteer->id)
+                ->whereIn('event_day_id', $scheduledDayIds)
+                ->distinct()
+                ->count('event_day_id');
+
+            // < 3 días asignados: asistencia 100% requerida
+            // >= 3 días asignados: puede faltar máximo 1 día
+            $required = $scheduledCount < 3 ? $scheduledCount : $scheduledCount - 1;
+
+            return [$event->id => $attendedCount >= $required];
         });
 
         return Inertia::render('Admin/Volunteers/Show', [
@@ -357,15 +363,19 @@ class VolunteerController extends Controller
             abort(403, 'Este voluntario no tiene días asignados en este evento.');
         }
 
-        // Días con checkin registrado
-        $attendedDayIds = Checkin::where('user_id', $volunteer->id)
-            ->whereIn('event_day_id', $scheduledDayIds)
-            ->pluck('event_day_id')
-            ->unique();
+        $scheduledCount = $scheduledDayIds->count();
 
-        $missing = $scheduledDayIds->diff($attendedDayIds);
-        if ($missing->isNotEmpty()) {
-            abort(403, 'El voluntario no asistió a todos los días asignados.');
+        $attendedCount = Checkin::where('user_id', $volunteer->id)
+            ->whereIn('event_day_id', $scheduledDayIds)
+            ->distinct()
+            ->count('event_day_id');
+
+        // < 3 días asignados: asistencia 100% requerida
+        // >= 3 días asignados: puede faltar máximo 1 día
+        $required = $scheduledCount < 3 ? $scheduledCount : $scheduledCount - 1;
+
+        if ($attendedCount < $required) {
+            abort(403, 'El voluntario no cumple con la asistencia mínima requerida.');
         }
 
         $pdf = Pdf::loadView('pdf.volunteer_certificate', [
