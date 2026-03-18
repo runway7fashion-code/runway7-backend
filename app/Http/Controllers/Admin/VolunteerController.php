@@ -628,10 +628,6 @@ class VolunteerController extends Controller
             return back()->with('error', "Error al enviar email: {$e->getMessage()}");
         }
 
-        if ($volunteer->status === 'pending') {
-            $volunteer->update(['status' => 'active']);
-        }
-
         return back()->with('success', "Email de onboarding encolado para {$volunteer->full_name}.");
     }
 
@@ -662,10 +658,6 @@ class VolunteerController extends Controller
             } catch (\Throwable $e) {
                 $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
                 continue;
-            }
-
-            if ($volunteer->status === 'pending') {
-                $volunteer->update(['status' => 'active']);
             }
 
             $count++;
@@ -719,10 +711,6 @@ class VolunteerController extends Controller
             return back()->with('error', "Error al enviar SMS: {$e->getMessage()}");
         }
 
-        if ($volunteer->status === 'pending') {
-            $volunteer->update(['status' => 'active']);
-        }
-
         return back()->with('success', "SMS de onboarding encolado para {$volunteer->full_name}.");
     }
 
@@ -761,10 +749,6 @@ class VolunteerController extends Controller
             } catch (\Throwable $e) {
                 $log->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
                 continue;
-            }
-
-            if ($volunteer->status === 'pending') {
-                $volunteer->update(['status' => 'active']);
             }
 
             $count++;
