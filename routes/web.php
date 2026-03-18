@@ -115,6 +115,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('volunteers/{volunteer}/schedules/{schedule}', [VolunteerController::class, 'removeSchedule'])->name('volunteers.remove-schedule');
             Route::post('volunteers/{volunteer}/send-onboarding', [VolunteerController::class, 'sendOnboardingEmail'])->name('volunteers.send-onboarding');
             Route::post('volunteers/{volunteer}/send-onboarding-sms', [VolunteerController::class, 'sendOnboardingSms'])->name('volunteers.send-onboarding-sms');
+            Route::get('volunteers/{volunteer}/certificate/{event}', [VolunteerController::class, 'certificate'])->name('volunteers.certificate');
         });
 
         // Eventos - admin, operation
