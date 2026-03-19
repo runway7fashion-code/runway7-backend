@@ -297,14 +297,37 @@ class ModelController extends Controller
         $normalCount  = $totalModels - $merchCount - $agencyCount;
         if ($normalCount < 0) $normalCount = 0;
 
+        // Checkin: modelos que hicieron check-in en casting
+        $checkinQuery = DB::table('event_model')->whereIn('model_id', $statsBaseIds)->whereNotNull('casting_checked_in_at');
+        if ($request->filled('event')) {
+            $checkinQuery->where('event_id', $request->event);
+        }
+        $checkinCount = $checkinQuery->distinct('model_id')->count('model_id');
+
+        // Conteo por user.status
+        $statusCounts = DB::table('users')
+            ->whereIn('id', $statsBaseIds)
+            ->selectRaw("COUNT(*) FILTER (WHERE status = 'active') as active_count")
+            ->selectRaw("COUNT(*) FILTER (WHERE status = 'pending') as pending_count")
+            ->selectRaw("COUNT(*) FILTER (WHERE status = 'applicant') as applicant_count")
+            ->selectRaw("COUNT(*) FILTER (WHERE status = 'rejected') as rejected_count")
+            ->selectRaw("COUNT(*) FILTER (WHERE status = 'inactive') as inactive_count")
+            ->first();
+
         $stats = [
-            'total'   => $totalModels,
-            'merch'   => $merchCount,
-            'agency'  => $agencyCount,
-            'top'     => $topCount,
-            'normal'  => $normalCount,
-            'male'    => $maleCount,
-            'female'  => $femaleCount,
+            'total'     => $totalModels,
+            'merch'     => $merchCount,
+            'agency'    => $agencyCount,
+            'top'       => $topCount,
+            'normal'    => $normalCount,
+            'male'      => $maleCount,
+            'female'    => $femaleCount,
+            'checkin'   => $checkinCount,
+            'active'    => (int) ($statusCounts->active_count ?? 0),
+            'pending'   => (int) ($statusCounts->pending_count ?? 0),
+            'applicant' => (int) ($statusCounts->applicant_count ?? 0),
+            'rejected'  => (int) ($statusCounts->rejected_count ?? 0),
+            'inactive'  => (int) ($statusCounts->inactive_count ?? 0),
         ];
 
         $events = Event::orderBy('start_date', 'desc')

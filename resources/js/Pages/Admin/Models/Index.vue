@@ -519,6 +519,34 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 </div>
             </div>
 
+            <!-- Status Cards -->
+            <div class="grid grid-cols-6 gap-3 mb-6">
+                <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Check-in</p>
+                    <p class="text-2xl font-bold text-teal-600 mt-1">{{ stats?.checkin ?? 0 }}</p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Activas</p>
+                    <p class="text-2xl font-bold text-green-600 mt-1">{{ stats?.active ?? 0 }}</p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Pendientes</p>
+                    <p class="text-2xl font-bold text-yellow-600 mt-1">{{ stats?.pending ?? 0 }}</p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Aplicantes</p>
+                    <p class="text-2xl font-bold text-purple-600 mt-1">{{ stats?.applicant ?? 0 }}</p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Rechazadas</p>
+                    <p class="text-2xl font-bold text-orange-600 mt-1">{{ stats?.rejected ?? 0 }}</p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Inactivas</p>
+                    <p class="text-2xl font-bold text-red-600 mt-1">{{ stats?.inactive ?? 0 }}</p>
+                </div>
+            </div>
+
             <!-- Filtros -->
             <div class="flex flex-wrap gap-3 mb-6">
                 <input v-model="search" type="text" placeholder="Buscar por nombre, email, teléfono, # participación..."
