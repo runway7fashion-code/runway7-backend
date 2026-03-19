@@ -420,7 +420,6 @@ class ModelController extends Controller
             'referral_source_other' => 'nullable|string|max:255',
             'event_id'    => 'nullable|exists:events,id',
             'casting_time'=> 'nullable|string',
-            'send_welcome_email' => 'boolean',
         ]);
 
         $userData = $request->only(['first_name', 'last_name', 'email', 'phone']);
@@ -442,9 +441,6 @@ class ModelController extends Controller
             $this->modelService->syncModelPass($model, $request->event_id, $request->user()->id);
         }
 
-        if ($request->boolean('send_welcome_email')) {
-            $this->modelService->sendWelcomeEmail($model);
-        }
 
         $this->activityLog->log(
             ActivityAction::Registered, $model, $request->user(),
@@ -507,7 +503,7 @@ class ModelController extends Controller
             'last_name'   => 'nullable|string|max:255',
             'email'       => "required|email|unique:users,email,{$model->id}",
             'phone'       => "nullable|string|unique:users,phone,{$model->id}",
-            'status'      => 'nullable|in:inactive,pending,applicant,rejected',
+            'status'      => 'nullable|in:inactive,pending,applicant',
             'instagram'   => 'nullable|string|max:255',
             'age'         => 'nullable|integer|min:16|max:80',
             'gender'      => 'nullable|in:female,male,non_binary',
@@ -554,7 +550,10 @@ class ModelController extends Controller
                     if ($event->pivot->casting_time) {
                         $this->modelService->removeCastingSlot($model, $event->id);
                     }
-                    $event->models()->updateExistingPivot($model->id, ['status' => 'rejected']);
+                    $event->models()->updateExistingPivot($model->id, [
+                        'status' => 'rejected',
+                        'casting_status' => 'rejected',
+                    ]);
                     EventPass::where('user_id', $model->id)
                         ->where('event_id', $event->id)
                         ->where('status', 'active')
@@ -562,11 +561,23 @@ class ModelController extends Controller
                 }
             }
 
-            // Reactivar pases y estado cuando vuelve de inactivo
+            // Reactivar pases, estado en evento y casting cuando vuelve de inactivo
             if ($oldStatus === 'inactive' && in_array($newStatus, ['pending', 'applicant'])) {
+                $profile = $model->modelProfile;
+                $isPriorityAgency = $profile?->agency
+                    && preg_match('/\b(fanny|cg|fma|fanny\'s|cgmodels)\b/i', $profile->agency);
+                $isTop = $profile?->is_top ?? false;
+                $startSlot = $isPriorityAgency ? 1 : ($isTop ? 2 : 3);
+
                 foreach ($model->eventsAsModelWithCasting as $event) {
                     if ($event->pivot->status === 'rejected') {
-                        $event->models()->updateExistingPivot($model->id, ['status' => 'invited']);
+                        $event->models()->updateExistingPivot($model->id, [
+                            'status' => 'invited',
+                            'casting_status' => 'scheduled',
+                        ]);
+
+                        // Reasignar casting slot
+                        $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot);
                     }
                     EventPass::where('user_id', $model->id)
                         ->where('event_id', $event->id)
@@ -745,15 +756,6 @@ class ModelController extends Controller
     {
         $this->authorizeModel($model);
 
-        $model->load(['eventsAsModelWithCasting.eventDays' => fn($q) => $q->where('type', 'casting')]);
-
-        // Usar el evento seleccionado por el usuario, o el primero si no se especificó
-        $eventId    = $request->input('event_id');
-        $event      = $eventId
-            ? $model->eventsAsModelWithCasting?->firstWhere('id', $eventId)
-            : $model->eventsAsModelWithCasting?->first();
-        $castingDay = $event?->eventDays?->first();
-
         $log = CommunicationLog::create([
             'user_id'  => $model->id,
             'sent_by'  => $request->user()->id,
@@ -763,11 +765,8 @@ class ModelController extends Controller
         ]);
 
         SendWelcomeEmailJob::dispatch(
-            userId:      $model->id,
-            eventName:   $event?->name,
-            castingTime: $event?->pivot?->casting_time,
-            castingDate: $castingDay?->date?->format('Y-m-d'),
-            logId:       $log->id,
+            userId: $model->id,
+            logId:  $log->id,
         );
 
         $this->activityLog->log(
@@ -825,7 +824,6 @@ class ModelController extends Controller
             ->where('status', 'pending')
             ->whereNull('welcome_email_sent_at')
             ->whereHas('eventsAsModelWithCasting', fn($q) => $q->whereNotNull('event_model.casting_time'))
-            ->with(['eventsAsModelWithCasting.eventDays' => fn($q) => $q->where('type', 'casting')])
             ->get();
 
         if ($pending->isEmpty()) {
@@ -834,14 +832,17 @@ class ModelController extends Controller
 
         $count = 0;
         foreach ($pending as $model) {
-            $firstEvent = $model->eventsAsModelWithCasting?->first();
-            $castingDay = $firstEvent?->eventDays?->first();
+            $log = CommunicationLog::create([
+                'user_id'  => $model->id,
+                'sent_by'  => request()->user()->id,
+                'type'     => 'email',
+                'channel'  => 'welcome_email',
+                'status'   => 'queued',
+            ]);
 
             SendWelcomeEmailJob::dispatch(
-                userId:      $model->id,
-                eventName:   $firstEvent?->name,
-                castingTime: $firstEvent?->pivot?->casting_time,
-                castingDate: $castingDay?->date?->format('Y-m-d'),
+                userId: $model->id,
+                logId:  $log->id,
             );
             $count++;
         }
@@ -882,7 +883,7 @@ class ModelController extends Controller
     {
         $this->authorizeModel($model);
 
-        $request->validate(['status' => 'required|in:inactive,pending,applicant,rejected']);
+        $request->validate(['status' => 'required|in:inactive,pending,applicant']);
 
         $oldStatus = $model->status;
         $model->update(['status' => $request->status]);
@@ -924,14 +925,24 @@ class ModelController extends Controller
             }
         }
 
-        // Reactivar pases y estado en evento cuando vuelve de inactivo
+        // Reactivar pases, estado en evento y casting cuando vuelve de inactivo
         if ($oldStatus === 'inactive' && in_array($request->status, ['pending', 'applicant'])) {
+            $profile = $model->modelProfile;
+            $isPriorityAgency = $profile?->agency
+                && preg_match('/\b(fanny|cg|fma|fanny\'s|cgmodels)\b/i', $profile->agency);
+            $isTop = $profile?->is_top ?? false;
+            $startSlot = $isPriorityAgency ? 1 : ($isTop ? 2 : 3);
+
             foreach ($model->eventsAsModelWithCasting as $event) {
-                // Restaurar como invited en el evento
+                // Restaurar como invited en el evento y scheduled en casting
                 if ($event->pivot->status === 'rejected') {
                     $event->models()->updateExistingPivot($model->id, [
                         'status' => 'invited',
+                        'casting_status' => 'scheduled',
                     ]);
+
+                    // Reasignar casting slot
+                    $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot);
                 }
 
                 // Reactivar pases cancelados
@@ -1025,6 +1036,14 @@ class ModelController extends Controller
                 ->where('event_id', $event->id)
                 ->update(['status' => 'invited']);
 
+            // Reasignar casting slot
+            $profile = $model->modelProfile;
+            $isPriorityAgency = $profile?->agency
+                && preg_match('/\b(fanny|cg|fma|fanny\'s|cgmodels)\b/i', $profile->agency);
+            $isTop = $profile?->is_top ?? false;
+            $startSlot = $isPriorityAgency ? 1 : ($isTop ? 2 : 3);
+            $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot);
+
             // Reactivar pass solo si fue cancelado (no tocar los usados)
             DB::table('event_passes')
                 ->where('user_id', $model->id)
@@ -1032,9 +1051,9 @@ class ModelController extends Controller
                 ->where('status', 'cancelled')
                 ->update(['status' => 'active']);
 
-            // Si user.status era rejected, restaurar a pending (ya no todos los eventos están rejected)
+            // Si user.status era rejected, restaurar a applicant (pending requiere casting asignado)
             if ($model->status === 'rejected') {
-                $model->update(['status' => 'pending']);
+                $model->update(['status' => 'applicant']);
             }
         }
 

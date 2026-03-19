@@ -15,9 +15,7 @@ class WelcomeModelMail extends Mailable
 
     public function __construct(
         public User $model,
-        public ?string $eventName = null,
-        public ?string $castingTime = null,
-        public ?string $castingDate = null,
+        public array $events = [],
     ) {}
 
     public function envelope(): Envelope

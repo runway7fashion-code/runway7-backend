@@ -411,12 +411,4 @@ class ModelService
         });
     }
 
-    /**
-     * Enviar email de bienvenida a la modelo.
-     * TODO: Implementar con Mailgun.
-     */
-    public function sendWelcomeEmail(User $user): void
-    {
-        // Mail::to($user->email)->send(new ModelWelcomeMail($user));
-    }
 }

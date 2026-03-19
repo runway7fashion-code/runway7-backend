@@ -56,10 +56,10 @@ function availabilityColor(a) {
     return { yes: 'text-green-600', no: 'text-red-600', partially: 'text-yellow-600' }[a] ?? 'text-gray-600';
 }
 function statusBadgeClass(s) {
-    return { active: 'bg-green-50 text-green-700', inactive: 'bg-red-50 text-red-600', pending: 'bg-yellow-50 text-yellow-700', applicant: 'bg-purple-50 text-purple-700' }[s] ?? 'bg-gray-50 text-gray-600';
+    return { active: 'bg-green-50 text-green-700', inactive: 'bg-red-50 text-red-600', rejected: 'bg-orange-50 text-orange-700', pending: 'bg-yellow-50 text-yellow-700', applicant: 'bg-purple-50 text-purple-700' }[s] ?? 'bg-gray-50 text-gray-600';
 }
 function statusBadgeLabel(s) {
-    return { active: 'Activo', inactive: 'Inactivo', pending: 'Pendiente', applicant: 'Aplicante' }[s] ?? s;
+    return { active: 'Activo', inactive: 'Inactivo', rejected: 'Rechazado', pending: 'Pendiente', applicant: 'Aplicante' }[s] ?? s;
 }
 function commStatusClass(s) {
     return { queued: 'bg-yellow-100 text-yellow-700', sent: 'bg-green-100 text-green-700', failed: 'bg-red-100 text-red-700' }[s] ?? 'bg-gray-100 text-gray-600';

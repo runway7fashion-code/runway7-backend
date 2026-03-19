@@ -10,6 +10,7 @@ const props = defineProps({
     events: Array,
     pendingEmailCount: Number,
     pendingSmsCount: Number,
+    twilioBalance: Object,
 });
 
 const search = ref(props.filters?.search || '');
@@ -19,6 +20,7 @@ const eventId = ref(props.filters?.event_id || '');
 const statusColors = {
     active: 'bg-green-100 text-green-800',
     inactive: 'bg-red-100 text-red-800',
+    rejected: 'bg-orange-100 text-orange-800',
     pending: 'bg-yellow-100 text-yellow-800',
     applicant: 'bg-blue-100 text-blue-800',
 };
@@ -203,6 +205,10 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <p class="text-gray-500 text-sm mt-1">{{ volunteers.total }} voluntarios registrados</p>
                 </div>
                 <div class="flex items-center gap-2">
+                    <div v-if="twilioBalance" class="flex flex-col items-end px-3 py-1.5 border border-gray-200 rounded-lg bg-white">
+                        <span class="text-[10px] text-gray-400 font-medium leading-tight">Twilio Balance</span>
+                        <span class="text-sm font-bold text-gray-900 leading-tight">{{ twilioBalance.balance }} {{ twilioBalance.currency }}</span>
+                    </div>
                     <div v-if="pendingEmailCount > 0" class="flex items-center gap-1">
                         <button @click="sendBulkOnboarding"
                             class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
@@ -261,6 +267,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <option value="applicant">Aplicante</option>
                     <option value="pending">Pendiente</option>
                     <option value="active">Activo</option>
+                    <option value="rejected">Rechazado</option>
                     <option value="inactive">Inactivo</option>
                 </select>
                 <select v-model="eventId" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
@@ -316,7 +323,20 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                 <span v-else class="text-gray-400 text-xs">Sin eventos</span>
                             </td>
                             <td class="px-6 py-4" @click.stop>
-                                <select :value="vol.status" :data-status-select="vol.id" @change="updateStatus(vol, $event.target.value)"
+                                <!-- Activo: badge estático -->
+                                <span v-if="vol.status === 'active'"
+                                    class="text-xs font-medium rounded-full px-2.5 py-1 bg-green-100 text-green-800">
+                                    Activo
+                                </span>
+                                <!-- Rechazado: solo puede ir a inactivo -->
+                                <select v-else-if="vol.status === 'rejected'" :value="vol.status"
+                                    :data-status-select="vol.id" @change="updateStatus(vol, $event.target.value)"
+                                    class="text-xs font-medium rounded-full px-2.5 py-1 border-0 cursor-pointer focus:ring-2 focus:ring-black/10 appearance-none text-center bg-orange-100 text-orange-800">
+                                    <option value="rejected">Rechazado</option>
+                                    <option value="inactive">Inactivo</option>
+                                </select>
+                                <!-- Otros: selector editable -->
+                                <select v-else :value="vol.status" :data-status-select="vol.id" @change="updateStatus(vol, $event.target.value)"
                                     class="text-xs font-medium rounded-full px-2.5 py-1 border-0 cursor-pointer focus:ring-2 focus:ring-black/10 appearance-none text-center"
                                     :class="[
                                         statusColors[vol.status] || 'bg-gray-100 text-gray-800',
@@ -633,23 +653,19 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <ul class="space-y-3 text-sm text-gray-600">
                         <li class="flex items-start gap-2">
                             <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                            Solo se envía a voluntarios con <strong class="text-gray-800 mx-1">estado Pendiente</strong> que no hayan recibido email de onboarding anteriormente.
+                            <span>Solo se envía a voluntarios con estado Pendiente que no hayan recibido email de onboarding anteriormente.</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                            El email incluye <strong class="text-gray-800 mx-1">todos los eventos asignados</strong> del voluntario donde su estado en el evento es <strong class="text-gray-800">Agendado</strong>.
+                            <span>El email incluye todos los eventos asignados del voluntario donde su estado en el evento es Agendado.</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                            Si un voluntario tiene 2 eventos, el email muestra ambos con su área y horarios correspondientes.
+                            <span>Si un voluntario tiene 2 eventos, el email muestra ambos con su área y horarios correspondientes.</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                            Al enviar, el voluntario cambia automáticamente a estado <strong class="text-gray-800 mx-1">Activo</strong>.
-                        </li>
-                        <li class="flex items-start gap-2">
-                            <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                            El envío se procesa en cola — puede tardar unos segundos dependiendo del volumen.
+                            <span>El envío se procesa en cola — puede tardar unos segundos dependiendo del volumen.</span>
                         </li>
                     </ul>
                     <button @click="showEmailInfoModal = false"
@@ -679,23 +695,19 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <ul class="space-y-3 text-sm text-gray-600">
                         <li class="flex items-start gap-2">
                             <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                            Solo se envía a voluntarios con <strong class="text-gray-800 mx-1">estado Pendiente</strong> que tengan teléfono con código de país (<strong class="text-gray-800">+1...</strong>) y no hayan recibido SMS anteriormente.
+                            <span>Solo se envía a voluntarios con estado Pendiente que tengan teléfono con código de país (+1...) y no hayan recibido SMS anteriormente.</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                            El SMS menciona <strong class="text-gray-800 mx-1">todos los eventos asignados</strong> del voluntario donde su estado en el evento es <strong class="text-gray-800">Agendado</strong>.
+                            <span>El SMS menciona todos los eventos asignados del voluntario donde su estado en el evento es Agendado.</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                            El mensaje incluye las credenciales de acceso a la app y los enlaces de descarga.
+                            <span>El mensaje incluye las credenciales de acceso a la app y los enlaces de descarga.</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                            Al enviar, el voluntario cambia automáticamente a estado <strong class="text-gray-800 mx-1">Activo</strong>.
-                        </li>
-                        <li class="flex items-start gap-2">
-                            <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                            Requiere saldo disponible en Twilio. Si no hay saldo el envío fallará.
+                            <span>Requiere saldo disponible en Twilio. Si no hay saldo el envío fallará.</span>
                         </li>
                     </ul>
                     <button @click="showSmsInfoModal = false"

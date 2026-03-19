@@ -84,6 +84,7 @@ class VolunteerController extends Controller
             'events'            => $events,
             'pendingEmailCount' => $pendingEmailCount,
             'pendingSmsCount'   => $pendingSmsCount,
+            'twilioBalance'     => $this->twilioService->getBalance(),
         ]);
     }
 
@@ -412,6 +413,8 @@ class VolunteerController extends Controller
             }
         }
 
+        $oldStatus = $volunteer->status;
+
         // Si se pone inactive, rechazar en todos los eventos y cancelar pases
         if ($newStatus === 'inactive') {
             $eventIds = $volunteer->eventsAsStaff->pluck('id')->toArray();
@@ -423,6 +426,19 @@ class VolunteerController extends Controller
                 ->whereIn('event_id', $eventIds)
                 ->where('status', 'active')
                 ->update(['status' => 'cancelled']);
+        }
+
+        // Reactivar eventos y pases cuando vuelve de inactive
+        if ($oldStatus === 'inactive' && in_array($newStatus, ['pending', 'applicant'])) {
+            foreach ($volunteer->eventsAsStaff as $event) {
+                if ($event->pivot->status === 'rejected') {
+                    $volunteer->eventsAsStaff()->updateExistingPivot($event->id, ['status' => 'assigned']);
+                }
+                EventPass::where('user_id', $volunteer->id)
+                    ->where('event_id', $event->id)
+                    ->where('status', 'cancelled')
+                    ->update(['status' => 'active']);
+            }
         }
 
         $volunteer->update(['status' => $newStatus]);
@@ -503,12 +519,27 @@ class VolunteerController extends Controller
                 ->where('event_id', $event->id)
                 ->where('status', 'cancelled')
                 ->update(['status' => 'active']);
+
+            // Si user.status era rejected, restaurar a applicant
+            if ($volunteer->status === 'rejected') {
+                $volunteer->update(['status' => 'applicant']);
+            }
         }
 
         DB::table('event_staff')
             ->where('user_id', $volunteer->id)
             ->where('event_id', $event->id)
             ->update(['status' => $newStatus]);
+
+        // Si se rechazó: verificar si TODOS los eventos están rejected → user.status = rejected
+        if ($newStatus === 'rejected') {
+            $totalEvents = DB::table('event_staff')->where('user_id', $volunteer->id)->count();
+            $rejectedEvents = DB::table('event_staff')->where('user_id', $volunteer->id)->where('status', 'rejected')->count();
+
+            if ($totalEvents > 0 && $totalEvents === $rejectedEvents && $volunteer->status !== 'inactive') {
+                $volunteer->update(['status' => 'rejected']);
+            }
+        }
 
         $labels = [
             'assigned'   => 'Agendado',

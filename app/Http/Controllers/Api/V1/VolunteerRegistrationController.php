@@ -227,6 +227,11 @@ class VolunteerRegistrationController extends Controller
                 return $user;
             });
 
+            // Si el voluntario estaba rejected, reactivar a applicant
+            if ($isReRegistration && $user->status === 'rejected') {
+                $user->update(['status' => 'applicant']);
+            }
+
             $event = Event::find($eventId);
             $this->activityLog->log(
                 ActivityAction::Registered,

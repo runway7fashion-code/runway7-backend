@@ -306,8 +306,6 @@ class ModelRegistrationController extends Controller
 
             if ($hasValidOrder) {
                 // Fast-track: enviar welcome email con credenciales
-                $castingDay = $event->eventDays()->where('type', 'casting')->first();
-
                 $log = CommunicationLog::create([
                     'user_id'  => $model->id,
                     'sent_by'  => null,
@@ -317,9 +315,7 @@ class ModelRegistrationController extends Controller
                 ]);
 
                 SendWelcomeEmailJob::dispatch(
-                    $model->id,
-                    $event->name,
-                    castingDate: $castingDay?->date,
+                    userId: $model->id,
                     logId: $log->id,
                 );
             } elseif (!$isReRegistration) {

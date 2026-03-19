@@ -198,28 +198,26 @@
             Below you will find your access information and the details of the Model Casting.
         </p>
 
-        @if($eventName || $castingDate || $castingTime)
+        @foreach($events as $event)
         <div class="info-box">
-            @if($eventName)
             <div class="info-row">
-                <span class="info-label margin-right-10">Event:</span>
-                <span class="info-value">{{ $eventName }}</span>
+                <span class="info-label">Event</span>
+                <span class="info-value">{{ $event['name'] }}</span>
+            </div>
+            @if($event['casting_date'])
+            <div class="info-row">
+                <span class="info-label">Casting Date</span>
+                <span class="info-value">{{ \Carbon\Carbon::parse($event['casting_date'])->format('l, F j, Y') }}</span>
             </div>
             @endif
-            @if($castingDate)
+            @if($event['casting_time'])
             <div class="info-row">
-                <span class="info-label margin-right-10">Casting Date:</span>
-                <span class="info-value">{{ \Carbon\Carbon::parse($castingDate)->format('l, F j, Y') }}</span>
-            </div>
-            @endif
-            @if($castingTime)
-            <div class="info-row">
-                <span class="info-label margin-right-10">Casting Time:</span>
-                <span class="info-value">{{ $castingTime }}</span>
+                <span class="info-label">Casting Time</span>
+                <span class="info-value">{{ $event['casting_time'] }}</span>
             </div>
             @endif
         </div>
-        @endif
+        @endforeach
 
         <p class="text">
             Use the following credentials to log in to the Runway 7 app:

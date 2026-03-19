@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue';
-import { EnvelopeIcon, PencilSquareIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, XMarkIcon, StarIcon as StarOutline } from '@heroicons/vue/24/outline';
+import { EnvelopeIcon, PencilSquareIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, XMarkIcon, StarIcon as StarOutline, InformationCircleIcon } from '@heroicons/vue/24/outline';
 import { StarIcon as StarSolid } from '@heroicons/vue/24/solid';
 import { computed } from 'vue';
 import { VueDatePicker } from '@vuepic/vue-datepicker';
@@ -160,6 +160,11 @@ function submitImport() {
 }
 
 // --- Acciones por fila ---
+function isReadyForPending(m) {
+    return m.status === 'applicant'
+        && (m.events_as_model_with_casting ?? []).some(e => e.pivot?.casting_time);
+}
+
 function canSendEmail(m) {
     const hasEventWithCasting = (m.events_as_model_with_casting ?? []).some(e => e.pivot?.casting_time);
     return m.status === 'pending' && !!m.email && hasEventWithCasting;
@@ -194,6 +199,7 @@ function commStatusClass(status) {
 // Modal de selección de evento para email
 const emailModalModel   = ref(null);
 const emailModalEventId = ref(null);
+const showEmailInfoModal = ref(false);
 
 function openEmailModal(m, e) {
     e.stopPropagation();
@@ -458,13 +464,19 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 </div>
                 <div class="flex items-center gap-3">
                     <!-- Botón enviar correos pendientes -->
-                    <button v-if="pendingEmailCount > 0"
-                        @click="sendPendingEmails"
-                        class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
-                        <EnvelopeIcon class="w-4 h-4 text-gray-500" />
-                        Enviar correos
-                        <span class="bg-amber-100 text-amber-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ pendingEmailCount }}</span>
-                    </button>
+                    <div v-if="pendingEmailCount > 0" class="flex items-center gap-1">
+                        <button @click="sendPendingEmails"
+                            class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
+                            <EnvelopeIcon class="w-4 h-4 text-gray-500" />
+                            Enviar correos
+                            <span class="bg-amber-100 text-amber-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ pendingEmailCount }}</span>
+                        </button>
+                        <button @click="showEmailInfoModal = true"
+                            class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="¿Cómo funciona el envío masivo?">
+                            <InformationCircleIcon class="w-4 h-4" />
+                        </button>
+                    </div>
 
                     <!-- Botón exportar Excel -->
                     <a :href="exportUrl"
@@ -791,14 +803,22 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                     class="text-xs font-medium rounded-full px-2 py-0.5 bg-green-100 text-green-700">
                                     Activo
                                 </span>
-                                <!-- Pendiente / Inactivo: selector editable -->
-                                <select v-else :value="m.status"
+                                <!-- Rechazada: solo permite cambiar a inactivo -->
+                                <select v-else-if="m.status === 'rejected'" :value="m.status"
                                     @change="updateModelStatus(m, $event.target.value)"
                                     :data-status-select="m.id"
                                     :class="statusBadge(m.status)"
                                     class="text-xs font-medium rounded-full px-2 py-0.5 border-0 outline-none cursor-pointer appearance-none">
-                                    <option value="inactive">Inactivo</option>
                                     <option value="rejected">Rechazada</option>
+                                    <option value="inactive">Inactivo</option>
+                                </select>
+                                <!-- Pendiente / Inactivo / Aplicante: selector editable -->
+                                <select v-else :value="m.status"
+                                    @change="updateModelStatus(m, $event.target.value)"
+                                    :data-status-select="m.id"
+                                    :class="[statusBadge(m.status), isReadyForPending(m) ? 'animate-pulse ring-2 ring-purple-400 ring-offset-1' : '']"
+                                    class="text-xs font-medium rounded-full px-2 py-0.5 border-0 outline-none cursor-pointer appearance-none">
+                                    <option value="inactive">Inactivo</option>
                                     <option value="pending">Pendiente</option>
                                     <option value="applicant">Aplicante</option>
                                 </select>
@@ -1548,6 +1568,48 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         Enviar Email
                     </button>
                 </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Modal info Email masivo -->
+    <Teleport to="body">
+        <div v-if="showEmailInfoModal" class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/50" @click="showEmailInfoModal = false"></div>
+            <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <EnvelopeIcon class="w-5 h-5 text-amber-600" />
+                        </div>
+                        <h3 class="text-base font-semibold text-gray-900">¿Cómo funciona el envío masivo de emails?</h3>
+                    </div>
+                    <button @click="showEmailInfoModal = false" class="text-gray-400 hover:text-gray-600 ml-2">
+                        <XMarkIcon class="w-5 h-5" />
+                    </button>
+                </div>
+                <ul class="space-y-3 text-sm text-gray-600">
+                    <li class="flex items-start gap-2">
+                        <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
+                        <span>Solo se envía a modelos con estado Pendiente que tengan casting agendado y no hayan recibido email de bienvenida anteriormente.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
+                        <span>El email incluye todos los eventos asignados de la modelo donde su casting está agendado, con la fecha y hora correspondiente.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
+                        <span>Si una modelo tiene 2 eventos, el email muestra ambos con sus fechas y horarios de casting.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
+                        <span>El envío se procesa en cola — puede tardar unos segundos dependiendo del volumen.</span>
+                    </li>
+                </ul>
+                <button @click="showEmailInfoModal = false"
+                    class="mt-5 w-full py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
+                    Entendido
+                </button>
             </div>
         </div>
     </Teleport>

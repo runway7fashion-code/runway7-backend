@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
-import { XMarkIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, DevicePhoneMobileIcon, EnvelopeIcon, PencilSquareIcon } from '@heroicons/vue/24/outline';
+import { XMarkIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, DevicePhoneMobileIcon, EnvelopeIcon, PencilSquareIcon, InformationCircleIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     designers:         Object,
@@ -195,6 +195,8 @@ const emailModalDesigner = ref(null);
 const emailModalEventId  = ref(null);
 const smsModalDesigner   = ref(null);
 const smsModalEventId    = ref(null);
+const showEmailInfoModal = ref(false);
+const showSmsInfoModal   = ref(false);
 
 function sendOnboardingEmail(d, e) {
     e.stopPropagation();
@@ -342,22 +344,32 @@ function submitImport() {
                         <span class="text-[10px] text-gray-400 font-medium leading-tight">Twilio Balance</span>
                         <span class="text-sm font-bold text-gray-900 leading-tight">{{ twilioBalance.balance }} {{ twilioBalance.currency }}</span>
                     </div>
-                    <button v-if="pendingSmsCount > 0" @click="sendPendingSms"
-                        class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
-                        <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
-                        </svg>
-                        Enviar SMS
-                        <span class="bg-green-100 text-green-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ pendingSmsCount }}</span>
-                    </button>
-                    <button v-if="pendingEmailCount > 0" @click="sendPendingOnboarding"
-                        class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
-                        <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                        </svg>
-                        Enviar correos
-                        <span class="bg-amber-100 text-amber-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ pendingEmailCount }}</span>
-                    </button>
+                    <div v-if="pendingSmsCount > 0" class="flex items-center gap-1">
+                        <button @click="sendPendingSms"
+                            class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
+                            <DevicePhoneMobileIcon class="w-4 h-4 text-gray-500" />
+                            Enviar SMS
+                            <span class="bg-green-100 text-green-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ pendingSmsCount }}</span>
+                        </button>
+                        <button @click="showSmsInfoModal = true"
+                            class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="¿Cómo funciona el envío masivo?">
+                            <InformationCircleIcon class="w-4 h-4" />
+                        </button>
+                    </div>
+                    <div v-if="pendingEmailCount > 0" class="flex items-center gap-1">
+                        <button @click="sendPendingOnboarding"
+                            class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
+                            <EnvelopeIcon class="w-4 h-4 text-gray-500" />
+                            Enviar correos
+                            <span class="bg-amber-100 text-amber-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ pendingEmailCount }}</span>
+                        </button>
+                        <button @click="showEmailInfoModal = true"
+                            class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="¿Cómo funciona el envío masivo?">
+                            <InformationCircleIcon class="w-4 h-4" />
+                        </button>
+                    </div>
                     <!-- Exportar Excel -->
                     <a :href="exportUrl"
                         class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
@@ -1141,6 +1153,90 @@ function submitImport() {
                         Cancelar
                     </button>
                 </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Modal info Email masivo -->
+    <Teleport to="body">
+        <div v-if="showEmailInfoModal" class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/50" @click="showEmailInfoModal = false"></div>
+            <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <EnvelopeIcon class="w-5 h-5 text-amber-600" />
+                        </div>
+                        <h3 class="text-base font-semibold text-gray-900">¿Cómo funciona el envío masivo de emails?</h3>
+                    </div>
+                    <button @click="showEmailInfoModal = false" class="text-gray-400 hover:text-gray-600 ml-2">
+                        <XMarkIcon class="w-5 h-5" />
+                    </button>
+                </div>
+                <ul class="space-y-3 text-sm text-gray-600">
+                    <li class="flex items-start gap-2">
+                        <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
+                        <span>Solo se envía a diseñadores con estado Pendiente que no hayan recibido email de onboarding anteriormente.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
+                        <span>El email incluye todos los eventos asignados del diseñador con sus shows y horarios correspondientes.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
+                        <span>Si un diseñador tiene 2 eventos, el email muestra ambos con sus shows correspondientes.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
+                        <span>El envío se procesa en cola — puede tardar unos segundos dependiendo del volumen.</span>
+                    </li>
+                </ul>
+                <button @click="showEmailInfoModal = false"
+                    class="mt-5 w-full py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
+                    Entendido
+                </button>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Modal info SMS masivo -->
+    <Teleport to="body">
+        <div v-if="showSmsInfoModal" class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/50" @click="showSmsInfoModal = false"></div>
+            <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <DevicePhoneMobileIcon class="w-5 h-5 text-green-600" />
+                        </div>
+                        <h3 class="text-base font-semibold text-gray-900">¿Cómo funciona el envío masivo de SMS?</h3>
+                    </div>
+                    <button @click="showSmsInfoModal = false" class="text-gray-400 hover:text-gray-600 ml-2">
+                        <XMarkIcon class="w-5 h-5" />
+                    </button>
+                </div>
+                <ul class="space-y-3 text-sm text-gray-600">
+                    <li class="flex items-start gap-2">
+                        <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
+                        <span>Solo se envía a diseñadores con estado Pendiente que tengan teléfono con código de país (+1...) y no hayan recibido SMS anteriormente.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
+                        <span>El SMS menciona todos los eventos asignados del diseñador.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
+                        <span>El mensaje incluye las credenciales de acceso a la app y los enlaces de descarga.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
+                        <span>Requiere saldo disponible en Twilio. Si no hay saldo el envío fallará.</span>
+                    </li>
+                </ul>
+                <button @click="showSmsInfoModal = false"
+                    class="mt-5 w-full py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
+                    Entendido
+                </button>
             </div>
         </div>
     </Teleport>

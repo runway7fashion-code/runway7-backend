@@ -24,9 +24,6 @@ class SendWelcomeEmailJob implements ShouldQueue
 
     public function __construct(
         public int $userId,
-        public ?string $eventName = null,
-        public ?string $castingTime = null,
-        public ?string $castingDate = null,
         public ?int $logId = null,
     ) {}
 
@@ -36,12 +33,24 @@ class SendWelcomeEmailJob implements ShouldQueue
 
         if (!$user) return;
 
+        $user->load(['eventsAsModelWithCasting.eventDays' => fn($q) => $q->where('type', 'casting')]);
+
+        // Solo eventos donde casting_status es scheduled (no rejected)
+        $events = $user->eventsAsModelWithCasting
+            ->filter(fn($event) => $event->pivot->casting_status === 'scheduled')
+            ->map(function ($event) {
+                $castingDay = $event->eventDays->first();
+                return [
+                    'name'         => $event->name,
+                    'casting_date' => $castingDay?->date?->format('Y-m-d'),
+                    'casting_time' => $event->pivot->casting_time,
+                ];
+            })->values()->toArray();
+
         Mail::to($user->email, "{$user->first_name} {$user->last_name}")
             ->send(new WelcomeModelMail(
-                model:       $user,
-                eventName:   $this->eventName,
-                castingTime: $this->castingTime,
-                castingDate: $this->castingDate,
+                model:  $user,
+                events: $events,
             ));
 
         $user->update(['welcome_email_sent_at' => now()]);

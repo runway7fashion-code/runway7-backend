@@ -65,7 +65,6 @@ const form = useForm({
     // Pestaña 3 - Evento
     event_id:     '',
     casting_time: '',
-    send_welcome_email: false,
 });
 
 const ageOptions = Array.from({ length: 63 }, (_, i) => i + 18); // 18-80
