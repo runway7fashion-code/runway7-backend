@@ -483,7 +483,7 @@ class ModelController extends Controller
             'last_name'   => 'nullable|string|max:255',
             'email'       => "required|email|unique:users,email,{$model->id}",
             'phone'       => "nullable|string|unique:users,phone,{$model->id}",
-            'status'      => 'nullable|in:inactive,pending,applicant',
+            'status'      => 'nullable|in:inactive,pending,applicant,rejected',
             'instagram'   => 'nullable|string|max:255',
             'age'         => 'nullable|integer|min:16|max:80',
             'gender'      => 'nullable|in:female,male,non_binary',
@@ -858,7 +858,7 @@ class ModelController extends Controller
     {
         $this->authorizeModel($model);
 
-        $request->validate(['status' => 'required|in:inactive,pending,applicant']);
+        $request->validate(['status' => 'required|in:inactive,pending,applicant,rejected']);
 
         $oldStatus = $model->status;
         $model->update(['status' => $request->status]);
@@ -986,6 +986,14 @@ class ModelController extends Controller
                 ->where('status', 'active')
                 ->update(['status' => 'cancelled']);
 
+            // Si TODOS los eventos de la modelo están rejected → user.status = rejected
+            $totalEvents = DB::table('event_model')->where('model_id', $model->id)->count();
+            $rejectedEvents = DB::table('event_model')->where('model_id', $model->id)->where('status', 'rejected')->count();
+
+            if ($totalEvents > 0 && $totalEvents === $rejectedEvents && $model->status !== 'inactive') {
+                $model->update(['status' => 'rejected']);
+            }
+
         } elseif ($previousStatus === 'rejected' && $newStatus !== 'rejected') {
             // Restaurar estado en evento a invited
             DB::table('event_model')
@@ -999,6 +1007,11 @@ class ModelController extends Controller
                 ->where('event_id', $event->id)
                 ->where('status', 'cancelled')
                 ->update(['status' => 'active']);
+
+            // Si user.status era rejected, restaurar a pending (ya no todos los eventos están rejected)
+            if ($model->status === 'rejected') {
+                $model->update(['status' => 'pending']);
+            }
         }
 
         return back()->with('success', 'Estado de casting actualizado.');

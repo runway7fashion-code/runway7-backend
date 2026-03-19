@@ -405,6 +405,7 @@ function statusBadge(status) {
     return {
         active:    'bg-green-100 text-green-700',
         inactive:  'bg-red-100 text-red-700',
+        rejected:  'bg-orange-100 text-orange-700',
         pending:   'bg-yellow-100 text-yellow-700',
         applicant: 'bg-purple-100 text-purple-700',
     }[status] ?? 'bg-gray-100 text-gray-600';
@@ -622,6 +623,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <option value="">Estado: todos</option>
                     <option value="active">Activo</option>
                     <option value="inactive">Inactivo</option>
+                    <option value="rejected">Rechazada</option>
                     <option value="pending">Pendiente</option>
                     <option value="applicant">Aplicante</option>
                 </select>
@@ -766,6 +768,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                     :class="statusBadge(m.status)"
                                     class="text-xs font-medium rounded-full px-2 py-0.5 border-0 outline-none cursor-pointer appearance-none">
                                     <option value="inactive">Inactivo</option>
+                                    <option value="rejected">Rechazada</option>
                                     <option value="pending">Pendiente</option>
                                     <option value="applicant">Aplicante</option>
                                 </select>

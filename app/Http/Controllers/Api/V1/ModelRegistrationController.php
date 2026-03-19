@@ -140,6 +140,14 @@ class ModelRegistrationController extends Controller
 
         $eventId = (int) $validated['event_id'];
 
+        // Bloquear si la modelo está inactiva (bloqueada por admin de todo registro)
+        if ($existingUser && $existingUser->status === 'inactive') {
+            return response()->json([
+                'message' => 'Your account has been deactivated. Please contact us for assistance.',
+                'errors' => ['email' => ['Your account has been deactivated. Please contact us at models@runway7fashion.com']],
+            ], 422);
+        }
+
         // Rechazar si el email ya existe con otro rol
         if ($existingUser && $existingUser->role !== 'model') {
             return response()->json([
@@ -259,8 +267,9 @@ class ModelRegistrationController extends Controller
                 return $user;
             });
 
-            // Si la modelo estaba inactive, reactivar a pending (tiene un registro activo nuevamente)
-            if ($isReRegistration && $model->status === 'inactive') {
+            // Si la modelo estaba inactive o rejected, reactivar a pending (tiene un registro activo nuevamente)
+            // Nota: inactive NO debería llegar aquí (se bloquea arriba), pero rejected sí puede re-registrarse
+            if ($isReRegistration && in_array($model->status, ['inactive', 'rejected'])) {
                 $model->update(['status' => 'pending']);
             }
 

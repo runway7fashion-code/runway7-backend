@@ -100,6 +100,14 @@ class VolunteerRegistrationController extends Controller
 
         $eventId = (int) $validated['event_id'];
 
+        // Bloquear si el usuario está inactivo (bloqueado por admin de todo registro)
+        if ($existingUser && $existingUser->status === 'inactive') {
+            return response()->json([
+                'message' => 'Your account has been deactivated. Please contact us for assistance.',
+                'errors' => ['email' => ['Your account has been deactivated. Please contact us at events@runway7fashion.com']],
+            ], 422);
+        }
+
         // Rechazar si el email ya existe con otro rol
         if ($existingUser && $existingUser->role !== 'volunteer') {
             return response()->json([
