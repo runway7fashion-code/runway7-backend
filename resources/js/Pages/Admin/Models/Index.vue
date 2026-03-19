@@ -33,6 +33,7 @@ const designer       = ref(props.filters.designer       ?? '');
 const status         = ref(props.filters.status         ?? '');
 const sort_name      = ref(props.filters.sort_name      ?? '');
 const merch          = ref(props.filters.merch          ?? '');
+const perPage        = ref(props.filters.per_page       ?? '20');
 
 // Date range filters — value is [Date, Date] or null
 function parseRange(from, to) {
@@ -95,6 +96,7 @@ function applyFilters() {
             status:          status.value         || undefined,
             sort_name:       sort_name.value      || undefined,
             merch:           merch.value          || undefined,
+            per_page:        perPage.value != 20  ? perPage.value : undefined,
             registered_from: registeredRange.value ? fmtDate(registeredRange.value[0]) : undefined,
             registered_to:   registeredRange.value ? fmtDate(registeredRange.value[1]) : undefined,
             checkin_from:    checkinRange.value    ? fmtDate(checkinRange.value[0])    : undefined,
@@ -102,7 +104,7 @@ function applyFilters() {
         }, { preserveState: true, replace: true });
     }, 300);
 }
-watch([search, event, compcard, gender, ethnicity, is_agency, is_top, email_sent, test_model, casting_time, casting_status, designer, status, sort_name, merch, registeredRange, checkinRange], applyFilters);
+watch([search, event, compcard, gender, ethnicity, is_agency, is_top, email_sent, test_model, casting_time, casting_status, designer, status, sort_name, merch, perPage, registeredRange, checkinRange], applyFilters);
 
 function toggleSortName() {
     if (sort_name.value === 'asc') sort_name.value = 'desc';
@@ -836,9 +838,19 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 </table>
 
                 <!-- Paginación -->
-                <div v-if="models.last_page > 1" class="border-t border-gray-100 px-5 py-3 flex items-center justify-between text-sm text-gray-500">
-                    <span>{{ models.from }}–{{ models.to }} de {{ models.total }} modelos</span>
-                    <div class="flex gap-1">
+                <div class="border-t border-gray-100 px-5 py-3 flex items-center justify-between text-sm text-gray-500">
+                    <div class="flex items-center gap-3">
+                        <span>{{ models.from }}–{{ models.to }} de {{ models.total }} modelos</span>
+                        <select v-model="perPage"
+                            class="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="200">200</option>
+                            <option value="500">500</option>
+                        </select>
+                    </div>
+                    <div v-if="models.last_page > 1" class="flex gap-1">
                         <Link v-if="models.prev_page_url" :href="models.prev_page_url"
                             class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">← Anterior</Link>
                         <Link v-if="models.next_page_url" :href="models.next_page_url"

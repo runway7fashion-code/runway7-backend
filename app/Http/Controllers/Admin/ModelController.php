@@ -163,7 +163,8 @@ class ModelController extends Controller
             $query->orderBy('created_at', 'desc');
         }
 
-        $models = $query->paginate(20)->withQueryString();
+        $perPage = in_array((int) $request->input('per_page'), [20, 50, 100, 200, 500]) ? (int) $request->input('per_page') : 20;
+        $models = $query->paginate($perPage)->withQueryString();
 
         // Batch-load fitting data for models on this page
         $modelIds = $models->pluck('id');
@@ -349,7 +350,7 @@ class ModelController extends Controller
             'models'             => $models,
             'events'             => $events,
             'designers'          => $designers,
-            'filters'            => $request->only(['event', 'compcard', 'gender', 'ethnicity', 'is_agency', 'is_top', 'search', 'email_sent', 'test_model', 'casting_time', 'casting_status', 'designer', 'status', 'merch']),
+            'filters'            => $request->only(['event', 'compcard', 'gender', 'ethnicity', 'is_agency', 'is_top', 'search', 'email_sent', 'test_model', 'casting_time', 'casting_status', 'designer', 'status', 'merch', 'per_page']),
             'castingTimes'       => $castingTimes,
             'pendingEmailCount'  => $pendingEmailCount,
             'stats'              => $stats,
