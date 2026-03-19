@@ -148,25 +148,10 @@ class ModelRegistrationController extends Controller
             ], 422);
         }
 
-        // Si la modelo ya existe, verificar si ya está asignada al mismo evento
-        if ($existingUser) {
-            $alreadyInEvent = DB::table('event_model')
-                ->where('model_id', $existingUser->id)
-                ->where('event_id', $eventId)
-                ->exists();
-
-            if ($alreadyInEvent) {
-                return response()->json([
-                    'message' => 'You are already registered for this event.',
-                    'errors' => ['email' => ['You are already registered for this event. Please select a different event or contact us at models@runway7fashion.com']],
-                ], 422);
-            }
-        }
-
         $orderNumber = $validated['order_number'] ?? null;
         $hasValidOrder = false;
 
-        // Si proporcionó order number, validar antes de crear la modelo
+        // Validar order number ANTES de verificar duplicados (merch permite re-registro)
         if ($orderNumber) {
             // Verificar que no haya sido usado previamente
             $alreadyUsed = DB::table('event_model')
@@ -191,6 +176,23 @@ class ModelRegistrationController extends Controller
 
             $hasValidOrder = true;
             $orderNumber = ltrim(trim($orderNumber), '#');
+        }
+
+        // Si la modelo ya existe, verificar si ya está asignada al mismo evento
+        if ($existingUser) {
+            $alreadyInEvent = DB::table('event_model')
+                ->where('model_id', $existingUser->id)
+                ->where('event_id', $eventId)
+                ->exists();
+
+            // Bloquear solo si ya está en el evento Y no tiene código de merch válido
+            // Con merch válido se permite re-registro (acceso garantizado al casting)
+            if ($alreadyInEvent && !$hasValidOrder) {
+                return response()->json([
+                    'message' => 'You are already registered for this event.',
+                    'errors' => ['email' => ['You are already registered for this event. Please select a different event or contact us at models@runway7fashion.com']],
+                ], 422);
+            }
         }
 
         try {
@@ -256,6 +258,11 @@ class ModelRegistrationController extends Controller
 
                 return $user;
             });
+
+            // Si la modelo estaba inactive, reactivar a pending (tiene un registro activo nuevamente)
+            if ($isReRegistration && $model->status === 'inactive') {
+                $model->update(['status' => 'pending']);
+            }
 
             // Auto-assign casting slot según prioridad:
             // Slot 1: merch (Shopify order) o agencia prioritaria (Fanny/CG/FMA)

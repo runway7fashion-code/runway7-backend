@@ -66,7 +66,15 @@ class ModelService
         $alreadyAssigned = $event->models()->where('model_id', $user->id)->exists();
 
         if ($alreadyAssigned) {
-            // Ya asignada: solo actualizar casting_time si se proporcionó
+            $updateData = [];
+
+            // Re-registro con merch: resetear status y guardar order number
+            if ($shopifyOrderNumber) {
+                $updateData['shopify_order_number'] = $shopifyOrderNumber;
+                $updateData['status'] = 'invited';
+                $updateData['casting_status'] = 'scheduled';
+            }
+
             if ($castingTime) {
                 // Decrementar slot anterior si tenía horario previo
                 $pivot = $event->models()->where('model_id', $user->id)->first()?->pivot;
@@ -80,10 +88,8 @@ class ModelService
                     }
                 }
 
-                $event->models()->updateExistingPivot($user->id, [
-                    'casting_time'   => $castingTime,
-                    'casting_status' => 'scheduled',
-                ]);
+                $updateData['casting_time'] = $castingTime;
+                $updateData['casting_status'] = 'scheduled';
 
                 // Incrementar nuevo slot
                 $castingDay = $event->eventDays()->where('type', 'casting')->first();
@@ -93,6 +99,10 @@ class ModelService
                         $slot->increment('booked');
                     }
                 }
+            }
+
+            if (!empty($updateData)) {
+                $event->models()->updateExistingPivot($user->id, $updateData);
             }
 
             return;
