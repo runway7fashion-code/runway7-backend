@@ -5,6 +5,7 @@ namespace App\Mail;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -21,6 +22,7 @@ class WelcomeModelMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
+            from: new Address('models@runway7fashion.com', 'Runway 7 Models'),
             subject: 'Welcome to Runway 7! — Your Event Access',
         );
     }
