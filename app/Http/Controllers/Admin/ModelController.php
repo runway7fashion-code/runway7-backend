@@ -33,7 +33,7 @@ class ModelController extends Controller
         $query = User::models()->with([
             'modelProfile',
             'eventsAsModelWithCasting',
-            'communicationLogs' => fn($q) => $q->where('channel', 'welcome_email')->with('sender')->orderByDesc('created_at'),
+            'communicationLogs' => fn($q) => $q->whereIn('channel', ['welcome_email', 'registration_email'])->with('sender')->orderByDesc('created_at'),
         ]);
 
         if ($request->filled('event')) {

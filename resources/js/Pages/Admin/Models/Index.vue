@@ -1482,8 +1482,8 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                 {{ new Date(log.sent_at ?? log.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' }) }}
                             </span>
                         </div>
-                        <div v-if="log.sender" class="text-xs text-gray-500">
-                            Enviado por <span class="font-medium text-gray-700">{{ log.sender.first_name }} {{ log.sender.last_name }}</span>
+                        <div class="text-xs text-gray-500">
+                            Enviado por <span class="font-medium text-gray-700">{{ log.sender ? `${log.sender.first_name} ${log.sender.last_name}` : 'Registro automático' }}</span>
                         </div>
                         <div v-if="log.error_message" class="mt-2 text-xs text-red-600 bg-red-100 rounded-lg p-2">
                             {{ log.error_message }}

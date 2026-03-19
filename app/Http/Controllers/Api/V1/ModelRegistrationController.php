@@ -6,6 +6,7 @@ use App\Enums\ActivityAction;
 use App\Http\Controllers\Controller;
 use App\Jobs\SendRegistrationEmailJob;
 use App\Jobs\SendWelcomeEmailJob;
+use App\Models\CommunicationLog;
 use App\Models\Event;
 use App\Models\User;
 use App\Notifications\NewModelRegistered;
@@ -306,14 +307,32 @@ class ModelRegistrationController extends Controller
             if ($hasValidOrder) {
                 // Fast-track: enviar welcome email con credenciales
                 $castingDay = $event->eventDays()->where('type', 'casting')->first();
+
+                $log = CommunicationLog::create([
+                    'user_id'  => $model->id,
+                    'sent_by'  => null,
+                    'type'     => 'email',
+                    'channel'  => 'welcome_email',
+                    'status'   => 'queued',
+                ]);
+
                 SendWelcomeEmailJob::dispatch(
                     $model->id,
                     $event->name,
                     castingDate: $castingDay?->date,
+                    logId: $log->id,
                 );
             } elseif (!$isReRegistration) {
                 // Flujo normal (solo nuevos): enviar email de registro
-                SendRegistrationEmailJob::dispatch($model->id, $event->name);
+                $log = CommunicationLog::create([
+                    'user_id'  => $model->id,
+                    'sent_by'  => null,
+                    'type'     => 'email',
+                    'channel'  => 'registration_email',
+                    'status'   => 'queued',
+                ]);
+
+                SendRegistrationEmailJob::dispatch($model->id, $event->name, logId: $log->id);
             }
 
             $message = $isReRegistration

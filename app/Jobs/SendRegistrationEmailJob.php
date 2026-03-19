@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Mail\ModelRegistrationMail;
+use App\Models\CommunicationLog;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -22,6 +23,7 @@ class SendRegistrationEmailJob implements ShouldQueue
     public function __construct(
         public int $userId,
         public ?string $eventName = null,
+        public ?int $logId = null,
     ) {}
 
     public function handle(): void
@@ -35,10 +37,20 @@ class SendRegistrationEmailJob implements ShouldQueue
                 model: $user,
                 eventName: $this->eventName,
             ));
+
+        if ($this->logId) {
+            CommunicationLog::where('id', $this->logId)
+                ->update(['status' => 'sent', 'sent_at' => now()]);
+        }
     }
 
     public function failed(\Throwable $exception): void
     {
         \Illuminate\Support\Facades\Log::error("SendRegistrationEmailJob failed for user {$this->userId}: " . $exception->getMessage());
+
+        if ($this->logId) {
+            CommunicationLog::where('id', $this->logId)
+                ->update(['status' => 'failed', 'error_message' => $exception->getMessage()]);
+        }
     }
 }
