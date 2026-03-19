@@ -15,6 +15,7 @@ const props = defineProps({
     filters:           Object,
     castingTimes:      Array,
     pendingEmailCount: Number,
+    stats:             Object,
 });
 
 const search         = ref(props.filters.search         ?? '');
@@ -480,6 +481,38 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
                         + Crear Modelo
                     </Link>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-7 gap-3 mb-6">
+                <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-1">{{ stats?.total ?? 0 }}</p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Merch</p>
+                    <p class="text-2xl font-bold text-emerald-600 mt-1">{{ stats?.merch ?? 0 }}</p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Agencia</p>
+                    <p class="text-2xl font-bold text-blue-600 mt-1">{{ stats?.agency ?? 0 }}</p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Top</p>
+                    <p class="text-2xl font-bold text-amber-500 mt-1">{{ stats?.top ?? 0 }}</p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Normales</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-1">{{ stats?.normal ?? 0 }}</p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Hombres</p>
+                    <p class="text-2xl font-bold text-indigo-600 mt-1">{{ stats?.male ?? 0 }}</p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Mujeres</p>
+                    <p class="text-2xl font-bold text-pink-500 mt-1">{{ stats?.female ?? 0 }}</p>
                 </div>
             </div>
 

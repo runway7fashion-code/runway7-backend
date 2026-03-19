@@ -264,6 +264,48 @@ class ModelController extends Controller
             return $model;
         });
 
+        // --- Stats cards ---
+        $statsBaseQuery = User::models();
+        if ($request->filled('event')) {
+            $statsBaseQuery->whereHas('eventsAsModelWithCasting', fn($q) => $q->where('events.id', $request->event));
+        }
+        $statsBaseIds = (clone $statsBaseQuery)->pluck('users.id');
+
+        $totalModels = $statsBaseIds->count();
+
+        // Merch: tienen shopify_order_number en event_model
+        $merchQuery = DB::table('event_model')->whereIn('model_id', $statsBaseIds)->whereNotNull('shopify_order_number');
+        if ($request->filled('event')) {
+            $merchQuery->where('event_id', $request->event);
+        }
+        $merchCount = $merchQuery->distinct('model_id')->count('model_id');
+
+        // Agencia, Top via model_profiles
+        $profileStats = DB::table('model_profiles')
+            ->whereIn('user_id', $statsBaseIds)
+            ->selectRaw("COUNT(*) FILTER (WHERE is_agency = true) as agency_count")
+            ->selectRaw("COUNT(*) FILTER (WHERE is_top = true) as top_count")
+            ->selectRaw("COUNT(*) FILTER (WHERE gender = 'male') as male_count")
+            ->selectRaw("COUNT(*) FILTER (WHERE gender = 'female') as female_count")
+            ->first();
+
+        $agencyCount  = (int) ($profileStats->agency_count ?? 0);
+        $topCount     = (int) ($profileStats->top_count ?? 0);
+        $maleCount    = (int) ($profileStats->male_count ?? 0);
+        $femaleCount  = (int) ($profileStats->female_count ?? 0);
+        $normalCount  = $totalModels - $merchCount - $agencyCount;
+        if ($normalCount < 0) $normalCount = 0;
+
+        $stats = [
+            'total'   => $totalModels,
+            'merch'   => $merchCount,
+            'agency'  => $agencyCount,
+            'top'     => $topCount,
+            'normal'  => $normalCount,
+            'male'    => $maleCount,
+            'female'  => $femaleCount,
+        ];
+
         $events = Event::orderBy('start_date', 'desc')
             ->get(['id', 'name']);
 
@@ -310,6 +352,7 @@ class ModelController extends Controller
             'filters'            => $request->only(['event', 'compcard', 'gender', 'ethnicity', 'is_agency', 'is_top', 'search', 'email_sent', 'test_model', 'casting_time', 'casting_status', 'designer', 'status', 'merch']),
             'castingTimes'       => $castingTimes,
             'pendingEmailCount'  => $pendingEmailCount,
+            'stats'              => $stats,
         ]);
     }
 
