@@ -135,15 +135,16 @@ class ModelService
     /**
      * Auto-asignar casting slot a una modelo según prioridad.
      * $startFromPosition: 1 = primer slot, 2 = segundo, 3 = tercero...
+     * $slotType: 'normal' para modelos normales/brand, 'merch' para runway_merch.
      * Busca desde esa posición; si no hay cupo avanza al siguiente.
      */
-    public function autoAssignCastingSlot(User $user, int $eventId, int $startFromPosition = 1): ?string
+    public function autoAssignCastingSlot(User $user, int $eventId, int $startFromPosition = 1, string $slotType = 'normal'): ?string
     {
         $event = Event::findOrFail($eventId);
         $castingDay = $event->eventDays()->where('type', 'casting')->first();
         if (!$castingDay) return null;
 
-        $slots = $castingDay->castingSlots()->orderBy('time')->get();
+        $slots = $castingDay->castingSlots()->where('slot_type', $slotType)->orderBy('time')->get();
         if ($slots->isEmpty()) return null;
 
         // Decrementar slot anterior si la modelo ya tenía uno asignado

@@ -196,31 +196,22 @@ function commStatusClass(status) {
     }[status] ?? 'bg-gray-100 text-gray-600';
 }
 
-// Modal de selección de evento para email
+// Modal de confirmación para email
 const emailModalModel   = ref(null);
-const emailModalEventId = ref(null);
 const showEmailInfoModal = ref(false);
 
 function openEmailModal(m, e) {
     e.stopPropagation();
-    const events = m.events_as_model_with_casting ?? [];
-    if (events.length === 1) {
-        // Solo un evento → enviar directo sin modal
-        emailModalEventId.value = events[0].id;
-        confirmSendWelcomeEmail(m);
-        return;
-    }
-    emailModalModel.value   = m;
-    const firstAvailable = events.find(ev => ev.pivot?.casting_status !== 'rejected');
-    emailModalEventId.value = firstAvailable?.id ?? null;
+    emailModalModel.value = m;
 }
 
-function confirmSendWelcomeEmail(m) {
-    const model = m ?? emailModalModel.value;
-    router.post(`/admin/models/${model.id}/send-welcome-email`,
-        { event_id: emailModalEventId.value },
-        { preserveScroll: true }
-    );
+function scheduledEvents(m) {
+    return (m?.events_as_model_with_casting ?? []).filter(ev => ev.pivot?.casting_status === 'scheduled');
+}
+
+function confirmSendWelcomeEmail() {
+    const model = emailModalModel.value;
+    router.post(`/admin/models/${model.id}/send-welcome-email`, {}, { preserveScroll: true });
     emailModalModel.value = null;
 }
 
@@ -261,12 +252,35 @@ function updateCastingStatus(model, eventId, newStatus) {
         {
             preserveScroll: true,
             onSuccess: () => {
-                // Refrescar selectedModel con los datos actualizados de props
                 const fresh = props.models.data.find(m => m.id === model.id);
                 if (fresh) selectedModel.value = fresh;
             },
         }
     );
+}
+
+function updateModelTag(model, eventId, newTag) {
+    router.patch(`/admin/models/${model.id}/events/${eventId}/model-tag`,
+        { model_tag: newTag || null },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                const fresh = props.models.data.find(m => m.id === model.id);
+                if (fresh) selectedModel.value = fresh;
+            },
+        }
+    );
+}
+
+function sendOnboarding(model, eventId) {
+    if (!confirm('¿Enviar email de onboarding personalizado?')) return;
+    router.post(`/admin/models/${model.id}/events/${eventId}/send-onboarding`, {}, {
+        preserveScroll: true,
+        onSuccess: () => {
+            const fresh = props.models.data.find(m => m.id === model.id);
+            if (fresh) selectedModel.value = fresh;
+        },
+    });
 }
 
 function eventStatusBadge(status) {
@@ -1217,6 +1231,42 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                         </div>
                                     </div>
 
+                                    <!-- Tag de modelo (solo si tiene merch) -->
+                                    <div v-if="ev.pivot?.shopify_order_number" class="flex items-center gap-2 col-span-2">
+                                        <div class="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-3.5 h-3.5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" />
+                                            </svg>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-[10px] text-gray-400 leading-none mb-1">Tag modelo</p>
+                                            <select
+                                                :value="ev.pivot?.model_tag || ''"
+                                                @change="updateModelTag(selectedModel, ev.id, $event.target.value)"
+                                                class="w-full border rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                                :class="{
+                                                    'border-orange-300 bg-orange-50 text-orange-700': ev.pivot?.model_tag === 'runway_merch',
+                                                    'border-green-300 bg-green-50 text-green-700': ev.pivot?.model_tag === 'runway_brand',
+                                                    'border-gray-300 bg-white text-gray-500': !ev.pivot?.model_tag,
+                                                }">
+                                                <option value="">Sin tag</option>
+                                                <option value="runway_merch">Runway Merch</option>
+                                                <option value="runway_brand">Runway Brand</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <!-- Botón enviar onboarding (solo si tiene tag y casting) -->
+                                <div v-if="ev.pivot?.model_tag && ev.pivot?.casting_time"
+                                    class="mt-3 pt-3 border-t border-gray-100">
+                                    <button @click="sendOnboarding(selectedModel, ev.id)"
+                                        class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                                        <EnvelopeIcon class="w-3.5 h-3.5" />
+                                        Enviar onboarding {{ ev.pivot.model_tag === 'runway_merch' ? '(Merch)' : '(Brand)' }}
+                                    </button>
                                 </div>
 
                                 <!-- Check-in timestamp si existe -->
@@ -1521,49 +1571,42 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
         </div>
     </Teleport>
 
-    <!-- Modal: Seleccionar evento para email de bienvenida -->
+    <!-- Modal: Confirmar envío de email de bienvenida -->
     <Teleport to="body">
         <div v-if="emailModalModel" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="emailModalModel = null">
             <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-base font-bold text-gray-900">Seleccionar evento</h3>
+                    <h3 class="text-base font-bold text-gray-900">Enviar email de onboarding</h3>
                     <button @click="emailModalModel = null" class="text-gray-400 hover:text-gray-600">
                         <XMarkIcon class="w-5 h-5" />
                     </button>
                 </div>
                 <p class="text-sm text-gray-500 mb-4">
-                    ¿A qué evento pertenece el email de bienvenida para
+                    ¿Enviar email de bienvenida a
                     <span class="font-semibold text-gray-800">{{ emailModalModel.first_name }} {{ emailModalModel.last_name }}</span>?
                 </p>
+                <p class="text-xs text-gray-400 mb-3">Se incluirán los siguientes eventos:</p>
                 <div class="space-y-2 mb-5">
-                    <label v-for="evt in (emailModalModel.events_as_model_with_casting ?? [])" :key="evt.id"
-                        class="flex items-center gap-3 p-3 border rounded-xl transition-colors"
-                        :class="evt.pivot?.casting_status === 'rejected'
-                            ? 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'
-                            : emailModalEventId === evt.id
-                                ? 'border-black bg-gray-50 cursor-pointer'
-                                : 'border-gray-200 hover:border-gray-300 cursor-pointer'">
-                        <input type="radio" :value="evt.id" v-model="emailModalEventId"
-                            :disabled="evt.pivot?.casting_status === 'rejected'"
-                            class="accent-black" />
+                    <div v-for="evt in scheduledEvents(emailModalModel)" :key="evt.id"
+                        class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl bg-gray-50">
                         <div class="flex-1 min-w-0">
-                            <p class="text-sm font-medium" :class="evt.pivot?.casting_status === 'rejected' ? 'text-gray-400' : 'text-gray-900'">{{ evt.name }}</p>
-                            <p v-if="evt.pivot?.casting_status === 'rejected'" class="text-xs text-red-400 font-medium">
-                                {{ emailModalModel.model_profile?.gender === 'male' ? 'Rechazado' : 'Rechazada' }}
-                            </p>
-                            <p v-else-if="evt.pivot?.casting_time" class="text-xs text-gray-400">
+                            <p class="text-sm font-medium text-gray-900">{{ evt.name }}</p>
+                            <p v-if="evt.pivot?.casting_time" class="text-xs text-gray-400">
                                 Casting: {{ evt.pivot.casting_time }}
                             </p>
                         </div>
-                    </label>
+                    </div>
+                    <p v-if="!scheduledEvents(emailModalModel).length" class="text-sm text-red-500 italic">
+                        No tiene eventos con casting agendado.
+                    </p>
                 </div>
                 <div class="flex gap-3">
                     <button @click="emailModalModel = null"
                         class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
                         Cancelar
                     </button>
-                    <button @click="confirmSendWelcomeEmail(null)"
-                        :disabled="!emailModalEventId"
+                    <button @click="confirmSendWelcomeEmail()"
+                        :disabled="!scheduledEvents(emailModalModel).length"
                         class="flex-1 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                         Enviar Email
                     </button>

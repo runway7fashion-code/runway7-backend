@@ -37,17 +37,31 @@ class EventService
                 ]);
 
                 if ($eventDay->isCasting()) {
+                    // Slots normales
                     if (!empty($day['casting_slots'])) {
-                        // Usar slots personalizados
-                        $this->createCustomCastingSlots($eventDay, $day['casting_slots']);
+                        $this->createCustomCastingSlots($eventDay, $day['casting_slots'], 'normal');
                     } elseif (isset($day['casting_start'], $day['casting_end'], $day['casting_interval'])) {
-                        // Generar automáticamente por intervalo
                         $this->generateCastingSlots(
                             $eventDay,
                             $day['casting_start'],
                             $day['casting_end'],
                             (int) $day['casting_interval'],
-                            (int) ($day['casting_capacity'] ?? 50)
+                            (int) ($day['casting_capacity'] ?? 50),
+                            'normal'
+                        );
+                    }
+
+                    // Slots merch
+                    if (!empty($day['merch_casting_slots'])) {
+                        $this->createCustomCastingSlots($eventDay, $day['merch_casting_slots'], 'merch');
+                    } elseif (isset($day['merch_casting_start'], $day['merch_casting_end'], $day['merch_casting_interval'])) {
+                        $this->generateCastingSlots(
+                            $eventDay,
+                            $day['merch_casting_start'],
+                            $day['merch_casting_end'],
+                            (int) $day['merch_casting_interval'],
+                            (int) ($day['merch_casting_capacity'] ?? 50),
+                            'merch'
                         );
                     }
                 }
@@ -113,7 +127,7 @@ class EventService
         return $count;
     }
 
-    public function createCustomCastingSlots(EventDay $day, array $slots): int
+    public function createCustomCastingSlots(EventDay $day, array $slots, string $slotType = 'normal'): int
     {
         $newTimes = [];
         foreach ($slots as $slot) {
@@ -121,13 +135,14 @@ class EventService
             $capacity = (int) ($slot['capacity'] ?? 50);
             $newTimes[] = $time;
             CastingSlot::firstOrCreate(
-                ['event_day_id' => $day->id, 'time' => $time],
+                ['event_day_id' => $day->id, 'time' => $time, 'slot_type' => $slotType],
                 ['capacity' => $capacity, 'booked' => 0]
             );
         }
 
-        // Eliminar slots que ya no están (solo sin bookings)
+        // Eliminar slots de este tipo que ya no están (solo sin bookings)
         $day->castingSlots()
+            ->where('slot_type', $slotType)
             ->whereNotIn('time', $newTimes)
             ->where('booked', 0)
             ->delete();
@@ -136,13 +151,14 @@ class EventService
         foreach ($slots as $slot) {
             $day->castingSlots()
                 ->where('time', substr($slot['time'], 0, 5))
+                ->where('slot_type', $slotType)
                 ->update(['capacity' => (int) ($slot['capacity'] ?? 50)]);
         }
 
         return count($slots);
     }
 
-    public function generateCastingSlots(EventDay $day, string $startTime, string $endTime, int $intervalMinutes, int $capacity = 50): int
+    public function generateCastingSlots(EventDay $day, string $startTime, string $endTime, int $intervalMinutes, int $capacity = 50, string $slotType = 'normal'): int
     {
         $count    = 0;
         $current  = Carbon::createFromFormat('H:i', substr($startTime, 0, 5));
@@ -154,15 +170,16 @@ class EventService
             $time = $current->format('H:i');
             $newTimes[] = $time;
             CastingSlot::firstOrCreate(
-                ['event_day_id' => $day->id, 'time' => $time],
+                ['event_day_id' => $day->id, 'time' => $time, 'slot_type' => $slotType],
                 ['capacity' => $capacity, 'booked' => 0]
             );
             $current->addMinutes($intervalMinutes);
             $count++;
         }
 
-        // Eliminar slots que ya no corresponden al nuevo intervalo (solo si no tienen bookings)
+        // Eliminar slots de este tipo que ya no corresponden (solo si no tienen bookings)
         $day->castingSlots()
+            ->where('slot_type', $slotType)
             ->whereNotIn('time', $newTimes)
             ->where('booked', 0)
             ->delete();
@@ -293,9 +310,10 @@ class EventService
 
                 foreach ($day->castingSlots as $slot) {
                     $newDay->castingSlots()->create([
-                        'time'     => $slot->time,
-                        'capacity' => $slot->capacity,
-                        'booked'   => 0,
+                        'time'      => $slot->time,
+                        'capacity'  => $slot->capacity,
+                        'booked'    => 0,
+                        'slot_type' => $slot->slot_type,
                     ]);
                 }
 
@@ -333,15 +351,31 @@ class EventService
                         ]);
 
                         if ($dayData['type'] === 'casting') {
+                            // Slots normales
                             if (!empty($dayData['casting_slots'])) {
-                                $this->createCustomCastingSlots($day, $dayData['casting_slots']);
+                                $this->createCustomCastingSlots($day, $dayData['casting_slots'], 'normal');
                             } elseif (isset($dayData['casting_start'], $dayData['casting_end'], $dayData['casting_interval'])) {
                                 $this->generateCastingSlots(
                                     $day,
                                     $dayData['casting_start'],
                                     $dayData['casting_end'],
                                     (int) $dayData['casting_interval'],
-                                    (int) ($dayData['casting_capacity'] ?? 50)
+                                    (int) ($dayData['casting_capacity'] ?? 50),
+                                    'normal'
+                                );
+                            }
+
+                            // Slots merch
+                            if (!empty($dayData['merch_casting_slots'])) {
+                                $this->createCustomCastingSlots($day, $dayData['merch_casting_slots'], 'merch');
+                            } elseif (isset($dayData['merch_casting_start'], $dayData['merch_casting_end'], $dayData['merch_casting_interval'])) {
+                                $this->generateCastingSlots(
+                                    $day,
+                                    $dayData['merch_casting_start'],
+                                    $dayData['merch_casting_end'],
+                                    (int) $dayData['merch_casting_interval'],
+                                    (int) ($dayData['merch_casting_capacity'] ?? 50),
+                                    'merch'
                                 );
                             }
                         }
@@ -372,15 +406,31 @@ class EventService
                     ]);
 
                     if ($newDay->isCasting()) {
+                        // Slots normales
                         if (!empty($dayData['casting_slots'])) {
-                            $this->createCustomCastingSlots($newDay, $dayData['casting_slots']);
+                            $this->createCustomCastingSlots($newDay, $dayData['casting_slots'], 'normal');
                         } elseif (isset($dayData['casting_start'], $dayData['casting_end'], $dayData['casting_interval'])) {
                             $this->generateCastingSlots(
                                 $newDay,
                                 $dayData['casting_start'],
                                 $dayData['casting_end'],
                                 (int) $dayData['casting_interval'],
-                                (int) ($dayData['casting_capacity'] ?? 50)
+                                (int) ($dayData['casting_capacity'] ?? 50),
+                                'normal'
+                            );
+                        }
+
+                        // Slots merch
+                        if (!empty($dayData['merch_casting_slots'])) {
+                            $this->createCustomCastingSlots($newDay, $dayData['merch_casting_slots'], 'merch');
+                        } elseif (isset($dayData['merch_casting_start'], $dayData['merch_casting_end'], $dayData['merch_casting_interval'])) {
+                            $this->generateCastingSlots(
+                                $newDay,
+                                $dayData['merch_casting_start'],
+                                $dayData['merch_casting_end'],
+                                (int) $dayData['merch_casting_interval'],
+                                (int) ($dayData['merch_casting_capacity'] ?? 50),
+                                'merch'
                             );
                         }
                     }

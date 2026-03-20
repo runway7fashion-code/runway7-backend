@@ -68,6 +68,9 @@ class EventController extends Controller
             'days.*.casting_slots'          => 'nullable|array',
             'days.*.casting_slots.*.time'     => 'required|string',
             'days.*.casting_slots.*.capacity' => 'required|integer|min:1',
+            'days.*.merch_casting_slots'          => 'nullable|array',
+            'days.*.merch_casting_slots.*.time'     => 'required|string',
+            'days.*.merch_casting_slots.*.capacity' => 'required|integer|min:1',
             'time_slots'            => 'nullable|array',
             'apply_same_schedule'   => 'boolean',
         ]);
@@ -145,6 +148,9 @@ class EventController extends Controller
             'days.*.casting_slots'          => 'nullable|array',
             'days.*.casting_slots.*.time'     => 'required|string',
             'days.*.casting_slots.*.capacity' => 'required|integer|min:1',
+            'days.*.merch_casting_slots'          => 'nullable|array',
+            'days.*.merch_casting_slots.*.time'     => 'required|string',
+            'days.*.merch_casting_slots.*.capacity' => 'required|integer|min:1',
         ]);
 
         $this->eventService->updateEvent(

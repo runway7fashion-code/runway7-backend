@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Mail\WelcomeModelMail;
+use App\Mail\ModelOnboardingMail;
 use App\Models\CommunicationLog;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
@@ -12,48 +12,45 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
 
-class SendWelcomeEmailJob implements ShouldQueue
+class SendModelOnboardingJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /** Reintentos si falla (ej: SES timeout) */
     public int $tries = 3;
-
-    /** Espera entre reintentos: 60s, 300s, 600s */
     public int $backoff = 60;
 
     public function __construct(
         public int $userId,
+        public int $eventId,
+        public string $tag,
         public ?int $logId = null,
     ) {}
 
     public function handle(): void
     {
         $user = User::find($this->userId);
-
         if (!$user) return;
 
         $user->load(['eventsAsModelWithCasting.eventDays' => fn($q) => $q->where('type', 'casting')]);
 
-        // Incluir todos los eventos no rechazados (para merch sin casting asignado aún)
-        $events = $user->eventsAsModelWithCasting
-            ->filter(fn($event) => $event->pivot->status !== 'rejected')
-            ->map(function ($event) {
-                $castingDay = $event->eventDays->first();
-                return [
-                    'name'         => $event->name,
-                    'casting_date' => $castingDay?->date?->format('Y-m-d'),
-                    'casting_time' => $event->pivot->casting_time,
-                ];
-            })->values()->toArray();
+        // Solo el evento específico con el tag asignado
+        $event = $user->eventsAsModelWithCasting->firstWhere('id', $this->eventId);
+        if (!$event) return;
+
+        $castingDay = $event->eventDays->first();
+
+        $events = [[
+            'name'         => $event->name,
+            'casting_date' => $castingDay?->date?->format('Y-m-d'),
+            'casting_time' => $event->pivot->casting_time,
+        ]];
 
         Mail::to($user->email, "{$user->first_name} {$user->last_name}")
-            ->send(new WelcomeModelMail(
+            ->send(new ModelOnboardingMail(
                 model:  $user,
                 events: $events,
+                tag:    $this->tag,
             ));
-
-        $user->update(['welcome_email_sent_at' => now()]);
 
         if ($this->logId) {
             CommunicationLog::where('id', $this->logId)
@@ -63,7 +60,7 @@ class SendWelcomeEmailJob implements ShouldQueue
 
     public function failed(\Throwable $exception): void
     {
-        \Illuminate\Support\Facades\Log::error("SendWelcomeEmailJob failed for user {$this->userId}: " . $exception->getMessage());
+        \Illuminate\Support\Facades\Log::error("SendModelOnboardingJob failed for user {$this->userId}: " . $exception->getMessage());
 
         if ($this->logId) {
             CommunicationLog::where('id', $this->logId)

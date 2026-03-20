@@ -6,6 +6,7 @@ use App\Enums\ActivityAction;
 use App\Exports\ModelsExport;
 use App\Http\Controllers\Controller;
 use App\Imports\ModelsImport;
+use App\Jobs\SendModelOnboardingJob;
 use App\Jobs\SendWelcomeEmailJob;
 use App\Models\CommunicationLog;
 use App\Models\Event;
@@ -33,7 +34,7 @@ class ModelController extends Controller
         $query = User::models()->with([
             'modelProfile',
             'eventsAsModelWithCasting',
-            'communicationLogs' => fn($q) => $q->whereIn('channel', ['welcome_email', 'registration_email'])->with('sender')->orderByDesc('created_at'),
+            'communicationLogs' => fn($q) => $q->whereIn('channel', ['welcome_email', 'registration_email', 'model_onboarding'])->with('sender')->orderByDesc('created_at'),
         ]);
 
         if ($request->filled('event')) {
@@ -576,8 +577,9 @@ class ModelController extends Controller
                             'casting_status' => 'scheduled',
                         ]);
 
-                        // Reasignar casting slot
-                        $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot);
+                        // Reasignar casting slot según tag
+                        $slotType = $event->pivot->model_tag === 'runway_merch' ? 'merch' : 'normal';
+                        $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot, slotType: $slotType);
                     }
                     EventPass::where('user_id', $model->id)
                         ->where('event_id', $event->id)
@@ -871,7 +873,8 @@ class ModelController extends Controller
 
             foreach ($model->eventsAsModelWithCasting as $event) {
                 if ($event->pivot->casting_time) {
-                    $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $targetSlot);
+                    $slotType = $event->pivot->model_tag === 'runway_merch' ? 'merch' : 'normal';
+                    $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $targetSlot, slotType: $slotType);
                 }
             }
         }
@@ -899,7 +902,8 @@ class ModelController extends Controller
 
             foreach ($model->eventsAsModelWithCasting as $event) {
                 if ($isPriorityAgency || $isTop || !$event->pivot->casting_time) {
-                    $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot);
+                    $slotType = $event->pivot->model_tag === 'runway_merch' ? 'merch' : 'normal';
+                    $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot, slotType: $slotType);
                 }
             }
         }
@@ -941,8 +945,9 @@ class ModelController extends Controller
                         'casting_status' => 'scheduled',
                     ]);
 
-                    // Reasignar casting slot
-                    $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot);
+                    // Reasignar casting slot según tag
+                    $slotType = $event->pivot->model_tag === 'runway_merch' ? 'merch' : 'normal';
+                    $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot, slotType: $slotType);
                 }
 
                 // Reactivar pases cancelados
@@ -1036,13 +1041,15 @@ class ModelController extends Controller
                 ->where('event_id', $event->id)
                 ->update(['status' => 'invited']);
 
-            // Reasignar casting slot
+            // Reasignar casting slot según tag
             $profile = $model->modelProfile;
             $isPriorityAgency = $profile?->agency
                 && preg_match('/\b(fanny|cg|fma|fanny\'s|cgmodels)\b/i', $profile->agency);
             $isTop = $profile?->is_top ?? false;
             $startSlot = $isPriorityAgency ? 1 : ($isTop ? 2 : 3);
-            $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot);
+            $pivotTag = DB::table('event_model')->where('model_id', $model->id)->where('event_id', $event->id)->value('model_tag');
+            $slotType = $pivotTag === 'runway_merch' ? 'merch' : 'normal';
+            $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot, slotType: $slotType);
 
             // Reactivar pass solo si fue cancelado (no tocar los usados)
             DB::table('event_passes')
@@ -1058,6 +1065,59 @@ class ModelController extends Controller
         }
 
         return back()->with('success', 'Estado de casting actualizado.');
+    }
+
+    public function updateModelTag(Request $request, User $model, Event $event)
+    {
+        $this->authorizeModel($model);
+
+        $request->validate([
+            'model_tag' => 'nullable|in:runway_merch,runway_brand',
+        ]);
+
+        DB::table('event_model')
+            ->where('model_id', $model->id)
+            ->where('event_id', $event->id)
+            ->update(['model_tag' => $request->model_tag ?: null]);
+
+        $tagLabel = match ($request->model_tag) {
+            'runway_merch' => 'Runway Merch',
+            'runway_brand' => 'Runway Brand',
+            default => 'Sin tag',
+        };
+
+        return back()->with('success', "Tag actualizado a {$tagLabel}.");
+    }
+
+    public function sendModelOnboarding(Request $request, User $model, Event $event)
+    {
+        $this->authorizeModel($model);
+
+        $pivot = DB::table('event_model')
+            ->where('model_id', $model->id)
+            ->where('event_id', $event->id)
+            ->first();
+
+        abort_unless($pivot, 404, 'La modelo no está asignada a este evento.');
+        abort_unless($pivot->model_tag, 422, 'La modelo no tiene tag asignado para este evento.');
+        abort_unless($pivot->casting_time, 422, 'La modelo no tiene horario de casting asignado.');
+
+        $log = CommunicationLog::create([
+            'user_id'  => $model->id,
+            'sent_by'  => $request->user()->id,
+            'type'     => 'email',
+            'channel'  => 'model_onboarding',
+            'status'   => 'queued',
+        ]);
+
+        SendModelOnboardingJob::dispatch(
+            userId:  $model->id,
+            eventId: $event->id,
+            tag:     $pivot->model_tag,
+            logId:   $log->id,
+        );
+
+        return back()->with('success', 'Email de onboarding enviado.');
     }
 
     // --- Helpers ---
@@ -1130,6 +1190,7 @@ class ModelController extends Controller
                 'participation_number'  => $event->pivot->participation_number,
                 'model_status'          => $event->pivot->status,
                 'shopify_order_number'  => $event->pivot->shopify_order_number,
+                'model_tag'             => $event->pivot->model_tag,
                 'pass'                  => $passMap->has($event->id) ? (function () use ($passMap, $event, $dayMap) {
                     $p = $passMap[$event->id];
                     return [

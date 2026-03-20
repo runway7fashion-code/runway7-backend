@@ -59,6 +59,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('models/{model}/delete-profile-picture', [ModelController::class, 'deleteProfilePicture'])->name('models.delete-profile-picture');
             Route::patch('models/{model}/status', [ModelController::class, 'updateStatus'])->name('models.update-status');
             Route::patch('models/{model}/events/{event}/casting-status', [ModelController::class, 'updateEventCastingStatus'])->name('models.update-event-casting-status');
+            Route::patch('models/{model}/events/{event}/model-tag', [ModelController::class, 'updateModelTag'])->name('models.update-model-tag');
+            Route::post('models/{model}/events/{event}/send-onboarding', [ModelController::class, 'sendModelOnboarding'])->name('models.send-onboarding');
             Route::post('models/{model}/toggle-top', [ModelController::class, 'toggleTop'])->name('models.toggle-top');
         });
 

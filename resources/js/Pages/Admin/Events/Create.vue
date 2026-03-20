@@ -61,6 +61,11 @@ watch([() => form.start_date, () => form.end_date], () => {
             casting_interval: 30,
             casting_capacity: 50,
             casting_slots: [],
+            merch_casting_start: '',
+            merch_casting_end: '',
+            merch_casting_interval: 30,
+            merch_casting_capacity: 50,
+            merch_casting_slots: [],
             time_slots: [...form.time_slots],
             has_fitting: false,
             fitting_start: '08:00',
@@ -110,6 +115,11 @@ function addDay() {
         casting_interval: 30,
         casting_capacity: 50,
         casting_slots: [],
+        merch_casting_start: '',
+        merch_casting_end: '',
+        merch_casting_interval: 30,
+        merch_casting_capacity: 50,
+        merch_casting_slots: [],
         time_slots: [...form.time_slots],
         has_fitting: false,
         fitting_start: '08:00',
@@ -180,6 +190,32 @@ function addCastingSlot(day) {
 
 function removeCastingSlot(day, index) {
     day.casting_slots.splice(index, 1);
+}
+
+function generateMerchSlots(day) {
+    if (!day.merch_casting_start || !day.merch_casting_end || !day.merch_casting_interval) return;
+    const slots = [];
+    const [sh, sm] = day.merch_casting_start.split(':').map(Number);
+    const [eh, em] = day.merch_casting_end.split(':').map(Number);
+    let current = sh * 60 + sm;
+    const end = eh * 60 + em;
+    while (current <= end) {
+        const h = String(Math.floor(current / 60)).padStart(2, '0');
+        const m = String(current % 60).padStart(2, '0');
+        slots.push({ time: `${h}:${m}`, capacity: day.merch_casting_capacity || 50 });
+        current += Number(day.merch_casting_interval);
+    }
+    day.merch_casting_slots = slots;
+}
+
+function addMerchSlot(day) {
+    if (!day.merch_casting_slots) day.merch_casting_slots = [];
+    const lastTime = day.merch_casting_slots.length > 0 ? day.merch_casting_slots[day.merch_casting_slots.length - 1].time : '12:00';
+    day.merch_casting_slots.push({ time: lastTime, capacity: day.merch_casting_capacity || 50 });
+}
+
+function removeMerchSlot(day, index) {
+    day.merch_casting_slots.splice(index, 1);
 }
 
 function nextStep() {
@@ -447,6 +483,66 @@ function submit() {
                                             class="border-0 text-xs text-gray-500 p-0 focus:outline-none focus:ring-0 w-[35px] text-center"
                                             title="Capacidad" />
                                         <button @click="removeCastingSlot(day, si)" type="button" class="text-red-300 hover:text-red-500 flex-shrink-0">
+                                            <XMarkIcon class="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Merch casting slots -->
+                        <div v-if="day.type === 'casting'" class="mt-3 pt-3 border-t border-orange-200">
+                            <p class="text-xs font-bold text-orange-700 uppercase tracking-wider mb-2">Casting Merch (Runway Merch)</p>
+                            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                                <div>
+                                    <label class="text-xs text-orange-600 font-medium mb-0.5 block">Inicio</label>
+                                    <input v-model="day.merch_casting_start" type="time"
+                                        class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
+                                </div>
+                                <div>
+                                    <label class="text-xs text-orange-600 font-medium mb-0.5 block">Fin</label>
+                                    <input v-model="day.merch_casting_end" type="time"
+                                        class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
+                                </div>
+                                <div>
+                                    <label class="text-xs text-orange-600 font-medium mb-0.5 block">Intervalo (min)</label>
+                                    <select v-model="day.merch_casting_interval"
+                                        class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30">
+                                        <option :value="15">15 min</option>
+                                        <option :value="30">30 min</option>
+                                        <option :value="45">45 min</option>
+                                        <option :value="60">60 min</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-orange-600 font-medium mb-0.5 block">Cap. por slot</label>
+                                    <input v-model.number="day.merch_casting_capacity" type="number" min="1"
+                                        class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
+                                </div>
+                                <div class="flex items-end">
+                                    <button @click="generateMerchSlots(day)" type="button"
+                                        class="w-full px-3 py-1.5 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors">
+                                        Generar slots
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Merch slots preview/edit -->
+                            <div v-if="day.merch_casting_slots?.length" class="mt-3 pt-3 border-t border-orange-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <p class="text-xs font-semibold text-orange-700">{{ day.merch_casting_slots.length }} slots merch generados</p>
+                                    <button @click="addMerchSlot(day)" type="button"
+                                        class="text-xs text-orange-600 hover:text-orange-800 font-medium">+ Agregar slot</button>
+                                </div>
+                                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                                    <div v-for="(slot, si) in day.merch_casting_slots" :key="si"
+                                        class="flex items-center gap-1 bg-white border border-orange-200 rounded-lg px-2 py-1">
+                                        <input v-model="slot.time" type="time"
+                                            class="border-0 text-sm font-medium text-gray-800 p-0 focus:outline-none focus:ring-0 w-[70px]" />
+                                        <input v-model.number="slot.capacity" type="number" min="1"
+                                            class="border-0 text-xs text-gray-500 p-0 focus:outline-none focus:ring-0 w-[35px] text-center"
+                                            title="Capacidad" />
+                                        <button @click="removeMerchSlot(day, si)" type="button" class="text-red-300 hover:text-red-500 flex-shrink-0">
                                             <XMarkIcon class="w-3.5 h-3.5" />
                                         </button>
                                     </div>

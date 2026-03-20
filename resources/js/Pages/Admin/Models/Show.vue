@@ -79,6 +79,25 @@ function removeFromEvent(eventId, eventName) {
     router.delete(`/admin/models/${props.model.id}/remove-event/${eventId}`, { preserveScroll: true });
 }
 
+function updateCastingStatus(eventId, newStatus) {
+    router.patch(`/admin/models/${props.model.id}/events/${eventId}/casting-status`,
+        { casting_status: newStatus },
+        { preserveScroll: true }
+    );
+}
+
+function updateModelTag(eventId, newTag) {
+    router.patch(`/admin/models/${props.model.id}/events/${eventId}/model-tag`,
+        { model_tag: newTag || null },
+        { preserveScroll: true }
+    );
+}
+
+function sendOnboarding(eventId) {
+    if (!confirm('¿Enviar email de onboarding personalizado?')) return;
+    router.post(`/admin/models/${props.model.id}/events/${eventId}/send-onboarding`, {}, { preserveScroll: true });
+}
+
 function statusBadgeClass(s) {
     return { active: 'bg-green-50 text-green-700', inactive: 'bg-red-50 text-red-600', rejected: 'bg-orange-50 text-orange-700', pending: 'bg-yellow-50 text-yellow-700', applicant: 'bg-purple-50 text-purple-700' }[s] ?? 'bg-gray-50 text-gray-600';
 }
@@ -323,17 +342,59 @@ function deleteModel() {
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                         Casting: {{ evt.casting_time ?? 'No asignado' }}
-                                        <span v-if="evt.casting_status"
-                                            :class="{
-                                                'text-yellow-600': evt.casting_status === 'scheduled',
-                                                'text-blue-600': evt.casting_status === 'checked_in',
-                                                'text-green-600': evt.casting_status === 'selected',
-                                                'text-red-500': evt.casting_status === 'no_show' || evt.casting_status === 'rejected',
-                                            }"
-                                            class="font-medium">
-                                            · {{ castingStatusLabel(evt.casting_status, profile?.gender) }}
-                                        </span>
                                     </span>
+                                </div>
+
+                                <!-- Estado casting + Tag + Onboarding -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <!-- Estado casting editable -->
+                                    <div>
+                                        <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Estado casting</p>
+                                        <select
+                                            :value="evt.casting_status"
+                                            @change="updateCastingStatus(evt.id, $event.target.value)"
+                                            class="w-full border rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-black/10"
+                                            :class="{
+                                                'border-yellow-300 bg-yellow-50 text-yellow-700': evt.casting_status === 'scheduled',
+                                                'border-blue-300 bg-blue-50 text-blue-700': evt.casting_status === 'checked_in',
+                                                'border-green-300 bg-green-50 text-green-700': evt.casting_status === 'selected',
+                                                'border-red-300 bg-red-50 text-red-600': evt.casting_status === 'no_show' || evt.casting_status === 'rejected',
+                                                'border-gray-200 bg-white text-gray-500': !evt.casting_status,
+                                            }">
+                                            <option value="scheduled">Agendada</option>
+                                            <option value="checked_in">Check-in</option>
+                                            <option value="selected">Seleccionada</option>
+                                            <option value="no_show">No se presentó</option>
+                                            <option value="rejected">{{ profile?.gender === 'male' ? 'Rechazado' : 'Rechazada' }}</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Tag modelo (solo si tiene merch) -->
+                                    <div v-if="evt.shopify_order_number">
+                                        <p class="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Tag modelo</p>
+                                        <select
+                                            :value="evt.model_tag || ''"
+                                            @change="updateModelTag(evt.id, $event.target.value)"
+                                            class="w-full border rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-orange-400"
+                                            :class="{
+                                                'border-orange-300 bg-orange-50 text-orange-700': evt.model_tag === 'runway_merch',
+                                                'border-green-300 bg-green-50 text-green-700': evt.model_tag === 'runway_brand',
+                                                'border-gray-200 bg-white text-gray-500': !evt.model_tag,
+                                            }">
+                                            <option value="">Sin tag</option>
+                                            <option value="runway_merch">Runway Merch</option>
+                                            <option value="runway_brand">Runway Brand</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Botón enviar onboarding -->
+                                <div v-if="evt.model_tag && evt.casting_time">
+                                    <button @click="sendOnboarding(evt.id)"
+                                        class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                                        <EnvelopeIcon class="w-3.5 h-3.5" />
+                                        Enviar onboarding {{ evt.model_tag === 'runway_merch' ? '(Merch)' : '(Brand)' }}
+                                    </button>
                                 </div>
 
                                 <!-- Pase -->
