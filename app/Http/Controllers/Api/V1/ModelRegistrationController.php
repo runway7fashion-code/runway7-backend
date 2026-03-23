@@ -96,6 +96,7 @@ class ModelRegistrationController extends Controller
             'order_number'          => 'nullable|string|max:50',
             'referral_source'       => 'nullable|in:instagram,tiktok,facebook,friends_family,agency,other',
             'referral_source_other' => 'nullable|string|max:255',
+            'walk_video_url'        => 'required|url|max:500',
 
             'profile_picture' => $requiredPhotoRule,
             'photo_1'         => $requiredPhotoRule,
@@ -220,6 +221,10 @@ class ModelRegistrationController extends Controller
                 if (!empty($validated['agency_name'])) {
                     $profileData['agency'] = $validated['agency_name'];
                     $profileData['is_agency'] = true;
+                }
+
+                if (!empty($validated['walk_video_url'])) {
+                    $profileData['walk_video_url'] = $validated['walk_video_url'];
                 }
 
                 if (!empty($validated['referral_source'])) {

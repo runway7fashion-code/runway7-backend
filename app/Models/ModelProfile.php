@@ -19,7 +19,7 @@ class ModelProfile extends Model
         'shoe_size', 'dress_size', 'body_type', 'ethnicity', 'hair',
         'photos', 'photo_1', 'photo_2', 'photo_3', 'photo_4',
         'compcard_completed', 'notes',
-        'referral_source', 'referral_source_other',
+        'referral_source', 'referral_source_other', 'walk_video_url',
     ];
 
     protected function casts(): array

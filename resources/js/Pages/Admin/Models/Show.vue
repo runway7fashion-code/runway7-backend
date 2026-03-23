@@ -290,7 +290,7 @@ function deleteModel() {
                 <!-- Columna derecha: Eventos y Shows -->
                 <div class="space-y-6">
                     <!-- Cómo se enteró -->
-                    <div v-if="profile?.referral_source || events.some(e => e.shopify_order_number)"
+                    <div v-if="profile?.referral_source || profile?.walk_video_url || events.some(e => e.shopify_order_number)"
                         class="bg-white rounded-2xl border border-gray-200 p-5">
                         <h4 class="font-bold text-gray-900 mb-2">¿Cómo se enteró?</h4>
                         <template v-if="profile?.referral_source">
@@ -307,6 +307,13 @@ function deleteModel() {
                                 <span class="font-mono text-sm font-semibold text-gray-900">#{{ ev.shopify_order_number }}</span>
                             </div>
                         </template>
+                        <div v-if="profile?.walk_video_url" class="mt-3 pt-3 border-t border-gray-100">
+                            <p class="text-xs text-gray-500 mb-1">Walk Video</p>
+                            <a :href="profile.walk_video_url" target="_blank"
+                                class="text-sm text-blue-600 hover:text-blue-800 font-medium break-all">
+                                {{ profile.walk_video_url }}
+                            </a>
+                        </div>
                     </div>
 
                     <!-- Eventos asignados -->
