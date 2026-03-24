@@ -314,6 +314,14 @@ function deleteModel() {
                                 {{ profile.walk_video_url }}
                             </a>
                         </div>
+                        <div v-if="profile?.wants_model_kit !== undefined" class="mt-3 pt-3 border-t border-gray-100">
+                            <p class="text-xs text-gray-500 mb-1">Model Kit ($9.99)</p>
+                            <span v-if="profile.wants_model_kit"
+                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
+                                Quiere comprar
+                            </span>
+                            <span v-else class="text-sm text-gray-400">No solicitado</span>
+                        </div>
                     </div>
 
                     <!-- Eventos asignados -->
