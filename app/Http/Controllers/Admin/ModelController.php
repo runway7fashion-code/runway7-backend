@@ -160,10 +160,9 @@ class ModelController extends Controller
         if ($request->filled('model_kit')) {
             $query->whereHas('modelProfile', function ($q) use ($request) {
                 match ($request->model_kit) {
-                    'wants'     => $q->where('wants_model_kit', true)->whereNull('model_kit_paid_at'),
-                    'not_wants' => $q->where('wants_model_kit', false),
-                    'paid'      => $q->whereNotNull('model_kit_paid_at'),
-                    default     => null,
+                    'paid'     => $q->whereNotNull('model_kit_paid_at'),
+                    'not_paid' => $q->whereNull('model_kit_paid_at'),
+                    default    => null,
                 };
             });
         }
@@ -300,8 +299,6 @@ class ModelController extends Controller
             ->selectRaw("COUNT(*) FILTER (WHERE is_top = true) as top_count")
             ->selectRaw("COUNT(*) FILTER (WHERE gender = 'male') as male_count")
             ->selectRaw("COUNT(*) FILTER (WHERE gender = 'female') as female_count")
-            ->selectRaw("COUNT(*) FILTER (WHERE wants_model_kit = true AND model_kit_paid_at IS NULL) as kit_wants_count")
-            ->selectRaw("COUNT(*) FILTER (WHERE wants_model_kit = false OR wants_model_kit IS NULL) as kit_not_wants_count")
             ->selectRaw("COUNT(*) FILTER (WHERE model_kit_paid_at IS NOT NULL) as kit_paid_count")
             ->first();
 
@@ -343,8 +340,6 @@ class ModelController extends Controller
             'applicant' => (int) ($statusCounts->applicant_count ?? 0),
             'rejected'  => (int) ($statusCounts->rejected_count ?? 0),
             'inactive'  => (int) ($statusCounts->inactive_count ?? 0),
-            'kit_wants'     => (int) ($profileStats->kit_wants_count ?? 0),
-            'kit_not_wants' => (int) ($profileStats->kit_not_wants_count ?? 0),
             'kit_paid'      => (int) ($profileStats->kit_paid_count ?? 0),
         ];
 
@@ -437,7 +432,6 @@ class ModelController extends Controller
             'referral_source'       => 'nullable|in:instagram,tiktok,facebook,friends_family,agency,other',
             'referral_source_other' => 'nullable|string|max:255',
             'walk_video_url'        => 'nullable|url|max:500',
-            'wants_model_kit'       => 'nullable|boolean',
             'model_kit_paid_at'     => 'nullable|date',
             'event_id'    => 'nullable|exists:events,id',
             'casting_time'=> 'nullable|string',
@@ -448,7 +442,7 @@ class ModelController extends Controller
             'instagram', 'age', 'gender', 'location', 'ethnicity', 'hair', 'body_type',
             'height', 'bust', 'chest', 'waist', 'hips', 'shoe_size', 'dress_size',
             'agency', 'is_agency', 'is_test_model', 'notes',
-            'referral_source', 'referral_source_other', 'walk_video_url', 'wants_model_kit', 'model_kit_paid_at',
+            'referral_source', 'referral_source_other', 'walk_video_url', 'model_kit_paid_at',
         ]);
 
         $model = $this->modelService->createModel(
@@ -546,7 +540,6 @@ class ModelController extends Controller
             'referral_source'       => 'nullable|in:instagram,tiktok,facebook,friends_family,agency,other',
             'referral_source_other' => 'nullable|string|max:255',
             'walk_video_url'        => 'nullable|url|max:500',
-            'wants_model_kit'       => 'nullable|boolean',
             'model_kit_paid_at'     => 'nullable|date',
         ]);
 
@@ -556,7 +549,7 @@ class ModelController extends Controller
             'instagram', 'age', 'gender', 'location', 'ethnicity', 'hair', 'body_type',
             'height', 'bust', 'chest', 'waist', 'hips', 'shoe_size', 'dress_size',
             'agency', 'is_agency', 'is_test_model', 'notes',
-            'referral_source', 'referral_source_other', 'walk_video_url', 'wants_model_kit', 'model_kit_paid_at',
+            'referral_source', 'referral_source_other', 'walk_video_url', 'model_kit_paid_at',
         ]);
 
         $oldStatus = $model->status;
