@@ -76,6 +76,7 @@ const form = useForm({
     referral_source_other: profile?.referral_source_other  ?? '',
     walk_video_url:        profile?.walk_video_url         ?? '',
     wants_model_kit:       profile?.wants_model_kit        ?? false,
+    model_kit_paid_at:     profile?.model_kit_paid_at      ?? null,
     // Estado de cuenta
     status:        props.model.status      ?? 'pending',
 });
@@ -468,11 +469,20 @@ function submit() {
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         <p class="text-xs text-gray-400 mt-1">Link público donde se pueda ver su pasarela</p>
                     </div>
-                    <div>
+                    <div class="space-y-2">
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input v-model="form.wants_model_kit" type="checkbox"
                                 class="w-4 h-4 rounded border-gray-300 text-black focus:ring-black/20" />
                             <span class="text-sm font-medium text-gray-700">Quiere Model Kit ($9.99 — R7 T-Shirt + R7 Tote Bag)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" :checked="!!form.model_kit_paid_at"
+                                @change="form.model_kit_paid_at = $event.target.checked ? new Date().toISOString() : null"
+                                class="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500/20" />
+                            <span class="text-sm font-medium text-gray-700">Kit pagado</span>
+                            <span v-if="form.model_kit_paid_at" class="text-xs text-gray-400">
+                                ({{ new Date(form.model_kit_paid_at).toLocaleDateString('es-US', { month: 'short', day: 'numeric', year: 'numeric' }) }})
+                            </span>
                         </label>
                     </div>
                 </div>

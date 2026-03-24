@@ -157,6 +157,18 @@ class ModelController extends Controller
             }
         }
 
+        if ($request->filled('model_kit')) {
+            $query->whereHas('modelProfile', function ($q) use ($request) {
+                match ($request->model_kit) {
+                    'wants'          => $q->where('wants_model_kit', true),
+                    'not_wants'      => $q->where('wants_model_kit', false),
+                    'paid'           => $q->whereNotNull('model_kit_paid_at'),
+                    'wants_not_paid' => $q->where('wants_model_kit', true)->whereNull('model_kit_paid_at'),
+                    default          => null,
+                };
+            });
+        }
+
         if ($request->filled('sort_name')) {
             $dir = $request->sort_name === 'asc' ? 'asc' : 'desc';
             $query->orderBy('first_name', $dir)->orderBy('last_name', $dir);
@@ -374,7 +386,7 @@ class ModelController extends Controller
             'models'             => $models,
             'events'             => $events,
             'designers'          => $designers,
-            'filters'            => $request->only(['event', 'compcard', 'gender', 'ethnicity', 'is_agency', 'is_top', 'search', 'email_sent', 'test_model', 'casting_time', 'casting_status', 'designer', 'status', 'merch', 'per_page']),
+            'filters'            => $request->only(['event', 'compcard', 'gender', 'ethnicity', 'is_agency', 'is_top', 'search', 'email_sent', 'test_model', 'casting_time', 'casting_status', 'designer', 'status', 'merch', 'model_kit', 'per_page']),
             'castingTimes'       => $castingTimes,
             'pendingEmailCount'  => $pendingEmailCount,
             'stats'              => $stats,
@@ -421,6 +433,7 @@ class ModelController extends Controller
             'referral_source_other' => 'nullable|string|max:255',
             'walk_video_url'        => 'nullable|url|max:500',
             'wants_model_kit'       => 'nullable|boolean',
+            'model_kit_paid_at'     => 'nullable|date',
             'event_id'    => 'nullable|exists:events,id',
             'casting_time'=> 'nullable|string',
         ]);
@@ -430,7 +443,7 @@ class ModelController extends Controller
             'instagram', 'age', 'gender', 'location', 'ethnicity', 'hair', 'body_type',
             'height', 'bust', 'chest', 'waist', 'hips', 'shoe_size', 'dress_size',
             'agency', 'is_agency', 'is_test_model', 'notes',
-            'referral_source', 'referral_source_other', 'walk_video_url', 'wants_model_kit',
+            'referral_source', 'referral_source_other', 'walk_video_url', 'wants_model_kit', 'model_kit_paid_at',
         ]);
 
         $model = $this->modelService->createModel(
@@ -529,6 +542,7 @@ class ModelController extends Controller
             'referral_source_other' => 'nullable|string|max:255',
             'walk_video_url'        => 'nullable|url|max:500',
             'wants_model_kit'       => 'nullable|boolean',
+            'model_kit_paid_at'     => 'nullable|date',
         ]);
 
         $userData = $request->only(['first_name', 'last_name', 'email', 'phone']);
@@ -537,7 +551,7 @@ class ModelController extends Controller
             'instagram', 'age', 'gender', 'location', 'ethnicity', 'hair', 'body_type',
             'height', 'bust', 'chest', 'waist', 'hips', 'shoe_size', 'dress_size',
             'agency', 'is_agency', 'is_test_model', 'notes',
-            'referral_source', 'referral_source_other', 'walk_video_url', 'wants_model_kit',
+            'referral_source', 'referral_source_other', 'walk_video_url', 'wants_model_kit', 'model_kit_paid_at',
         ]);
 
         $oldStatus = $model->status;

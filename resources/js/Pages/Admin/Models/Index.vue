@@ -33,6 +33,7 @@ const designer       = ref(props.filters.designer       ?? '');
 const status         = ref(props.filters.status         ?? '');
 const sort_name      = ref(props.filters.sort_name      ?? '');
 const merch          = ref(props.filters.merch          ?? '');
+const model_kit      = ref(props.filters.model_kit      ?? '');
 const perPage        = ref(props.filters.per_page       ?? '20');
 
 // Date range filters — value is [Date, Date] or null
@@ -96,6 +97,7 @@ function applyFilters() {
             status:          status.value         || undefined,
             sort_name:       sort_name.value      || undefined,
             merch:           merch.value          || undefined,
+            model_kit:       model_kit.value      || undefined,
             per_page:        perPage.value != 20  ? perPage.value : undefined,
             registered_from: registeredRange.value ? fmtDate(registeredRange.value[0]) : undefined,
             registered_to:   registeredRange.value ? fmtDate(registeredRange.value[1]) : undefined,
@@ -104,7 +106,7 @@ function applyFilters() {
         }, { preserveState: true, replace: true });
     }, 300);
 }
-watch([search, event, compcard, gender, ethnicity, is_agency, is_top, email_sent, test_model, casting_time, casting_status, designer, status, sort_name, merch, perPage, registeredRange, checkinRange], applyFilters);
+watch([search, event, compcard, gender, ethnicity, is_agency, is_top, email_sent, test_model, casting_time, casting_status, designer, status, sort_name, merch, model_kit, perPage, registeredRange, checkinRange], applyFilters);
 
 function toggleSortName() {
     if (sort_name.value === 'asc') sort_name.value = 'desc';
@@ -135,6 +137,7 @@ const exportUrl = computed(() => {
     if (designer.value)       params.set('designer',       designer.value);
     if (status.value)         params.set('status',         status.value);
     if (merch.value)          params.set('merch',          merch.value);
+    if (model_kit.value)      params.set('model_kit',      model_kit.value);
     const qs = params.toString();
     return '/admin/models/export' + (qs ? '?' + qs : '');
 });
@@ -645,6 +648,15 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <option value="">Merch: todos</option>
                     <option value="with">Con código</option>
                     <option value="without">Sin código</option>
+                </select>
+
+                <select v-model="model_kit"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Model Kit: todos</option>
+                    <option value="wants">Desean Model Kit</option>
+                    <option value="not_wants">No desean Model Kit</option>
+                    <option value="paid">Compraron Model Kit</option>
+                    <option value="wants_not_paid">Desean pero no compraron</option>
                 </select>
 
                 <select v-model="test_model"
