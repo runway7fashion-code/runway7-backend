@@ -20,6 +20,7 @@ class ModelProfile extends Model
         'photos', 'photo_1', 'photo_2', 'photo_3', 'photo_4',
         'compcard_completed', 'notes',
         'referral_source', 'referral_source_other', 'walk_video_url',
+        'wants_model_kit',
     ];
 
     protected function casts(): array
@@ -31,6 +32,7 @@ class ModelProfile extends Model
             'is_top'             => 'boolean',
             'is_test_model'      => 'boolean',
             'compcard_completed' => 'boolean',
+            'wants_model_kit'    => 'boolean',
         ];
     }
 

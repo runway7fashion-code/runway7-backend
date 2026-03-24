@@ -97,6 +97,7 @@ class ModelRegistrationController extends Controller
             'referral_source'       => 'nullable|in:instagram,tiktok,facebook,friends_family,agency,other',
             'referral_source_other' => 'nullable|string|max:255',
             'walk_video_url'        => 'required|url|max:500',
+            'wants_model_kit'       => 'nullable|boolean',
 
             'profile_picture' => $requiredPhotoRule,
             'photo_1'         => $requiredPhotoRule,
@@ -226,6 +227,8 @@ class ModelRegistrationController extends Controller
                 if (!empty($validated['walk_video_url'])) {
                     $profileData['walk_video_url'] = $validated['walk_video_url'];
                 }
+
+                $profileData['wants_model_kit'] = !empty($validated['wants_model_kit']);
 
                 if (!empty($validated['referral_source'])) {
                     $profileData['referral_source'] = $validated['referral_source'];
