@@ -62,6 +62,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::patch('models/{model}/events/{event}/model-tag', [ModelController::class, 'updateModelTag'])->name('models.update-model-tag');
             Route::post('models/{model}/events/{event}/send-onboarding', [ModelController::class, 'sendModelOnboarding'])->name('models.send-onboarding');
             Route::post('models/{model}/toggle-top', [ModelController::class, 'toggleTop'])->name('models.toggle-top');
+            Route::post('models/{model}/send-rejection-email', [ModelController::class, 'sendRejectionEmail'])->name('models.send-rejection-email');
+            Route::post('models/send-bulk-rejection-emails', [ModelController::class, 'sendBulkRejectionEmails'])->name('models.send-bulk-rejection-emails');
+            Route::post('models/send-bulk-onboarding-sms', [ModelController::class, 'sendBulkOnboardingSms'])->name('models.send-bulk-onboarding-sms');
+            Route::post('models/send-bulk-rejection-sms', [ModelController::class, 'sendBulkRejectionSms'])->name('models.send-bulk-rejection-sms');
         });
 
         // Diseñadores - admin, operation, sales

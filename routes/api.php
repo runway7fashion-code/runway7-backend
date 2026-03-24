@@ -85,3 +85,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('my-certificates/{event}', [App\Http\Controllers\Api\V1\VolunteerCertificateController::class, 'download'])->name('certificates.download');
     });
 });
+
+// Shopify Webhooks (sin auth, verificados por HMAC)
+Route::post('webhooks/shopify/order-paid', [App\Http\Controllers\Api\V1\ShopifyWebhookController::class, 'orderPaid'])
+    ->name('shopify.webhook.order-paid');

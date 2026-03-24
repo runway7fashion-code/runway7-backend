@@ -21,8 +21,8 @@ class SendModelOnboardingJob implements ShouldQueue
 
     public function __construct(
         public int $userId,
-        public int $eventId,
-        public string $tag,
+        public ?int $eventId = null,
+        public ?string $tag = null,
         public ?int $logId = null,
     ) {}
 
@@ -33,17 +33,32 @@ class SendModelOnboardingJob implements ShouldQueue
 
         $user->load(['eventsAsModelWithCasting.eventDays' => fn($q) => $q->where('type', 'casting')]);
 
-        // Solo el evento específico con el tag asignado
-        $event = $user->eventsAsModelWithCasting->firstWhere('id', $this->eventId);
-        if (!$event) return;
+        if ($this->eventId) {
+            // Evento específico (envío individual con tag)
+            $event = $user->eventsAsModelWithCasting->firstWhere('id', $this->eventId);
+            if (!$event) return;
 
-        $castingDay = $event->eventDays->first();
+            $castingDay = $event->eventDays->first();
+            $events = [[
+                'name'         => $event->name,
+                'casting_date' => $castingDay?->date?->format('Y-m-d'),
+                'casting_time' => $event->pivot->casting_time,
+            ]];
+        } else {
+            // Todos los eventos con casting scheduled (envío masivo sin tag)
+            $events = $user->eventsAsModelWithCasting
+                ->filter(fn($ev) => $ev->pivot->casting_status === 'scheduled')
+                ->map(function ($ev) {
+                    $castingDay = $ev->eventDays->first();
+                    return [
+                        'name'         => $ev->name,
+                        'casting_date' => $castingDay?->date?->format('Y-m-d'),
+                        'casting_time' => $ev->pivot->casting_time,
+                    ];
+                })->values()->toArray();
 
-        $events = [[
-            'name'         => $event->name,
-            'casting_date' => $castingDay?->date?->format('Y-m-d'),
-            'casting_time' => $event->pivot->casting_time,
-        ]];
+            if (empty($events)) return;
+        }
 
         Mail::to($user->email, "{$user->first_name} {$user->last_name}")
             ->send(new ModelOnboardingMail(

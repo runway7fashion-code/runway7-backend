@@ -96,18 +96,32 @@
 
         @if($tag === 'runway_merch')
         <p class="text">
-            Great news! Your casting schedule is confirmed.
-            You will be modeling for the <strong>Runway 7 Merch Collection</strong>.
-            Below you will find your casting details and access information.
+            Congratulations! You have been selected to attend the <strong>Runway 7 Merch Model Casting</strong>.
+            While you have not been chosen for the designer casting, we are pleased to formally invite you
+            to participate in our exclusive merch casting.
         </p>
-        <span class="tag-badge tag-merch">Runway 7 Merch</span>
+        <p class="text">
+            Selected models will have the opportunity to take part in our <strong>live merch runway commercial</strong>
+            during Fashion Week and be featured across our official social media platforms.
+            We look forward to seeing you there!
+        </p>
+        <span class="tag-badge tag-merch">Runway 7 Merch Casting</span>
         @elseif($tag === 'runway_brand')
         <p class="text">
             Great news! Your casting schedule is confirmed.
             You will be walking for the <strong>designers</strong> at Runway 7 Fashion.
             Below you will find your casting details and access information.
         </p>
+        <p class="text">
+            As part of your official merch purchase, you'll receive <strong>exclusive skip-the-line access</strong> on casting day.
+        </p>
         <span class="tag-badge tag-brand">Designer Runway</span>
+        @else
+        <p class="text">
+            Great news! Your casting schedule is confirmed.
+            Welcome to the <strong>Runway 7 Fashion</strong> team.
+            Below you will find your casting details and access information.
+        </p>
         @endif
 
         @foreach($events as $event)
@@ -167,6 +181,14 @@
                 </td>
             </tr>
         </table>
+
+        @if(!$tag)
+        <p class="text" style="font-size: 14px; background-color: #FFF7ED; border-left: 3px solid #D4AF37; border-radius: 0 8px 8px 0; padding: 16px 20px;">
+            <strong>Want to skip the line?</strong> By making a minimum purchase of $100 from our official merch,
+            you will get priority access and be seen faster by top designers.
+            <a href="https://runway7.co/Skiptheline" style="color:#D4AF37; font-weight:700;">Shop now and secure your fast pass here.</a>
+        </p>
+        @endif
 
         <p class="text" style="font-size:13px; color:#999999; margin-bottom:0;">
             If you have any questions, you can reply to this email or contact us at

@@ -420,6 +420,11 @@ function deleteModel() {
                                         class="text-[10px] font-medium px-1.5 py-0.5 rounded">
                                         {{ passStatusLabel(evt.pass.status) }}
                                     </span>
+                                    <span v-if="evt.pass.is_preferential"
+                                        class="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-100 text-green-700">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                        Preferencial
+                                    </span>
                                     <button @click="openPassModal(evt)"
                                         class="ml-auto flex items-center gap-0.5 text-[11px] text-indigo-500 hover:text-indigo-700 font-medium">
                                         Ver QR <ArrowRightIcon class="w-3 h-3" />

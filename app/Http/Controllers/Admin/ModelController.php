@@ -7,6 +7,9 @@ use App\Exports\ModelsExport;
 use App\Http\Controllers\Controller;
 use App\Imports\ModelsImport;
 use App\Jobs\SendModelOnboardingJob;
+use App\Jobs\SendModelOnboardingSmsJob;
+use App\Jobs\SendModelRejectionJob;
+use App\Jobs\SendModelRejectionSmsJob;
 use App\Jobs\SendWelcomeEmailJob;
 use App\Models\CommunicationLog;
 use App\Models\Event;
@@ -27,6 +30,7 @@ class ModelController extends Controller
     public function __construct(
         protected ModelService $modelService,
         protected ActivityLogService $activityLog,
+        protected \App\Services\TwilioService $twilioService,
     ) {}
 
     public function index(Request $request): Response
@@ -34,7 +38,7 @@ class ModelController extends Controller
         $query = User::models()->with([
             'modelProfile',
             'eventsAsModelWithCasting',
-            'communicationLogs' => fn($q) => $q->whereIn('channel', ['welcome_email', 'registration_email', 'model_onboarding'])->with('sender')->orderByDesc('created_at'),
+            'communicationLogs' => fn($q) => $q->whereIn('channel', ['welcome_email', 'registration_email', 'model_onboarding', 'model_rejection'])->with('sender')->orderByDesc('created_at'),
         ]);
 
         if ($request->filled('event')) {
@@ -352,6 +356,26 @@ class ModelController extends Controller
             ->whereHas('eventsAsModelWithCasting', fn($q) => $q->whereNotNull('event_model.casting_time'))
             ->count();
 
+        $pendingSmsCount = User::models()
+            ->where('status', 'pending')
+            ->whereNotNull('phone')
+            ->where('phone', 'like', '+%')
+            ->whereNull('sms_sent_at')
+            ->whereHas('eventsAsModelWithCasting', fn($q) => $q->whereNotNull('event_model.casting_time'))
+            ->count();
+
+        $rejectedEmailCount = User::models()
+            ->where('status', 'rejected')
+            ->whereDoesntHave('communicationLogs', fn($q) => $q->where('channel', 'model_rejection'))
+            ->count();
+
+        $rejectedSmsCount = User::models()
+            ->where('status', 'rejected')
+            ->whereNotNull('phone')
+            ->where('phone', 'like', '+%')
+            ->whereDoesntHave('communicationLogs', fn($q) => $q->where('channel', 'model_rejection_sms'))
+            ->count();
+
         // Obtener horarios de casting desde casting_slots (solo cuando hay evento seleccionado)
         $castingTimes = collect();
         if ($request->filled('event')) {
@@ -388,7 +412,11 @@ class ModelController extends Controller
             'designers'          => $designers,
             'filters'            => $request->only(['event', 'compcard', 'gender', 'ethnicity', 'is_agency', 'is_top', 'search', 'email_sent', 'test_model', 'casting_time', 'casting_status', 'designer', 'status', 'merch', 'model_kit', 'per_page']),
             'castingTimes'       => $castingTimes,
-            'pendingEmailCount'  => $pendingEmailCount,
+            'pendingEmailCount'   => $pendingEmailCount,
+            'pendingSmsCount'     => $pendingSmsCount,
+            'rejectedEmailCount'  => $rejectedEmailCount,
+            'rejectedSmsCount'    => $rejectedSmsCount,
+            'twilioBalance'       => $this->twilioService->getBalance(),
             'stats'              => $stats,
         ]);
     }
@@ -778,21 +806,23 @@ class ModelController extends Controller
             'user_id'  => $model->id,
             'sent_by'  => $request->user()->id,
             'type'     => 'email',
-            'channel'  => 'welcome_email',
+            'channel'  => 'model_onboarding',
             'status'   => 'queued',
         ]);
 
-        SendWelcomeEmailJob::dispatch(
+        SendModelOnboardingJob::dispatch(
             userId: $model->id,
             logId:  $log->id,
         );
 
+        $model->update(['welcome_email_sent_at' => now()]);
+
         $this->activityLog->log(
             ActivityAction::EmailSent, $model, $request->user(),
-            "Email de bienvenida enviado a {$model->email}"
+            "Email de onboarding enviado a {$model->email}"
         );
 
-        return back()->with('success', 'Email de bienvenida encolado para envío.');
+        return back()->with('success', 'Email de onboarding encolado para envío.');
     }
 
     public function exportModels(Request $request)
@@ -854,18 +884,20 @@ class ModelController extends Controller
                 'user_id'  => $model->id,
                 'sent_by'  => request()->user()->id,
                 'type'     => 'email',
-                'channel'  => 'welcome_email',
+                'channel'  => 'model_onboarding',
                 'status'   => 'queued',
             ]);
 
-            SendWelcomeEmailJob::dispatch(
+            SendModelOnboardingJob::dispatch(
                 userId: $model->id,
                 logId:  $log->id,
             );
             $count++;
+
+            $model->update(['welcome_email_sent_at' => now()]);
         }
 
-        return back()->with('success', "{$count} emails encolados para envío. Se procesarán en los próximos minutos.");
+        return back()->with('success', "{$count} emails de onboarding encolados para envío.");
     }
 
     public function toggleTop(User $model)
@@ -1091,12 +1123,64 @@ class ModelController extends Controller
             'model_tag' => 'nullable|in:runway_merch,runway_brand',
         ]);
 
+        $oldTag = DB::table('event_model')
+            ->where('model_id', $model->id)
+            ->where('event_id', $event->id)
+            ->value('model_tag');
+
+        $newTag = $request->model_tag ?: null;
+
         DB::table('event_model')
             ->where('model_id', $model->id)
             ->where('event_id', $event->id)
-            ->update(['model_tag' => $request->model_tag ?: null]);
+            ->update(['model_tag' => $newTag]);
 
-        $tagLabel = match ($request->model_tag) {
+        // Si el tag cambió entre merch y normal, reasignar slot al tipo correcto
+        $oldSlotType = $oldTag === 'runway_merch' ? 'merch' : 'normal';
+        $newSlotType = $newTag === 'runway_merch' ? 'merch' : 'normal';
+
+        if ($newTag && $oldSlotType !== $newSlotType) {
+            // Liberar slot anterior
+            $this->modelService->removeCastingSlot($model, $event->id);
+
+            // Asignar nuevo slot del tipo correcto
+            $profile = $model->modelProfile;
+            $isPriorityAgency = $profile?->agency
+                && preg_match('/\b(fanny|cg|fma|fanny\'s|cgmodels)\b/i', $profile->agency);
+            $isTop = $profile?->is_top ?? false;
+            $startSlot = $newTag === 'runway_brand'
+                ? ($isPriorityAgency ? 1 : ($isTop ? 2 : 3))
+                : 1; // merch siempre desde slot 1
+            $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot, slotType: $newSlotType);
+        } elseif ($newTag && !$oldTag) {
+            // Tag nuevo asignado por primera vez — auto-assign slot
+            $pivot = DB::table('event_model')->where('model_id', $model->id)->where('event_id', $event->id)->first();
+            if (!$pivot->casting_time) {
+                $profile = $model->modelProfile;
+                $isPriorityAgency = $profile?->agency
+                    && preg_match('/\b(fanny|cg|fma|fanny\'s|cgmodels)\b/i', $profile->agency);
+                $isTop = $profile?->is_top ?? false;
+                $startSlot = $newTag === 'runway_brand'
+                    ? ($isPriorityAgency ? 1 : ($isTop ? 2 : 3))
+                    : 1;
+                $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot, slotType: $newSlotType);
+            }
+        }
+
+        // runway_brand con merch → pass preferencial automático
+        if ($newTag === 'runway_brand') {
+            EventPass::where('user_id', $model->id)
+                ->where('event_id', $event->id)
+                ->where('status', 'active')
+                ->update(['is_preferential' => true]);
+        } elseif ($newTag === 'runway_merch' || !$newTag) {
+            // runway_merch o sin tag → quitar preferencial
+            EventPass::where('user_id', $model->id)
+                ->where('event_id', $event->id)
+                ->update(['is_preferential' => false]);
+        }
+
+        $tagLabel = match ($newTag) {
             'runway_merch' => 'Runway Merch',
             'runway_brand' => 'Runway Brand',
             default => 'Sin tag',
@@ -1133,7 +1217,136 @@ class ModelController extends Controller
             logId:   $log->id,
         );
 
+        $model->update(['welcome_email_sent_at' => now()]);
+
         return back()->with('success', 'Email de onboarding enviado.');
+    }
+
+    public function sendRejectionEmail(Request $request, User $model)
+    {
+        $this->authorizeModel($model);
+
+        $firstEvent = $model->eventsAsModelWithCasting?->first();
+
+        $log = CommunicationLog::create([
+            'user_id'  => $model->id,
+            'sent_by'  => $request->user()->id,
+            'type'     => 'email',
+            'channel'  => 'model_rejection',
+            'status'   => 'queued',
+        ]);
+
+        SendModelRejectionJob::dispatch(
+            userId:    $model->id,
+            eventName: $firstEvent?->name,
+            logId:     $log->id,
+        );
+
+        return back()->with('success', 'Email de rechazo enviado.');
+    }
+
+    public function sendBulkRejectionEmails(Request $request)
+    {
+        $rejected = User::models()
+            ->where('status', 'rejected')
+            ->whereDoesntHave('communicationLogs', fn($q) => $q->where('channel', 'model_rejection'))
+            ->with('eventsAsModelWithCasting')
+            ->get();
+
+        if ($rejected->isEmpty()) {
+            return back()->with('info', 'No hay modelos rechazadas pendientes de recibir correo.');
+        }
+
+        $count = 0;
+        foreach ($rejected as $model) {
+            $firstEvent = $model->eventsAsModelWithCasting?->first();
+
+            $log = CommunicationLog::create([
+                'user_id'  => $model->id,
+                'sent_by'  => $request->user()->id,
+                'type'     => 'email',
+                'channel'  => 'model_rejection',
+                'status'   => 'queued',
+            ]);
+
+            SendModelRejectionJob::dispatch(
+                userId:    $model->id,
+                eventName: $firstEvent?->name,
+                logId:     $log->id,
+            );
+            $count++;
+        }
+
+        return back()->with('success', "{$count} emails de rechazo encolados para envío.");
+    }
+
+    public function sendBulkOnboardingSms(Request $request)
+    {
+        $pending = User::models()
+            ->where('status', 'pending')
+            ->whereNotNull('phone')
+            ->where('phone', 'like', '+%')
+            ->whereNull('sms_sent_at')
+            ->whereHas('eventsAsModelWithCasting', fn($q) => $q->whereNotNull('event_model.casting_time'))
+            ->get();
+
+        if ($pending->isEmpty()) {
+            return back()->with('info', 'No hay modelos pendientes de recibir SMS.');
+        }
+
+        $count = 0;
+        foreach ($pending as $model) {
+            $log = CommunicationLog::create([
+                'user_id' => $model->id,
+                'sent_by' => $request->user()->id,
+                'type'    => 'sms',
+                'channel' => 'model_onboarding_sms',
+                'status'  => 'queued',
+            ]);
+
+            SendModelOnboardingSmsJob::dispatch(
+                userId: $model->id,
+                sentBy: $request->user()->id,
+                logId:  $log->id,
+            );
+            $count++;
+        }
+
+        return back()->with('success', "{$count} SMS de onboarding encolados para envío.");
+    }
+
+    public function sendBulkRejectionSms(Request $request)
+    {
+        $rejected = User::models()
+            ->where('status', 'rejected')
+            ->whereNotNull('phone')
+            ->where('phone', 'like', '+%')
+            ->whereDoesntHave('communicationLogs', fn($q) => $q->where('channel', 'model_rejection_sms'))
+            ->get();
+
+        if ($rejected->isEmpty()) {
+            return back()->with('info', 'No hay modelos rechazadas pendientes de recibir SMS.');
+        }
+
+        $count = 0;
+        foreach ($rejected as $model) {
+            $log = CommunicationLog::create([
+                'user_id' => $model->id,
+                'sent_by' => $request->user()->id,
+                'type'    => 'sms',
+                'channel' => 'model_rejection_sms',
+                'status'  => 'queued',
+            ]);
+
+            SendModelRejectionSmsJob::dispatch(
+                userId: $model->id,
+                sentBy: $request->user()->id,
+                logId:  $log->id,
+            );
+            $count++;
+        }
+
+        return back()->with('success', "{$count} SMS de rechazo encolados para envío.");
     }
 
     // --- Helpers ---
@@ -1216,6 +1429,7 @@ class ModelController extends Controller
                         'pass_type_label'   => $p->passTypeLabel(),
                         'holder_name'       => $p->holder_name,
                         'holder_email'      => $p->holder_email,
+                        'is_preferential'   => (bool) $p->is_preferential,
                         'valid_days'        => $p->valid_days,
                         'valid_days_labels' => $p->valid_days
                             ? collect($p->valid_days)->map(fn($id) => $dayMap[$id] ?? null)->filter()->join(' · ')

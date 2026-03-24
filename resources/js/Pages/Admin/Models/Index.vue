@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue';
-import { EnvelopeIcon, PencilSquareIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, XMarkIcon, StarIcon as StarOutline, InformationCircleIcon } from '@heroicons/vue/24/outline';
+import { EnvelopeIcon, PencilSquareIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, XMarkIcon, StarIcon as StarOutline, InformationCircleIcon, DevicePhoneMobileIcon } from '@heroicons/vue/24/outline';
 import { StarIcon as StarSolid } from '@heroicons/vue/24/solid';
 import { computed } from 'vue';
 import { VueDatePicker } from '@vuepic/vue-datepicker';
@@ -14,8 +14,12 @@ const props = defineProps({
     designers:         Array,
     filters:           Object,
     castingTimes:      Array,
-    pendingEmailCount: Number,
-    stats:             Object,
+    pendingEmailCount:  Number,
+    pendingSmsCount:    Number,
+    rejectedEmailCount: Number,
+    rejectedSmsCount:   Number,
+    twilioBalance:      Object,
+    stats:              Object,
 });
 
 const search         = ref(props.filters.search         ?? '');
@@ -409,10 +413,25 @@ function timeAgo(dt) {
     return fmtCheckinDate(dt);
 }
 
-// --- Send pending emails ---
+// --- Send pending emails/SMS ---
 function sendPendingEmails() {
-    if (!confirm(`¿Enviar correo de bienvenida a ${props.pendingEmailCount} modelo(s) pendiente(s)? Los emails se procesarán en cola.`)) return;
+    if (!confirm(`¿Enviar email de onboarding a ${props.pendingEmailCount} modelo(s) pendiente(s)?`)) return;
     router.post('/admin/models/send-pending-emails', {}, { preserveScroll: true });
+}
+
+function sendPendingSms() {
+    if (!confirm(`¿Enviar SMS de onboarding a ${props.pendingSmsCount} modelo(s) pendiente(s)?`)) return;
+    router.post('/admin/models/send-bulk-onboarding-sms', {}, { preserveScroll: true });
+}
+
+function sendBulkRejectionEmails() {
+    if (!confirm(`¿Enviar email de rechazo a ${props.rejectedEmailCount} modelo(s) rechazada(s)?`)) return;
+    router.post('/admin/models/send-bulk-rejection-emails', {}, { preserveScroll: true });
+}
+
+function sendBulkRejectionSms() {
+    if (!confirm(`¿Enviar SMS de rechazo a ${props.rejectedSmsCount} modelo(s) rechazada(s)?`)) return;
+    router.post('/admin/models/send-bulk-rejection-sms', {}, { preserveScroll: true });
 }
 
 // --- Helpers ---
@@ -493,6 +512,42 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                             title="¿Cómo funciona el envío masivo?">
                             <InformationCircleIcon class="w-4 h-4" />
                         </button>
+                    </div>
+
+                    <!-- SMS onboarding -->
+                    <div v-if="pendingSmsCount > 0" class="flex items-center gap-1">
+                        <button @click="sendPendingSms"
+                            class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
+                            <DevicePhoneMobileIcon class="w-4 h-4 text-gray-500" />
+                            Enviar SMS
+                            <span class="bg-green-100 text-green-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ pendingSmsCount }}</span>
+                        </button>
+                    </div>
+
+                    <!-- Email rechazo masivo -->
+                    <div v-if="rejectedEmailCount > 0" class="flex items-center gap-1">
+                        <button @click="sendBulkRejectionEmails"
+                            class="flex items-center gap-2 px-4 py-2 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors text-red-700">
+                            <EnvelopeIcon class="w-4 h-4 text-red-400" />
+                            Email rechazo
+                            <span class="bg-red-100 text-red-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ rejectedEmailCount }}</span>
+                        </button>
+                    </div>
+
+                    <!-- SMS rechazo masivo -->
+                    <div v-if="rejectedSmsCount > 0" class="flex items-center gap-1">
+                        <button @click="sendBulkRejectionSms"
+                            class="flex items-center gap-2 px-4 py-2 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors text-red-700">
+                            <DevicePhoneMobileIcon class="w-4 h-4 text-red-400" />
+                            SMS rechazo
+                            <span class="bg-red-100 text-red-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ rejectedSmsCount }}</span>
+                        </button>
+                    </div>
+
+                    <!-- Twilio Balance -->
+                    <div v-if="twilioBalance" class="flex flex-col items-end px-3 py-1.5 border border-gray-200 rounded-lg bg-white">
+                        <span class="text-[10px] text-gray-400 font-medium leading-tight">Twilio Balance</span>
+                        <span class="text-sm font-bold text-gray-900 leading-tight">{{ twilioBalance.balance }} {{ twilioBalance.currency }}</span>
                     </div>
 
                     <!-- Botón exportar Excel -->

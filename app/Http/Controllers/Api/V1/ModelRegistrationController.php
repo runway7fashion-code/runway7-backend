@@ -309,22 +309,8 @@ class ModelRegistrationController extends Controller
                 $notifyUser->notify(new NewModelRegistered($model, $event->name, $hasValidOrder));
             }
 
-            if ($hasValidOrder) {
-                // Fast-track: enviar welcome email con credenciales
-                $log = CommunicationLog::create([
-                    'user_id'  => $model->id,
-                    'sent_by'  => null,
-                    'type'     => 'email',
-                    'channel'  => 'welcome_email',
-                    'status'   => 'queued',
-                ]);
-
-                SendWelcomeEmailJob::dispatch(
-                    userId: $model->id,
-                    logId: $log->id,
-                );
-            } elseif (!$isReRegistration) {
-                // Flujo normal (solo nuevos): enviar email de registro
+            // Enviar email de registro (Under Review) a todas las modelos nuevas y re-registros
+            if (!$isReRegistration || $hasValidOrder) {
                 $log = CommunicationLog::create([
                     'user_id'  => $model->id,
                     'sent_by'  => null,
