@@ -42,6 +42,17 @@ function parsePhone(full) {
     return { code: '+1', number: full.replace(/^\+/, '') };
 }
 
+const usStates = [
+    'Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware',
+    'Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky',
+    'Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota','Mississippi',
+    'Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey','New Mexico',
+    'New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania',
+    'Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont',
+    'Virginia','Washington','Washington D.C.','West Virginia','Wisconsin','Wyoming',
+    'Puerto Rico','Outside the U.S.',
+];
+
 const parsed = parsePhone(props.model.phone);
 const phoneCode = ref(parsed.code);
 const phoneNumber = ref(parsed.number);
@@ -320,9 +331,12 @@ function submit() {
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Ciudad / Ubicación</label>
-                        <input v-model="form.location" type="text"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
+                        <select v-model="form.location"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                            <option value="">Seleccionar...</option>
+                            <option v-for="s in usStates" :key="s" :value="s">{{ s }}</option>
+                        </select>
                     </div>
 
                     <div class="grid grid-cols-3 gap-4">
