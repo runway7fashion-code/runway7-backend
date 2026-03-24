@@ -656,7 +656,6 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <option value="wants">Desean Model Kit</option>
                     <option value="not_wants">No desean Model Kit</option>
                     <option value="paid">Compraron Model Kit</option>
-                    <option value="wants_not_paid">Desean pero no compraron</option>
                 </select>
 
                 <select v-model="test_model"

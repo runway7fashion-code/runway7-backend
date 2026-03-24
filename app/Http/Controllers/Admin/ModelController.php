@@ -160,11 +160,10 @@ class ModelController extends Controller
         if ($request->filled('model_kit')) {
             $query->whereHas('modelProfile', function ($q) use ($request) {
                 match ($request->model_kit) {
-                    'wants'          => $q->where('wants_model_kit', true),
-                    'not_wants'      => $q->where('wants_model_kit', false),
-                    'paid'           => $q->whereNotNull('model_kit_paid_at'),
-                    'wants_not_paid' => $q->where('wants_model_kit', true)->whereNull('model_kit_paid_at'),
-                    default          => null,
+                    'wants'     => $q->where('wants_model_kit', true)->whereNull('model_kit_paid_at'),
+                    'not_wants' => $q->where('wants_model_kit', false),
+                    'paid'      => $q->whereNotNull('model_kit_paid_at'),
+                    default     => null,
                 };
             });
         }
