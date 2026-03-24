@@ -517,7 +517,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
             </div>
 
             <!-- Stats Cards -->
-            <div class="grid grid-cols-7 gap-3 mb-6">
+            <div class="grid grid-cols-8 gap-3 mb-6">
                 <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
                     <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total</p>
                     <p class="text-2xl font-bold text-gray-900 mt-1">{{ stats?.total ?? 0 }}</p>
@@ -525,6 +525,23 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
                     <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Merch</p>
                     <p class="text-2xl font-bold text-emerald-600 mt-1">{{ stats?.merch ?? 0 }}</p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Model Kit</p>
+                    <div class="flex items-center gap-3 mt-1">
+                        <div class="text-center" title="Desean">
+                            <p class="text-lg font-bold text-amber-500">{{ stats?.kit_wants ?? 0 }}</p>
+                            <p class="text-[10px] text-gray-400 leading-tight">Desean</p>
+                        </div>
+                        <div class="text-center" title="No desean">
+                            <p class="text-lg font-bold text-gray-400">{{ stats?.kit_not_wants ?? 0 }}</p>
+                            <p class="text-[10px] text-gray-400 leading-tight">No</p>
+                        </div>
+                        <div class="text-center" title="Compraron">
+                            <p class="text-lg font-bold text-green-600">{{ stats?.kit_paid ?? 0 }}</p>
+                            <p class="text-[10px] text-gray-400 leading-tight">Pagado</p>
+                        </div>
+                    </div>
                 </div>
                 <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
                     <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Agencia</p>

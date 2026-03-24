@@ -293,13 +293,16 @@ class ModelController extends Controller
         }
         $merchCount = $merchQuery->distinct('model_id')->count('model_id');
 
-        // Agencia, Top via model_profiles
+        // Agencia, Top, Model Kit via model_profiles
         $profileStats = DB::table('model_profiles')
             ->whereIn('user_id', $statsBaseIds)
             ->selectRaw("COUNT(*) FILTER (WHERE is_agency = true) as agency_count")
             ->selectRaw("COUNT(*) FILTER (WHERE is_top = true) as top_count")
             ->selectRaw("COUNT(*) FILTER (WHERE gender = 'male') as male_count")
             ->selectRaw("COUNT(*) FILTER (WHERE gender = 'female') as female_count")
+            ->selectRaw("COUNT(*) FILTER (WHERE wants_model_kit = true AND model_kit_paid_at IS NULL) as kit_wants_count")
+            ->selectRaw("COUNT(*) FILTER (WHERE wants_model_kit = false OR wants_model_kit IS NULL) as kit_not_wants_count")
+            ->selectRaw("COUNT(*) FILTER (WHERE model_kit_paid_at IS NOT NULL) as kit_paid_count")
             ->first();
 
         $agencyCount  = (int) ($profileStats->agency_count ?? 0);
@@ -340,6 +343,9 @@ class ModelController extends Controller
             'applicant' => (int) ($statusCounts->applicant_count ?? 0),
             'rejected'  => (int) ($statusCounts->rejected_count ?? 0),
             'inactive'  => (int) ($statusCounts->inactive_count ?? 0),
+            'kit_wants'     => (int) ($profileStats->kit_wants_count ?? 0),
+            'kit_not_wants' => (int) ($profileStats->kit_not_wants_count ?? 0),
+            'kit_paid'      => (int) ($profileStats->kit_paid_count ?? 0),
         ];
 
         $events = Event::orderBy('start_date', 'desc')
