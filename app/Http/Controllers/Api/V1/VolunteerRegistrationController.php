@@ -30,7 +30,14 @@ class VolunteerRegistrationController extends Controller
     {
         $events = Event::where('status', 'active')
             ->orderBy('start_date')
-            ->get(['id', 'name', 'city', 'start_date', 'end_date']);
+            ->get(['id', 'name', 'city', 'start_date', 'end_date'])
+            ->map(fn($e) => [
+                'id'         => $e->id,
+                'name'       => $e->name,
+                'city'       => $e->city,
+                'start_date' => $e->start_date?->format('Y-m-d'),
+                'end_date'   => $e->end_date?->format('Y-m-d'),
+            ]);
 
         return response()->json($events);
     }
