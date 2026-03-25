@@ -83,7 +83,7 @@ function submit() {
 }
 
 // Event management
-const assignedEvents = computed(() => props.volunteer.events_as_staff ?? []);
+const assignedEvents = computed(() => props.volunteer.events_as_volunteer ?? []);
 const schedules = computed(() => props.volunteer.volunteer_schedules ?? []);
 
 const assignForm = useForm({ event_id: '', area: '' });

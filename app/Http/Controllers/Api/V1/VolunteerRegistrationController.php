@@ -118,8 +118,8 @@ class VolunteerRegistrationController extends Controller
 
         // Verificar si ya está asignado a este evento
         if ($existingUser) {
-            $alreadyInEvent = DB::table('event_staff')
-                ->where('user_id', $existingUser->id)
+            $alreadyInEvent = DB::table('event_volunteer')
+                ->where('volunteer_id', $existingUser->id)
                 ->where('event_id', $eventId)
                 ->exists();
 
@@ -162,7 +162,7 @@ class VolunteerRegistrationController extends Controller
                     );
 
                     // Asignar al evento
-                    $existingUser->eventsAsStaff()->attach($eventId, [
+                    $existingUser->eventsAsVolunteer()->attach($eventId, [
                         'assigned_role' => 'volunteer',
                         'status'        => 'assigned',
                     ]);
@@ -207,7 +207,7 @@ class VolunteerRegistrationController extends Controller
                 ]);
 
                 // Asignar al evento
-                $user->eventsAsStaff()->attach($eventId, [
+                $user->eventsAsVolunteer()->attach($eventId, [
                     'assigned_role' => 'volunteer',
                     'status'        => 'assigned',
                 ]);

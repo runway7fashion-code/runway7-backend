@@ -29,13 +29,13 @@ class SendVolunteerOnboardingJob implements ShouldQueue
     {
         $user = User::with([
             'volunteerSchedules.eventDay',
-            'eventsAsStaff' => fn ($q) => $q->wherePivot('status', 'assigned'),
+            'eventsAsVolunteer' => fn ($q) => $q->wherePivot('status', 'assigned'),
         ])->find($this->userId);
 
         if (!$user) return;
 
         // Construir array de eventos con sus horarios agrupados
-        $events = $user->eventsAsStaff->map(function ($event) use ($user) {
+        $events = $user->eventsAsVolunteer->map(function ($event) use ($user) {
             $area = $event->pivot->area;
 
             $schedules = $user->volunteerSchedules

@@ -90,7 +90,7 @@ function submitImport() {
 
 function isReadyForPending(vol) {
     return vol.status === 'applicant'
-        && (vol.events_as_staff ?? []).length > 0
+        && (vol.events_as_volunteer ?? []).length > 0
         && (vol.volunteer_schedules ?? []).length > 0;
 }
 
@@ -143,7 +143,7 @@ const showSmsInfoModal = ref(false);
 
 function updateStatus(vol, newStatus) {
     if (newStatus === 'pending') {
-        const hasEvent = (vol.events_as_staff ?? []).length > 0;
+        const hasEvent = (vol.events_as_volunteer ?? []).length > 0;
         const hasSchedules = (vol.volunteer_schedules ?? []).length > 0;
         if (!hasEvent || !hasSchedules) {
             statusAlertVol.value = vol;
@@ -316,9 +316,9 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                 {{ availabilityLabels[vol.volunteer_profile?.full_availability] || '—' }}
                             </td>
                             <td class="px-6 py-4" @click.stop>
-                                <button v-if="vol.events_as_staff?.length" @click="openEventsModal(vol, $event)"
+                                <button v-if="vol.events_as_volunteer?.length" @click="openEventsModal(vol, $event)"
                                     class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full hover:bg-blue-100 transition-colors cursor-pointer">
-                                    {{ vol.events_as_staff.length }} evento{{ vol.events_as_staff.length !== 1 ? 's' : '' }}
+                                    {{ vol.events_as_volunteer.length }} evento{{ vol.events_as_volunteer.length !== 1 ? 's' : '' }}
                                 </button>
                                 <span v-else class="text-gray-400 text-xs">Sin eventos</span>
                             </td>
@@ -422,8 +422,8 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                             {{ selectedVol.first_name }} {{ selectedVol.last_name }}
                                         </p>
                                         <p class="text-white/50 text-xs mt-0.5">
-                                            {{ selectedVol.events_as_staff.length }}
-                                            evento{{ selectedVol.events_as_staff.length !== 1 ? 's' : '' }} asignado{{ selectedVol.events_as_staff.length !== 1 ? 's' : '' }}
+                                            {{ selectedVol.events_as_volunteer.length }}
+                                            evento{{ selectedVol.events_as_volunteer.length !== 1 ? 's' : '' }} asignado{{ selectedVol.events_as_volunteer.length !== 1 ? 's' : '' }}
                                         </p>
                                     </div>
                                 </div>
@@ -436,7 +436,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
 
                         <!-- Lista de eventos -->
                         <div class="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
-                            <div v-for="(ev, idx) in selectedVol.events_as_staff" :key="ev.id"
+                            <div v-for="(ev, idx) in selectedVol.events_as_volunteer" :key="ev.id"
                                 class="border border-gray-100 rounded-xl p-4 hover:border-gray-200 transition-colors bg-gray-50/50">
 
                                 <!-- Nombre evento + estado -->

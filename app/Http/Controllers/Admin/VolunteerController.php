@@ -34,7 +34,7 @@ class VolunteerController extends Controller
     public function index(Request $request): Response
     {
         $query = User::where('role', 'volunteer')
-            ->with(['volunteerProfile', 'eventsAsStaff', 'volunteerSchedules.eventDay', 'eventPasses']);
+            ->with(['volunteerProfile', 'eventsAsVolunteer', 'volunteerSchedules.eventDay', 'eventPasses']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -52,7 +52,7 @@ class VolunteerController extends Controller
 
         if ($request->filled('event_id')) {
             $eventId = $request->event_id;
-            $query->whereHas('eventsAsStaff', fn ($q) => $q->where('events.id', $eventId));
+            $query->whereHas('eventsAsVolunteer', fn ($q) => $q->where('events.id', $eventId));
         }
 
         $volunteers = $query->orderBy('created_at', 'desc')
@@ -67,7 +67,7 @@ class VolunteerController extends Controller
         $pendingEmailCount = User::where('role', 'volunteer')
             ->where('status', 'pending')
             ->whereNull('welcome_email_sent_at')
-            ->whereHas('eventsAsStaff')
+            ->whereHas('eventsAsVolunteer')
             ->count();
 
         $pendingSmsCount = User::where('role', 'volunteer')
@@ -75,7 +75,7 @@ class VolunteerController extends Controller
             ->whereNotNull('phone')
             ->where('phone', 'like', '+%')
             ->whereNull('sms_sent_at')
-            ->whereHas('eventsAsStaff')
+            ->whereHas('eventsAsVolunteer')
             ->count();
 
         return Inertia::render('Admin/Volunteers/Index', [
@@ -94,7 +94,7 @@ class VolunteerController extends Controller
 
         $volunteer->load([
             'volunteerProfile',
-            'eventsAsStaff.eventDays',
+            'eventsAsVolunteer.eventDays',
             'volunteerSchedules.eventDay',
             'volunteerSchedules.event',
             'eventPasses',
@@ -107,7 +107,7 @@ class VolunteerController extends Controller
             ->get();
 
         // Elegibilidad de certificado por evento
-        $certificates = $volunteer->eventsAsStaff->mapWithKeys(function ($event) use ($volunteer) {
+        $certificates = $volunteer->eventsAsVolunteer->mapWithKeys(function ($event) use ($volunteer) {
             $scheduledDayIds = VolunteerSchedule::where('user_id', $volunteer->id)
                 ->where('event_id', $event->id)
                 ->pluck('event_day_id');
@@ -213,7 +213,7 @@ class VolunteerController extends Controller
             foreach ($validated['assignments'] ?? [] as $assignment) {
                 $eventId = (int) $assignment['event_id'];
 
-                $user->eventsAsStaff()->attach($eventId, [
+                $user->eventsAsVolunteer()->attach($eventId, [
                     'assigned_role' => 'volunteer',
                     'status'        => 'assigned',
                     'area'          => $assignment['area'] ?? null,
@@ -262,7 +262,7 @@ class VolunteerController extends Controller
 
         $volunteer->load([
             'volunteerProfile',
-            'eventsAsStaff.eventDays',
+            'eventsAsVolunteer.eventDays',
             'volunteerSchedules.eventDay',
         ]);
 
@@ -339,7 +339,7 @@ class VolunteerController extends Controller
         DB::transaction(function () use ($volunteer) {
             $volunteer->volunteerSchedules()->delete();
             $volunteer->volunteerProfile?->delete();
-            $volunteer->eventsAsStaff()->detach();
+            $volunteer->eventsAsVolunteer()->detach();
             DB::table('event_passes')->where('user_id', $volunteer->id)->delete();
             DB::table('communication_logs')->where('user_id', $volunteer->id)->delete();
             $volunteer->forceDelete();
@@ -405,7 +405,7 @@ class VolunteerController extends Controller
 
         // Validar que tenga evento y horarios para pasar a pendiente
         if ($newStatus === 'pending') {
-            if ($volunteer->eventsAsStaff()->count() === 0) {
+            if ($volunteer->eventsAsVolunteer()->count() === 0) {
                 return back()->with('error', 'No se puede cambiar a Pendiente: el voluntario no tiene eventos asignados.');
             }
             if ($volunteer->volunteerSchedules()->count() === 0) {
@@ -417,8 +417,8 @@ class VolunteerController extends Controller
 
         // Si se pone inactive, rechazar en todos los eventos y cancelar pases
         if ($newStatus === 'inactive') {
-            $eventIds = $volunteer->eventsAsStaff->pluck('id')->toArray();
-            $volunteer->eventsAsStaff()->updateExistingPivot(
+            $eventIds = $volunteer->eventsAsVolunteer->pluck('id')->toArray();
+            $volunteer->eventsAsVolunteer()->updateExistingPivot(
                 $eventIds,
                 ['status' => 'rejected'],
             );
@@ -430,9 +430,9 @@ class VolunteerController extends Controller
 
         // Reactivar eventos y pases cuando vuelve de inactive
         if ($oldStatus === 'inactive' && in_array($newStatus, ['pending', 'applicant'])) {
-            foreach ($volunteer->eventsAsStaff as $event) {
+            foreach ($volunteer->eventsAsVolunteer as $event) {
                 if ($event->pivot->status === 'rejected') {
-                    $volunteer->eventsAsStaff()->updateExistingPivot($event->id, ['status' => 'assigned']);
+                    $volunteer->eventsAsVolunteer()->updateExistingPivot($event->id, ['status' => 'assigned']);
                 }
                 EventPass::where('user_id', $volunteer->id)
                     ->where('event_id', $event->id)
@@ -463,11 +463,11 @@ class VolunteerController extends Controller
 
         $eventId = (int) $request->event_id;
 
-        if ($volunteer->eventsAsStaff()->where('events.id', $eventId)->exists()) {
+        if ($volunteer->eventsAsVolunteer()->where('events.id', $eventId)->exists()) {
             return back()->with('error', 'El voluntario ya está asignado a este evento.');
         }
 
-        $volunteer->eventsAsStaff()->attach($eventId, [
+        $volunteer->eventsAsVolunteer()->attach($eventId, [
             'assigned_role' => 'volunteer',
             'status'        => 'assigned',
             'area'          => $request->area,
@@ -500,8 +500,8 @@ class VolunteerController extends Controller
 
         $newStatus = $request->status;
 
-        $previousStatus = DB::table('event_staff')
-            ->where('user_id', $volunteer->id)
+        $previousStatus = DB::table('event_volunteer')
+            ->where('volunteer_id', $volunteer->id)
             ->where('event_id', $event->id)
             ->value('status');
 
@@ -526,15 +526,15 @@ class VolunteerController extends Controller
             }
         }
 
-        DB::table('event_staff')
-            ->where('user_id', $volunteer->id)
+        DB::table('event_volunteer')
+            ->where('volunteer_id', $volunteer->id)
             ->where('event_id', $event->id)
             ->update(['status' => $newStatus]);
 
         // Si se rechazó: verificar si TODOS los eventos están rejected → user.status = rejected
         if ($newStatus === 'rejected') {
-            $totalEvents = DB::table('event_staff')->where('user_id', $volunteer->id)->count();
-            $rejectedEvents = DB::table('event_staff')->where('user_id', $volunteer->id)->where('status', 'rejected')->count();
+            $totalEvents = DB::table('event_volunteer')->where('volunteer_id', $volunteer->id)->count();
+            $rejectedEvents = DB::table('event_volunteer')->where('volunteer_id', $volunteer->id)->where('status', 'rejected')->count();
 
             if ($totalEvents > 0 && $totalEvents === $rejectedEvents && $volunteer->status !== 'inactive') {
                 $volunteer->update(['status' => 'rejected']);
@@ -562,7 +562,7 @@ class VolunteerController extends Controller
         EventPass::where('user_id', $volunteer->id)->where('event_id', $event->id)->update(['status' => 'cancelled']);
 
         // Desvincular del evento
-        $volunteer->eventsAsStaff()->detach($event->id);
+        $volunteer->eventsAsVolunteer()->detach($event->id);
 
         return back()->with('success', 'Evento removido correctamente.');
     }
@@ -608,7 +608,7 @@ class VolunteerController extends Controller
 
         $request->validate(['area' => 'nullable|string|max:255']);
 
-        $volunteer->eventsAsStaff()->updateExistingPivot($event->id, [
+        $volunteer->eventsAsVolunteer()->updateExistingPivot($event->id, [
             'area' => $request->area,
         ]);
 
@@ -667,7 +667,7 @@ class VolunteerController extends Controller
         $volunteers = User::where('role', 'volunteer')
             ->where('status', 'pending')
             ->whereNull('welcome_email_sent_at')
-            ->whereHas('eventsAsStaff')
+            ->whereHas('eventsAsVolunteer')
             ->get();
 
         $count = 0;
@@ -758,7 +758,7 @@ class VolunteerController extends Controller
             ->whereNotNull('phone')
             ->where('phone', 'like', '+%')
             ->whereNull('sms_sent_at')
-            ->whereHas('eventsAsStaff')
+            ->whereHas('eventsAsVolunteer')
             ->get();
 
         $count = 0;

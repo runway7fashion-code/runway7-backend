@@ -28,7 +28,7 @@ class SendVolunteerOnboardingSmsJob implements ShouldQueue
     public function handle(TwilioService $twilio): void
     {
         $user = User::with([
-            'eventsAsStaff' => fn ($q) => $q->wherePivot('status', 'assigned'),
+            'eventsAsVolunteer' => fn ($q) => $q->wherePivot('status', 'assigned'),
         ])->find($this->userId);
 
         if (!$user || !$user->phone) return;
@@ -40,7 +40,7 @@ class SendVolunteerOnboardingSmsJob implements ShouldQueue
         }
 
         $name = $user->first_name;
-        $eventNames = $user->eventsAsStaff->pluck('name')->toArray();
+        $eventNames = $user->eventsAsVolunteer->pluck('name')->toArray();
         $event = count($eventNames) > 0 ? ' for ' . implode(', ', $eventNames) : '';
 
         $appStore  = config('services.app_stores.apple');

@@ -15,7 +15,7 @@ const props = defineProps({
 });
 
 const profile = props.volunteer.volunteer_profile;
-const assignedEvents = props.volunteer.events_as_staff ?? [];
+const assignedEvents = props.volunteer.events_as_volunteer ?? [];
 const schedules = props.volunteer.volunteer_schedules ?? [];
 const commLogs = props.volunteer.communication_logs ?? [];
 const passes = props.volunteer.event_passes ?? [];
