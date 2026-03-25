@@ -26,7 +26,6 @@ class MediaRegistrationController extends Controller
     public function events(): JsonResponse
     {
         $events = Event::where('status', 'active')
-            ->orWhere('status', 'published')
             ->orderBy('start_date')
             ->get(['id', 'name', 'city', 'start_date', 'end_date']);
 
