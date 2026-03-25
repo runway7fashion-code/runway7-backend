@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\DesignerController;
 use App\Http\Controllers\Admin\DesignerSettingsController;
 use App\Http\Controllers\Admin\AccountingController;
 use App\Http\Controllers\Admin\PassController;
+use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\VolunteerController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\SalesController;
@@ -124,6 +125,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('volunteers/{volunteer}/send-onboarding', [VolunteerController::class, 'sendOnboardingEmail'])->name('volunteers.send-onboarding');
             Route::post('volunteers/{volunteer}/send-onboarding-sms', [VolunteerController::class, 'sendOnboardingSms'])->name('volunteers.send-onboarding-sms');
             Route::get('volunteers/{volunteer}/certificate/{event}', [VolunteerController::class, 'certificate'])->name('volunteers.certificate');
+        });
+
+        // Media - admin, operation
+        Route::middleware('section:media')->group(function () {
+            Route::resource('media', MediaController::class)->parameters(['media' => 'media']);
+            Route::patch('media/{media}/status', [MediaController::class, 'updateStatus'])->name('media.update-status');
+            Route::post('media/{media}/assign-event', [MediaController::class, 'assignEvent'])->name('media.assign-event');
+            Route::delete('media/{media}/remove-event/{event}', [MediaController::class, 'removeEvent'])->name('media.remove-event');
+            Route::patch('media/{media}/events/{event}/status', [MediaController::class, 'updateEventStatus'])->name('media.update-event-status');
+            Route::post('media/{media}/send-onboarding', [MediaController::class, 'sendOnboardingEmail'])->name('media.send-onboarding');
+            Route::post('media/{media}/send-onboarding-sms', [MediaController::class, 'sendOnboardingSms'])->name('media.send-onboarding-sms');
+            Route::post('media/send-bulk-onboarding', [MediaController::class, 'sendBulkOnboardingEmails'])->name('media.send-bulk-onboarding');
+            Route::post('media/send-bulk-onboarding-sms', [MediaController::class, 'sendBulkOnboardingSms'])->name('media.send-bulk-onboarding-sms');
+            Route::post('media/{media}/assistants', [MediaController::class, 'storeAssistant'])->name('media.store-assistant');
+            Route::delete('media/{media}/assistants/{assistant}', [MediaController::class, 'destroyAssistant'])->name('media.destroy-assistant');
         });
 
         // Eventos - admin, operation

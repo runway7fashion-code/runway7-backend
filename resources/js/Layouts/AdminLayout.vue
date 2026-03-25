@@ -25,6 +25,7 @@ import {
     CurrencyDollarIcon,
     ChartBarIcon,
     HandRaisedIcon,
+    CameraIcon,
     ClipboardDocumentCheckIcon,
 } from '@heroicons/vue/24/outline';
 
@@ -44,6 +45,7 @@ const allNavItems = [
     { name: 'Modelos',      href: '/admin/models',    exact: false, section: 'models',             icon: UserIcon },
     { name: 'Diseñadores',  href: '/admin/designers', exact: false, section: 'designers',          icon: PaintBrushIcon },
     { name: 'Voluntarios', href: '/admin/volunteers', exact: false, section: 'volunteers',         icon: HandRaisedIcon },
+    { name: 'Media',       href: '/admin/media',      exact: false, section: 'media',              icon: CameraIcon },
     { name: 'Asistencia',  href: '/admin/attendance', exact: false, section: 'attendance',         icon: ClipboardDocumentCheckIcon },
     { name: 'Chats',        href: '/admin/chats',     exact: false, section: 'chats',              icon: ChatBubbleLeftRightIcon },
     { name: 'Banners',      href: '/admin/banners',   exact: false, section: 'banners',            icon: PhotoIcon },
