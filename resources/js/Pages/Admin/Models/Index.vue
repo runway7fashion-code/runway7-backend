@@ -216,6 +216,7 @@ function commStatusClass(status) {
 // Modal de confirmación para email
 const emailModalModel   = ref(null);
 const showEmailInfoModal = ref(false);
+const showSmsInfoModal = ref(false);
 
 function openEmailModal(m, e) {
     e.stopPropagation();
@@ -531,6 +532,11 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                             <DevicePhoneMobileIcon class="w-4 h-4 text-gray-500" />
                             Enviar SMS
                             <span class="bg-green-100 text-green-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ pendingSmsCount }}</span>
+                        </button>
+                        <button @click="showSmsInfoModal = true"
+                            class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="¿Cómo funciona el envío masivo?">
+                            <InformationCircleIcon class="w-4 h-4" />
                         </button>
                     </div>
 
@@ -1736,6 +1742,44 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     </li>
                 </ul>
                 <button @click="showEmailInfoModal = false"
+                    class="mt-5 w-full py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
+                    Entendido
+                </button>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Modal info SMS masivo -->
+    <Teleport to="body">
+        <div v-if="showSmsInfoModal" class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/50" @click="showSmsInfoModal = false"></div>
+            <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <DevicePhoneMobileIcon class="w-5 h-5 text-green-600" />
+                        </div>
+                        <h3 class="text-base font-semibold text-gray-900">¿Cómo funciona el envío masivo de SMS?</h3>
+                    </div>
+                    <button @click="showSmsInfoModal = false" class="text-gray-400 hover:text-gray-600 ml-2">
+                        <XMarkIcon class="w-5 h-5" />
+                    </button>
+                </div>
+                <ul class="space-y-3 text-sm text-gray-600">
+                    <li class="flex items-start gap-2">
+                        <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
+                        <span>Solo se envía a modelos con estado Pendiente que tengan teléfono con código de país (+1...) y no hayan recibido SMS anteriormente.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
+                        <span>El SMS incluye los eventos asignados con casting agendado, las credenciales de acceso a la app y los enlaces de descarga.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
+                        <span>Requiere saldo disponible en Twilio. Si no hay saldo el envío fallará.</span>
+                    </li>
+                </ul>
+                <button @click="showSmsInfoModal = false"
                     class="mt-5 w-full py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
                     Entendido
                 </button>
