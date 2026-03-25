@@ -330,6 +330,18 @@ function methodLabel(m) {
                                 <span class="text-gray-400 text-xs">Casting</span>
                                 <p class="text-gray-800">{{ infoData.event?.model_casting_enabled ? 'Si' : 'No' }}</p>
                             </div>
+                            <div>
+                                <span class="text-gray-400 text-xs">Media</span>
+                                <p class="text-gray-800">{{ infoData.event?.media_package ? 'Si' : 'No' }}</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-400 text-xs">Custom BG</span>
+                                <p class="text-gray-800">{{ infoData.event?.custom_background ? 'Si' : 'No' }}</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-400 text-xs">Tickets</span>
+                                <p class="text-gray-800">{{ infoData.event?.courtesy_tickets ? 'Si' : 'No' }}</p>
+                            </div>
                         </div>
 
                         <!-- Redes sociales -->

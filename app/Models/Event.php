@@ -42,7 +42,7 @@ class Event extends Model
     public function designers()
     {
         return $this->belongsToMany(User::class, 'event_designer', 'event_id', 'designer_id')
-            ->withPivot(['status', 'package_id', 'looks', 'model_casting_enabled', 'package_price', 'notes'])
+            ->withPivot(['status', 'package_id', 'looks', 'model_casting_enabled', 'media_package', 'custom_background', 'courtesy_tickets', 'package_price', 'notes'])
             ->withTimestamps();
     }
 

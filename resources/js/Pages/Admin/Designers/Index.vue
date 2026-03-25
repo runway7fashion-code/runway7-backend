@@ -874,12 +874,19 @@ function submitImport() {
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                                             </svg>
                                         </div>
-                                        <div>
-                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Casting modelos</p>
-                                            <p class="text-xs font-semibold" :class="ev.pivot?.model_casting_enabled ? 'text-green-600' : 'text-red-500'">
-                                                {{ ev.pivot?.model_casting_enabled ? 'Habilitado' : 'Deshabilitado' }}
-                                            </p>
-                                        </div>
+                                    </div>
+                                    <div class="flex flex-wrap gap-1.5 col-span-2">
+                                        <span v-for="feat in [
+                                            { label: 'Casting', value: ev.pivot?.model_casting_enabled },
+                                            { label: 'Media', value: ev.pivot?.media_package },
+                                            { label: 'BG', value: ev.pivot?.custom_background },
+                                            { label: 'Tickets', value: ev.pivot?.courtesy_tickets },
+                                        ]" :key="feat.label"
+                                            class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold"
+                                            :class="feat.value ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'">
+                                            <span class="w-1 h-1 rounded-full" :class="feat.value ? 'bg-green-500' : 'bg-gray-300'"></span>
+                                            {{ feat.label }}
+                                        </span>
                                     </div>
 
                                 </div>

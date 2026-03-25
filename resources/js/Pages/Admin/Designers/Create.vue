@@ -65,6 +65,9 @@ const form = useForm({
     package_id:            '',
     looks:                 '',
     model_casting_enabled: true,
+    media_package:         false,
+    custom_background:     false,
+    courtesy_tickets:      false,
     package_price:         '',
     notes:                 '',
     shows:                 [],
@@ -332,13 +335,30 @@ function submit() {
                                 <input v-model="form.package_price" type="number" step="0.01" min="0"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
-                            <div class="flex items-end pb-1">
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input v-model="form.model_casting_enabled" type="checkbox"
-                                        class="rounded border-gray-300 text-black focus:ring-black/20" />
-                                    <span class="text-sm text-gray-700">Casting de modelos habilitado</span>
-                                </label>
-                            </div>
+                        </div>
+
+                        <!-- Feature flags -->
+                        <div class="grid grid-cols-2 gap-x-6 gap-y-3 bg-gray-50 rounded-xl p-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input v-model="form.model_casting_enabled" type="checkbox"
+                                    class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                <span class="text-sm text-gray-700">Model Casting</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input v-model="form.media_package" type="checkbox"
+                                    class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                <span class="text-sm text-gray-700">Media Package</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input v-model="form.custom_background" type="checkbox"
+                                    class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                <span class="text-sm text-gray-700">Custom Background</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input v-model="form.courtesy_tickets" type="checkbox"
+                                    class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                <span class="text-sm text-gray-700">Courtesy Tickets</span>
+                            </label>
                         </div>
 
                         <div>

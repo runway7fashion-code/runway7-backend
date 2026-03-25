@@ -52,6 +52,10 @@ const form = useForm({
     installments_count: 3,
     looks: '',
     assistants: '',
+    model_casting_enabled: true,
+    media_package: false,
+    custom_background: false,
+    courtesy_tickets: false,
     notes: '',
     sales_rep_id: '',
     documents: [],
@@ -256,6 +260,28 @@ function submit() {
                                         <option value="">— Sin asignar (yo mismo) —</option>
                                         <option v-for="rep in salesReps" :key="rep.id" :value="rep.id">{{ rep.first_name }} {{ rep.last_name }}</option>
                                     </select>
+                                </div>
+                                <div class="col-span-2 grid grid-cols-2 gap-x-6 gap-y-2 bg-gray-50 rounded-xl p-4">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input v-model="form.model_casting_enabled" type="checkbox"
+                                            class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                        <span class="text-sm text-gray-700">Model Casting</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input v-model="form.media_package" type="checkbox"
+                                            class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                        <span class="text-sm text-gray-700">Media Package</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input v-model="form.custom_background" type="checkbox"
+                                            class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                        <span class="text-sm text-gray-700">Custom Background</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input v-model="form.courtesy_tickets" type="checkbox"
+                                            class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                        <span class="text-sm text-gray-700">Courtesy Tickets</span>
+                                    </label>
                                 </div>
                                 <div class="col-span-2">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Notas</label>

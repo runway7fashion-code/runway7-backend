@@ -62,6 +62,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::patch('models/{model}/events/{event}/model-tag', [ModelController::class, 'updateModelTag'])->name('models.update-model-tag');
             Route::post('models/{model}/events/{event}/send-onboarding', [ModelController::class, 'sendModelOnboarding'])->name('models.send-onboarding');
             Route::post('models/{model}/toggle-top', [ModelController::class, 'toggleTop'])->name('models.toggle-top');
+            Route::post('models/{model}/send-onboarding-sms', [ModelController::class, 'sendOnboardingSms'])->name('models.send-onboarding-sms');
             Route::post('models/{model}/send-rejection-email', [ModelController::class, 'sendRejectionEmail'])->name('models.send-rejection-email');
             Route::post('models/send-bulk-rejection-emails', [ModelController::class, 'sendBulkRejectionEmails'])->name('models.send-bulk-rejection-emails');
             Route::post('models/send-bulk-onboarding-sms', [ModelController::class, 'sendBulkOnboardingSms'])->name('models.send-bulk-onboarding-sms');
@@ -75,6 +76,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::resource('designers', DesignerController::class);
             Route::patch('designers/{designer}/status', [DesignerController::class, 'updateStatus'])->name('designers.update-status');
             Route::post('designers/{designer}/assign-event', [DesignerController::class, 'assignEvent'])->name('designers.assign-event');
+            Route::post('designers/{designer}/events/{event}/toggle-feature', [DesignerController::class, 'toggleEventFeature'])->name('designers.toggle-event-feature');
             Route::patch('designers/{designer}/cancel-event/{event}', [DesignerController::class, 'cancelEvent'])->name('designers.cancel-event');
             Route::delete('designers/{designer}/remove-event/{event}', [DesignerController::class, 'removeEvent'])->name('designers.remove-event');
             Route::post('designers/{designer}/assistants', [DesignerController::class, 'addAssistant'])->name('designers.add-assistant');

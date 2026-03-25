@@ -928,6 +928,9 @@ class AccountingController extends Controller
                 'looks' => $eventDesigner->looks ?? 0,
                 'package_price' => $packagePrice,
                 'model_casting_enabled' => (bool) ($eventDesigner->model_casting_enabled ?? false),
+                'media_package'         => (bool) ($eventDesigner->media_package ?? false),
+                'custom_background'     => (bool) ($eventDesigner->custom_background ?? false),
+                'courtesy_tickets'      => (bool) ($eventDesigner->courtesy_tickets ?? false),
             ] : null,
             'package' => $package ? ['id' => $package->id, 'name' => $package->name, 'price' => (float) $package->price] : null,
             'payment_plan' => $paymentPlan ? [

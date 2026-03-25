@@ -177,6 +177,16 @@ function canSendEmail(m) {
     return m.status === 'pending' && !!m.email && hasEventWithCasting;
 }
 
+function canSendSms(m) {
+    const hasEventWithCasting = (m.events_as_model_with_casting ?? []).some(e => e.pivot?.casting_time);
+    return m.status === 'pending' && !!m.phone && m.phone.startsWith('+') && !m.sms_sent_at && hasEventWithCasting;
+}
+
+function sendIndividualSms(m) {
+    if (!confirm(`¿Enviar SMS de onboarding a ${m.first_name} ${m.last_name}?`)) return;
+    router.post(`/admin/models/${m.id}/send-onboarding-sms`, {}, { preserveScroll: true });
+}
+
 // Modal historial de correos
 const emailHistoryModel = ref(null);
 
@@ -956,6 +966,13 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                         :disabled="!canSendEmail(m)"
                                         title="Enviar Email">
                                         <EnvelopeIcon class="w-4 h-4" />
+                                    </button>
+                                    <button @click="sendIndividualSms(m)"
+                                        class="p-1.5 border border-gray-200 rounded-lg transition-colors"
+                                        :class="canSendSms(m) ? 'hover:bg-gray-50 text-green-600' : 'opacity-40 cursor-not-allowed text-gray-400'"
+                                        :disabled="!canSendSms(m)"
+                                        title="Enviar SMS">
+                                        <DevicePhoneMobileIcon class="w-4 h-4" />
                                     </button>
                                     <Link :href="`/admin/models/${m.id}/edit`"
                                         class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"

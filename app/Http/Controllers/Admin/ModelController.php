@@ -798,6 +798,27 @@ class ModelController extends Controller
         }
     }
 
+    public function sendOnboardingSms(Request $request, User $model)
+    {
+        $this->authorizeModel($model);
+
+        $log = CommunicationLog::create([
+            'user_id' => $model->id,
+            'sent_by' => $request->user()->id,
+            'type'    => 'sms',
+            'channel' => 'model_onboarding_sms',
+            'status'  => 'queued',
+        ]);
+
+        SendModelOnboardingSmsJob::dispatch(
+            userId: $model->id,
+            sentBy: $request->user()->id,
+            logId:  $log->id,
+        );
+
+        return back()->with('success', 'SMS de onboarding enviado.');
+    }
+
     public function sendWelcomeEmail(Request $request, User $model)
     {
         $this->authorizeModel($model);

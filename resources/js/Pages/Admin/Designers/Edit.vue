@@ -84,6 +84,9 @@ const selectedPackageId = ref('');
 const assignLooks = ref('');
 const assignPrice = ref('');
 const assignCasting = ref(true);
+const assignMedia = ref(false);
+const assignBackground = ref(false);
+const assignTickets = ref(false);
 const assignNotes = ref('');
 
 const selectedEventData = computed(() => props.events?.find(e => e.id == selectedEventId.value) ?? null);
@@ -132,6 +135,9 @@ function assignEvent() {
         package_id:            selectedPackageId.value || null,
         looks:                 assignLooks.value || null,
         model_casting_enabled: assignCasting.value,
+        media_package:         assignMedia.value,
+        custom_background:     assignBackground.value,
+        courtesy_tickets:      assignTickets.value,
         package_price:         assignPrice.value || null,
         notes:                 assignNotes.value || null,
         shows:                 assignShows.value.length ? assignShows.value : null,
@@ -144,6 +150,9 @@ function assignEvent() {
             assignLooks.value = '';
             assignPrice.value = '';
             assignCasting.value = true;
+            assignMedia.value = false;
+            assignBackground.value = false;
+            assignTickets.value = false;
             assignNotes.value = '';
             assignShows.value = [];
             assignFittingSlotId.value = '';
@@ -562,13 +571,28 @@ function submit() {
                                     <input v-model="assignPrice" type="number" step="0.01" min="0"
                                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                                 </div>
-                                <div class="flex items-end pb-0.5">
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input v-model="assignCasting" type="checkbox"
-                                            class="rounded border-gray-300 text-black focus:ring-black/20" />
-                                        <span class="text-sm text-gray-700">Casting habilitado</span>
-                                    </label>
-                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-x-6 gap-y-2 bg-gray-50 rounded-xl p-3 col-span-full">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input v-model="assignCasting" type="checkbox"
+                                        class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                    <span class="text-sm text-gray-700">Model Casting</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input v-model="assignMedia" type="checkbox"
+                                        class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                    <span class="text-sm text-gray-700">Media Package</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input v-model="assignBackground" type="checkbox"
+                                        class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                    <span class="text-sm text-gray-700">Custom Background</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input v-model="assignTickets" type="checkbox"
+                                        class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                    <span class="text-sm text-gray-700">Courtesy Tickets</span>
+                                </label>
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-500 mb-1">Notas</label>
@@ -630,7 +654,10 @@ function submit() {
                                     <span v-if="evt.package_price">${{ Number(evt.package_price).toLocaleString() }}</span>
                                     <span>{{ evt.looks }} looks</span>
                                     <span>{{ evt.models_count ?? 0 }} modelos</span>
-                                    <span>Casting: {{ evt.model_casting_enabled ? 'Si' : 'No' }}</span>
+                                    <span :class="evt.model_casting_enabled ? 'text-green-500' : ''">Casting: {{ evt.model_casting_enabled ? 'Si' : 'No' }}</span>
+                                    <span :class="evt.media_package ? 'text-green-500' : ''">Media: {{ evt.media_package ? 'Si' : 'No' }}</span>
+                                    <span :class="evt.custom_background ? 'text-green-500' : ''">BG: {{ evt.custom_background ? 'Si' : 'No' }}</span>
+                                    <span :class="evt.courtesy_tickets ? 'text-green-500' : ''">Tickets: {{ evt.courtesy_tickets ? 'Si' : 'No' }}</span>
                                     <span v-if="evt.designer_status === 'cancelled'"
                                         class="px-1.5 py-0.5 rounded bg-red-50 text-red-600 font-medium">
                                         Cancelado

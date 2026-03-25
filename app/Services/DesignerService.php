@@ -80,6 +80,9 @@ class DesignerService
             'looks'                 => $data['looks'] ?? 10,
             'assistants'            => $data['assistants'] ?? 1,
             'model_casting_enabled' => $data['model_casting_enabled'] ?? true,
+            'media_package'         => $data['media_package'] ?? false,
+            'custom_background'     => $data['custom_background'] ?? false,
+            'courtesy_tickets'      => $data['courtesy_tickets'] ?? false,
             'package_price'         => $data['package_price'] ?? 0,
             'notes'                 => $data['notes'] ?? null,
         ]);

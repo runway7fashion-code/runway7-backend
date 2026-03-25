@@ -139,7 +139,7 @@ class User extends Authenticatable
     public function eventsAsDesigner()
     {
         return $this->belongsToMany(Event::class, 'event_designer', 'designer_id', 'event_id')
-            ->withPivot(['status', 'package_id', 'looks', 'assistants', 'model_casting_enabled', 'package_price', 'notes'])
+            ->withPivot(['status', 'package_id', 'looks', 'assistants', 'model_casting_enabled', 'media_package', 'custom_background', 'courtesy_tickets', 'package_price', 'notes'])
             ->withTimestamps();
     }
 

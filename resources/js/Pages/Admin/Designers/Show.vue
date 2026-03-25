@@ -17,18 +17,18 @@ const docTypeLabel = (type) => ({
     other:       'Otro',
 })[type] ?? type;
 
-const profile    = props.designer.designer_profile;
-const events     = props.designer.events     ?? [];
-const shows      = props.designer.shows      ?? [];
-const fittings   = props.designer.fittings   ?? [];
-const assistants = props.designer.assistants  ?? [];
-const materials  = props.designer.materials   ?? [];
-const displays   = props.designer.displays    ?? [];
+const profile    = computed(() => props.designer.designer_profile);
+const events     = computed(() => props.designer.events     ?? []);
+const shows      = computed(() => props.designer.shows      ?? []);
+const fittings   = computed(() => props.designer.fittings   ?? []);
+const assistants = computed(() => props.designer.assistants  ?? []);
+const materials  = computed(() => props.designer.materials   ?? []);
+const displays   = computed(() => props.designer.displays    ?? []);
 
 // ── Tab seleccionado ─────────────────────────────────────────────
-const firstActive = events.find(e => e.designer_status === 'confirmed') ?? events[0];
+const firstActive = (props.designer.events ?? []).find(e => e.designer_status === 'confirmed') ?? (props.designer.events ?? [])[0];
 const selectedEventId = ref(firstActive?.id ?? null);
-const selectedEvent   = computed(() => events.find(e => e.id === selectedEventId.value) ?? null);
+const selectedEvent   = computed(() => events.value.find(e => e.id === selectedEventId.value) ?? null);
 
 // ── Tab bar scroll ────────────────────────────────────────────────
 const tabScroll = ref(null);
@@ -38,19 +38,19 @@ function scrollTabs(dir) {
 
 // ── Datos filtrados por evento ───────────────────────────────────
 const tabShows = computed(() =>
-    shows.filter(s => s.event_day?.event_id === selectedEventId.value)
+    shows.value.filter(s => s.event_day?.event_id === selectedEventId.value)
 );
 const tabFitting = computed(() =>
-    fittings.find(f => f.event_id === selectedEventId.value) ?? null
+    fittings.value.find(f => f.event_id === selectedEventId.value) ?? null
 );
 const tabMaterials = computed(() =>
-    materials.filter(m => m.event_id === selectedEventId.value)
+    materials.value.filter(m => m.event_id === selectedEventId.value)
 );
 const tabDisplays = computed(() =>
-    displays.filter(d => d.event_id === selectedEventId.value)
+    displays.value.filter(d => d.event_id === selectedEventId.value)
 );
 const tabAssistants = computed(() =>
-    assistants.filter(a => a.event_id === selectedEventId.value)
+    assistants.value.filter(a => a.event_id === selectedEventId.value)
 );
 const tabProgress = computed(() => {
     if (!tabMaterials.value.length) return 0;
@@ -68,6 +68,10 @@ function storageUrl(path) {
 function removeFromEvent(eventId, eventName) {
     if (!confirm(`Quitar a ${props.designer.first_name} del evento "${eventName}"?`)) return;
     router.delete(`/admin/designers/${props.designer.id}/remove-event/${eventId}`, { preserveScroll: true });
+}
+
+function toggleFeature(eventId, field) {
+    router.post(`/admin/designers/${props.designer.id}/events/${eventId}/toggle-feature`, { field }, { preserveScroll: true });
 }
 
 // Onboarding email
@@ -452,12 +456,20 @@ const socialLinks = computed(() => {
                                     Ver
                                 </button>
                             </p>
-                            <p class="text-xs text-gray-500">
-                                Casting:
-                                <span :class="selectedEvent.model_casting_enabled ? 'text-green-600' : 'text-red-500'" class="font-medium">
-                                    {{ selectedEvent.model_casting_enabled ? 'Habilitado' : 'Deshabilitado' }}
-                                </span>
-                            </p>
+                            <div class="flex flex-wrap gap-1.5 mt-1">
+                                <button v-for="feat in [
+                                    { field: 'model_casting_enabled', label: 'Model Casting', value: selectedEvent.model_casting_enabled },
+                                    { field: 'media_package', label: 'Media Package', value: selectedEvent.media_package },
+                                    { field: 'custom_background', label: 'Custom BG', value: selectedEvent.custom_background },
+                                    { field: 'courtesy_tickets', label: 'Courtesy Tickets', value: selectedEvent.courtesy_tickets },
+                                ]" :key="feat.field"
+                                    @click="toggleFeature(selectedEvent.id, feat.field)"
+                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium cursor-pointer transition-colors"
+                                    :class="feat.value ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
+                                    <span class="w-1.5 h-1.5 rounded-full" :class="feat.value ? 'bg-green-500' : 'bg-gray-300'"></span>
+                                    {{ feat.label }}
+                                </button>
+                            </div>
                             <p v-if="tabFitting" class="text-xs text-gray-500">
                                 Fitting: <span class="font-medium text-orange-600">{{ tabFitting.day_label }} · {{ tabFitting.time }}</span>
                             </p>

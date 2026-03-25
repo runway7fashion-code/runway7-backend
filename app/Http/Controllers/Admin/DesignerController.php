@@ -192,6 +192,9 @@ class DesignerController extends Controller
             'package_id'      => 'nullable|exists:designer_packages,id',
             'looks'           => 'nullable|integer|min:0',
             'model_casting_enabled' => 'boolean',
+            'media_package'         => 'boolean',
+            'custom_background'     => 'boolean',
+            'courtesy_tickets'      => 'boolean',
             'package_price'   => 'nullable|numeric|min:0',
             'notes'           => 'nullable|string',
             'assistants'              => 'nullable|array',
@@ -211,7 +214,7 @@ class DesignerController extends Controller
             'bio', 'country', 'category_id', 'sales_rep_id', 'tracking_link', 'skype', 'social_media',
         ]);
 
-        $eventData = $request->only(['package_id', 'looks', 'model_casting_enabled', 'package_price', 'notes']);
+        $eventData = $request->only(['package_id', 'looks', 'model_casting_enabled', 'media_package', 'custom_background', 'courtesy_tickets', 'package_price', 'notes']);
 
         $designer = $this->designerService->createDesigner(
             $userData,
@@ -452,6 +455,9 @@ class DesignerController extends Controller
             'package_id'            => 'nullable|exists:designer_packages,id',
             'looks'                 => 'nullable|integer|min:0',
             'model_casting_enabled' => 'boolean',
+            'media_package'         => 'boolean',
+            'custom_background'     => 'boolean',
+            'courtesy_tickets'      => 'boolean',
             'package_price'         => 'nullable|numeric|min:0',
             'notes'                 => 'nullable|string',
             'shows'                        => 'nullable|array',
@@ -464,7 +470,7 @@ class DesignerController extends Controller
             $this->designerService->assignToEvent(
                 $designer,
                 $request->event_id,
-                $request->only(['package_id', 'looks', 'model_casting_enabled', 'package_price', 'notes']),
+                $request->only(['package_id', 'looks', 'model_casting_enabled', 'media_package', 'custom_background', 'courtesy_tickets', 'package_price', 'notes']),
             );
 
             if ($request->filled('shows')) {
@@ -494,6 +500,37 @@ class DesignerController extends Controller
         } catch (\Exception $e) {
             return back()->withErrors(['event' => $e->getMessage()]);
         }
+    }
+
+    public function toggleEventFeature(Request $request, User $designer, Event $event)
+    {
+        $this->authorizeDesigner($designer);
+
+        $request->validate([
+            'field' => 'required|in:model_casting_enabled,media_package,custom_background,courtesy_tickets',
+        ]);
+
+        $field = $request->field;
+
+        $current = DB::table('event_designer')
+            ->where('designer_id', $designer->id)
+            ->where('event_id', $event->id)
+            ->value($field);
+
+        DB::table('event_designer')
+            ->where('designer_id', $designer->id)
+            ->where('event_id', $event->id)
+            ->update([$field => !$current]);
+
+        $labels = [
+            'model_casting_enabled' => 'Model Casting',
+            'media_package'         => 'Media Package',
+            'custom_background'     => 'Custom Background',
+            'courtesy_tickets'      => 'Courtesy Tickets',
+        ];
+
+        $status = !$current ? 'habilitado' : 'deshabilitado';
+        return back()->with('success', "{$labels[$field]} {$status}.");
     }
 
     public function cancelEvent(User $designer, Event $event)
@@ -981,6 +1018,9 @@ class DesignerController extends Controller
                 'looks'                 => $event->pivot->looks,
                 'assistants'            => $event->pivot->assistants,
                 'model_casting_enabled' => $event->pivot->model_casting_enabled,
+                'media_package'         => $event->pivot->media_package,
+                'custom_background'     => $event->pivot->custom_background,
+                'courtesy_tickets'      => $event->pivot->courtesy_tickets,
                 'package_price'         => $event->pivot->package_price,
                 'notes'                 => $event->pivot->notes,
                 'designer_status'       => $event->pivot->status,
