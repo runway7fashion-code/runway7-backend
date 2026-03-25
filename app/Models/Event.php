@@ -53,6 +53,20 @@ class Event extends Model
             ->withTimestamps();
     }
 
+    public function volunteers()
+    {
+        return $this->belongsToMany(User::class, 'event_volunteer', 'event_id', 'volunteer_id')
+            ->withPivot(['assigned_role', 'status', 'checked_in_at', 'notes', 'area'])
+            ->withTimestamps();
+    }
+
+    public function mediaUsers()
+    {
+        return $this->belongsToMany(User::class, 'event_media', 'event_id', 'media_id')
+            ->withPivot(['status', 'checked_in_at', 'notes'])
+            ->withTimestamps();
+    }
+
     // --- Helpers ---
     public function showDays()
     {

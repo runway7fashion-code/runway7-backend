@@ -88,6 +88,7 @@ class User extends Authenticatable
     public function scopeActive($query) { return $query->where('status', 'active'); }
     public function scopeModels($query) { return $query->where('role', 'model'); }
     public function scopeDesigners($query) { return $query->where('role', 'designer'); }
+    public function scopeMedia($query) { return $query->where('role', 'media'); }
     public function scopeAdmins($query) { return $query->where('role', 'admin'); }
     public function scopeInternalTeam($query) { return $query->whereIn('role', self::ROLES_INTERNAL); }
     public function scopeParticipants($query) { return $query->whereIn('role', self::ROLES_PARTICIPANT); }
@@ -110,6 +111,8 @@ class User extends Authenticatable
     public function designerProfile() { return $this->hasOne(DesignerProfile::class); }
     public function volunteerProfile() { return $this->hasOne(VolunteerProfile::class); }
     public function volunteerSchedules() { return $this->hasMany(VolunteerSchedule::class); }
+    public function mediaProfile() { return $this->hasOne(MediaProfile::class); }
+    public function mediaAssistants() { return $this->hasMany(MediaAssistant::class, 'media_id'); }
     public function pressProfile() { return $this->hasOne(PressProfile::class); }
     public function sponsorProfile() { return $this->hasOne(SponsorProfile::class); }
 
@@ -155,6 +158,20 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Event::class, 'event_staff', 'user_id', 'event_id')
             ->withPivot(['assigned_role', 'status', 'checked_in_at', 'notes', 'area'])
+            ->withTimestamps();
+    }
+
+    public function eventsAsVolunteer()
+    {
+        return $this->belongsToMany(Event::class, 'event_volunteer', 'volunteer_id', 'event_id')
+            ->withPivot(['assigned_role', 'status', 'checked_in_at', 'notes', 'area'])
+            ->withTimestamps();
+    }
+
+    public function eventsAsMedia()
+    {
+        return $this->belongsToMany(Event::class, 'event_media', 'media_id', 'event_id')
+            ->withPivot(['status', 'checked_in_at', 'notes'])
             ->withTimestamps();
     }
 
