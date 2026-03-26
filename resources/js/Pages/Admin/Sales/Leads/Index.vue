@@ -45,7 +45,7 @@ function applyFilters() {
 
 // Inline status change
 function changeStatus(lead, newStatus) {
-    router.patch(`/admin/sales/leads/${lead.id}`, { status: newStatus }, { preserveScroll: true });
+    router.patch(`/admin/sales/leads/${lead.id}/status`, { status: newStatus }, { preserveScroll: true });
 }
 
 // Inline advisor assignment (leader only)
@@ -209,51 +209,56 @@ function advisorName(lead) {
                     <table class="w-full">
                         <thead class="bg-gray-50 border-b border-gray-200">
                             <tr>
-                                <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Lead</th>
-                                <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Telefono</th>
-                                <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Presupuesto</th>
-                                <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Evento</th>
-                                <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
-                                <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Asesor</th>
-                                <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ultimo contacto</th>
-                                <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Registro</th>
-                                <th class="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
+                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Lead</th>
+                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Empresa</th>
+                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Teléfono</th>
+                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Presupuesto</th>
+                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Evento</th>
+                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Asesor</th>
+                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Registro</th>
+                                <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             <tr v-for="lead in leads.data" :key="lead.id" class="hover:bg-gray-50 transition-colors">
                                 <!-- Lead info -->
-                                <td class="px-6 py-4">
+                                <td class="px-4 py-4">
                                     <div class="flex items-center space-x-3">
                                         <div class="w-9 h-9 rounded-full bg-black flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
                                             {{ lead.first_name?.[0] || '' }}{{ lead.last_name?.[0] || '' }}
                                         </div>
                                         <div class="min-w-0">
-                                            <p class="font-medium text-gray-900 truncate">{{ lead.first_name }} {{ lead.last_name }}</p>
-                                            <p v-if="lead.company" class="text-gray-400 text-xs truncate">{{ lead.company }}</p>
+                                            <p class="font-medium text-gray-900 text-sm">{{ lead.first_name }} {{ lead.last_name }}</p>
                                             <p class="text-gray-500 text-xs truncate">{{ lead.email }}</p>
                                         </div>
                                     </div>
                                 </td>
 
+                                <!-- Company -->
+                                <td class="px-4 py-4 text-sm text-gray-700">
+                                    <span v-if="lead.company_name">{{ lead.company_name }}</span>
+                                    <span v-else class="text-gray-400">—</span>
+                                </td>
+
                                 <!-- Phone -->
-                                <td class="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+                                <td class="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
                                     {{ lead.phone || '—' }}
                                 </td>
 
                                 <!-- Budget -->
-                                <td class="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+                                <td class="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
                                     {{ lead.budget || '—' }}
                                 </td>
 
                                 <!-- Event -->
-                                <td class="px-6 py-4 text-sm text-gray-600">
-                                    <span v-if="lead.event" class="truncate block max-w-32">{{ lead.event.name }}</span>
+                                <td class="px-4 py-4 text-sm text-gray-600">
+                                    <span v-if="lead.event">{{ lead.event.name }}</span>
                                     <span v-else class="text-gray-400">—</span>
                                 </td>
 
                                 <!-- Status (clickable badge with dropdown) -->
-                                <td class="px-6 py-4" @click.stop>
+                                <td class="px-4 py-4" @click.stop>
                                     <div class="relative">
                                         <button @click="toggleStatusDropdown(lead.id)"
                                             class="text-xs font-medium rounded-full px-2.5 py-1 cursor-pointer border border-transparent hover:border-gray-300 transition-colors"
@@ -278,7 +283,7 @@ function advisorName(lead) {
                                 </td>
 
                                 <!-- Advisor -->
-                                <td class="px-6 py-4" @click.stop>
+                                <td class="px-4 py-4" @click.stop>
                                     <div class="relative">
                                         <button v-if="isLeader" @click="toggleAdvisorDropdown(lead.id)"
                                             class="text-xs font-medium rounded-full px-2.5 py-1 cursor-pointer transition-colors"
@@ -312,17 +317,17 @@ function advisorName(lead) {
                                 </td>
 
                                 <!-- Last contacted -->
-                                <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                                <td class="px-4 py-4 text-sm text-gray-500 whitespace-nowrap">
                                     {{ timeAgo(lead.last_contacted_at) }}
                                 </td>
 
                                 <!-- Created at -->
-                                <td class="px-6 py-4 text-gray-500 text-sm whitespace-nowrap">
+                                <td class="px-4 py-4 text-gray-500 text-sm whitespace-nowrap">
                                     {{ formatDate(lead.created_at) }}
                                 </td>
 
                                 <!-- Actions -->
-                                <td class="px-6 py-4" @click.stop>
+                                <td class="px-4 py-4" @click.stop>
                                     <div class="flex items-center justify-end">
                                         <Link :href="`/admin/sales/leads/${lead.id}`"
                                             class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors cursor-pointer"
@@ -342,7 +347,7 @@ function advisorName(lead) {
                 </div>
 
                 <!-- Pagination -->
-                <div v-if="leads.last_page > 1" class="border-t border-gray-200 px-6 py-4 flex items-center justify-between">
+                <div v-if="leads.last_page > 1" class="border-t border-gray-200 px-4 py-4 flex items-center justify-between">
                     <p class="text-sm text-gray-500">Mostrando {{ leads.from }}–{{ leads.to }} de {{ leads.total }}</p>
                     <div class="flex gap-1">
                         <Link v-for="link in leads.links" :key="link.label" :href="link.url || '#'" v-html="link.label"
