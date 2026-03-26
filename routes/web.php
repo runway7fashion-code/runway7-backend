@@ -271,6 +271,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('calendar', [LeadController::class, 'calendar'])->name('calendar');
                 Route::get('calendar/events', [LeadController::class, 'calendarEvents'])->name('calendar.events');
             });
+            // Bot messages API (all sales users)
+            Route::get('bot/messages', [LeadController::class, 'botMessages'])->name('bot.messages');
+            Route::post('bot/mark-read', [LeadController::class, 'botMarkRead'])->name('bot.mark-read');
+            Route::post('bot/mark-all-read', [LeadController::class, 'botMarkAllRead'])->name('bot.mark-all-read');
         });
 
         // API de notificaciones (polling)

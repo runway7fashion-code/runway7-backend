@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DesignerLead;
 use App\Models\Event;
 use App\Models\LeadActivity;
+use App\Models\SalesBotMessage;
 use App\Models\User;
 use App\Services\LeadAssignmentService;
 use Illuminate\Http\Request;
@@ -394,5 +395,42 @@ class LeadController extends Controller
         ]);
 
         return response()->json($events);
+    }
+
+    public function botMessages()
+    {
+        $messages = SalesBotMessage::where('user_id', auth()->id())
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get();
+
+        $unreadCount = SalesBotMessage::where('user_id', auth()->id())
+            ->where('is_read', false)
+            ->count();
+
+        return response()->json([
+            'messages'     => $messages,
+            'unread_count' => $unreadCount,
+        ]);
+    }
+
+    public function botMarkRead(Request $request)
+    {
+        $request->validate(['id' => 'required|exists:sales_bot_messages,id']);
+
+        SalesBotMessage::where('id', $request->id)
+            ->where('user_id', auth()->id())
+            ->update(['is_read' => true]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function botMarkAllRead()
+    {
+        SalesBotMessage::where('user_id', auth()->id())
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
+
+        return response()->json(['ok' => true]);
     }
 }

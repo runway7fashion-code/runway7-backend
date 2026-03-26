@@ -86,6 +86,63 @@ const salesItems = computed(() => {
     return items;
 });
 
+// Sales Bot Widget
+const showBotWidget = computed(() => hasSection('sales_leads'));
+const botOpen = ref(false);
+const botMessages = ref([]);
+const botUnreadCount = ref(0);
+let botInterval = null;
+
+async function fetchBotMessages() {
+    if (!showBotWidget.value) return;
+    try {
+        const res = await fetch('/admin/sales/bot/messages', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+        if (res.ok) {
+            const data = await res.json();
+            botMessages.value = data.messages;
+            botUnreadCount.value = data.unread_count;
+        }
+    } catch(e) {}
+}
+
+async function markBotRead(id) {
+    try {
+        await fetch('/admin/sales/bot/mark-read', {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] || '') },
+            body: JSON.stringify({ id }),
+        });
+        const msg = botMessages.value.find(m => m.id === id);
+        if (msg) { msg.is_read = true; botUnreadCount.value = Math.max(0, botUnreadCount.value - 1); }
+    } catch(e) {}
+}
+
+async function markAllBotRead() {
+    try {
+        await fetch('/admin/sales/bot/mark-all-read', {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] || '') },
+        });
+        botMessages.value.forEach(m => m.is_read = true);
+        botUnreadCount.value = 0;
+    } catch(e) {}
+}
+
+function botTypeIcon(type) {
+    const icons = { new_lead: '🆕', reminder: '⏰', overdue: '🔴', alert: '⚠️', info: 'ℹ️', converted: '🎉' };
+    return icons[type] || '📌';
+}
+
+function botTimeAgo(date) {
+    const d = new Date(date);
+    const now = new Date();
+    const diff = Math.floor((now - d) / 1000);
+    if (diff < 60) return 'ahora';
+    if (diff < 3600) return Math.floor(diff / 60) + 'min';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h';
+    return Math.floor(diff / 86400) + 'd';
+}
+
 const showSettings = computed(() => hasSection('settings'));
 const settingsOpen = ref(page.url.startsWith('/admin/settings'));
 const settingsItems = [
@@ -191,9 +248,12 @@ onMounted(() => {
     notifInterval = setInterval(fetchNotifications, 30000);
     document.addEventListener('click', closeNotifOnOutsideClick);
     document.addEventListener('click', unlockAudio);
+    fetchBotMessages();
+    botInterval = setInterval(fetchBotMessages, 60000);
 });
 onUnmounted(() => {
     clearInterval(notifInterval);
+    clearInterval(botInterval);
     document.removeEventListener('click', closeNotifOnOutsideClick);
     document.removeEventListener('click', unlockAudio);
 });
@@ -399,6 +459,63 @@ function logout() {
             <main class="flex-1 px-8 py-6">
                 <slot />
             </main>
+        </div>
+    </div>
+
+    <!-- Sales Bot Widget -->
+    <div v-if="showBotWidget" class="fixed bottom-6 right-6 z-50">
+        <!-- Bot button -->
+        <button v-if="!botOpen" @click="botOpen = true" class="relative w-14 h-14 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+            <span v-if="botUnreadCount > 0" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{{ botUnreadCount > 9 ? '9+' : botUnreadCount }}</span>
+        </button>
+
+        <!-- Bot panel -->
+        <div v-if="botOpen" class="w-80 h-[480px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden">
+            <!-- Header -->
+            <div class="bg-black text-white px-4 py-3 flex items-center justify-between flex-shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">🤖</span>
+                    <div>
+                        <div class="text-sm font-semibold">Sales Bot</div>
+                        <div class="text-xs text-gray-400">Runway 7 CRM</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button v-if="botUnreadCount > 0" @click="markAllBotRead" class="text-xs text-gray-400 hover:text-white">Leer todo</button>
+                    <button @click="botOpen = false" class="text-gray-400 hover:text-white text-lg leading-none">&times;</button>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            <div class="flex-1 overflow-y-auto p-3 space-y-2">
+                <div v-if="botMessages.length === 0" class="text-center text-gray-400 text-sm mt-16">
+                    <span class="text-3xl block mb-2">🤖</span>
+                    No hay mensajes aún
+                </div>
+                <div v-for="msg in botMessages" :key="msg.id"
+                    @click="!msg.is_read && markBotRead(msg.id)"
+                    :class="['rounded-xl p-3 text-sm transition cursor-pointer', msg.is_read ? 'bg-gray-50' : 'bg-blue-50 border border-blue-100']">
+                    <div class="flex items-start gap-2">
+                        <span class="text-base flex-shrink-0 mt-0.5">{{ botTypeIcon(msg.type) }}</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-1">
+                                <span class="font-semibold text-gray-900 text-xs">{{ msg.title }}</span>
+                                <span class="text-[10px] text-gray-400 flex-shrink-0">{{ botTimeAgo(msg.created_at) }}</span>
+                            </div>
+                            <p class="text-gray-600 text-xs mt-0.5 whitespace-pre-line leading-relaxed">{{ msg.message }}</p>
+                            <a v-if="msg.action_url" :href="msg.action_url" class="inline-block mt-1.5 text-[11px] font-medium text-blue-600 hover:text-blue-800">
+                                {{ msg.action_label || 'Ver detalle' }} →
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="border-t border-gray-100 px-4 py-2 flex-shrink-0">
+                <p class="text-[10px] text-gray-400 text-center">Verificaciones cada hora · Recordatorios automáticos</p>
+            </div>
         </div>
     </div>
 </template>

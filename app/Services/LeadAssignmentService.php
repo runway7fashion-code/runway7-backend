@@ -7,6 +7,7 @@ use App\Models\LeadActivity;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
+use App\Services\SalesBotService;
 
 class LeadAssignmentService
 {
@@ -49,6 +50,9 @@ class LeadAssignmentService
             'status'      => 'completed',
             'completed_at'=> now(),
         ]);
+
+        // Send bot message to advisor
+        (new SalesBotService())->notifyNewLead($lead, $nextAdvisor);
 
         return $nextAdvisor;
     }
