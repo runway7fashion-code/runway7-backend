@@ -12,6 +12,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('volunteers/events', [App\Http\Controllers\Api\V1\VolunteerRegistrationController::class, 'events']);
         Route::post('media/register', [App\Http\Controllers\Api\V1\MediaRegistrationController::class, 'store']);
         Route::get('media/events', [App\Http\Controllers\Api\V1\MediaRegistrationController::class, 'events']);
+        Route::post('leads/register', [App\Http\Controllers\Api\V1\LeadRegistrationController::class, 'register']);
+        Route::get('leads/events', [App\Http\Controllers\Api\V1\LeadRegistrationController::class, 'events']);
         Route::post('check-email', function (\Illuminate\Http\Request $request) {
             $request->validate(['email' => 'required|email', 'role' => 'required|string']);
             $user = \App\Models\User::withTrashed()->where('email', $request->email)->first();

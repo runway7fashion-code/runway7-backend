@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\VolunteerController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\SalesController;
+use App\Http\Controllers\Admin\LeadController;
 use App\Http\Controllers\Admin\AttendanceController;
 
 Route::get('/', function () {
@@ -250,6 +251,25 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::patch('designers/{registration}', [SalesController::class, 'update'])->name('designers.update');
                 Route::post('designers/{registration}/documents', [SalesController::class, 'uploadDocument'])->name('designers.upload-document');
                 Route::delete('documents/{document}', [SalesController::class, 'deleteDocument'])->name('documents.destroy');
+            });
+            Route::middleware('section:sales_leads')->group(function () {
+                Route::get('leads', [LeadController::class, 'index'])->name('leads.index');
+                Route::get('leads/create', [LeadController::class, 'create'])->name('leads.create');
+                Route::post('leads', [LeadController::class, 'store'])->name('leads.store');
+                Route::get('leads/search', [LeadController::class, 'search'])->name('leads.search');
+                Route::get('leads/{lead}', [LeadController::class, 'show'])->name('leads.show');
+                Route::get('leads/{lead}/edit', [LeadController::class, 'edit'])->name('leads.edit');
+                Route::put('leads/{lead}', [LeadController::class, 'update'])->name('leads.update');
+                Route::patch('leads/{lead}/status', [LeadController::class, 'updateStatus'])->name('leads.update-status');
+                Route::patch('leads/{lead}/assign', [LeadController::class, 'assign'])->name('leads.assign');
+                Route::post('leads/{lead}/activity', [LeadController::class, 'addActivity'])->name('leads.add-activity');
+                Route::patch('activities/{activity}/complete', [LeadController::class, 'completeActivity'])->name('leads.complete-activity');
+                Route::delete('leads/{lead}', [LeadController::class, 'destroy'])->name('leads.destroy');
+                Route::post('toggle-availability', [LeadController::class, 'toggleAvailability'])->name('toggle-availability');
+            });
+            Route::middleware('section:sales_calendar')->group(function () {
+                Route::get('calendar', [LeadController::class, 'calendar'])->name('calendar');
+                Route::get('calendar/events', [LeadController::class, 'calendarEvents'])->name('calendar.events');
             });
         });
 

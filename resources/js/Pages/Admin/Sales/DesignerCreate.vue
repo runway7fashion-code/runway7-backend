@@ -1,8 +1,9 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { Link, useForm } from '@inertiajs/vue3';
-import { ref, computed, watch } from 'vue';
-import { DocumentArrowUpIcon, TrashIcon } from '@heroicons/vue/24/outline';
+import { Link, useForm, usePage } from '@inertiajs/vue3';
+import { ref, computed, watch, onMounted } from 'vue';
+import { DocumentArrowUpIcon, TrashIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline';
+import axios from 'axios';
 
 const props = defineProps({
     events: Array,
@@ -37,6 +38,59 @@ const phoneCodes = [
 
 const phoneCode = ref('+1');
 const phoneNumber = ref('');
+
+// Lead search autocomplete
+const leadSearch = ref('');
+const leadResults = ref([]);
+const showLeadDropdown = ref(false);
+const selectedLead = ref(null);
+let leadSearchTimeout = null;
+
+watch(leadSearch, (val) => {
+    clearTimeout(leadSearchTimeout);
+    if (!val || val.length < 2) { leadResults.value = []; showLeadDropdown.value = false; return; }
+    leadSearchTimeout = setTimeout(async () => {
+        try {
+            const { data } = await axios.get('/admin/sales/leads/search', { params: { q: val } });
+            leadResults.value = data;
+            showLeadDropdown.value = data.length > 0;
+        } catch(e) { leadResults.value = []; }
+    }, 300);
+});
+
+function selectLead(lead) {
+    selectedLead.value = lead;
+    leadSearch.value = '';
+    showLeadDropdown.value = false;
+    form.first_name = lead.first_name || '';
+    form.last_name = lead.last_name || '';
+    form.email = lead.email || '';
+    form.brand_name = lead.company_name || '';
+    if (lead.phone) {
+        const match = lead.phone.match(/^(\+\d+)\s*(.*)$/);
+        if (match) { phoneCode.value = match[1]; phoneNumber.value = match[2]; }
+        else phoneNumber.value = lead.phone;
+    }
+    if (lead.event_id) form.event_id = lead.event_id;
+}
+
+function clearLead() {
+    selectedLead.value = null;
+    form.first_name = ''; form.last_name = ''; form.email = ''; form.brand_name = '';
+    phoneNumber.value = ''; phoneCode.value = '+1'; form.event_id = '';
+}
+
+// Check for lead_id in URL params
+onMounted(() => {
+    const params = new URLSearchParams(window.location.search);
+    const leadId = params.get('lead_id');
+    if (leadId) {
+        axios.get('/admin/sales/leads/search', { params: { q: leadId } }).then(({ data }) => {
+            const lead = data.find(l => l.id == leadId);
+            if (lead) selectLead(lead);
+        });
+    }
+});
 
 const form = useForm({
     first_name: '',
@@ -112,6 +166,30 @@ function submit() {
         </template>
 
         <div>
+            <!-- Lead autocomplete -->
+            <div class="bg-white rounded-xl border border-gray-200 p-4 mb-6">
+                <div class="flex items-center gap-3">
+                    <MagnifyingGlassIcon class="w-5 h-5 text-gray-400 flex-shrink-0" />
+                    <div class="flex-1 relative">
+                        <input v-if="!selectedLead" v-model="leadSearch" type="text" placeholder="Buscar prospecto existente para autocompletar..." class="w-full border-0 p-0 text-sm focus:ring-0 placeholder-gray-400" />
+                        <div v-else class="flex items-center gap-2">
+                            <span class="text-sm font-medium">{{ selectedLead.first_name }} {{ selectedLead.last_name }}</span>
+                            <span class="text-xs text-gray-500">{{ selectedLead.company_name }} — {{ selectedLead.email }}</span>
+                            <button type="button" @click="clearLead" class="text-xs text-red-500 hover:text-red-700 ml-2">Quitar</button>
+                        </div>
+                        <div v-if="showLeadDropdown" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-30 max-h-48 overflow-y-auto">
+                            <button v-for="l in leadResults" :key="l.id" type="button" @click="selectLead(l)" class="w-full text-left px-3 py-2 hover:bg-gray-50 flex justify-between items-center">
+                                <div>
+                                    <span class="text-sm font-medium">{{ l.first_name }} {{ l.last_name }}</span>
+                                    <span class="text-xs text-gray-500 ml-2">{{ l.company_name }}</span>
+                                </div>
+                                <span class="text-xs text-gray-400">{{ l.email }}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <form @submit.prevent="submit">
                 <div class="flex flex-col lg:grid lg:grid-cols-2 gap-6 lg:items-start">
                     <!-- Columna izquierda: Info del Diseñador + Documentos (lg) -->
