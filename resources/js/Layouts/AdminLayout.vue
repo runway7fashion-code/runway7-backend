@@ -78,10 +78,10 @@ const showSales = computed(() => hasSection('sales_dashboard') || hasSection('sa
 const salesItems = computed(() => {
     const items = [];
     if (hasSection('sales_dashboard')) items.push({ name: 'Dashboard', href: '/admin/sales/dashboard', icon: PresentationChartBarIcon });
-    if (hasSection('sales_leads')) items.push({ name: 'Prospectos', href: '/admin/sales/leads', icon: UserPlusIcon });
+    if (hasSection('sales_designers')) items.push({ name: 'Diseñadores', href: '/admin/sales/designers', icon: PaintBrushIcon });
+    if (hasSection('sales_leads')) items.push({ name: 'Leads web', href: '/admin/sales/leads', icon: UserPlusIcon });
     if (hasSection('sales_calendar')) items.push({ name: 'Calendario', href: '/admin/sales/calendar', icon: CalendarDaysIcon });
     if (hasSection('sales_dashboard') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Sales History', href: '/admin/sales/history', icon: ChartBarIcon });
-    if (hasSection('sales_designers')) items.push({ name: 'Diseñadores', href: '/admin/sales/designers', icon: PaintBrushIcon });
     if (hasSection('designer_packages') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Paquetes', href: '/admin/settings/designer-packages', icon: CurrencyDollarIcon });
     return items;
 });

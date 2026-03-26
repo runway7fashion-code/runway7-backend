@@ -316,11 +316,6 @@ function advisorName(lead) {
                                     </div>
                                 </td>
 
-                                <!-- Last contacted -->
-                                <td class="px-4 py-4 text-sm text-gray-500 whitespace-nowrap">
-                                    {{ timeAgo(lead.last_contacted_at) }}
-                                </td>
-
                                 <!-- Created at -->
                                 <td class="px-4 py-4 text-gray-500 text-sm whitespace-nowrap">
                                     {{ formatDate(lead.created_at) }}
