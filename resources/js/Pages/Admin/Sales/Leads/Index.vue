@@ -50,7 +50,7 @@ function changeStatus(lead, newStatus) {
 
 // Inline advisor assignment (leader only)
 function changeAdvisor(lead, advisorId) {
-    router.patch(`/admin/sales/leads/${lead.id}`, { assigned_to: advisorId || null }, { preserveScroll: true });
+    router.patch(`/admin/sales/leads/${lead.id}/assign`, { assigned_to: advisorId }, { preserveScroll: true });
 }
 
 // Toggle availability for sales users
@@ -115,8 +115,8 @@ const statsCards = computed(() => {
 });
 
 function advisorName(lead) {
-    if (!lead.advisor) return null;
-    return `${lead.advisor.first_name} ${lead.advisor.last_name}`;
+    if (!lead.assigned_to || typeof lead.assigned_to !== 'object') return null;
+    return `${lead.assigned_to.first_name} ${lead.assigned_to.last_name}`;
 }
 </script>
 
