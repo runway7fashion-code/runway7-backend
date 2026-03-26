@@ -320,7 +320,7 @@ const sortedActivities = computed(() => {
                         <!-- Assigned to -->
                         <div v-if="isLeader">
                             <label class="block text-xs font-medium text-gray-500 mb-1.5">Asignado a</label>
-                            <select @change="reassignAdvisor($event.target.value)" :value="lead.assignedTo?.id || ''"
+                            <select @change="reassignAdvisor($event.target.value)" :value="(typeof lead.assigned_to === 'object' && lead.assigned_to) ? lead.assigned_to.id : (lead.assigned_to || '')"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black focus:border-black">
                                 <option value="">Sin asignar</option>
                                 <option v-for="advisor in advisors" :key="advisor.id" :value="advisor.id">
@@ -328,9 +328,9 @@ const sortedActivities = computed(() => {
                                 </option>
                             </select>
                         </div>
-                        <div v-else-if="lead.assignedTo">
+                        <div v-else-if="lead.assigned_to">
                             <label class="block text-xs font-medium text-gray-500 mb-1.5">Asignado a</label>
-                            <p class="text-sm text-gray-700 font-medium">{{ lead.assignedTo.first_name }} {{ lead.assignedTo.last_name }}</p>
+                            <p class="text-sm text-gray-700 font-medium">{{ lead.assigned_to.first_name }} {{ lead.assigned_to.last_name }}</p>
                         </div>
 
                         <!-- Last contacted -->
@@ -341,12 +341,12 @@ const sortedActivities = computed(() => {
 
                         <!-- Convert to designer -->
                         <div class="pt-3 border-t border-gray-100">
-                            <div v-if="lead.convertedDesigner">
+                            <div v-if="lead.converted_designer">
                                 <p class="text-xs text-gray-500 mb-1">Convertido a Designer</p>
-                                <Link :href="`/admin/sales/designers/${lead.convertedDesigner.id}`"
+                                <Link :href="`/admin/sales/designers/${lead.converted_designer.id}`"
                                     class="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 bg-green-50 px-3 py-1.5 rounded-lg hover:bg-green-100 transition-colors">
                                     <CheckCircleIcon class="w-4 h-4" />
-                                    {{ lead.convertedDesigner.first_name }} {{ lead.convertedDesigner.last_name }}
+                                    {{ lead.converted_designer.first_name }} {{ lead.converted_designer.last_name }}
                                 </Link>
                             </div>
                             <Link v-else-if="lead.status !== 'converted'"
