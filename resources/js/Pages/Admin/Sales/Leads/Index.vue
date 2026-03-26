@@ -204,8 +204,8 @@ function advisorName(lead) {
             </div>
 
             <!-- Table -->
-            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <div class="overflow-x-auto">
+            <div class="bg-white rounded-xl border border-gray-200">
+                <div>
                     <table class="w-full">
                         <thead class="bg-gray-50 border-b border-gray-200">
                             <tr>
