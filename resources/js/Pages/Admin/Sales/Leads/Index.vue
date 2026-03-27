@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import { EyeIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -118,6 +118,15 @@ function advisorName(lead) {
     if (!lead.assigned_to || typeof lead.assigned_to !== 'object') return null;
     return `${lead.assigned_to.first_name} ${lead.assigned_to.last_name}`;
 }
+
+// Auto-refresh when new lead notification arrives
+function onNotification(e) {
+    if (e.detail?.data?.type === 'new_designer_lead') {
+        router.reload({ only: ['leads', 'stats'], preserveScroll: true });
+    }
+}
+onMounted(() => window.addEventListener('notification:received', onNotification));
+onUnmounted(() => window.removeEventListener('notification:received', onNotification));
 </script>
 
 <template>
