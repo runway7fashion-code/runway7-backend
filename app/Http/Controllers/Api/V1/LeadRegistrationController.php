@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Mail\LeadConfirmationMail;
 use App\Models\DesignerLead;
 use App\Models\Event;
 use App\Models\LeadActivity;
 use App\Models\User;
+use Illuminate\Support\Facades\Mail;
 use App\Notifications\NewDesignerLead;
 use App\Services\LeadAssignmentService;
 use Illuminate\Http\Request;
@@ -93,6 +95,15 @@ class LeadRegistrationController extends Controller
         if ($assignedTo) {
             $lead->refresh();
             $assignmentService->scheduleInitialCall($lead);
+        }
+
+        // Send confirmation email to the lead
+        try {
+            $lead->load('event');
+            Mail::to($lead->email, "{$lead->first_name} {$lead->last_name}")
+                ->send(new LeadConfirmationMail($lead));
+        } catch (\Exception $e) {
+            \Log::warning('Lead confirmation email failed: ' . $e->getMessage());
         }
 
         // Notify leader(s) and assigned advisor
