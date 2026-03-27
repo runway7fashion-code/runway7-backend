@@ -93,7 +93,7 @@ function timeAgo(dateStr) {
 function formatDate(dateStr) {
     if (!dateStr) return '—';
     const d = new Date(dateStr);
-    return d.toLocaleDateString('es-US');
+    return d.toLocaleDateString('es-US') + '\n' + d.toLocaleTimeString('es-US', { hour: '2-digit', minute: '2-digit' });
 }
 
 // Stats cards config
@@ -326,7 +326,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                 </td>
 
                                 <!-- Created at -->
-                                <td class="px-4 py-4 text-gray-500 text-sm whitespace-nowrap">
+                                <td class="px-4 py-4 text-gray-500 text-xs whitespace-pre-line">
                                     {{ formatDate(lead.created_at) }}
                                 </td>
 
