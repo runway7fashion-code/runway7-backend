@@ -366,7 +366,7 @@ const sortedActivities = computed(() => {
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-gray-500 mb-1">Titulo</label>
+                                <label class="block text-xs font-medium text-gray-500 mb-1">Titulo *</label>
                                 <input v-model="activityForm.title" type="text" placeholder="Ej: Llamada de seguimiento"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black focus:border-black" />
                                 <p v-if="activityForm.errors.title" class="text-xs text-red-500 mt-1">{{ activityForm.errors.title }}</p>
