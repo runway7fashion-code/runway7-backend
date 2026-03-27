@@ -222,9 +222,17 @@ function closeModal() {
 
 // ── Complete activity ──────────────────────────────────────────────
 async function completeActivity(evt) {
+    if (!evt || !evt.id) return;
     try {
-        await axios.patch(`/admin/sales/activities/${evt.id}/complete`);
+        const token = document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1];
+        await axios.patch(`/admin/sales/activities/${evt.id}/complete`, {}, {
+            headers: {
+                'X-XSRF-TOKEN': token ? decodeURIComponent(token) : '',
+                'Accept': 'application/json',
+            }
+        });
         evt.status = 'completed';
+        showModal.value = false;
         fetchEvents();
     } catch (e) {
         console.error('Error completing activity', e);
