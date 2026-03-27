@@ -267,11 +267,8 @@ const sortedActivities = computed(() => {
                             <div v-if="lead.event" class="flex justify-between sm:flex-col sm:gap-0.5 sm:col-span-2">
                                 <dt class="text-gray-500">Evento de interes</dt>
                                 <dd class="font-medium text-gray-900">
-                                    <Link :href="`/admin/events/${lead.event.id}`" class="text-blue-600 hover:underline">
-                                        {{ lead.event.name }}
-                                    </Link>
+                                    {{ lead.event.name }}
                                     <span class="text-gray-400 text-xs ml-1" v-if="lead.event.city">· {{ lead.event.city }}</span>
-                                    <span class="text-gray-400 text-xs ml-1" v-if="lead.event.start_date">· {{ formatDate(lead.event.start_date) }}</span>
                                 </dd>
                             </div>
                         </dl>
