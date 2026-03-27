@@ -6,6 +6,7 @@ import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 const props = defineProps({
     events: Array,
     advisors: Array,
+    isLeader: Boolean,
 });
 
 const form = useForm({
@@ -201,13 +202,13 @@ function submit() {
                     </div>
                 </div>
 
-                <!-- Section 4: Asignacion -->
+                <!-- Section 4: Asignacion y Notas -->
                 <div class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
-                    <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">Asignacion</h3>
+                    <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">{{ isLeader ? 'Asignacion y Notas' : 'Notas' }}</h3>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div v-if="isLeader" class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Advisor</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Asignar a</label>
                             <select v-model="form.assigned_to"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
                                 <option value="">-- Sin asignar --</option>

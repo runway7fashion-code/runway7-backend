@@ -451,12 +451,21 @@ const sortedActivities = computed(() => {
         <Teleport to="body">
             <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center">
                 <div class="absolute inset-0 bg-black/50" @click="showDeleteModal = false"></div>
-                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
                     <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
                         <TrashIcon class="w-6 h-6 text-red-500" />
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Eliminar a {{ lead.first_name }} {{ lead.last_name }}?</h3>
-                    <p class="text-sm text-gray-500 mb-5">Esta accion es permanente y eliminara todas las actividades asociadas.</p>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2 text-center">Eliminar a {{ lead.first_name }} {{ lead.last_name }}?</h3>
+                    <div class="bg-red-50 border border-red-100 rounded-lg p-3 mb-4 text-sm text-gray-700">
+                        <p class="font-medium text-red-700 mb-2">Se eliminara permanentemente:</p>
+                        <ul class="space-y-1 text-xs text-gray-600">
+                            <li>- Prospecto: <span class="font-medium">{{ lead.first_name }} {{ lead.last_name }}</span> ({{ lead.company_name }})</li>
+                            <li>- {{ lead.activities?.length || 0 }} actividades registradas (llamadas, emails, reuniones, notas)</li>
+                            <li v-if="lead.activities?.filter(a => a.status === 'pending').length">- <span class="text-red-600 font-medium">{{ lead.activities.filter(a => a.status === 'pending').length }} actividades pendientes en el calendario</span></li>
+                            <li>- Mensajes del bot relacionados</li>
+                        </ul>
+                        <p v-if="lead.converted_designer" class="mt-2 text-xs text-green-700 font-medium">El diseñador convertido NO sera afectado.</p>
+                    </div>
                     <div class="flex gap-3">
                         <button @click="showDeleteModal = false" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancelar</button>
                         <button @click="deleteLead" class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Eliminar</button>

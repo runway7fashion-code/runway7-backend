@@ -136,12 +136,17 @@ class LeadController extends Controller
 
     public function create()
     {
+        $user = auth()->user();
+        $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
         $events = Event::whereNull('deleted_at')->select('id', 'name')->orderBy('start_date', 'desc')->get();
-        $advisors = User::where('role', 'sales')->whereNull('deleted_at')->select('id', 'first_name', 'last_name')->get();
+        $advisors = $isLeader
+            ? User::where('role', 'sales')->whereNull('deleted_at')->select('id', 'first_name', 'last_name')->get()
+            : collect();
 
         return Inertia::render('Admin/Sales/Leads/Create', [
             'events'   => $events,
             'advisors' => $advisors,
+            'isLeader' => $isLeader,
         ]);
     }
 
@@ -165,6 +170,13 @@ class LeadController extends Controller
             'assigned_to'            => 'nullable|exists:users,id',
             'notes'                  => 'nullable|string',
         ]);
+
+        // Auto-assign to current user if not leader
+        $user = auth()->user();
+        $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
+        if (!$isLeader) {
+            $validated['assigned_to'] = $user->id;
+        }
 
         $lead = DesignerLead::create(array_merge($validated, [
             'status' => 'new',
@@ -354,7 +366,15 @@ class LeadController extends Controller
 
     public function destroy(DesignerLead $lead)
     {
-        $lead->delete();
+        // Delete related activities (soft delete doesn't trigger cascade)
+        $lead->activities()->delete();
+
+        // Delete bot messages that reference this lead
+        SalesBotMessage::where('action_url', 'like', "%/leads/{$lead->id}%")
+            ->delete();
+
+        $lead->forceDelete();
+
         return redirect()->route('admin.sales.leads.index')->with('success', 'Prospecto eliminado.');
     }
 
