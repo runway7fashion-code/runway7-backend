@@ -293,6 +293,35 @@ class LeadController extends Controller
             $lead->update(['last_contacted_at' => now()]);
         }
 
+        // Immediate bot notification if activity is scheduled within the next hour
+        if ($validated['scheduled_at']) {
+            $scheduledTime = \Carbon\Carbon::parse($validated['scheduled_at']);
+            $minutesUntil = now()->diffInMinutes($scheduledTime, false);
+
+            if ($minutesUntil > 0 && $minutesUntil <= 60) {
+                SalesBotMessage::create([
+                    'user_id'      => auth()->id(),
+                    'type'         => 'reminder',
+                    'title'        => "Actividad en {$minutesUntil} min: {$activity->title}",
+                    'message'      => "Tienes programado a las {$scheduledTime->format('g:i A')}: {$activity->title} — {$lead->full_name} ({$lead->company_name})",
+                    'action_url'   => "/admin/sales/leads/{$lead->id}",
+                    'action_label' => 'Ver prospecto',
+                ]);
+            }
+
+            // If activity is already overdue, notify immediately
+            if ($minutesUntil < 0) {
+                SalesBotMessage::create([
+                    'user_id'      => auth()->id(),
+                    'type'         => 'overdue',
+                    'title'        => "Actividad vencida: {$activity->title}",
+                    'message'      => "Esta actividad ya pasó su hora programada ({$scheduledTime->format('g:i A')}): {$activity->title} — {$lead->full_name}",
+                    'action_url'   => "/admin/sales/leads/{$lead->id}",
+                    'action_label' => 'Ver prospecto',
+                ]);
+            }
+        }
+
         return back()->with('success', 'Actividad registrada.');
     }
 

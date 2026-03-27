@@ -231,6 +231,10 @@ const sortedActivities = computed(() => {
                                 <GlobeAltIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
                                 <a :href="lead.website_url" target="_blank" class="text-blue-600 hover:underline truncate">{{ lead.website_url }}</a>
                             </div>
+                            <div v-if="lead.preferred_contact_time" class="flex items-center gap-2">
+                                <ClockIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                <span class="text-gray-700">Prefiere contacto a las {{ lead.preferred_contact_time }}</span>
+                            </div>
                         </div>
                         <p v-if="!lead.email && !lead.phone && !lead.country && !lead.instagram && !lead.website_url"
                             class="text-sm text-gray-400 italic">Sin informacion de contacto.</p>
@@ -259,10 +263,6 @@ const sortedActivities = computed(() => {
                             <div class="flex justify-between sm:flex-col sm:gap-0.5">
                                 <dt class="text-gray-500">Shows pasados</dt>
                                 <dd class="font-medium text-gray-900">{{ lead.past_shows || '—' }}</dd>
-                            </div>
-                            <div class="flex justify-between sm:flex-col sm:gap-0.5">
-                                <dt class="text-gray-500">Horario preferido</dt>
-                                <dd class="font-medium text-gray-900">{{ lead.preferred_contact_time || '—' }}</dd>
                             </div>
                             <div v-if="lead.event" class="flex justify-between sm:flex-col sm:gap-0.5 sm:col-span-2">
                                 <dt class="text-gray-500">Evento de interes</dt>
@@ -343,7 +343,7 @@ const sortedActivities = computed(() => {
                         <div class="pt-3 border-t border-gray-100">
                             <div v-if="lead.converted_designer">
                                 <p class="text-xs text-gray-500 mb-1">Convertido a Designer</p>
-                                <Link :href="`/admin/sales/designers/${lead.converted_designer.id}`"
+                                <Link :href="`/admin/designers/${lead.converted_designer.id}`"
                                     class="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 bg-green-50 px-3 py-1.5 rounded-lg hover:bg-green-100 transition-colors">
                                     <CheckCircleIcon class="w-4 h-4" />
                                     {{ lead.converted_designer.first_name }} {{ lead.converted_designer.last_name }}

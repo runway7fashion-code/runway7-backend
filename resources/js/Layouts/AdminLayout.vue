@@ -99,8 +99,13 @@ async function fetchBotMessages() {
         const res = await fetch('/admin/sales/bot/messages', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
         if (res.ok) {
             const data = await res.json();
+            const prevUnread = botUnreadCount.value;
             botMessages.value = data.messages;
             botUnreadCount.value = data.unread_count;
+            // Play sound if new unread messages arrived
+            if (data.unread_count > prevUnread) {
+                playNotifSound();
+            }
         }
     } catch(e) {}
 }
@@ -249,7 +254,7 @@ onMounted(() => {
     document.addEventListener('click', closeNotifOnOutsideClick);
     document.addEventListener('click', unlockAudio);
     fetchBotMessages();
-    botInterval = setInterval(fetchBotMessages, 60000);
+    botInterval = setInterval(fetchBotMessages, 15000);
 });
 onUnmounted(() => {
     clearInterval(notifInterval);

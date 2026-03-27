@@ -140,14 +140,14 @@ const HOURS = Array.from({ length: 11 }, (_, i) => i + 8); // 8..18
 // ── Events per day lookup ──────────────────────────────────────────
 function eventsForDay(date) {
     return events.value.filter(e => {
-        const ed = new Date(e.scheduled_at);
+        const ed = new Date(e.start);
         return sameDay(ed, date);
     });
 }
 
 function eventsForHour(date, hour) {
     return events.value.filter(e => {
-        const ed = new Date(e.scheduled_at);
+        const ed = new Date(e.start);
         return sameDay(ed, date) && ed.getHours() === hour;
     });
 }
@@ -169,7 +169,8 @@ function typeLabel(type) {
 }
 
 function typeIcon(type) {
-    return props.activityTypes?.[type]?.icon || '';
+    const icons = { call: '📞', email: '📧', meeting: '👥', note: '📝', status_change: '🔄', assignment: '👤', system: '⚙️' };
+    return icons[type] || '📌';
 }
 
 // ── Format helpers ─────────────────────────────────────────────────
@@ -222,7 +223,7 @@ function closeModal() {
 // ── Complete activity ──────────────────────────────────────────────
 async function completeActivity(evt) {
     try {
-        await axios.patch(`/admin/sales/leads/${evt.lead_id}/activities/${evt.id}/complete`);
+        await axios.patch(`/admin/sales/activities/${evt.id}/complete`);
         evt.status = 'completed';
         fetchEvents();
     } catch (e) {
@@ -413,7 +414,7 @@ async function completeActivity(evt) {
                                     <h4 class="text-sm font-semibold text-gray-900">{{ evt.title || typeLabel(evt.type) }}</h4>
                                     <div v-if="evt.lead_name" class="text-xs text-gray-600 mt-0.5">
                                         {{ evt.lead_name }}
-                                        <span v-if="evt.lead_company" class="text-gray-400"> · {{ evt.lead_company }}</span>
+                                        <span v-if="evt.company" class="text-gray-400"> · {{ evt.company }}</span>
                                     </div>
                                     <p v-if="evt.description" class="text-xs text-gray-500 mt-1 line-clamp-2">{{ evt.description }}</p>
                                     <div class="flex items-center justify-end mt-2" v-if="evt.status === 'pending'">
@@ -488,13 +489,13 @@ async function completeActivity(evt) {
                             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                             <span>
                                 {{ selectedEvent.lead_name }}
-                                <span v-if="selectedEvent.lead_company" class="text-gray-400"> · {{ selectedEvent.lead_company }}</span>
+                                <span v-if="selectedEvent.company" class="text-gray-400"> · {{ selectedEvent.company }}</span>
                             </span>
                         </div>
 
-                        <div v-if="selectedEvent.advisor_name" class="flex items-center gap-2 text-gray-500">
+                        <div v-if="selectedEvent.advisor" class="flex items-center gap-2 text-gray-500">
                             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0"/></svg>
-                            <span>Asesor: {{ selectedEvent.advisor_name }}</span>
+                            <span>Asesor: {{ selectedEvent.advisor }}</span>
                         </div>
                     </div>
 

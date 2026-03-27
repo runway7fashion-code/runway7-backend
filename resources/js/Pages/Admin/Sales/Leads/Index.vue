@@ -139,11 +139,11 @@ function advisorName(lead) {
                         <span class="text-sm text-gray-600">Disponible para leads</span>
                         <button @click.stop="toggleAvailability"
                             class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
-                            :class="$page.props.auth?.user?.sales_is_available ? 'bg-green-500' : 'bg-gray-300'"
+                            :class="$page.props.auth?.user?.is_available ? 'bg-green-500' : 'bg-gray-300'"
                             role="switch"
-                            :aria-checked="$page.props.auth?.user?.sales_is_available">
+                            :aria-checked="$page.props.auth?.user?.is_available">
                             <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
-                                :class="$page.props.auth?.user?.sales_is_available ? 'translate-x-5' : 'translate-x-0'" />
+                                :class="$page.props.auth?.user?.is_available ? 'translate-x-5' : 'translate-x-0'" />
                         </button>
                     </div>
 
@@ -221,7 +221,7 @@ function advisorName(lead) {
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
-                            <tr v-for="lead in leads.data" :key="lead.id" class="hover:bg-gray-50 transition-colors">
+                            <tr v-for="lead in leads.data" :key="lead.id" class="hover:bg-gray-50 transition-colors cursor-pointer" @click="router.visit(`/admin/sales/leads/${lead.id}`)">
                                 <!-- Lead info -->
                                 <td class="px-4 py-4">
                                     <div class="flex items-center space-x-3">
@@ -306,7 +306,7 @@ function advisorName(lead) {
                                             <button v-for="adv in advisors" :key="adv.id"
                                                 @click="changeAdvisor(lead, adv.id); openAdvisorDropdown = null"
                                                 class="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-2 transition-colors"
-                                                :class="lead.assigned_to === adv.id ? 'font-semibold text-blue-700' : 'text-gray-700'">
+                                                :class="lead.assigned_to?.id === adv.id ? 'font-semibold text-blue-700' : 'text-gray-700'">
                                                 <span class="w-2 h-2 rounded-full flex-shrink-0"
                                                     :class="adv.is_available ? 'bg-green-500' : 'bg-gray-300'"></span>
                                                 {{ adv.first_name }} {{ adv.last_name }}
