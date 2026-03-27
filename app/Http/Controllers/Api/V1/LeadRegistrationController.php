@@ -26,8 +26,8 @@ class LeadRegistrationController extends Controller
 
     public function register(Request $request)
     {
-        // Honeypot check
-        if ($request->filled('website_url')) {
+        // Honeypot check (hidden field name="hp_website" in the form)
+        if ($request->filled('hp_website')) {
             return response()->json(['message' => 'Application received.'], 201);
         }
 

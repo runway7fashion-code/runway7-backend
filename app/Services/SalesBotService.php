@@ -30,9 +30,10 @@ class SalesBotService
      */
     public function checkOverdueActivities(): int
     {
+        $nowLima = now('America/Lima');
         $overdueActivities = LeadActivity::where('status', 'pending')
             ->whereNotNull('scheduled_at')
-            ->where('scheduled_at', '<', now())
+            ->where('scheduled_at', '<', $nowLima->format('Y-m-d H:i:s'))
             ->whereNotNull('user_id')
             ->with(['lead:id,first_name,last_name,company_name', 'user:id,first_name,last_name,email'])
             ->get();
@@ -84,9 +85,10 @@ class SalesBotService
      */
     public function checkUpcomingActivities(): int
     {
+        $nowLima = now('America/Lima');
         $upcoming = LeadActivity::where('status', 'pending')
             ->whereNotNull('scheduled_at')
-            ->whereBetween('scheduled_at', [now(), now()->addHour()])
+            ->whereBetween('scheduled_at', [$nowLima->format('Y-m-d H:i:s'), $nowLima->copy()->addHour()->format('Y-m-d H:i:s')])
             ->whereNotNull('user_id')
             ->with(['lead:id,first_name,last_name,company_name'])
             ->get();

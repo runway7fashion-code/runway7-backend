@@ -295,8 +295,9 @@ class LeadController extends Controller
 
         // Immediate bot notification if activity is scheduled within the next hour
         if ($validated['scheduled_at']) {
-            $scheduledTime = \Carbon\Carbon::parse($validated['scheduled_at']);
-            $minutesUntil = now()->diffInMinutes($scheduledTime, false);
+            $scheduledTime = \Carbon\Carbon::parse($validated['scheduled_at'], 'America/Lima');
+            $nowLima = now('America/Lima');
+            $minutesUntil = $nowLima->diffInMinutes($scheduledTime, false);
 
             if ($minutesUntil > 0 && $minutesUntil <= 60) {
                 SalesBotMessage::create([
