@@ -96,17 +96,21 @@ class LeadRegistrationController extends Controller
         }
 
         // Notify leader(s) and assigned advisor
-        $leaders = User::where('role', 'sales')
-            ->where('sales_type', 'lider')
-            ->whereNull('deleted_at')
-            ->get();
+        try {
+            $leaders = User::where('role', 'sales')
+                ->where('sales_type', 'lider')
+                ->whereNull('deleted_at')
+                ->get();
 
-        foreach ($leaders as $leader) {
-            $leader->notify(new NewDesignerLead($lead));
-        }
+            foreach ($leaders as $leader) {
+                $leader->notify(new NewDesignerLead($lead));
+            }
 
-        if ($assignedTo) {
-            $assignedTo->notify(new NewDesignerLead($lead));
+            if ($assignedTo) {
+                $assignedTo->notify(new NewDesignerLead($lead));
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Lead notification failed: ' . $e->getMessage());
         }
 
         return response()->json([

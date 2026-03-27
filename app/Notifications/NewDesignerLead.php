@@ -14,7 +14,7 @@ class NewDesignerLead extends Notification
 
     public function via($notifiable): array
     {
-        return ['database', 'broadcast'];
+        return ['database'];
     }
 
     public function toArray($notifiable): array
