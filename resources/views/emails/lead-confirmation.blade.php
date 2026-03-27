@@ -41,7 +41,7 @@
     <div class="email-card">
         <!-- Header -->
         <div class="header">
-            <h1>RUNWAY 7</h1>
+            <img src="{{ asset('images/logo.webp') }}" alt="Runway 7" style="max-width: 180px; height: auto; margin: 0 auto 8px auto; display: block;">
             <p>Fashion Week</p>
         </div>
 
@@ -57,6 +57,22 @@
                         <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; color: #888;">Name</td>
                         <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; color: #1a1a1a; font-weight: 600; text-align: right;">{{ $lead->first_name }} {{ $lead->last_name }}</td>
                     </tr>
+                    <tr>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; color: #888;">Email</td>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; color: #1a1a1a; font-weight: 600; text-align: right;">{{ $lead->email }}</td>
+                    </tr>
+                    @if($lead->phone)
+                    <tr>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; color: #888;">Phone</td>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; color: #1a1a1a; font-weight: 600; text-align: right;">{{ $lead->phone }}</td>
+                    </tr>
+                    @endif
+                    @if($lead->country)
+                    <tr>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; color: #888;">Country</td>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; color: #1a1a1a; font-weight: 600; text-align: right;">{{ $lead->country }}</td>
+                    </tr>
+                    @endif
                     <tr>
                         <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; color: #888;">Company</td>
                         <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; color: #1a1a1a; font-weight: 600; text-align: right;">{{ $lead->company_name }}</td>
