@@ -337,6 +337,10 @@ class LeadController extends Controller
             $activity->lead->update(['last_contacted_at' => now()]);
         }
 
+        if (request()->wantsJson()) {
+            return response()->json(['ok' => true]);
+        }
+
         return back()->with('success', 'Actividad completada.');
     }
 

@@ -135,7 +135,7 @@ const weekDays = computed(() => {
     return days;
 });
 
-const HOURS = Array.from({ length: 11 }, (_, i) => i + 8); // 8..18
+const HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 6..23
 
 // ── Events per day lookup ──────────────────────────────────────────
 function eventsForDay(date) {
@@ -231,9 +231,15 @@ async function completeActivity(evt) {
                 'Accept': 'application/json',
             }
         });
-        evt.status = 'completed';
+        // Update reactively
+        const idx = events.value.findIndex(e => e.id === evt.id);
+        if (idx !== -1) {
+            events.value[idx] = { ...events.value[idx], status: 'completed' };
+        }
+        if (selectedEvent.value?.id === evt.id) {
+            selectedEvent.value = { ...selectedEvent.value, status: 'completed' };
+        }
         showModal.value = false;
-        fetchEvents();
     } catch (e) {
         console.error('Error completing activity', e);
     }
@@ -408,7 +414,7 @@ async function completeActivity(evt) {
                                                 <span v-if="typeIcon(evt.type)" v-text="typeIcon(evt.type)"></span>
                                                 {{ typeLabel(evt.type) }}
                                             </span>
-                                            <span class="text-xs text-gray-500">{{ formatTime(evt.scheduled_at) }}</span>
+                                            <span class="text-xs text-gray-500">{{ formatTime(evt.start) }}</span>
                                         </div>
                                         <span
                                             v-if="evt.status === 'pending'"
@@ -490,7 +496,7 @@ async function completeActivity(evt) {
 
                         <div class="flex items-center gap-2 text-gray-500">
                             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            {{ formatDateTime(selectedEvent.scheduled_at) }}
+                            {{ formatDateTime(selectedEvent.start) }}
                         </div>
 
                         <div v-if="selectedEvent.lead_name" class="flex items-center gap-2 text-gray-500">
