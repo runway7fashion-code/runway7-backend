@@ -60,32 +60,62 @@ class LeadRegistrationController extends Controller
             $validated['instagram'] = $ig;
         }
 
-        // Check if lead with same email already exists for this event
-        $existingLead = DesignerLead::where('email', $validated['email'])
-            ->where('event_id', $validated['event_id'])
-            ->first();
+        $eventId = $validated['event_id'];
+        unset($validated['event_id']);
+
+        // Check if lead with same email already exists
+        $existingLead = DesignerLead::where('email', $validated['email'])->first();
 
         if ($existingLead) {
-            return response()->json([
-                'message' => 'You have already submitted an application for this event. Our team will contact you soon.',
-            ], 422);
+            // Check if already registered for this event
+            if ($existingLead->events()->where('events.id', $eventId)->exists()) {
+                return response()->json([
+                    'message' => 'You have already submitted an application for this event. Our team will contact you soon. If you need immediate assistance, please email us at designers@runway7fashion.com or reach us via WhatsApp at https://wa.me/message/4M6DBP2NATXFC1',
+                ], 422);
+            }
+
+            // Add new event to existing lead
+            $existingLead->events()->attach($eventId);
+
+            // Update fields if changed
+            $existingLead->update(array_filter([
+                'phone'          => $validated['phone'] ?? null,
+                'company_name'   => $validated['company_name'] ?? null,
+                'retail_category'=> $validated['retail_category'] ?? null,
+                'website_url'    => $validated['website_url'] ?? null,
+                'instagram'      => $validated['instagram'] ?? null,
+            ]));
+
+            LeadActivity::create([
+                'lead_id'      => $existingLead->id,
+                'user_id'      => null,
+                'type'         => 'system',
+                'title'        => 'Nuevo evento agregado desde la web: ' . \App\Models\Event::find($eventId)?->name,
+                'status'       => 'completed',
+                'completed_at' => now(),
+            ]);
+
+            $lead = $existingLead;
+        } else {
+            $lead = DesignerLead::create(array_merge($validated, [
+                'status' => 'new',
+                'source' => 'website',
+            ]));
+
+            // Link event
+            $lead->events()->attach($eventId);
+
+            // Log creation activity
+            LeadActivity::create([
+                'lead_id'      => $lead->id,
+                'user_id'      => null,
+                'type'         => 'system',
+                'title'        => 'Lead registrado desde la web',
+                'description'  => "Email: {$lead->email}, Empresa: {$lead->company_name}",
+                'status'       => 'completed',
+                'completed_at' => now(),
+            ]);
         }
-
-        $lead = DesignerLead::create(array_merge($validated, [
-            'status' => 'new',
-            'source' => 'website',
-        ]));
-
-        // Log creation activity
-        LeadActivity::create([
-            'lead_id'      => $lead->id,
-            'user_id'      => null,
-            'type'         => 'system',
-            'title'        => 'Lead registrado desde la web',
-            'description'  => "Email: {$lead->email}, Empresa: {$lead->company_name}",
-            'status'       => 'completed',
-            'completed_at' => now(),
-        ]);
 
         // Round-robin assignment
         $assignmentService = new LeadAssignmentService();
@@ -99,7 +129,7 @@ class LeadRegistrationController extends Controller
 
         // Send confirmation email to the lead
         try {
-            $lead->load('event');
+            $lead->load('events');
             Mail::to($lead->email, "{$lead->first_name} {$lead->last_name}")
                 ->send(new LeadConfirmationMail($lead));
         } catch (\Exception $e) {

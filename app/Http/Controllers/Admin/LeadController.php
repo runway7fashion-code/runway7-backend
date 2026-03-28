@@ -19,7 +19,7 @@ class LeadController extends Controller
         $user = auth()->user();
         $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
 
-        $query = DesignerLead::with(['event:id,name', 'assignedTo:id,first_name,last_name'])
+        $query = DesignerLead::with(['events:id,name', 'assignedTo:id,first_name,last_name'])
             ->whereNull('deleted_at');
 
         // Advisors only see their leads
@@ -44,7 +44,7 @@ class LeadController extends Controller
         }
 
         if ($request->filled('event')) {
-            $query->where('event_id', $request->event);
+            $query->whereHas('events', fn($q) => $q->where('events.id', $request->event));
         }
 
         if ($request->filled('assigned_to')) {
@@ -112,7 +112,7 @@ class LeadController extends Controller
         }
 
         $lead->load([
-            'event:id,name,city,start_date',
+            'events:id,name,city,start_date',
             'assignedTo:id,first_name,last_name',
             'convertedDesigner:id,first_name,last_name',
             'activities.user:id,first_name,last_name',
@@ -165,11 +165,14 @@ class LeadController extends Controller
             'designs_ready'          => 'nullable|string|max:50',
             'budget'                 => 'nullable|string|max:100',
             'past_shows'             => 'nullable|string|max:10',
-            'event_id'               => 'nullable|exists:events,id',
+            'event_id'               => 'required|exists:events,id',
             'preferred_contact_time' => 'nullable|string|max:20',
             'assigned_to'            => 'nullable|exists:users,id',
             'notes'                  => 'nullable|string',
         ]);
+
+        $eventId = $validated['event_id'];
+        unset($validated['event_id']);
 
         // Auto-assign to current user if not leader
         $user = auth()->user();
@@ -178,10 +181,38 @@ class LeadController extends Controller
             $validated['assigned_to'] = $user->id;
         }
 
+        // Check if lead with this email already exists
+        $existingLead = DesignerLead::where('email', $validated['email'])->first();
+
+        if ($existingLead) {
+            // Check if this event is already linked
+            if ($existingLead->events()->where('events.id', $eventId)->exists()) {
+                return back()->withErrors(['email' => 'Este prospecto ya está registrado para este evento.'])->withInput();
+            }
+
+            // Add new event to existing lead
+            $existingLead->events()->attach($eventId);
+
+            LeadActivity::create([
+                'lead_id'      => $existingLead->id,
+                'user_id'      => auth()->id(),
+                'type'         => 'system',
+                'title'        => 'Nuevo evento agregado: ' . Event::find($eventId)?->name,
+                'status'       => 'completed',
+                'completed_at' => now(),
+            ]);
+
+            return redirect()->route('admin.sales.leads.show', $existingLead)
+                ->with('success', 'Evento agregado al prospecto existente.');
+        }
+
         $lead = DesignerLead::create(array_merge($validated, [
             'status' => 'new',
             'source' => 'manual',
         ]));
+
+        // Link event
+        $lead->events()->attach($eventId);
 
         LeadActivity::create([
             'lead_id'      => $lead->id,
@@ -263,6 +294,46 @@ class LeadController extends Controller
         ]);
 
         return back()->with('success', 'Estado actualizado.');
+    }
+
+    public function updateEventStatus(Request $request, DesignerLead $lead)
+    {
+        $request->validate([
+            'event_id' => 'required|exists:events,id',
+            'status'   => 'required|string|in:' . implode(',', array_keys(DesignerLead::STATUSES)),
+        ]);
+
+        $leadEvent = $lead->leadEvents()->where('event_id', $request->event_id)->first();
+        if (!$leadEvent) {
+            return back()->with('error', 'Este lead no está registrado para este evento.');
+        }
+
+        $oldStatus = $leadEvent->status;
+        $leadEvent->update(['status' => $request->status]);
+
+        $eventName = Event::find($request->event_id)?->name ?? '';
+
+        LeadActivity::create([
+            'lead_id'      => $lead->id,
+            'user_id'      => auth()->id(),
+            'type'         => 'status_change',
+            'title'        => "Estado de {$eventName}: {$oldStatus} → {$request->status}",
+            'description'  => DesignerLead::STATUSES[$oldStatus]['label'] . ' → ' . DesignerLead::STATUSES[$request->status]['label'],
+            'status'       => 'completed',
+            'completed_at' => now(),
+        ]);
+
+        // Update global lead status to the most advanced event status
+        $allStatuses = $lead->leadEvents()->pluck('status')->toArray();
+        $statusPriority = ['converted', 'negotiating', 'interested', 'follow_up', 'contacted', 'new', 'no_response', 'no_contact', 'lost', 'spam'];
+        foreach ($statusPriority as $s) {
+            if (in_array($s, $allStatuses)) {
+                $lead->update(['status' => $s]);
+                break;
+            }
+        }
+
+        return back()->with('success', 'Estado del evento actualizado.');
     }
 
     public function assign(Request $request, DesignerLead $lead)

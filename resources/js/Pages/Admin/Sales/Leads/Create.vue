@@ -179,18 +179,6 @@ function submit() {
                             <p v-if="form.errors.past_shows" class="mt-1 text-red-500 text-xs">{{ form.errors.past_shows }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Evento</label>
-                            <select v-model="form.event_id"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
-                                <option value="">-- Sin asignar --</option>
-                                <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
-                            </select>
-                            <p v-if="form.errors.event_id" class="mt-1 text-red-500 text-xs">{{ form.errors.event_id }}</p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Preferred Contact Time</label>
                             <select v-model="form.preferred_contact_time"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
@@ -198,6 +186,19 @@ function submit() {
                                 <option v-for="t in contactTimeOptions" :key="t" :value="t">{{ t }}</option>
                             </select>
                             <p v-if="form.errors.preferred_contact_time" class="mt-1 text-red-500 text-xs">{{ form.errors.preferred_contact_time }}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4">
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Evento *</label>
+                            <select v-model="form.event_id"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
+                                <option value="">-- Sin asignar --</option>
+                                <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
+                            </select>
+                            <p v-if="form.errors.event_id" class="mt-1 text-red-500 text-xs">{{ form.errors.event_id }}</p>
                         </div>
                     </div>
                 </div>

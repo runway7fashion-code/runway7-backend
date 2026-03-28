@@ -58,6 +58,20 @@ function toggleAvailability() {
     router.post('/admin/sales/toggle-availability', {}, { preserveScroll: true });
 }
 
+// Events modal
+const eventsModalLead = ref(null);
+
+function openEventsModal(lead) {
+    eventsModalLead.value = lead;
+}
+
+function changeEventStatus(lead, eventId, newStatus) {
+    router.patch(`/admin/sales/leads/${lead.id}/event-status`, { event_id: eventId, status: newStatus }, {
+        preserveScroll: true,
+        onSuccess: () => { eventsModalLead.value = null; },
+    });
+}
+
 // Status dropdown management
 const openStatusDropdown = ref(null);
 const openAdvisorDropdown = ref(null);
@@ -260,10 +274,12 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                     {{ lead.budget || '—' }}
                                 </td>
 
-                                <!-- Event -->
-                                <td class="px-4 py-4 text-sm text-gray-600">
-                                    <span v-if="lead.event">{{ lead.event.name }}</span>
-                                    <span v-else class="text-gray-400">—</span>
+                                <!-- Events -->
+                                <td class="px-4 py-4" @click.stop>
+                                    <button v-if="lead.events?.length" @click="openEventsModal(lead)" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer">
+                                        {{ lead.events.length }} {{ lead.events.length === 1 ? 'evento' : 'eventos' }}
+                                    </button>
+                                    <span v-else class="text-gray-400 text-xs">—</span>
                                 </td>
 
                                 <!-- Status (clickable badge with dropdown) -->
@@ -361,5 +377,47 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 </div>
             </div>
         </div>
+
+        <!-- Events Modal -->
+        <Teleport to="body">
+            <div v-if="eventsModalLead" class="fixed inset-0 z-50 flex items-center justify-center">
+                <div class="absolute inset-0 bg-black/50" @click="eventsModalLead = null"></div>
+                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                    <!-- Header -->
+                    <div class="bg-gray-50 px-6 py-4 flex items-center justify-between border-b">
+                        <div>
+                            <h3 class="font-semibold text-gray-900">{{ eventsModalLead.first_name }} {{ eventsModalLead.last_name }}</h3>
+                            <p class="text-xs text-gray-500">{{ eventsModalLead.events?.length }} {{ eventsModalLead.events?.length === 1 ? 'evento asignado' : 'eventos asignados' }}</p>
+                        </div>
+                        <button @click="eventsModalLead = null" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    </div>
+                    <!-- Events list -->
+                    <div class="px-6 py-4 space-y-4 max-h-96 overflow-y-auto">
+                        <div v-for="(ev, idx) in eventsModalLead.events" :key="ev.id" class="border border-gray-200 rounded-xl p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-6 h-6 rounded-full bg-black text-white text-xs font-bold flex items-center justify-center">{{ idx + 1 }}</span>
+                                    <span class="font-medium text-sm text-gray-900">{{ ev.name }}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 mb-1 block">Estado</label>
+                                <select
+                                    :value="ev.pivot?.status || 'new'"
+                                    @change="changeEventStatus(eventsModalLead, ev.id, $event.target.value)"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black focus:border-black">
+                                    <option v-for="(info, key) in statuses" :key="key" :value="key">{{ info.label }}</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Footer -->
+                    <div class="border-t px-6 py-3 flex items-center justify-between">
+                        <Link :href="`/admin/sales/leads/${eventsModalLead.id}`" class="text-sm font-medium text-gray-700 hover:text-black">Ver perfil completo →</Link>
+                        <button @click="eventsModalLead = null" class="text-sm text-gray-500 hover:text-gray-700">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </AdminLayout>
 </template>

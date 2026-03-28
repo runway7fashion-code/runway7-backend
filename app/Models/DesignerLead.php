@@ -55,6 +55,18 @@ class DesignerLead extends Model
         return $this->belongsTo(Event::class);
     }
 
+    public function events()
+    {
+        return $this->belongsToMany(Event::class, 'lead_events', 'lead_id', 'event_id')
+            ->withPivot('status')
+            ->withTimestamps();
+    }
+
+    public function leadEvents()
+    {
+        return $this->hasMany(LeadEvent::class, 'lead_id');
+    }
+
     public function assignedTo()
     {
         return $this->belongsTo(User::class, 'assigned_to');

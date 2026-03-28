@@ -261,6 +261,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('leads/{lead}/edit', [LeadController::class, 'edit'])->name('leads.edit');
                 Route::put('leads/{lead}', [LeadController::class, 'update'])->name('leads.update');
                 Route::patch('leads/{lead}/status', [LeadController::class, 'updateStatus'])->name('leads.update-status');
+                Route::patch('leads/{lead}/event-status', [LeadController::class, 'updateEventStatus'])->name('leads.update-event-status');
                 Route::patch('leads/{lead}/assign', [LeadController::class, 'assign'])->name('leads.assign');
                 Route::post('leads/{lead}/activity', [LeadController::class, 'addActivity'])->name('leads.add-activity');
                 Route::patch('activities/{activity}/complete', [LeadController::class, 'completeActivity'])->name('leads.complete-activity');

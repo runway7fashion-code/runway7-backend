@@ -81,10 +81,10 @@
                         <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; color: #888;">Category</td>
                         <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-size: 13px; color: #1a1a1a; font-weight: 600; text-align: right;">{{ $lead->retail_category }}</td>
                     </tr>
-                    @if($lead->event)
+                    @if($lead->events->count())
                     <tr>
-                        <td style="padding: 8px 0; font-size: 13px; color: #888;">Event</td>
-                        <td style="padding: 8px 0; font-size: 13px; color: #1a1a1a; font-weight: 600; text-align: right;">{{ $lead->event->name }}</td>
+                        <td style="padding: 8px 0; font-size: 13px; color: #888;">Event{{ $lead->events->count() > 1 ? 's' : '' }}</td>
+                        <td style="padding: 8px 0; font-size: 13px; color: #1a1a1a; font-weight: 600; text-align: right;">{{ $lead->events->pluck('name')->join(', ') }}</td>
                     </tr>
                     @endif
                 </table>
