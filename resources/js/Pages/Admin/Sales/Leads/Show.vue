@@ -19,6 +19,10 @@ const props = defineProps({
     isLeader: Boolean,
 });
 
+// Convert to designer
+const showConvertModal = ref(false);
+const selectedConvertEvent = ref('');
+
 // Tags
 const editingTags = ref(false);
 const selectedTagIds = ref([]);
@@ -451,7 +455,7 @@ const sortedActivities = computed(() => {
 
                         <!-- Convert to designer -->
                         <div class="pt-3 border-t border-gray-100">
-                            <div v-if="lead.converted_designer">
+                            <div v-if="lead.converted_designer && lead.converted_designer.id">
                                 <p class="text-xs text-gray-500 mb-1">Convertido a Designer</p>
                                 <Link :href="`/admin/designers/${lead.converted_designer.id}`"
                                     class="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 bg-green-50 px-3 py-1.5 rounded-lg hover:bg-green-100 transition-colors">
@@ -459,11 +463,19 @@ const sortedActivities = computed(() => {
                                     {{ lead.converted_designer.first_name }} {{ lead.converted_designer.last_name }}
                                 </Link>
                             </div>
-                            <Link v-else-if="lead.status !== 'converted'"
-                                :href="`/admin/sales/designers/create?lead_id=${lead.id}`"
-                                class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-sm font-medium hover:bg-amber-100 transition-colors">
-                                <ArrowPathIcon class="w-4 h-4" /> Convertir a Designer
-                            </Link>
+                            <template v-else>
+                                <!-- If 1 event, go directly -->
+                                <Link v-if="lead.events?.length === 1"
+                                    :href="`/admin/sales/designers/create?lead_id=${lead.id}&event_id=${lead.events[0].id}`"
+                                    class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-sm font-medium hover:bg-amber-100 transition-colors">
+                                    <ArrowPathIcon class="w-4 h-4" /> Convertir a Designer
+                                </Link>
+                                <!-- If 0 or 2+ events, show modal to select -->
+                                <button v-else @click="showConvertModal = true"
+                                    class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-sm font-medium hover:bg-amber-100 transition-colors">
+                                    <ArrowPathIcon class="w-4 h-4" /> Convertir a Designer
+                                </button>
+                            </template>
                         </div>
                     </div>
 
@@ -562,6 +574,41 @@ const sortedActivities = computed(() => {
 
         <!-- Delete Modal -->
         <Teleport to="body">
+            <!-- Convert to Designer Modal -->
+            <div v-if="showConvertModal" class="fixed inset-0 z-50 flex items-center justify-center">
+                <div class="absolute inset-0 bg-black/50" @click="showConvertModal = false"></div>
+                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+                    <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <ArrowPathIcon class="w-6 h-6 text-amber-600" />
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2 text-center">Convertir a Designer</h3>
+                    <p class="text-sm text-gray-500 mb-4 text-center">Selecciona el evento para el cual quieres convertir a {{ lead.first_name }}:</p>
+                    <div class="space-y-2 mb-5">
+                        <label v-for="ev in lead.events" :key="ev.id"
+                            class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-colors"
+                            :class="selectedConvertEvent == ev.id ? 'border-amber-400 bg-amber-50' : 'border-gray-200 hover:bg-gray-50'">
+                            <input type="radio" :value="ev.id" v-model="selectedConvertEvent" class="accent-amber-500" />
+                            <span class="text-sm font-medium text-gray-900">{{ ev.name }}</span>
+                        </label>
+                        <label v-if="!lead.events?.length"
+                            class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl">
+                            <span class="text-sm text-gray-400">No hay eventos asignados</span>
+                        </label>
+                    </div>
+                    <div class="flex gap-3">
+                        <button @click="showConvertModal = false" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancelar</button>
+                        <Link v-if="selectedConvertEvent"
+                            :href="`/admin/sales/designers/create?lead_id=${lead.id}&event_id=${selectedConvertEvent}`"
+                            class="flex-1 px-4 py-2.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 text-center">
+                            Continuar
+                        </Link>
+                        <button v-else disabled class="flex-1 px-4 py-2.5 bg-gray-200 text-gray-400 rounded-lg text-sm font-medium cursor-not-allowed">
+                            Selecciona evento
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center">
                 <div class="absolute inset-0 bg-black/50" @click="showDeleteModal = false"></div>
                 <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">

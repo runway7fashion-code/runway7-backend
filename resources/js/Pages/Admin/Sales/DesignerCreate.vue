@@ -66,18 +66,30 @@ function selectLead(lead) {
     form.last_name = lead.last_name || '';
     form.email = lead.email || '';
     form.brand_name = lead.company_name || '';
+    if (lead.country) form.country = lead.country;
     if (lead.phone) {
         const match = lead.phone.match(/^(\+\d+)\s*(.*)$/);
         if (match) { phoneCode.value = match[1]; phoneNumber.value = match[2]; }
         else phoneNumber.value = lead.phone;
     }
-    if (lead.event_id) form.event_id = lead.event_id;
+    // Event from URL param or lead's first event
+    const urlEventId = new URLSearchParams(window.location.search).get('event_id');
+    if (urlEventId) {
+        form.event_id = urlEventId;
+    } else if (lead.events?.length) {
+        form.event_id = lead.events[0].id;
+    }
+    // Sales rep from lead's assigned_to
+    if (lead.assigned_to) {
+        form.sales_rep_id = typeof lead.assigned_to === 'object' ? lead.assigned_to.id : lead.assigned_to;
+    }
 }
 
 function clearLead() {
     selectedLead.value = null;
     form.first_name = ''; form.last_name = ''; form.email = ''; form.brand_name = '';
-    phoneNumber.value = ''; phoneCode.value = '+1'; form.event_id = '';
+    form.country = ''; form.event_id = ''; form.sales_rep_id = '';
+    phoneNumber.value = ''; phoneCode.value = '+1';
 }
 
 // Check for lead_id in URL params
@@ -85,9 +97,8 @@ onMounted(() => {
     const params = new URLSearchParams(window.location.search);
     const leadId = params.get('lead_id');
     if (leadId) {
-        axios.get('/admin/sales/leads/search', { params: { q: leadId } }).then(({ data }) => {
-            const lead = data.find(l => l.id == leadId);
-            if (lead) selectLead(lead);
+        axios.get('/admin/sales/leads/search', { params: { id: leadId } }).then(({ data }) => {
+            if (data.length) selectLead(data[0]);
         });
     }
 });

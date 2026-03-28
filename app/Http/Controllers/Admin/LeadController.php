@@ -469,8 +469,21 @@ class LeadController extends Controller
      */
     public function search(Request $request)
     {
-        $leads = DesignerLead::where('status', '!=', 'converted')
-            ->where('status', '!=', 'spam')
+        $query = DesignerLead::query();
+
+        $fields = ['id', 'first_name', 'last_name', 'email', 'phone', 'country', 'company_name', 'retail_category', 'website_url', 'instagram', 'budget', 'assigned_to'];
+
+        // Search by ID directly
+        if ($request->filled('id')) {
+            $lead = $query->where('id', $request->id)
+                ->select($fields)
+                ->with('events:id,name')
+                ->first();
+            return response()->json($lead ? [$lead] : []);
+        }
+
+        // Search by text
+        $leads = $query->where('status', '!=', 'spam')
             ->where(function ($q) use ($request) {
                 $s = $request->q;
                 $q->where('first_name', 'ilike', "%{$s}%")
@@ -478,7 +491,8 @@ class LeadController extends Controller
                   ->orWhere('email', 'ilike', "%{$s}%")
                   ->orWhere('company_name', 'ilike', "%{$s}%");
             })
-            ->select('id', 'first_name', 'last_name', 'email', 'phone', 'company_name', 'retail_category', 'website_url', 'instagram', 'event_id', 'budget')
+            ->select($fields)
+            ->with('events:id,name')
             ->limit(10)
             ->get();
 

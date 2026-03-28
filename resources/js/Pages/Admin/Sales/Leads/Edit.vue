@@ -1,6 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -8,6 +9,27 @@ const props = defineProps({
     events: Array,
     advisors: Array,
 });
+
+const phoneCodes = [
+    { code: '+1', flag: '🇺🇸' }, { code: '+52', flag: '🇲🇽' }, { code: '+44', flag: '🇬🇧' },
+    { code: '+33', flag: '🇫🇷' }, { code: '+39', flag: '🇮🇹' }, { code: '+34', flag: '🇪🇸' },
+    { code: '+49', flag: '🇩🇪' }, { code: '+55', flag: '🇧🇷' }, { code: '+57', flag: '🇨🇴' },
+    { code: '+51', flag: '🇵🇪' }, { code: '+54', flag: '🇦🇷' }, { code: '+56', flag: '🇨🇱' },
+    { code: '+58', flag: '🇻🇪' }, { code: '+593', flag: '🇪🇨' }, { code: '+91', flag: '🇮🇳' },
+    { code: '+86', flag: '🇨🇳' }, { code: '+81', flag: '🇯🇵' }, { code: '+82', flag: '🇰🇷' },
+    { code: '+234', flag: '🇳🇬' }, { code: '+27', flag: '🇿🇦' }, { code: '+971', flag: '🇦🇪' },
+];
+
+// Parse existing phone into code + number
+function parsePhone(phone) {
+    if (!phone) return { code: '+1', number: '' };
+    const match = phone.match(/^(\+\d+)\s*(.*)$/);
+    if (match) return { code: match[1], number: match[2] };
+    return { code: '+1', number: phone };
+}
+const parsed = parsePhone(props.lead.phone);
+const phoneCode = ref(parsed.code);
+const phoneNumber = ref(parsed.number);
 
 const form = useForm({
     first_name: props.lead.first_name || '',
@@ -38,6 +60,7 @@ const contactTimeOptions = [
 ];
 
 function submit() {
+    form.phone = phoneNumber.value ? `${phoneCode.value} ${phoneNumber.value}` : '';
     form.put(`/admin/sales/leads/${props.lead.id}`);
 }
 </script>
@@ -84,9 +107,14 @@ function submit() {
                             <p v-if="form.errors.email" class="mt-1 text-red-500 text-xs">{{ form.errors.email }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
-                            <input v-model="form.phone" type="text"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                            <div class="flex gap-2">
+                                <select v-model="phoneCode" class="w-28 border border-gray-300 rounded-lg px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white flex-shrink-0">
+                                    <option v-for="pc in phoneCodes" :key="pc.code" :value="pc.code">{{ pc.flag }} {{ pc.code }}</option>
+                                </select>
+                                <input v-model="phoneNumber" type="tel" placeholder="926807963"
+                                    class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
                             <p v-if="form.errors.phone" class="mt-1 text-red-500 text-xs">{{ form.errors.phone }}</p>
                         </div>
                     </div>

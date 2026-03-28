@@ -63,6 +63,7 @@ function toggleAvailability() {
 
 // Events modal
 const eventsModalLead = ref(null);
+const tagsModalLead = ref(null);
 
 function openEventsModal(lead) {
     eventsModalLead.value = lead;
@@ -291,13 +292,16 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                 </td>
 
                                 <!-- Tags -->
-                                <td class="px-4 py-4">
-                                    <div v-if="lead.tags?.length" class="flex flex-wrap gap-1">
-                                        <span v-for="t in lead.tags" :key="t.id"
-                                            class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium"
-                                            :style="{ backgroundColor: t.color + '20', color: t.color }">
-                                            {{ t.name }}
+                                <td class="px-4 py-4" @click.stop>
+                                    <div v-if="lead.tags?.length" class="flex items-center gap-1">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium"
+                                            :style="{ backgroundColor: lead.tags[0].color + '20', color: lead.tags[0].color }">
+                                            {{ lead.tags[0].name }}
                                         </span>
+                                        <button v-if="lead.tags.length > 1" @click="tagsModalLead = lead"
+                                            class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-bold hover:bg-gray-200 transition-colors">
+                                            +{{ lead.tags.length - 1 }}
+                                        </button>
                                     </div>
                                     <span v-else class="text-gray-400 text-xs">—</span>
                                 </td>
@@ -397,6 +401,35 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 </div>
             </div>
         </div>
+
+        <!-- Tags Modal -->
+        <Teleport to="body">
+            <div v-if="tagsModalLead" class="fixed inset-0 z-50 flex items-center justify-center">
+                <div class="absolute inset-0 bg-black/50" @click="tagsModalLead = null"></div>
+                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+                    <div class="bg-gray-50 px-6 py-4 flex items-center justify-between border-b">
+                        <div>
+                            <h3 class="font-semibold text-gray-900">Tags de {{ tagsModalLead.first_name }} {{ tagsModalLead.last_name }}</h3>
+                            <p class="text-xs text-gray-500">{{ tagsModalLead.tags?.length }} tags asignados</p>
+                        </div>
+                        <button @click="tagsModalLead = null" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    </div>
+                    <div class="px-6 py-4">
+                        <div class="flex flex-wrap gap-2">
+                            <span v-for="t in tagsModalLead.tags" :key="t.id"
+                                class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium"
+                                :style="{ backgroundColor: t.color + '20', color: t.color }">
+                                {{ t.name }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="border-t px-6 py-3 flex justify-between">
+                        <Link :href="`/admin/sales/leads/${tagsModalLead.id}`" class="text-sm font-medium text-gray-700 hover:text-black">Ver perfil →</Link>
+                        <button @click="tagsModalLead = null" class="text-sm text-gray-500 hover:text-gray-700">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
 
         <!-- Events Modal -->
         <Teleport to="body">
