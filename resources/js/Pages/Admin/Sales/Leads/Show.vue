@@ -4,7 +4,7 @@ import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import {
     ArrowLeftIcon, EnvelopeIcon, PhoneIcon, GlobeAltIcon, TrashIcon,
-    PencilSquareIcon, CheckCircleIcon, ClockIcon, UserIcon,
+    PencilSquareIcon, CheckCircleIcon, ClockIcon, UserIcon, PlusIcon,
     ChatBubbleLeftIcon, CalendarDaysIcon, PhoneArrowUpRightIcon,
     DocumentTextIcon, ChevronDownIcon, ArrowPathIcon,
 } from '@heroicons/vue/24/outline';
@@ -20,12 +20,49 @@ const props = defineProps({
 });
 
 // Tags
-function toggleTag(tagId) {
-    const currentIds = (props.lead.tags || []).map(t => t.id);
-    const newIds = currentIds.includes(tagId)
-        ? currentIds.filter(id => id !== tagId)
-        : [...currentIds, tagId];
-    router.patch(`/admin/sales/leads/${props.lead.id}/tags`, { tag_ids: newIds }, { preserveScroll: true });
+const editingTags = ref(false);
+const selectedTagIds = ref([]);
+const tagSearch = ref('');
+
+function startEditTags() {
+    selectedTagIds.value = (props.lead.tags || []).map(t => t.id);
+    tagSearch.value = '';
+    editingTags.value = true;
+}
+
+function cancelEditTags() {
+    editingTags.value = false;
+    tagSearch.value = '';
+}
+
+function addTag(tagId) {
+    if (!selectedTagIds.value.includes(tagId)) {
+        selectedTagIds.value.push(tagId);
+    }
+    tagSearch.value = '';
+}
+
+function removeTag(tagId) {
+    selectedTagIds.value = selectedTagIds.value.filter(id => id !== tagId);
+}
+
+function saveTags() {
+    router.patch(`/admin/sales/leads/${props.lead.id}/tags`, { tag_ids: selectedTagIds.value }, {
+        preserveScroll: true,
+        onSuccess: () => { editingTags.value = false; },
+    });
+}
+
+const filteredTags = computed(() => {
+    if (!props.allTags) return [];
+    return props.allTags.filter(t =>
+        !selectedTagIds.value.includes(t.id) &&
+        (!tagSearch.value || t.name.toLowerCase().includes(tagSearch.value.toLowerCase()))
+    );
+});
+
+function getTagById(id) {
+    return props.allTags?.find(t => t.id === id);
 }
 
 // Editable notes
@@ -317,20 +354,64 @@ const sortedActivities = computed(() => {
 
                     <!-- Tags Card -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-6">
-                        <h4 class="font-semibold text-gray-800 mb-3">Tags</h4>
-                        <div class="flex flex-wrap gap-1.5">
-                            <button v-for="t in allTags" :key="t.id" @click="toggleTag(t.id)"
-                                class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium transition-all cursor-pointer border"
-                                :class="lead.tags?.some(lt => lt.id === t.id)
-                                    ? 'border-transparent shadow-sm'
-                                    : 'border-dashed border-gray-300 opacity-40 hover:opacity-70'"
-                                :style="lead.tags?.some(lt => lt.id === t.id)
-                                    ? { backgroundColor: t.color + '20', color: t.color, borderColor: t.color + '40' }
-                                    : {}">
-                                {{ t.name }}
-                            </button>
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold text-gray-800">Tags</h4>
+                            <div v-if="editingTags" class="flex items-center gap-1.5">
+                                <button @click="saveTags" class="w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center hover:bg-green-700 transition-colors">
+                                    <CheckCircleIcon class="w-4 h-4" />
+                                </button>
+                                <button @click="cancelEditTags" class="w-8 h-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center hover:bg-gray-300 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                            </div>
                         </div>
-                        <p v-if="!allTags?.length" class="text-xs text-gray-400 italic">No hay tags creados.</p>
+
+                        <!-- View mode -->
+                        <div v-if="!editingTags">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span v-for="t in lead.tags" :key="t.id"
+                                    class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
+                                    :style="{ backgroundColor: t.color + '20', color: t.color }">
+                                    {{ t.name }}
+                                </span>
+                                <button @click="startEditTags"
+                                    class="w-7 h-7 rounded-full border-2 border-dashed border-gray-300 text-gray-400 flex items-center justify-center hover:border-gray-400 hover:text-gray-500 transition-colors">
+                                    <PlusIcon class="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                            <p v-if="!lead.tags?.length && !allTags?.length" class="text-xs text-gray-400 italic">No hay tags creados.</p>
+                        </div>
+
+                        <!-- Edit mode -->
+                        <div v-else>
+                            <div class="border border-green-400 rounded-xl p-3 mb-2">
+                                <div class="flex flex-wrap gap-1.5 mb-2">
+                                    <span v-for="id in selectedTagIds" :key="id"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer"
+                                        :style="{ backgroundColor: (getTagById(id)?.color || '#6B7280') + '20', color: getTagById(id)?.color || '#6B7280' }"
+                                        @click="removeTag(id)">
+                                        {{ getTagById(id)?.name }}
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    </span>
+                                    <span v-if="!selectedTagIds.length" class="text-xs text-gray-400 italic py-1">Sin tags</span>
+                                </div>
+
+                                <!-- Dropdown search -->
+                                <div class="relative">
+                                    <input v-model="tagSearch" type="text" placeholder="Tag Name"
+                                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-green-400 focus:border-green-400" />
+                                    <div v-if="filteredTags.length" class="mt-1 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-sm">
+                                        <button v-for="t in filteredTags" :key="t.id" @click="addTag(t.id)"
+                                            class="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 transition-colors">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium"
+                                                :style="{ backgroundColor: t.color + '20', color: t.color }">
+                                                {{ t.name }}
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Status & Assignment Card -->
