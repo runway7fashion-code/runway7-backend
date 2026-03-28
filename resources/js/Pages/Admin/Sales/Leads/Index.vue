@@ -121,7 +121,6 @@ const statsCards = computed(() => {
         { key: 'new', label: 'Nuevos', value: props.stats?.new ?? 0, color: props.statuses?.new?.color ?? '#3B82F6' },
         { key: 'contacted', label: 'Contactados', value: props.stats?.contacted ?? 0, color: props.statuses?.contacted?.color ?? '#8B5CF6' },
         { key: 'follow_up', label: 'Seguimiento', value: props.stats?.follow_up ?? 0, color: props.statuses?.follow_up?.color ?? '#F59E0B' },
-        { key: 'interested', label: 'Interesados', value: props.stats?.interested ?? 0, color: props.statuses?.interested?.color ?? '#10B981' },
         { key: 'negotiating', label: 'Negociando', value: props.stats?.negotiating ?? 0, color: props.statuses?.negotiating?.color ?? '#EC4899' },
         { key: 'converted', label: 'Convertidos', value: props.stats?.converted ?? 0, color: props.statuses?.converted?.color ?? '#059669' },
         { key: 'lost', label: 'Perdidos', value: props.stats?.lost ?? 0, color: props.statuses?.lost?.color ?? '#EF4444' },

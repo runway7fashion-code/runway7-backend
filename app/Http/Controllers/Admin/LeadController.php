@@ -75,7 +75,6 @@ class LeadController extends Controller
             'new'         => (clone $baseQuery)->where('status', 'new')->count(),
             'contacted'   => (clone $baseQuery)->where('status', 'contacted')->count(),
             'follow_up'   => (clone $baseQuery)->where('status', 'follow_up')->count(),
-            'interested'  => (clone $baseQuery)->where('status', 'interested')->count(),
             'negotiating' => (clone $baseQuery)->where('status', 'negotiating')->count(),
             'converted'   => (clone $baseQuery)->where('status', 'converted')->count(),
             'lost'        => (clone $baseQuery)->where('status', 'lost')->count(),
@@ -331,16 +330,6 @@ class LeadController extends Controller
             'completed_at' => now(),
         ]);
 
-        // Update global lead status to the most advanced event status
-        $allStatuses = $lead->leadEvents()->pluck('status')->toArray();
-        $statusPriority = ['converted', 'negotiating', 'interested', 'follow_up', 'contacted', 'new', 'no_response', 'no_contact', 'lost', 'spam'];
-        foreach ($statusPriority as $s) {
-            if (in_array($s, $allStatuses)) {
-                $lead->update(['status' => $s]);
-                break;
-            }
-        }
-
         return back()->with('success', 'Estado del evento actualizado.');
     }
 
@@ -377,22 +366,33 @@ class LeadController extends Controller
             'title'        => 'required|string|max:255',
             'description'  => 'nullable|string',
             'scheduled_at' => 'nullable|date',
+            'file'         => 'nullable|file|max:10240', // 10MB max
         ]);
 
-        $activity = LeadActivity::create(array_merge($validated, [
+        $fileData = [];
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $path = $file->store('lead-files', 'public');
+            $fileData = [
+                'file_path' => $path,
+                'file_name' => $file->getClientOriginalName(),
+            ];
+        }
+
+        $activity = LeadActivity::create(array_merge($validated, $fileData, [
             'lead_id' => $lead->id,
             'user_id' => auth()->id(),
-            'status'  => $validated['scheduled_at'] ? 'pending' : 'completed',
-            'completed_at' => $validated['scheduled_at'] ? null : now(),
+            'status'  => ($validated['scheduled_at'] ?? null) ? 'pending' : 'completed',
+            'completed_at' => ($validated['scheduled_at'] ?? null) ? null : now(),
         ]));
 
         // Update last_contacted_at for call/email/meeting types
-        if (in_array($validated['type'], ['call', 'email', 'meeting']) && !$validated['scheduled_at']) {
+        if (in_array($validated['type'], ['call', 'email', 'meeting']) && !($validated['scheduled_at'] ?? null)) {
             $lead->update(['last_contacted_at' => now()]);
         }
 
         // Immediate bot notification if activity is scheduled within the next hour
-        if ($validated['scheduled_at']) {
+        if ($validated['scheduled_at'] ?? null) {
             $scheduledTime = \Carbon\Carbon::parse($validated['scheduled_at'], 'America/Lima');
             $nowLima = now('America/Lima');
             $minutesUntil = $nowLima->diffInMinutes($scheduledTime, false);

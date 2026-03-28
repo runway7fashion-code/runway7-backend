@@ -41,7 +41,6 @@ class DesignerLead extends Model
         'new'        => ['label' => 'Nuevo',       'color' => '#3B82F6'],
         'contacted'  => ['label' => 'Contactado',  'color' => '#EAB308'],
         'follow_up'  => ['label' => 'Seguimiento', 'color' => '#F97316'],
-        'interested' => ['label' => 'Interesado',  'color' => '#22C55E'],
         'negotiating'=> ['label' => 'Negociando',  'color' => '#8B5CF6'],
         'converted'  => ['label' => 'Venta',       'color' => '#10B981'],
         'no_response'=> ['label' => 'No Responde', 'color' => '#9CA3AF'],

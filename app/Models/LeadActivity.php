@@ -18,6 +18,8 @@ class LeadActivity extends Model
         'scheduled_at',
         'completed_at',
         'status',
+        'file_path',
+        'file_name',
     ];
 
     protected $casts = [
