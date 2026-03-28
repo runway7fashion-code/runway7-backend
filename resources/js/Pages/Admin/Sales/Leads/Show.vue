@@ -15,8 +15,18 @@ const props = defineProps({
     activityTypes: Object,
     advisors: Array,
     events: Array,
+    allTags: Array,
     isLeader: Boolean,
 });
+
+// Tags
+function toggleTag(tagId) {
+    const currentIds = (props.lead.tags || []).map(t => t.id);
+    const newIds = currentIds.includes(tagId)
+        ? currentIds.filter(id => id !== tagId)
+        : [...currentIds, tagId];
+    router.patch(`/admin/sales/leads/${props.lead.id}/tags`, { tag_ids: newIds }, { preserveScroll: true });
+}
 
 // Editable notes
 const editingNotes = ref(false);
@@ -304,6 +314,24 @@ const sortedActivities = computed(() => {
 
                 <!-- Right Column -->
                 <div class="lg:col-span-4 space-y-6">
+
+                    <!-- Tags Card -->
+                    <div class="bg-white rounded-2xl border border-gray-200 p-6">
+                        <h4 class="font-semibold text-gray-800 mb-3">Tags</h4>
+                        <div class="flex flex-wrap gap-1.5">
+                            <button v-for="t in allTags" :key="t.id" @click="toggleTag(t.id)"
+                                class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium transition-all cursor-pointer border"
+                                :class="lead.tags?.some(lt => lt.id === t.id)
+                                    ? 'border-transparent shadow-sm'
+                                    : 'border-dashed border-gray-300 opacity-40 hover:opacity-70'"
+                                :style="lead.tags?.some(lt => lt.id === t.id)
+                                    ? { backgroundColor: t.color + '20', color: t.color, borderColor: t.color + '40' }
+                                    : {}">
+                                {{ t.name }}
+                            </button>
+                        </div>
+                        <p v-if="!allTags?.length" class="text-xs text-gray-400 italic">No hay tags creados.</p>
+                    </div>
 
                     <!-- Status & Assignment Card -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">

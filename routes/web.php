@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\VolunteerController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\SalesController;
 use App\Http\Controllers\Admin\LeadController;
+use App\Http\Controllers\Admin\LeadTagController;
 use App\Http\Controllers\Admin\AttendanceController;
 
 Route::get('/', function () {
@@ -266,7 +267,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('leads/{lead}/activity', [LeadController::class, 'addActivity'])->name('leads.add-activity');
                 Route::patch('activities/{activity}/complete', [LeadController::class, 'completeActivity'])->name('leads.complete-activity');
                 Route::delete('leads/{lead}', [LeadController::class, 'destroy'])->name('leads.destroy');
+                Route::patch('leads/{lead}/tags', [LeadController::class, 'syncTags'])->name('leads.sync-tags');
                 Route::post('toggle-availability', [LeadController::class, 'toggleAvailability'])->name('toggle-availability');
+                // Tags CRUD
+                Route::get('tags', [LeadTagController::class, 'index'])->name('tags.index');
+                Route::post('tags', [LeadTagController::class, 'store'])->name('tags.store');
+                Route::put('tags/{tag}', [LeadTagController::class, 'update'])->name('tags.update');
+                Route::delete('tags/{tag}', [LeadTagController::class, 'destroy'])->name('tags.destroy');
             });
             Route::middleware('section:sales_calendar')->group(function () {
                 Route::get('calendar', [LeadController::class, 'calendar'])->name('calendar');

@@ -77,6 +77,11 @@ class DesignerLead extends Model
         return $this->belongsTo(User::class, 'converted_designer_id');
     }
 
+    public function tags()
+    {
+        return $this->belongsToMany(LeadTag::class, 'lead_tag', 'lead_id', 'tag_id')->withTimestamps();
+    }
+
     public function activities()
     {
         return $this->hasMany(LeadActivity::class, 'lead_id')->orderBy('created_at', 'desc');

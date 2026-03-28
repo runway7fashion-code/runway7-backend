@@ -28,6 +28,7 @@ import {
     CameraIcon,
     ClipboardDocumentCheckIcon,
     UserPlusIcon,
+    TagIcon,
 } from '@heroicons/vue/24/outline';
 
 const page = usePage();
@@ -81,6 +82,7 @@ const salesItems = computed(() => {
     if (hasSection('sales_designers')) items.push({ name: 'Diseñadores', href: '/admin/sales/designers', icon: PaintBrushIcon });
     if (hasSection('sales_leads')) items.push({ name: 'Leads web', href: '/admin/sales/leads', icon: UserPlusIcon });
     if (hasSection('sales_calendar')) items.push({ name: 'Calendario', href: '/admin/sales/calendar', icon: CalendarDaysIcon });
+    if (hasSection('sales_leads') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Tags', href: '/admin/sales/tags', icon: TagIcon });
     if (hasSection('sales_dashboard') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Sales History', href: '/admin/sales/history', icon: ChartBarIcon });
     if (hasSection('designer_packages') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Paquetes', href: '/admin/settings/designer-packages', icon: CurrencyDollarIcon });
     return items;

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\DesignerLead;
 use App\Models\Event;
 use App\Models\LeadActivity;
+use App\Models\LeadTag;
 use App\Models\SalesBotMessage;
 use App\Models\User;
 use App\Services\LeadAssignmentService;
@@ -19,7 +20,7 @@ class LeadController extends Controller
         $user = auth()->user();
         $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
 
-        $query = DesignerLead::with(['events:id,name', 'assignedTo:id,first_name,last_name'])
+        $query = DesignerLead::with(['events:id,name', 'assignedTo:id,first_name,last_name', 'tags:id,name,color'])
             ->whereNull('deleted_at');
 
         // Advisors only see their leads
@@ -57,6 +58,10 @@ class LeadController extends Controller
 
         if ($request->filled('budget')) {
             $query->where('budget', $request->budget);
+        }
+
+        if ($request->filled('tag')) {
+            $query->whereHas('tags', fn($q) => $q->where('lead_tags.id', $request->tag));
         }
 
         // Stats
@@ -97,7 +102,8 @@ class LeadController extends Controller
             'statuses' => DesignerLead::STATUSES,
             'advisors' => $advisors,
             'events'   => $events,
-            'filters'  => $request->only(['search', 'status', 'event', 'assigned_to', 'budget', 'per_page']),
+            'allTags'  => LeadTag::orderBy('name')->get(['id', 'name', 'color']),
+            'filters'  => $request->only(['search', 'status', 'event', 'assigned_to', 'budget', 'tag', 'per_page']),
             'isLeader' => $isLeader,
         ]);
     }
@@ -113,6 +119,7 @@ class LeadController extends Controller
 
         $lead->load([
             'events:id,name,city,start_date',
+            'tags:id,name,color',
             'assignedTo:id,first_name,last_name',
             'convertedDesigner:id,first_name,last_name',
             'activities.user:id,first_name,last_name',
@@ -130,6 +137,7 @@ class LeadController extends Controller
             'activityTypes' => LeadActivity::TYPES,
             'advisors' => $advisors,
             'events'   => $events,
+            'allTags'  => LeadTag::orderBy('name')->get(['id', 'name', 'color']),
             'isLeader' => $isLeader,
         ]);
     }
@@ -353,6 +361,13 @@ class LeadController extends Controller
         ]);
 
         return back()->with('success', "Prospecto asignado a {$advisor->first_name}.");
+    }
+
+    public function syncTags(Request $request, DesignerLead $lead)
+    {
+        $request->validate(['tag_ids' => 'array', 'tag_ids.*' => 'exists:lead_tags,id']);
+        $lead->tags()->sync($request->tag_ids ?? []);
+        return back()->with('success', 'Tags actualizados.');
     }
 
     public function addActivity(Request $request, DesignerLead $lead)

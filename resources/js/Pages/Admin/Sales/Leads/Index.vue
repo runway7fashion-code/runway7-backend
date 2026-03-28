@@ -10,6 +10,7 @@ const props = defineProps({
     statuses: Object,
     advisors: Array,
     events: Array,
+    allTags: Array,
     filters: Object,
     isLeader: Boolean,
 });
@@ -19,6 +20,7 @@ const status = ref(props.filters?.status || '');
 const event = ref(props.filters?.event || '');
 const assignedTo = ref(props.filters?.assigned_to || '');
 const budget = ref(props.filters?.budget || '');
+const tag = ref(props.filters?.tag || '');
 const perPage = ref(props.filters?.per_page || '20');
 const isAvailable = ref(null);
 
@@ -30,7 +32,7 @@ watch(search, () => {
 });
 
 // Immediate filters
-watch([status, event, assignedTo, budget, perPage], () => applyFilters());
+watch([status, event, assignedTo, budget, tag, perPage], () => applyFilters());
 
 function applyFilters() {
     router.get('/admin/sales/leads', {
@@ -39,6 +41,7 @@ function applyFilters() {
         event: event.value || undefined,
         assigned_to: assignedTo.value || undefined,
         budget: budget.value || undefined,
+        tag: tag.value || undefined,
         per_page: perPage.value !== '20' ? perPage.value : undefined,
     }, { preserveState: true, replace: true });
 }
@@ -218,6 +221,10 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <option value="high">Alto</option>
                     <option value="premium">Premium</option>
                 </select>
+                <select v-model="tag" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Todos los tags</option>
+                    <option v-for="t in allTags" :key="t.id" :value="t.id">{{ t.name }}</option>
+                </select>
                 <select v-model="perPage" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
                     <option value="20">20 por pagina</option>
                     <option value="50">50 por pagina</option>
@@ -237,6 +244,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Teléfono</th>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Presupuesto</th>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Evento</th>
+                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tags</th>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Asesor</th>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Registro</th>
@@ -279,6 +287,18 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                     <button v-if="lead.events?.length" @click="openEventsModal(lead)" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer">
                                         {{ lead.events.length }} {{ lead.events.length === 1 ? 'evento' : 'eventos' }}
                                     </button>
+                                    <span v-else class="text-gray-400 text-xs">—</span>
+                                </td>
+
+                                <!-- Tags -->
+                                <td class="px-4 py-4">
+                                    <div v-if="lead.tags?.length" class="flex flex-wrap gap-1">
+                                        <span v-for="t in lead.tags" :key="t.id"
+                                            class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium"
+                                            :style="{ backgroundColor: t.color + '20', color: t.color }">
+                                            {{ t.name }}
+                                        </span>
+                                    </div>
                                     <span v-else class="text-gray-400 text-xs">—</span>
                                 </td>
 
