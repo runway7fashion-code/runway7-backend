@@ -39,13 +39,13 @@ class LeadActivity extends Model
     }
 
     const TYPES = [
-        'call'          => ['label' => 'Llamada',          'icon' => 'phone',    'color' => '#3B82F6'],
-        'email'         => ['label' => 'Email',            'icon' => 'envelope', 'color' => '#8B5CF6'],
-        'meeting'       => ['label' => 'Reunión',          'icon' => 'users',    'color' => '#10B981'],
-        'note'          => ['label' => 'Nota',             'icon' => 'pencil',   'color' => '#6B7280'],
-        'status_change' => ['label' => 'Cambio de Estado', 'icon' => 'refresh',  'color' => '#F97316'],
-        'assignment'    => ['label' => 'Asignación',       'icon' => 'user',     'color' => '#EAB308'],
-        'system'        => ['label' => 'Sistema',          'icon' => 'cog',      'color' => '#9CA3AF'],
+        'call'          => ['label' => 'Call',           'icon' => 'phone',    'color' => '#3B82F6'],
+        'email'         => ['label' => 'Email',          'icon' => 'envelope', 'color' => '#8B5CF6'],
+        'meeting'       => ['label' => 'Meeting',        'icon' => 'users',    'color' => '#10B981'],
+        'note'          => ['label' => 'Note',           'icon' => 'pencil',   'color' => '#6B7280'],
+        'status_change' => ['label' => 'Status Change',  'icon' => 'refresh',  'color' => '#F97316'],
+        'assignment'    => ['label' => 'Assignment',     'icon' => 'user',     'color' => '#EAB308'],
+        'system'        => ['label' => 'System',         'icon' => 'cog',      'color' => '#9CA3AF'],
     ];
 
     public function lead()

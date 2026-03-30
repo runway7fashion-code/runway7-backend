@@ -19,8 +19,8 @@ const selectedEvent = ref(null);
 const showModal = ref(false);
 
 // ── Date helpers ───────────────────────────────────────────────────
-const DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 function toDateStr(d) {
     const y = d.getFullYear();
@@ -41,12 +41,12 @@ function isToday(d) {
 const headerLabel = computed(() => {
     const d = currentDate.value;
     if (currentView.value === 'day') {
-        return `${DAYS[getWeekday(d)]} ${d.getDate()} de ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+        return `${DAYS[getWeekday(d)]} ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
     }
     if (currentView.value === 'week') {
         const { start, end } = weekRange.value;
         if (start.getMonth() === end.getMonth()) {
-            return `${start.getDate()} – ${end.getDate()} de ${MONTHS[start.getMonth()]} ${start.getFullYear()}`;
+            return `${start.getDate()} – ${end.getDate()} ${MONTHS[start.getMonth()]} ${start.getFullYear()}`;
         }
         return `${start.getDate()} ${MONTHS[start.getMonth()].slice(0,3)} – ${end.getDate()} ${MONTHS[end.getMonth()].slice(0,3)} ${end.getFullYear()}`;
     }
@@ -176,13 +176,13 @@ function typeIcon(type) {
 // ── Format helpers ─────────────────────────────────────────────────
 function formatTime(dateStr) {
     const d = new Date(dateStr);
-    return d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
 function formatDateTime(dateStr) {
     if (!dateStr) return '—';
     const d = new Date(dateStr);
-    return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+    return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
 function hourLabel(h) {
@@ -249,7 +249,7 @@ async function completeActivity(evt) {
 <template>
     <AdminLayout>
         <template #header>
-            <h2 class="text-lg font-semibold text-gray-900">Calendario de Ventas</h2>
+            <h2 class="text-lg font-semibold text-gray-900">Sales Calendar</h2>
         </template>
 
         <div>
@@ -258,7 +258,7 @@ async function completeActivity(evt) {
                 <!-- View toggle -->
                 <div class="inline-flex rounded-lg border border-gray-200 overflow-hidden">
                     <button
-                        v-for="v in [{ key: 'day', label: 'Día' }, { key: 'week', label: 'Semana' }, { key: 'month', label: 'Mes' }]"
+                        v-for="v in [{ key: 'day', label: 'Day' }, { key: 'week', label: 'Week' }, { key: 'month', label: 'Month' }]"
                         :key="v.key"
                         @click="currentView = v.key"
                         class="px-4 py-2 text-sm font-medium transition-colors"
@@ -273,7 +273,7 @@ async function completeActivity(evt) {
                     <button @click="navigate(-1)" class="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                     </button>
-                    <button @click="goToday" class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600 transition-colors">Hoy</button>
+                    <button @click="goToday" class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600 transition-colors">Today</button>
                     <span class="text-sm font-semibold text-gray-900 min-w-[220px] text-center">{{ headerLabel }}</span>
                     <button @click="navigate(1)" class="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-600 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
@@ -283,7 +283,7 @@ async function completeActivity(evt) {
                 <!-- Advisor filter (leader only) -->
                 <div v-if="isLeader" class="flex items-center gap-2">
                     <select v-model="selectedAdvisor" class="border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-1 focus:ring-black focus:border-black">
-                        <option value="">Todos los asesores</option>
+                        <option value="">All advisors</option>
                         <option v-for="a in advisors" :key="a.id" :value="a.id">{{ a.first_name }} {{ a.last_name }}</option>
                     </select>
                 </div>
@@ -340,7 +340,7 @@ async function completeActivity(evt) {
                                 v-if="eventsForDay(cell.date).length > 3"
                                 class="text-[10px] text-gray-400 font-medium px-1"
                             >
-                                +{{ eventsForDay(cell.date).length - 3 }} más
+                                +{{ eventsForDay(cell.date).length - 3 }} more
                             </span>
                         </div>
                     </div>
@@ -419,11 +419,11 @@ async function completeActivity(evt) {
                                         <span
                                             v-if="evt.status === 'pending'"
                                             class="text-[10px] font-medium bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full"
-                                        >Pendiente</span>
+                                        >Pending</span>
                                         <span
                                             v-else-if="evt.status === 'completed'"
                                             class="text-[10px] font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full"
-                                        >Completada</span>
+                                        >Completed</span>
                                     </div>
                                     <h4 class="text-sm font-semibold text-gray-900">{{ evt.title || typeLabel(evt.type) }}</h4>
                                     <div v-if="evt.lead_name" class="text-xs text-gray-600 mt-0.5">
@@ -436,7 +436,7 @@ async function completeActivity(evt) {
                                             @click.stop="completeActivity(evt)"
                                             class="text-xs font-medium bg-black text-white px-3 py-1 rounded-lg hover:bg-gray-800 transition-colors"
                                         >
-                                            Completar
+                                            Complete
                                         </button>
                                     </div>
                                 </div>
@@ -451,7 +451,7 @@ async function completeActivity(evt) {
             <!-- Empty state -->
             <div v-if="!loading && events.length === 0" class="text-center py-16">
                 <svg class="mx-auto h-12 w-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                <p class="mt-3 text-sm text-gray-500">No hay actividades programadas en este periodo</p>
+                <p class="mt-3 text-sm text-gray-500">No activities scheduled in this period</p>
             </div>
         </div>
 
@@ -480,11 +480,11 @@ async function completeActivity(evt) {
                         <span
                             v-if="selectedEvent.status === 'pending'"
                             class="ml-2 text-xs font-medium bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full"
-                        >Pendiente</span>
+                        >Pending</span>
                         <span
                             v-else-if="selectedEvent.status === 'completed'"
                             class="ml-2 text-xs font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full"
-                        >Completada</span>
+                        >Completed</span>
                     </div>
 
                     <!-- Title -->
@@ -509,7 +509,7 @@ async function completeActivity(evt) {
 
                         <div v-if="selectedEvent.advisor" class="flex items-center gap-2 text-gray-500">
                             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0"/></svg>
-                            <span>Asesor: {{ selectedEvent.advisor }}</span>
+                            <span>Advisor: {{ selectedEvent.advisor }}</span>
                         </div>
                     </div>
 
@@ -520,14 +520,14 @@ async function completeActivity(evt) {
                             :href="`/admin/sales/leads/${selectedEvent.lead_id}`"
                             class="flex-1 text-center text-sm font-medium py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
                         >
-                            Ver lead
+                            View lead
                         </a>
                         <button
                             v-if="selectedEvent.status === 'pending'"
                             @click="completeActivity(selectedEvent)"
                             class="flex-1 text-center text-sm font-medium py-2 rounded-lg bg-black text-white hover:bg-gray-800 transition-colors"
                         >
-                            Completar
+                            Complete
                         </button>
                     </div>
                 </div>

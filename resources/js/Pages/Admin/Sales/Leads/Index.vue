@@ -109,17 +109,17 @@ function timeAgo(dateStr) {
     const date = new Date(dateStr);
     const now = new Date();
     const diff = Math.floor((now - date) / 1000);
-    if (diff < 60) return 'Hace un momento';
-    if (diff < 3600) return `Hace ${Math.floor(diff / 60)} min`;
-    if (diff < 86400) return `Hace ${Math.floor(diff / 3600)}h`;
-    if (diff < 604800) return `Hace ${Math.floor(diff / 86400)}d`;
-    return date.toLocaleDateString('es-US');
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+    return date.toLocaleDateString('en-US');
 }
 
 function formatDate(dateStr) {
     if (!dateStr) return '—';
     const d = new Date(dateStr);
-    return d.toLocaleDateString('es-US') + '\n' + d.toLocaleTimeString('es-US', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('en-US') + '\n' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }
 
 // Stats cards config
@@ -127,14 +127,14 @@ function formatDate(dateStr) {
 const leadCards = computed(() => {
     const cards = [
         { key: 'total', label: 'Total', value: props.stats?.total ?? 0, color: '#6B7280' },
-        { key: 'new', label: 'Nuevos', value: props.stats?.new ?? 0, color: props.statuses?.new?.color ?? '#3B82F6' },
-        { key: 'qualified', label: 'Calificados', value: props.stats?.qualified ?? 0, color: props.statuses?.qualified?.color ?? '#8B5CF6' },
-        { key: 'client', label: 'Clientes', value: props.stats?.client ?? 0, color: props.statuses?.client?.color ?? '#10B981' },
-        { key: 'lost', label: 'Perdidos', value: props.stats?.lost ?? 0, color: props.statuses?.lost?.color ?? '#EF4444' },
+        { key: 'new', label: 'New', value: props.stats?.new ?? 0, color: props.statuses?.new?.color ?? '#3B82F6' },
+        { key: 'qualified', label: 'Qualified', value: props.stats?.qualified ?? 0, color: props.statuses?.qualified?.color ?? '#8B5CF6' },
+        { key: 'client', label: 'Clients', value: props.stats?.client ?? 0, color: props.statuses?.client?.color ?? '#10B981' },
+        { key: 'lost', label: 'Lost', value: props.stats?.lost ?? 0, color: props.statuses?.lost?.color ?? '#EF4444' },
         { key: 'spam', label: 'Spam', value: props.stats?.spam ?? 0, color: props.statuses?.spam?.color ?? '#1F2937' },
     ];
     if (props.isLeader) {
-        cards.push({ key: 'unassigned', label: 'Sin asignar', value: props.stats?.unassigned ?? 0, color: '#9CA3AF' });
+        cards.push({ key: 'unassigned', label: 'Unassigned', value: props.stats?.unassigned ?? 0, color: '#9CA3AF' });
     }
     return cards;
 });
@@ -142,11 +142,11 @@ const leadCards = computed(() => {
 // Opportunity stats (ventas)
 const oppCards = computed(() => [
     { key: 'opp_total', label: 'Total', value: props.opportunityStats?.opp_total ?? 0, color: '#6B7280' },
-    { key: 'opp_negotiating', label: 'Negociando', value: props.opportunityStats?.opp_negotiating ?? 0, color: '#8B5CF6' },
-    { key: 'opp_converted', label: 'Ventas', value: props.opportunityStats?.opp_converted ?? 0, color: '#10B981' },
-    { key: 'opp_follow_up', label: 'Seguimiento', value: props.opportunityStats?.opp_follow_up ?? 0, color: '#F97316' },
-    { key: 'opp_contacted', label: 'Contactados', value: props.opportunityStats?.opp_contacted ?? 0, color: '#EAB308' },
-    { key: 'opp_lost', label: 'Perdidos', value: props.opportunityStats?.opp_lost ?? 0, color: '#EF4444' },
+    { key: 'opp_negotiating', label: 'Negotiating', value: props.opportunityStats?.opp_negotiating ?? 0, color: '#8B5CF6' },
+    { key: 'opp_converted', label: 'Sales', value: props.opportunityStats?.opp_converted ?? 0, color: '#10B981' },
+    { key: 'opp_follow_up', label: 'Follow Up', value: props.opportunityStats?.opp_follow_up ?? 0, color: '#F97316' },
+    { key: 'opp_contacted', label: 'Contacted', value: props.opportunityStats?.opp_contacted ?? 0, color: '#EAB308' },
+    { key: 'opp_lost', label: 'Lost', value: props.opportunityStats?.opp_lost ?? 0, color: '#EF4444' },
 ]);
 
 function advisorName(lead) {
@@ -168,7 +168,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-2">
-                <h2 class="text-lg font-semibold text-gray-900">Prospectos</h2>
+                <h2 class="text-lg font-semibold text-gray-900">Prospects</h2>
                 <button @click="showStatusInfo = true" class="w-5 h-5 rounded-full border border-gray-300 text-gray-400 flex items-center justify-center hover:bg-gray-100 hover:text-gray-600 transition-colors text-[10px] font-bold">?</button>
             </div>
         </template>
@@ -177,13 +177,13 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
             <!-- Header -->
             <div class="flex items-center justify-between mb-6">
                 <div>
-                    <h3 class="text-2xl font-bold text-gray-900">Prospectos</h3>
-                    <p class="text-gray-500 text-sm mt-1">{{ leads.total }} prospectos registrados</p>
+                    <h3 class="text-2xl font-bold text-gray-900">Prospects</h3>
+                    <p class="text-gray-500 text-sm mt-1">{{ leads.total }} registered prospects</p>
                 </div>
                 <div class="flex items-center gap-3">
                     <!-- Availability toggle for sales users -->
                     <div v-if="!isLeader" class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg bg-white">
-                        <span class="text-sm text-gray-600">Disponible para leads</span>
+                        <span class="text-sm text-gray-600">Available for leads</span>
                         <button @click.stop="toggleAvailability"
                             class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
                             :class="$page.props.auth?.user?.is_available ? 'bg-green-500' : 'bg-gray-300'"
@@ -196,7 +196,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
 
                     <Link href="/admin/sales/leads/create"
                         class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
-                        + Nuevo Prospecto
+                        + New Prospect
                     </Link>
                 </div>
             </div>
@@ -219,7 +219,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
 
             <!-- Opportunity Stats (Ventas) -->
             <div class="mb-6">
-                <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Oportunidades</p>
+                <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Opportunities</p>
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                     <div v-for="card in oppCards" :key="card.key"
                         class="bg-white rounded-lg border border-gray-200 px-4 py-3 cursor-pointer hover:shadow-sm transition-shadow"
@@ -238,42 +238,42 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 <input
                     v-model="search"
                     type="text"
-                    placeholder="Buscar nombre, email, empresa, telefono..."
+                    placeholder="Search name, email, company, phone..."
                     class="flex-1 min-w-48 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400"
                 />
                 <select v-model="status" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todos los estados</option>
+                    <option value="">All statuses</option>
                     <option v-for="(info, key) in statuses" :key="key" :value="key">{{ info.label }}</option>
                 </select>
                 <select v-model="event" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todos los eventos</option>
+                    <option value="">All events</option>
                     <option v-for="ev in events" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
                 </select>
                 <select v-if="isLeader" v-model="assignedTo" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todos los asesores</option>
-                    <option value="unassigned">Sin asignar</option>
+                    <option value="">All advisors</option>
+                    <option value="unassigned">Unassigned</option>
                     <option v-for="adv in advisors" :key="adv.id" :value="adv.id">{{ adv.first_name }} {{ adv.last_name }}</option>
                 </select>
                 <select v-model="budget" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Presupuesto</option>
-                    <option value="low">Bajo</option>
-                    <option value="medium">Medio</option>
-                    <option value="high">Alto</option>
+                    <option value="">Budget</option>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
                     <option value="premium">Premium</option>
                 </select>
                 <select v-model="tag" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todos los tags</option>
+                    <option value="">All tags</option>
                     <option v-for="t in allTags" :key="t.id" :value="t.id">{{ t.name }}</option>
                 </select>
                 <select v-model="source" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todas las fuentes</option>
+                    <option value="">All sources</option>
                     <option v-for="(label, key) in sources" :key="key" :value="key">{{ label }}</option>
                 </select>
                 <select v-model="perPage" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="20">20 por pagina</option>
-                    <option value="50">50 por pagina</option>
-                    <option value="100">100 por pagina</option>
-                    <option value="200">200 por pagina</option>
+                    <option value="20">20 per page</option>
+                    <option value="50">50 per page</option>
+                    <option value="100">100 per page</option>
+                    <option value="200">200 per page</option>
                 </select>
             </div>
 
@@ -284,16 +284,16 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         <thead class="bg-gray-50 border-b border-gray-200">
                             <tr>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Lead</th>
-                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Empresa</th>
+                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Company</th>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Instagram</th>
-                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Presupuesto</th>
-                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Evento</th>
+                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Budget</th>
+                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Event</th>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tags</th>
-                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
-                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Asesor</th>
-                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Registro</th>
-                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Fuente</th>
-                                <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
+                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Advisor</th>
+                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Registered</th>
+                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Source</th>
+                                <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
@@ -336,7 +336,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                 <!-- Events -->
                                 <td class="px-4 py-4" @click.stop>
                                     <button v-if="lead.events?.length" @click="openEventsModal(lead)" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer">
-                                        {{ lead.events.length }} {{ lead.events.length === 1 ? 'evento' : 'eventos' }}
+                                        {{ lead.events.length }} {{ lead.events.length === 1 ? 'event' : 'events' }}
                                     </button>
                                     <span v-else class="text-gray-400 text-xs">—</span>
                                 </td>
@@ -352,7 +352,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                     <div v-else-if="lead.tags?.length > 1">
                                         <button @click="tagsModalLead = lead"
                                             class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
-                                            Varios ({{ lead.tags.length }})
+                                            Multiple ({{ lead.tags.length }})
                                         </button>
                                     </div>
                                     <span v-else class="text-gray-400 text-xs">—</span>
@@ -391,18 +391,18 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                             :class="advisorName(lead)
                                                 ? 'bg-blue-50 text-blue-700 hover:bg-blue-100'
                                                 : 'bg-orange-50 text-orange-600 hover:bg-orange-100'">
-                                            {{ advisorName(lead) || 'Sin asignar' }}
+                                            {{ advisorName(lead) || 'Unassigned' }}
                                         </button>
                                         <span v-else class="text-xs font-medium rounded-full px-2.5 py-1"
                                             :class="advisorName(lead) ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-600'">
-                                            {{ advisorName(lead) || 'Sin asignar' }}
+                                            {{ advisorName(lead) || 'Unassigned' }}
                                         </span>
                                         <!-- Advisor dropdown (leader only) -->
                                         <div v-if="isLeader && openAdvisorDropdown === lead.id"
                                             class="absolute z-20 mt-1 left-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-44">
                                             <button @click="changeAdvisor(lead, null); openAdvisorDropdown = null"
                                                 class="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 text-orange-600 transition-colors">
-                                                Sin asignar
+                                                Unassigned
                                             </button>
                                             <button v-for="adv in advisors" :key="adv.id"
                                                 @click="changeAdvisor(lead, adv.id); openAdvisorDropdown = null"
@@ -411,7 +411,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                                 <span class="w-2 h-2 rounded-full flex-shrink-0"
                                                     :class="adv.is_available ? 'bg-green-500' : 'bg-gray-300'"></span>
                                                 {{ adv.first_name }} {{ adv.last_name }}
-                                                <span v-if="!adv.is_available" class="text-gray-400 text-[10px]">(no disponible)</span>
+                                                <span v-if="!adv.is_available" class="text-gray-400 text-[10px]">(unavailable)</span>
                                             </button>
                                         </div>
                                     </div>
@@ -432,12 +432,12 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                     <div class="flex items-center justify-end gap-1">
                                         <Link :href="`/admin/sales/leads/${lead.id}/edit`"
                                             class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors cursor-pointer"
-                                            title="Editar">
+                                            title="Edit">
                                             <PencilSquareIcon class="w-4 h-4" />
                                         </Link>
                                         <Link :href="`/admin/sales/leads/${lead.id}`"
                                             class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors cursor-pointer"
-                                            title="Ver detalle">
+                                            title="View details">
                                             <EyeIcon class="w-4 h-4" />
                                         </Link>
                                     </div>
@@ -445,7 +445,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                             </tr>
                             <tr v-if="leads.data.length === 0">
                                 <td colspan="9" class="px-6 py-12 text-center text-gray-400 text-sm">
-                                    No se encontraron prospectos con los filtros aplicados.
+                                    No prospects found with the applied filters.
                                 </td>
                             </tr>
                         </tbody>
@@ -454,7 +454,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
 
                 <!-- Pagination -->
                 <div v-if="leads.last_page > 1" class="border-t border-gray-200 px-4 py-4 flex items-center justify-between">
-                    <p class="text-sm text-gray-500">Mostrando {{ leads.from }}–{{ leads.to }} de {{ leads.total }}</p>
+                    <p class="text-sm text-gray-500">Showing {{ leads.from }}–{{ leads.to }} of {{ leads.total }}</p>
                     <div class="flex gap-1">
                         <Link v-for="link in leads.links" :key="link.label" :href="link.url || '#'" v-html="link.label"
                             class="px-3 py-1.5 text-sm rounded-lg border transition-colors"
@@ -470,40 +470,48 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 <div class="absolute inset-0 bg-black/50" @click="showStatusInfo = false"></div>
                 <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
                     <div class="sticky top-0 bg-white px-6 py-4 border-b flex items-center justify-between">
-                        <h3 class="text-lg font-semibold text-gray-900">Guía de Estados</h3>
+                        <h3 class="text-lg font-semibold text-gray-900">Status Guide</h3>
                         <button @click="showStatusInfo = false" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
                     </div>
                     <div class="px-6 py-5 space-y-6 text-sm">
                         <div>
-                            <h4 class="font-semibold text-gray-900 mb-3">Estado del Lead (persona)</h4>
-                            <p class="text-gray-500 text-xs mb-3">Representa el ciclo de vida del contacto como prospecto.</p>
+                            <h4 class="font-semibold text-gray-900 mb-3">Lead Status (person)</h4>
+                            <p class="text-gray-500 text-xs mb-3">Represents the contact's lifecycle as a prospect.</p>
                             <div class="space-y-2">
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-blue-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Nuevo</span><span class="text-gray-500"> — Acaba de registrarse. El líder debe revisar y calificar.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-purple-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Calificado</span><span class="text-gray-500"> — Es un prospecto real. Se asigna automáticamente a un asesor.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-green-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Cliente</span><span class="text-gray-500"> — Se cerró al menos 1 venta. Cambia automáticamente.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-red-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Perdido</span><span class="text-gray-500"> — No tiene interés. Cambia automáticamente si todos los eventos son negativos.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-gray-800 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Spam</span><span class="text-gray-500"> — No es un prospecto real.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-blue-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">New</span><span class="text-gray-500"> — Just registered. The leader must review and qualify.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-purple-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Qualified</span><span class="text-gray-500"> — A real prospect. Automatically assigned to an advisor.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-green-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Client</span><span class="text-gray-500"> — At least 1 sale was closed. Changes automatically.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-red-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Lost</span><span class="text-gray-500"> — Not interested. Changes automatically if all events are negative.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-gray-800 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Spam</span><span class="text-gray-500"> — Not a real prospect.</span></div></div>
                             </div>
                         </div>
                         <div class="border-t pt-5">
-                            <h4 class="font-semibold text-gray-900 mb-3">Estado por Evento (oportunidad)</h4>
-                            <p class="text-gray-500 text-xs mb-3">Progreso de la negociación para cada evento.</p>
+                            <h4 class="font-semibold text-gray-900 mb-3">Status per Event (opportunity)</h4>
+                            <p class="text-gray-500 text-xs mb-3">Negotiation progress for each event.</p>
                             <div class="space-y-2">
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-blue-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Nuevo</span><span class="text-gray-500"> — Registrado, sin contactar.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-yellow-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Contactado</span><span class="text-gray-500"> — Primer contacto realizado.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-orange-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Seguimiento</span><span class="text-gray-500"> — Pendiente de respuesta.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-purple-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Negociando</span><span class="text-gray-500"> — Discutiendo paquete. Se habilita convertir.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-green-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Venta</span><span class="text-gray-500"> — Venta cerrada.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-red-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">No Venta</span><span class="text-gray-500"> — No se concretó.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-blue-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">New</span><span class="text-gray-500"> — Registered, not contacted.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-yellow-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Contacted</span><span class="text-gray-500"> — First contact made.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-orange-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Follow Up</span><span class="text-gray-500"> — Awaiting response.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-purple-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Negotiating</span><span class="text-gray-500"> — Discussing package. Convert is enabled.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-green-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Sale</span><span class="text-gray-500"> — Sale closed.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-red-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">No Sale</span><span class="text-gray-500"> — Sale did not close.</span></div></div>
                             </div>
                         </div>
                         <div class="border-t pt-5">
-                            <h4 class="font-semibold text-gray-900 mb-3">Cambios Automáticos</h4>
+                            <h4 class="font-semibold text-gray-900 mb-3">Automatic Changes</h4>
                             <div class="space-y-2 text-gray-600 text-xs">
-                                <p>• Al calificar → se asigna asesor automáticamente</p>
-                                <p>• Al convertir a designer → lead pasa a <span class="font-medium text-green-600">Cliente</span>, evento a <span class="font-medium text-green-600">Venta</span></p>
-                                <p>• Todos los eventos negativos → lead pasa a <span class="font-medium text-red-600">Perdido</span></p>
-                                <p>• Lead perdido se re-registra → vuelve a <span class="font-medium text-purple-600">Calificado</span></p>
+                                <p>• When qualified → advisor is automatically assigned</p>
+                                <p>• When converted to designer → lead becomes <span class="font-medium text-green-600">Client</span>, event becomes <span class="font-medium text-green-600">Sale</span></p>
+                                <p>• All events negative → lead becomes <span class="font-medium text-red-600">Lost</span></p>
+                                <p>• Lost lead re-registers → returns to <span class="font-medium text-purple-600">Qualified</span></p>
+                            </div>
+                        </div>
+                        <div class="border-t pt-5">
+                            <h4 class="font-semibold text-gray-900 mb-3">Assignment</h4>
+                            <div class="space-y-2 text-gray-600 text-xs">
+                                <p>• <span class="font-medium text-blue-600">USA leads</span> — priority rotation (equal distribution)</p>
+                                <p>• <span class="font-medium text-gray-700">Other countries</span> — standard rotation</p>
+                                <p>• 3+ unassigned → email alert sent</p>
                             </div>
                         </div>
                     </div>
@@ -518,8 +526,8 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
                     <div class="bg-gray-50 px-6 py-4 flex items-center justify-between border-b">
                         <div>
-                            <h3 class="font-semibold text-gray-900">Tags de {{ tagsModalLead.first_name }} {{ tagsModalLead.last_name }}</h3>
-                            <p class="text-xs text-gray-500">{{ tagsModalLead.tags?.length }} tags asignados</p>
+                            <h3 class="font-semibold text-gray-900">Tags for {{ tagsModalLead.first_name }} {{ tagsModalLead.last_name }}</h3>
+                            <p class="text-xs text-gray-500">{{ tagsModalLead.tags?.length }} assigned tags</p>
                         </div>
                         <button @click="tagsModalLead = null" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
                     </div>
@@ -533,8 +541,8 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         </div>
                     </div>
                     <div class="border-t px-6 py-3 flex justify-between">
-                        <Link :href="`/admin/sales/leads/${tagsModalLead.id}`" class="text-sm font-medium text-gray-700 hover:text-black">Ver perfil →</Link>
-                        <button @click="tagsModalLead = null" class="text-sm text-gray-500 hover:text-gray-700">Cerrar</button>
+                        <Link :href="`/admin/sales/leads/${tagsModalLead.id}`" class="text-sm font-medium text-gray-700 hover:text-black">View profile →</Link>
+                        <button @click="tagsModalLead = null" class="text-sm text-gray-500 hover:text-gray-700">Close</button>
                     </div>
                 </div>
             </div>
@@ -549,7 +557,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <div class="bg-gray-50 px-6 py-4 flex items-center justify-between border-b">
                         <div>
                             <h3 class="font-semibold text-gray-900">{{ eventsModalLead.first_name }} {{ eventsModalLead.last_name }}</h3>
-                            <p class="text-xs text-gray-500">{{ eventsModalLead.events?.length }} {{ eventsModalLead.events?.length === 1 ? 'evento asignado' : 'eventos asignados' }}</p>
+                            <p class="text-xs text-gray-500">{{ eventsModalLead.events?.length }} {{ eventsModalLead.events?.length === 1 ? 'assigned event' : 'assigned events' }}</p>
                         </div>
                         <button @click="eventsModalLead = null" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
                     </div>
@@ -563,7 +571,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                 </div>
                             </div>
                             <div>
-                                <label class="text-xs text-gray-500 mb-1 block">Estado</label>
+                                <label class="text-xs text-gray-500 mb-1 block">Status</label>
                                 <select
                                     :value="ev.pivot?.status || 'new'"
                                     @change="changeEventStatus(eventsModalLead, ev.id, $event.target.value)"
@@ -575,8 +583,8 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     </div>
                     <!-- Footer -->
                     <div class="border-t px-6 py-3 flex items-center justify-between">
-                        <Link :href="`/admin/sales/leads/${eventsModalLead.id}`" class="text-sm font-medium text-gray-700 hover:text-black">Ver perfil completo →</Link>
-                        <button @click="eventsModalLead = null" class="text-sm text-gray-500 hover:text-gray-700">Cerrar</button>
+                        <Link :href="`/admin/sales/leads/${eventsModalLead.id}`" class="text-sm font-medium text-gray-700 hover:text-black">View full profile →</Link>
+                        <button @click="eventsModalLead = null" class="text-sm text-gray-500 hover:text-gray-700">Close</button>
                     </div>
                 </div>
             </div>

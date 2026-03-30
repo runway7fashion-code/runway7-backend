@@ -49,7 +49,6 @@ const form = useForm({
     designs_ready: props.lead.designs_ready || '',
     budget: props.lead.budget || '',
     past_shows: props.lead.past_shows || '',
-    event_id: props.lead.event_id || '',
     preferred_contact_time: props.lead.preferred_contact_time || '',
     source: props.lead.source || 'manual',
     event_ids: (props.lead.events || []).map(e => e.id),
@@ -81,26 +80,26 @@ function submit() {
                     <ArrowLeftIcon class="w-4 h-4" /> Leads
                 </Link>
                 <span class="text-gray-300">/</span>
-                <h2 class="text-lg font-semibold text-gray-900">Editar Lead</h2>
+                <h2 class="text-lg font-semibold text-gray-900">Edit Lead</h2>
             </div>
         </template>
 
         <div class="max-w-3xl mx-auto">
             <form @submit.prevent="submit" class="space-y-6">
 
-                <!-- Section 1: Informacion Personal -->
+                <!-- Section 1: Personal Information -->
                 <div class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
-                    <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">Informacion Personal</h3>
+                    <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">Personal Information</h3>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
                             <input v-model="form.first_name" type="text"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             <p v-if="form.errors.first_name" class="mt-1 text-red-500 text-xs">{{ form.errors.first_name }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
                             <input v-model="form.last_name" type="text"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             <p v-if="form.errors.last_name" class="mt-1 text-red-500 text-xs">{{ form.errors.last_name }}</p>
@@ -115,7 +114,7 @@ function submit() {
                             <p v-if="form.errors.email" class="mt-1 text-red-500 text-xs">{{ form.errors.email }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                             <div class="flex gap-2">
                                 <select v-model="phoneCode" class="w-28 border border-gray-300 rounded-lg px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white flex-shrink-0">
                                     <option v-for="pc in phoneCodes" :key="pc.code" :value="pc.code">{{ pc.flag }} {{ pc.code }}</option>
@@ -129,10 +128,10 @@ function submit() {
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">País</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Country</label>
                             <select v-model="form.country"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
-                                <option value="">-- Seleccionar --</option>
+                                <option value="">-- Select --</option>
                                 <option v-for="c in countryOptions" :key="c" :value="c">{{ c }}</option>
                             </select>
                             <p v-if="form.errors.country" class="mt-1 text-red-500 text-xs">{{ form.errors.country }}</p>
@@ -140,22 +139,22 @@ function submit() {
                     </div>
                 </div>
 
-                <!-- Section 2: Informacion del Negocio -->
+                <!-- Section 2: Business Information -->
                 <div class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
-                    <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">Informacion del Negocio</h3>
+                    <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">Business Information</h3>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre de Empresa</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
                             <input v-model="form.company_name" type="text"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             <p v-if="form.errors.company_name" class="mt-1 text-red-500 text-xs">{{ form.errors.company_name }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Categoría Retail</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Retail Category</label>
                             <select v-model="form.retail_category"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
-                                <option value="">-- Seleccionar --</option>
+                                <option value="">-- Select --</option>
                                 <option v-for="c in retailCategoryOptions" :key="c" :value="c">{{ c }}</option>
                             </select>
                             <p v-if="form.errors.retail_category" class="mt-1 text-red-500 text-xs">{{ form.errors.retail_category }}</p>
@@ -171,7 +170,7 @@ function submit() {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Instagram</label>
-                            <input v-model="form.instagram" type="text" placeholder="@usuario"
+                            <input v-model="form.instagram" type="text" placeholder="@username"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             <p v-if="form.errors.instagram" class="mt-1 text-red-500 text-xs">{{ form.errors.instagram }}</p>
                         </div>
@@ -180,14 +179,14 @@ function submit() {
 
                 <!-- Section 3: Detalles -->
                 <div class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
-                    <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">Detalles</h3>
+                    <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">Details</h3>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Designs Ready</label>
                             <select v-model="form.designs_ready"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
-                                <option value="">-- Seleccionar --</option>
+                                <option value="">-- Select --</option>
                                 <option v-for="opt in designsReadyOptions" :key="opt" :value="opt">{{ opt }}</option>
                             </select>
                             <p v-if="form.errors.designs_ready" class="mt-1 text-red-500 text-xs">{{ form.errors.designs_ready }}</p>
@@ -196,7 +195,7 @@ function submit() {
                             <label class="block text-sm font-medium text-gray-700 mb-1">Budget</label>
                             <select v-model="form.budget"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
-                                <option value="">-- Seleccionar --</option>
+                                <option value="">-- Select --</option>
                                 <option v-for="opt in budgetOptions" :key="opt" :value="opt">{{ opt }}</option>
                             </select>
                             <p v-if="form.errors.budget" class="mt-1 text-red-500 text-xs">{{ form.errors.budget }}</p>
@@ -208,19 +207,10 @@ function submit() {
                             <label class="block text-sm font-medium text-gray-700 mb-1">Past Shows</label>
                             <select v-model="form.past_shows"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
-                                <option value="">-- Seleccionar --</option>
+                                <option value="">-- Select --</option>
                                 <option v-for="opt in pastShowsOptions" :key="opt" :value="opt">{{ opt }}</option>
                             </select>
                             <p v-if="form.errors.past_shows" class="mt-1 text-red-500 text-xs">{{ form.errors.past_shows }}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Evento</label>
-                            <select v-model="form.event_id"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
-                                <option value="">-- Sin asignar --</option>
-                                <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
-                            </select>
-                            <p v-if="form.errors.event_id" class="mt-1 text-red-500 text-xs">{{ form.errors.event_id }}</p>
                         </div>
                     </div>
 
@@ -229,7 +219,7 @@ function submit() {
                             <label class="block text-sm font-medium text-gray-700 mb-1">Preferred Contact Time</label>
                             <select v-model="form.preferred_contact_time"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
-                                <option value="">-- Seleccionar --</option>
+                                <option value="">-- Select --</option>
                                 <option v-for="t in contactTimeOptions" :key="t" :value="t">{{ t }}</option>
                             </select>
                             <p v-if="form.errors.preferred_contact_time" class="mt-1 text-red-500 text-xs">{{ form.errors.preferred_contact_time }}</p>
@@ -239,7 +229,7 @@ function submit() {
 
                 <!-- Eventos -->
                 <div class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
-                    <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">Eventos</h3>
+                    <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">Events</h3>
                     <div class="space-y-2">
                         <label v-for="e in events" :key="e.id"
                             class="flex items-center justify-between p-3 border rounded-xl transition-colors"
@@ -262,9 +252,9 @@ function submit() {
 
                 <!-- Source -->
                 <div class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
-                    <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">Fuente</h3>
+                    <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">Source</h3>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">¿De dónde proviene este lead?</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Where does this lead come from?</label>
                         <select v-model="form.source"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
                             <option v-for="(label, key) in sources" :key="key" :value="key">{{ label }}</option>
@@ -276,12 +266,12 @@ function submit() {
                 <div class="flex justify-between">
                     <Link :href="cancelUrl"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-                        Cancelar
+                        Cancel
                     </Link>
                     <button type="submit" :disabled="form.processing"
                         class="px-8 py-2.5 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800 disabled:opacity-60 transition-colors">
-                        <span v-if="form.processing">Guardando...</span>
-                        <span v-else>Guardar Cambios</span>
+                        <span v-if="form.processing">Saving...</span>
+                        <span v-else>Save Changes</span>
                     </button>
                 </div>
             </form>

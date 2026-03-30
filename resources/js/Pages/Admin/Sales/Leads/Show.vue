@@ -83,7 +83,7 @@ function saveNote() {
     if (!noteContent.value.trim()) return;
     const formData = new FormData();
     formData.append('type', 'note');
-    formData.append('title', noteTitle.value.trim() || 'Nota');
+    formData.append('title', noteTitle.value.trim() || 'Note');
     formData.append('description', noteContent.value.trim());
     noteFiles.value.forEach((f, i) => formData.append(`files[${i}]`, f.file));
 
@@ -185,7 +185,7 @@ const showAddEventModal = ref(false);
 const newEventId = ref('');
 
 function removeEvent(eventId) {
-    if (!confirm('¿Quitar este evento del lead?')) return;
+    if (!confirm('Remove this event from the lead?')) return;
     router.delete(`/admin/sales/leads/${props.lead.id}/remove-event`, { data: { event_id: eventId }, preserveScroll: true });
 }
 
@@ -264,14 +264,14 @@ function formatDate(date) {
     if (!date) return '—';
     const d = new Date(date);
     if (isNaN(d)) return date;
-    return d.toLocaleDateString('es-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function formatDateTime(date) {
     if (!date) return '—';
     const d = new Date(date);
     if (isNaN(d)) return date;
-    return d.toLocaleDateString('es-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 function relativeTime(date) {
@@ -280,12 +280,12 @@ function relativeTime(date) {
     const d = new Date(date);
     const diffMs = now - d;
     const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 1) return 'ahora';
-    if (diffMins < 60) return `hace ${diffMins}m`;
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
     const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `hace ${diffHours}h`;
+    if (diffHours < 24) return `${diffHours}h ago`;
     const diffDays = Math.floor(diffHours / 24);
-    if (diffDays < 30) return `hace ${diffDays}d`;
+    if (diffDays < 30) return `${diffDays}d ago`;
     return formatDate(date);
 }
 
@@ -320,29 +320,29 @@ const sortedActivities = computed(() => {
                             <p v-if="lead.company_name" class="text-gray-500 text-sm">{{ lead.company_name }}</p>
                         </div>
                         <div class="flex flex-col ml-2">
-                            <span v-if="lead.assigned_to && typeof lead.assigned_to === 'object'" class="text-xs text-gray-400 mb-1">Asesor: <span class="font-medium text-gray-600">{{ lead.assigned_to.first_name }} {{ lead.assigned_to.last_name }}</span></span>
+                            <span v-if="lead.assigned_to && typeof lead.assigned_to === 'object'" class="text-xs text-gray-400 mb-1">Advisor: <span class="font-medium text-gray-600">{{ lead.assigned_to.first_name }} {{ lead.assigned_to.last_name }}</span></span>
                             <span :class="statusBadgeStyle(lead.status)" class="text-xs font-medium rounded-lg px-3 py-1 w-fit">
-                                Estado lead: {{ statusLabel(lead.status) }}
+                                Lead status: {{ statusLabel(lead.status) }}
                             </span>
                         </div>
                         <div class="flex flex-col text-xs text-gray-400 ml-2">
-                            <span v-if="lead.source">Fuente: <span class="font-medium text-gray-600">{{ sources[lead.source] || lead.source }}</span></span>
-                            <span>Registro: {{ formatDateTime(lead.created_at) }}</span>
-                            <span v-if="lead.updated_at !== lead.created_at">Modificado: {{ formatDateTime(lead.updated_at) }}</span>
+                            <span v-if="lead.source">Source: <span class="font-medium text-gray-600">{{ sources[lead.source] || lead.source }}</span></span>
+                            <span>Registered: {{ formatDateTime(lead.created_at) }}</span>
+                            <span v-if="lead.updated_at !== lead.created_at">Modified: {{ formatDateTime(lead.updated_at) }}</span>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <button @click="showActivityModal = true"
                             class="px-4 py-1.5 bg-[#D4AF37] text-white rounded-lg text-xs font-medium hover:bg-[#b8962f] transition-colors flex items-center gap-1">
-                            <PlusIcon class="w-3.5 h-3.5" /> Actividad
+                            <PlusIcon class="w-3.5 h-3.5" /> Activity
                         </button>
                         <Link :href="`/admin/sales/leads/${lead.id}/edit?from=show`"
                             class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors flex items-center gap-1">
-                            <PencilSquareIcon class="w-3.5 h-3.5" /> Editar
+                            <PencilSquareIcon class="w-3.5 h-3.5" /> Edit
                         </Link>
                         <button @click="showDeleteModal = true"
                             class="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors flex items-center gap-1">
-                            <TrashIcon class="w-3.5 h-3.5" /> Eliminar
+                            <TrashIcon class="w-3.5 h-3.5" /> Delete
                         </button>
                     </div>
                 </div>
@@ -357,7 +357,7 @@ const sortedActivities = computed(() => {
                     <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-5">
                         <!-- Contact -->
                         <div>
-                            <h4 class="font-semibold text-gray-800 mb-3">Datos de Contacto</h4>
+                            <h4 class="font-semibold text-gray-800 mb-3">Contact Info</h4>
                             <div class="grid grid-cols-1 gap-3 text-sm">
                                 <div v-if="lead.email" class="flex items-center gap-2">
                                     <EnvelopeIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -383,7 +383,7 @@ const sortedActivities = computed(() => {
                                 </div>
                                 <div v-if="lead.preferred_contact_time" class="flex items-center gap-2 sm:col-span-2">
                                     <ClockIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                    <span class="text-gray-700">Prefiere contacto a las {{ lead.preferred_contact_time }}</span>
+                                    <span class="text-gray-700">Prefers contact at {{ lead.preferred_contact_time }}</span>
                                 </div>
                             </div>
                         </div>
@@ -422,7 +422,7 @@ const sortedActivities = computed(() => {
                                             {{ getTagById(id)?.name }}
                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                                         </span>
-                                        <span v-if="!selectedTagIds.length" class="text-xs text-gray-400 italic py-1">Sin tags</span>
+                                        <span v-if="!selectedTagIds.length" class="text-xs text-gray-400 italic py-1">No tags</span>
                                     </div>
                                     <div class="relative">
                                         <input v-model="tagSearch" type="text" placeholder="Tag Name"
@@ -445,30 +445,30 @@ const sortedActivities = computed(() => {
 
                     <!-- Business Card -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-4">
-                        <h4 class="font-semibold text-gray-800 mb-4">Informacion del Negocio</h4>
+                        <h4 class="font-semibold text-gray-800 mb-4">Business Information</h4>
                         <dl class="space-y-2 text-sm">
                             <div class="flex items-center gap-2 mb-3">
-                                <dt class="text-gray-500">Empresa:</dt>
+                                <dt class="text-gray-500">Company:</dt>
                                 <dd class="font-medium text-gray-900">{{ lead.company_name || '—' }}</dd>
                             </div>
                             <div class="flex items-center gap-2 mb-3">
-                                <dt class="text-gray-500">Categoria Retail:</dt>
+                                <dt class="text-gray-500">Retail Category:</dt>
                                 <dd class="font-medium text-gray-900">{{ lead.retail_category || '—' }}</dd>
                             </div>
                             <div class="flex items-center gap-2 mb-3">
-                                <dt class="text-gray-500">Diseños listos:</dt>
+                                <dt class="text-gray-500">Designs Ready:</dt>
                                 <dd class="font-medium text-gray-900">{{ lead.designs_ready ?? '—' }}</dd>
                             </div>
                             <div class="flex items-center gap-2 mb-3">
-                                <dt class="text-gray-500">Presupuesto:</dt>
+                                <dt class="text-gray-500">Budget:</dt>
                                 <dd class="font-medium text-gray-900">{{ lead.budget || '—' }}</dd>
                             </div>
                             <div class="flex items-center gap-2 mb-3">
-                                <dt class="text-gray-500">Shows pasados:</dt>
+                                <dt class="text-gray-500">Past Shows:</dt>
                                 <dd class="font-medium text-gray-900">{{ lead.past_shows || '—' }}</dd>
                             </div>
                             <div v-if="lead.events?.length" class="flex justify-between sm:flex-col sm:gap-0.5 sm:col-span-2">
-                                <dt class="text-gray-500">Eventos de interes:</dt>
+                                <dt class="text-gray-500">Events of Interest:</dt>
                                 <dd class="font-medium text-gray-900">
                                     <div class="flex flex-wrap gap-2 mt-1">
                                         <span v-for="ev in lead.events" :key="ev.id" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
@@ -489,13 +489,13 @@ const sortedActivities = computed(() => {
                     <!-- Estado y Asignacion Card -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-4">
                         <div class="flex items-center justify-between">
-                            <h4 class="font-semibold text-gray-800">Estado y Asignacion</h4>
+                            <h4 class="font-semibold text-gray-800">Status & Assignment</h4>
                             <button @click="showStatusInfo = true" class="w-6 h-6 rounded-full border border-gray-300 text-gray-400 flex items-center justify-center hover:bg-gray-100 hover:text-gray-600 transition-colors text-xs font-bold">?</button>
                         </div>
 
                         <!-- Lead status -->
                         <div>
-                            <label class="block text-xs text-gray-400 mb-1">Estado del lead</label>
+                            <label class="block text-xs text-gray-400 mb-1">Lead Status</label>
                             <select @change="changeStatus($event.target.value)" :value="lead.status"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black focus:border-black">
                                 <option v-for="(info, key) in statuses" :key="key" :value="key">{{ info.label }}</option>
@@ -505,15 +505,15 @@ const sortedActivities = computed(() => {
                         <!-- Status per event -->
                         <div>
                             <div class="flex items-center justify-between mb-2">
-                                <label class="block text-xs text-gray-400">Estado por evento</label>
-                                <button @click="showAddEventModal = true" class="text-xs text-blue-600 hover:text-blue-800 font-medium">+ Agregar evento</button>
+                                <label class="block text-xs text-gray-400">Status per Event</label>
+                                <button @click="showAddEventModal = true" class="text-xs text-blue-600 hover:text-blue-800 font-medium">+ Add Event</button>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <div v-for="ev in lead.events" :key="ev.id" class="border border-gray-100 rounded-lg p-3">
                                 <div class="flex items-center justify-between mb-1.5">
                                     <p class="text-xs font-medium text-gray-700">{{ ev.name }}</p>
                                     <button v-if="ev.pivot?.status !== 'converted'" @click="removeEvent(ev.id)"
-                                        class="text-gray-300 hover:text-red-500 transition-colors text-xs" title="Quitar evento">&times;</button>
+                                        class="text-gray-300 hover:text-red-500 transition-colors text-xs" title="Remove event">&times;</button>
                                 </div>
                                 <select @change="changeEventStatus(ev.id, $event.target.value)" :value="ev.pivot?.status || 'new'"
                                     :disabled="ev.pivot?.status === 'converted' && !isLeader"
@@ -523,10 +523,10 @@ const sortedActivities = computed(() => {
                                 <Link v-if="ev.pivot?.status === 'negotiating' && !(lead.converted_designer && lead.converted_designer.id)"
                                     :href="`/admin/sales/designers/create?lead_id=${lead.id}&event_id=${ev.id}`"
                                     class="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-xs font-medium hover:bg-amber-100 transition-colors">
-                                    <ArrowPathIcon class="w-3.5 h-3.5" /> Convertir a Designer
+                                    <ArrowPathIcon class="w-3.5 h-3.5" /> Convert to Designer
                                 </Link>
                                 <div v-if="ev.pivot?.status === 'converted'" class="mt-2 text-xs text-green-600 font-medium flex items-center gap-1">
-                                    <CheckCircleIcon class="w-3.5 h-3.5" /> Venta cerrada
+                                    <CheckCircleIcon class="w-3.5 h-3.5" /> Sale closed
                                 </div>
                             </div>
                             </div>
@@ -536,7 +536,7 @@ const sortedActivities = computed(() => {
 
                     <!-- Notes Card (CRM style) -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-4">
-                        <h4 class="font-semibold text-gray-800 mb-4">Notas</h4>
+                        <h4 class="font-semibold text-gray-800 mb-4">Notes</h4>
 
                         <!-- New note input -->
                         <div class="mb-5">
@@ -596,7 +596,7 @@ const sortedActivities = computed(() => {
                                             <span class="text-sm font-semibold text-gray-900">{{ note.user ? note.user.first_name + ' ' + note.user.last_name : 'Runway 7 Fashion' }}</span>
                                             <span class="text-xs text-gray-400">{{ formatNoteDate(note.created_at) }}</span>
                                         </div>
-                                        <p v-if="note.title && note.title !== 'Nota'" class="text-sm font-semibold text-gray-800 mb-0.5">{{ note.title }}</p>
+                                        <p v-if="note.title && note.title !== 'Note' && note.title !== 'Nota'" class="text-sm font-semibold text-gray-800 mb-0.5">{{ note.title }}</p>
                                         <p class="text-sm text-gray-600 whitespace-pre-line">{{ note.description }}</p>
                                         <div v-if="note.files?.length" class="flex flex-wrap gap-1.5 mt-2">
                                             <button v-for="f in note.files" :key="f.id" @click="openPreview(f)"
@@ -608,7 +608,7 @@ const sortedActivities = computed(() => {
                                     </div>
                                 </div>
                             </div>
-                            <p v-if="!leadNotes.length" class="text-sm text-gray-400 italic py-4">No hay notas aún.</p>
+                            <p v-if="!leadNotes.length" class="text-sm text-gray-400 italic py-4">No notes yet.</p>
                         </div>
                     </div>
 
@@ -619,7 +619,7 @@ const sortedActivities = computed(() => {
 
                     <!-- Activity Timeline -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-4">
-                        <h4 class="font-semibold text-gray-800 mb-4">Historial de Actividades</h4>
+                        <h4 class="font-semibold text-gray-800 mb-4">Activity History</h4>
 
                         <div v-if="sortedActivities.length" class="space-y-4">
                             <div v-for="activity in sortedActivities" :key="activity.id" class="relative pl-7">
@@ -654,10 +654,10 @@ const sortedActivities = computed(() => {
                                                 'bg-gray-100 text-gray-500': activity.status === 'cancelled',
                                                 'bg-red-50 text-red-600': activity.status === 'not_completed',
                                             }">
-                                            <option value="pending">Pendiente</option>
-                                            <option value="completed">Completada</option>
-                                            <option value="cancelled">Cancelada</option>
-                                            <option value="not_completed">No completada</option>
+                                            <option value="pending">Pending</option>
+                                            <option value="completed">Completed</option>
+                                            <option value="cancelled">Cancelled</option>
+                                            <option value="not_completed">Not completed</option>
                                         </select>
                                     </div>
 
@@ -674,7 +674,7 @@ const sortedActivities = computed(() => {
                             </div>
                         </div>
 
-                        <p v-else class="text-sm text-gray-400 italic text-center py-4">Sin actividades registradas.</p>
+                        <p v-else class="text-sm text-gray-400 italic text-center py-4">No activities recorded.</p>
                     </div>
 
                 </div>
@@ -688,42 +688,52 @@ const sortedActivities = computed(() => {
                 <div class="absolute inset-0 bg-black/50" @click="showStatusInfo = false"></div>
                 <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
                     <div class="sticky top-0 bg-white px-6 py-4 border-b flex items-center justify-between">
-                        <h3 class="text-lg font-semibold text-gray-900">Guía de Estados</h3>
+                        <h3 class="text-lg font-semibold text-gray-900">Status Guide</h3>
                         <button @click="showStatusInfo = false" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
                     </div>
                     <div class="px-6 py-5 space-y-6 text-sm">
                         <div>
-                            <h4 class="font-semibold text-gray-900 mb-3">Estado del Lead (persona)</h4>
-                            <p class="text-gray-500 text-xs mb-3">Representa el ciclo de vida del contacto como prospecto.</p>
+                            <h4 class="font-semibold text-gray-900 mb-3">Lead Status (person)</h4>
+                            <p class="text-gray-500 text-xs mb-3">Represents the contact's lifecycle as a prospect.</p>
                             <div class="space-y-2">
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-blue-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Nuevo</span><span class="text-gray-500"> — Acaba de registrarse. El líder debe revisar y calificar.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-purple-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Calificado</span><span class="text-gray-500"> — Es un prospecto real. Se asigna automáticamente a un asesor.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-green-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Cliente</span><span class="text-gray-500"> — Se cerró al menos 1 venta. Cambia automáticamente al convertir.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-red-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Perdido</span><span class="text-gray-500"> — No tiene interés. Cambia automáticamente si todos los eventos son negativos.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-gray-800 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Spam</span><span class="text-gray-500"> — No es un prospecto real.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-blue-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">New</span><span class="text-gray-500"> — Just registered. The leader must review and qualify.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-purple-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Qualified</span><span class="text-gray-500"> — A real prospect. Automatically assigned to an advisor.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-green-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Client</span><span class="text-gray-500"> — At least 1 sale was closed. Changes automatically when converting.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-red-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Lost</span><span class="text-gray-500"> — Not interested. Changes automatically if all events are negative.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-gray-800 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Spam</span><span class="text-gray-500"> — Not a real prospect.</span></div></div>
                             </div>
                         </div>
                         <div class="border-t pt-5">
-                            <h4 class="font-semibold text-gray-900 mb-3">Estado por Evento (oportunidad)</h4>
-                            <p class="text-gray-500 text-xs mb-3">Representa el progreso de la negociación para cada evento específico.</p>
+                            <h4 class="font-semibold text-gray-900 mb-3">Status per Event (opportunity)</h4>
+                            <p class="text-gray-500 text-xs mb-3">Represents the negotiation progress for each specific event.</p>
                             <div class="space-y-2">
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-blue-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Nuevo</span><span class="text-gray-500"> — Registrado para este evento, sin contactar.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-yellow-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Contactado</span><span class="text-gray-500"> — Se hizo el primer contacto.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-orange-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Seguimiento</span><span class="text-gray-500"> — Necesita seguimiento, pendiente de respuesta.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-purple-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Negociando</span><span class="text-gray-500"> — Discutiendo paquete y precio. Se habilita botón de convertir.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-green-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Venta</span><span class="text-gray-500"> — Venta cerrada. Se creó el designer.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-gray-400 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">No Responde</span><span class="text-gray-500"> — No se logra contactar.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-gray-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Sin Contacto</span><span class="text-gray-500"> — Nunca se logró establecer contacto.</span></div></div>
-                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-red-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">No Venta</span><span class="text-gray-500"> — No se concretó la venta para este evento.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-blue-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">New</span><span class="text-gray-500"> — Registered for this event, not contacted.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-yellow-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Contacted</span><span class="text-gray-500"> — First contact was made.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-orange-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Follow Up</span><span class="text-gray-500"> — Needs follow-up, awaiting response.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-purple-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Negotiating</span><span class="text-gray-500"> — Discussing package and price. Convert button is enabled.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-green-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Sale</span><span class="text-gray-500"> — Sale closed. Designer was created.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-gray-400 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">No Response</span><span class="text-gray-500"> — Unable to reach contact.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-gray-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">No Contact</span><span class="text-gray-500"> — Contact was never established.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-red-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">No Sale</span><span class="text-gray-500"> — Sale was not completed for this event.</span></div></div>
                             </div>
                         </div>
                         <div class="border-t pt-5">
-                            <h4 class="font-semibold text-gray-900 mb-3">Cambios Automáticos</h4>
+                            <h4 class="font-semibold text-gray-900 mb-3">Automatic Changes</h4>
                             <div class="space-y-2 text-gray-600">
-                                <p>• Al calificar un lead → se asigna automáticamente a un asesor disponible</p>
-                                <p>• Al convertir a designer → estado del lead cambia a <span class="font-medium text-green-600">Cliente</span> y el evento a <span class="font-medium text-green-600">Venta</span></p>
-                                <p>• Si todos los eventos son negativos → estado del lead cambia a <span class="font-medium text-red-600">Perdido</span></p>
-                                <p>• Si un lead perdido se registra para un nuevo evento → vuelve a <span class="font-medium text-purple-600">Calificado</span></p>
+                                <p>• When a lead is qualified → automatically assigned to an available advisor</p>
+                                <p>• When converted to designer → lead status changes to <span class="font-medium text-green-600">Client</span> and event to <span class="font-medium text-green-600">Sale</span></p>
+                                <p>• If all events are negative → lead status changes to <span class="font-medium text-red-600">Lost</span></p>
+                                <p>• If a lost lead registers for a new event → returns to <span class="font-medium text-purple-600">Qualified</span></p>
+                            </div>
+                        </div>
+                        <div class="border-t pt-5">
+                            <h4 class="font-semibold text-gray-900 mb-3">Lead Assignment (Round-Robin)</h4>
+                            <div class="space-y-2 text-gray-600">
+                                <p>• Leads are assigned automatically when the leader changes their status to <span class="font-medium text-purple-600">Qualified</span></p>
+                                <p>• <span class="font-medium text-blue-600">USA leads</span> have their own priority rotation — distributed equally among all available advisors</p>
+                                <p>• <span class="font-medium text-gray-700">Other countries</span> have a separate standard rotation</p>
+                                <p>• This ensures USA leads (premium) don't accumulate on a single advisor</p>
+                                <p>• If no advisors are available, the lead remains unassigned and an alert is sent when there are 3+ unassigned</p>
                             </div>
                         </div>
                     </div>
@@ -734,7 +744,7 @@ const sortedActivities = computed(() => {
             <div v-if="showAddEventModal" class="fixed inset-0 z-50 flex items-center justify-center">
                 <div class="absolute inset-0 bg-black/50" @click="showAddEventModal = false"></div>
                 <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Agregar Evento</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Add Event</h3>
                     <div v-if="availableEvents.length" class="space-y-2 mb-5">
                         <label v-for="ev in availableEvents" :key="ev.id"
                             class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-colors"
@@ -743,10 +753,10 @@ const sortedActivities = computed(() => {
                             <span class="text-sm font-medium text-gray-900">{{ ev.name }}</span>
                         </label>
                     </div>
-                    <p v-else class="text-sm text-gray-400 mb-5">No hay eventos disponibles para agregar.</p>
+                    <p v-else class="text-sm text-gray-400 mb-5">No events available to add.</p>
                     <div class="flex gap-3">
-                        <button @click="showAddEventModal = false" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancelar</button>
-                        <button @click="addEvent" :disabled="!newEventId" class="flex-1 px-4 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">Agregar</button>
+                        <button @click="showAddEventModal = false" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                        <button @click="addEvent" :disabled="!newEventId" class="flex-1 px-4 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">Add</button>
                     </div>
                 </div>
             </div>
@@ -756,39 +766,39 @@ const sortedActivities = computed(() => {
                 <div class="absolute inset-0 bg-black/50" @click="showActivityModal = false"></div>
                 <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">Nueva Actividad</h3>
+                        <h3 class="text-lg font-semibold text-gray-900">New Activity</h3>
                         <button @click="showActivityModal = false" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
                     </div>
                     <form @submit.prevent="submitActivity" class="space-y-3">
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Tipo</label>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Type</label>
                             <select v-model="activityForm.type"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black focus:border-black">
                                 <option v-for="(info, key) in activityTypes" :key="key" :value="key" v-show="['call','email','meeting'].includes(key)">{{ info.label }}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Titulo *</label>
-                            <input v-model="activityForm.title" type="text" placeholder="Ej: Llamada de seguimiento"
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Title *</label>
+                            <input v-model="activityForm.title" type="text" placeholder="E.g.: Follow-up call"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black focus:border-black" />
                             <p v-if="activityForm.errors.title" class="text-xs text-red-500 mt-1">{{ activityForm.errors.title }}</p>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Descripcion <span class="text-gray-400">(opcional)</span></label>
-                            <textarea v-model="activityForm.description" rows="2" placeholder="Detalles..."
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Description <span class="text-gray-400">(optional)</span></label>
+                            <textarea v-model="activityForm.description" rows="2" placeholder="Details..."
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black focus:border-black"></textarea>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Programar para <span class="text-gray-400">(opcional)</span></label>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Schedule for <span class="text-gray-400">(optional)</span></label>
                             <input v-model="activityForm.scheduled_at" type="datetime-local"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black focus:border-black" />
                         </div>
                         <div class="flex gap-3 pt-2">
                             <button type="button" @click="showActivityModal = false"
-                                class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancelar</button>
+                                class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
                             <button type="submit" :disabled="activityForm.processing || !activityForm.title"
                                 class="flex-1 px-4 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-40">
-                                Registrar
+                                Register
                             </button>
                         </div>
                     </form>
@@ -808,7 +818,7 @@ const sortedActivities = computed(() => {
                         <div class="flex items-center gap-2 flex-shrink-0">
                             <a :href="previewDoc.url" download
                                 class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
-                                Descargar
+                                Download
                             </a>
                             <button @click="previewDoc = null" class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-lg leading-none">&times;</button>
                         </div>
@@ -827,20 +837,20 @@ const sortedActivities = computed(() => {
                     <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
                         <TrashIcon class="w-6 h-6 text-red-500" />
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2 text-center">Eliminar a {{ lead.first_name }} {{ lead.last_name }}?</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2 text-center">Delete {{ lead.first_name }} {{ lead.last_name }}?</h3>
                     <div class="bg-red-50 border border-red-100 rounded-lg p-3 mb-4 text-sm text-gray-700">
-                        <p class="font-medium text-red-700 mb-2">Se eliminara permanentemente:</p>
+                        <p class="font-medium text-red-700 mb-2">The following will be permanently deleted:</p>
                         <ul class="space-y-1 text-xs text-gray-600">
-                            <li>- Prospecto: <span class="font-medium">{{ lead.first_name }} {{ lead.last_name }}</span> ({{ lead.company_name }})</li>
-                            <li>- {{ lead.activities?.length || 0 }} actividades registradas (llamadas, emails, reuniones, notas)</li>
-                            <li v-if="lead.activities?.filter(a => a.status === 'pending').length">- <span class="text-red-600 font-medium">{{ lead.activities.filter(a => a.status === 'pending').length }} actividades pendientes en el calendario</span></li>
-                            <li>- Mensajes del bot relacionados</li>
+                            <li>- Prospect: <span class="font-medium">{{ lead.first_name }} {{ lead.last_name }}</span> ({{ lead.company_name }})</li>
+                            <li>- {{ lead.activities?.length || 0 }} recorded activities (calls, emails, meetings, notes)</li>
+                            <li v-if="lead.activities?.filter(a => a.status === 'pending').length">- <span class="text-red-600 font-medium">{{ lead.activities.filter(a => a.status === 'pending').length }} pending activities in calendar</span></li>
+                            <li>- Related bot messages</li>
                         </ul>
-                        <p v-if="lead.converted_designer" class="mt-2 text-xs text-green-700 font-medium">El diseñador convertido NO sera afectado.</p>
+                        <p v-if="lead.converted_designer" class="mt-2 text-xs text-green-700 font-medium">The converted designer will NOT be affected.</p>
                     </div>
                     <div class="flex gap-3">
-                        <button @click="showDeleteModal = false" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancelar</button>
-                        <button @click="deleteLead" class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Eliminar</button>
+                        <button @click="showDeleteModal = false" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                        <button @click="deleteLead" class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Delete</button>
                     </div>
                 </div>
             </div>

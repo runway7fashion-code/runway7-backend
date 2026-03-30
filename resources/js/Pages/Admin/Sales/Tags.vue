@@ -42,16 +42,16 @@ function deleteTag() {
 <template>
     <AdminLayout>
         <template #header>
-            <h2 class="text-lg font-semibold text-gray-900">Tags de Leads</h2>
+            <h2 class="text-lg font-semibold text-gray-900">Lead Tags</h2>
         </template>
 
         <div class="max-w-3xl mx-auto space-y-6">
             <!-- Create tag -->
             <div class="bg-white rounded-2xl border border-gray-200 p-6">
-                <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37] mb-4">Crear nuevo tag</h3>
+                <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37] mb-4">Create new tag</h3>
                 <form @submit.prevent="createTag" class="flex items-end gap-4">
                     <div class="flex-1">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
                         <input v-model="createForm.name" type="text" placeholder="Ej: Interested / Follow Up"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         <p v-if="createForm.errors.name" class="text-xs text-red-500 mt-1">{{ createForm.errors.name }}</p>
@@ -67,7 +67,7 @@ function deleteTag() {
                     </div>
                     <button type="submit" :disabled="createForm.processing || !createForm.name"
                         class="px-5 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 flex items-center gap-1.5 flex-shrink-0">
-                        <PlusIcon class="w-4 h-4" /> Crear
+                        <PlusIcon class="w-4 h-4" /> Create
                     </button>
                 </form>
             </div>
@@ -103,12 +103,12 @@ function deleteTag() {
                                     :class="editForm.color === c ? 'border-black scale-110' : 'border-transparent'"
                                     :style="{ backgroundColor: c }"></button>
                             </div>
-                            <button @click="saveEdit(tag)" class="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800">Guardar</button>
-                            <button @click="cancelEdit" class="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50">Cancelar</button>
+                            <button @click="saveEdit(tag)" class="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800">Save</button>
+                            <button @click="cancelEdit" class="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50">Cancel</button>
                         </div>
                     </div>
                     <div v-if="!tags.length" class="px-6 py-8 text-center text-gray-400 text-sm">
-                        No hay tags creados. Crea el primero arriba.
+                        No tags created yet. Create the first one above.
                     </div>
                 </div>
             </div>
@@ -122,11 +122,11 @@ function deleteTag() {
                     <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
                         <TrashIcon class="w-6 h-6 text-red-500" />
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Eliminar tag "{{ deleteModal.name }}"?</h3>
-                    <p class="text-sm text-gray-500 mb-5">Se quitara de {{ deleteModal.leads_count }} leads. Esta accion no se puede deshacer.</p>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Delete tag "{{ deleteModal.name }}"?</h3>
+                    <p class="text-sm text-gray-500 mb-5">It will be removed from {{ deleteModal.leads_count }} leads. This action cannot be undone.</p>
                     <div class="flex gap-3">
-                        <button @click="deleteModal = null" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancelar</button>
-                        <button @click="deleteTag" class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Eliminar</button>
+                        <button @click="deleteModal = null" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                        <button @click="deleteTag" class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Delete</button>
                     </div>
                 </div>
             </div>

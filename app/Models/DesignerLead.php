@@ -37,39 +37,39 @@ class DesignerLead extends Model
         'last_contacted_at' => 'datetime',
     ];
 
-    // Lead status (persona/marketing)
+    // Lead status (person/marketing)
     const STATUSES = [
-        'new'       => ['label' => 'Nuevo',      'color' => '#3B82F6'],
-        'qualified' => ['label' => 'Calificado', 'color' => '#8B5CF6'],
-        'client'    => ['label' => 'Cliente',    'color' => '#10B981'],
-        'lost'      => ['label' => 'Perdido',    'color' => '#EF4444'],
-        'spam'      => ['label' => 'Spam',       'color' => '#1F2937'],
+        'new'       => ['label' => 'New',       'color' => '#3B82F6'],
+        'qualified' => ['label' => 'Qualified', 'color' => '#8B5CF6'],
+        'client'    => ['label' => 'Client',    'color' => '#10B981'],
+        'lost'      => ['label' => 'Lost',      'color' => '#EF4444'],
+        'spam'      => ['label' => 'Spam',      'color' => '#1F2937'],
     ];
 
-    // Opportunity status (ventas/evento)
+    // Opportunity status (sales/event)
     const OPPORTUNITY_STATUSES = [
-        'new'        => ['label' => 'Nuevo',       'color' => '#3B82F6'],
-        'contacted'  => ['label' => 'Contactado',  'color' => '#EAB308'],
-        'follow_up'  => ['label' => 'Seguimiento', 'color' => '#F97316'],
-        'negotiating'=> ['label' => 'Negociando',  'color' => '#8B5CF6'],
-        'converted'  => ['label' => 'Venta',       'color' => '#10B981'],
-        'lost'       => ['label' => 'No Venta',    'color' => '#EF4444'],
+        'new'        => ['label' => 'New',         'color' => '#3B82F6'],
+        'contacted'  => ['label' => 'Contacted',   'color' => '#EAB308'],
+        'follow_up'  => ['label' => 'Follow Up',   'color' => '#F97316'],
+        'negotiating'=> ['label' => 'Negotiating',  'color' => '#8B5CF6'],
+        'converted'  => ['label' => 'Sale',        'color' => '#10B981'],
+        'lost'       => ['label' => 'Lost',        'color' => '#EF4444'],
     ];
 
     const SOURCES = [
         'website_designers' => 'Web Designers',
-        'website_organic'   => 'Web Orgánico',
+        'website_organic'   => 'Web Organic',
         'facebook'          => 'Facebook',
         'instagram'         => 'Instagram',
         'tiktok'            => 'TikTok',
         'google_ads'        => 'Google Ads',
-        'referral'          => 'Referido',
-        'cold_call'         => 'Llamada',
-        'event'             => 'Evento presencial',
-        'email_campaign'    => 'Email',
+        'referral'          => 'Referral',
+        'cold_call'         => 'Cold Call',
+        'event'             => 'In-person Event',
+        'email_campaign'    => 'Email Campaign',
         'whatsapp'          => 'WhatsApp',
         'manual'            => 'Manual',
-        'other'             => 'Otro',
+        'other'             => 'Other',
     ];
 
     public function event()
