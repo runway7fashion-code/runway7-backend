@@ -9,6 +9,7 @@ const props = defineProps({
     events: Array,
     advisors: Array,
     sources: Object,
+    opportunityStatuses: Object,
 });
 
 const phoneCodes = [
@@ -51,6 +52,8 @@ const form = useForm({
     event_id: props.lead.event_id || '',
     preferred_contact_time: props.lead.preferred_contact_time || '',
     source: props.lead.source || 'manual',
+    event_ids: (props.lead.events || []).map(e => e.id),
+    event_statuses: Object.fromEntries((props.lead.events || []).map(e => [e.id, e.pivot?.status || 'new'])),
     notes: props.lead.notes || '',
 });
 
@@ -232,6 +235,29 @@ function submit() {
                             <p v-if="form.errors.preferred_contact_time" class="mt-1 text-red-500 text-xs">{{ form.errors.preferred_contact_time }}</p>
                         </div>
                     </div>
+                </div>
+
+                <!-- Eventos -->
+                <div class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
+                    <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">Eventos</h3>
+                    <div class="space-y-2">
+                        <label v-for="e in events" :key="e.id"
+                            class="flex items-center justify-between p-3 border rounded-xl transition-colors"
+                            :class="form.event_ids.includes(e.id) ? 'border-black bg-gray-50' : 'border-gray-200 hover:bg-gray-50'">
+                            <div class="flex items-center gap-3">
+                                <input type="checkbox" :value="e.id" v-model="form.event_ids" class="accent-black w-4 h-4 cursor-pointer" />
+                                <span class="text-sm font-medium text-gray-900">{{ e.name }}</span>
+                            </div>
+                            <select v-if="form.event_ids.includes(e.id)"
+                                v-model="form.event_statuses[e.id]"
+                                @click.stop
+                                :disabled="form.event_statuses[e.id] === 'converted'"
+                                :class="form.event_statuses[e.id] === 'converted' ? 'border border-gray-200 rounded-lg px-2 py-1 text-xs bg-gray-100 text-green-700 cursor-not-allowed' : 'border border-gray-300 rounded-lg px-2 py-1 text-xs focus:ring-1 focus:ring-black'">
+                                <option v-for="(info, key) in opportunityStatuses" :key="key" :value="key">{{ info.label }}</option>
+                            </select>
+                        </label>
+                    </div>
+                    <p v-if="form.errors.event_ids" class="text-red-500 text-xs">{{ form.errors.event_ids }}</p>
                 </div>
 
                 <!-- Source -->

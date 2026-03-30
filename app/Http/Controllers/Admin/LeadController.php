@@ -307,12 +307,14 @@ class LeadController extends Controller
 
     public function edit(DesignerLead $lead)
     {
+        $lead->load('events');
         $events = Event::whereNull('deleted_at')->select('id', 'name')->orderBy('start_date', 'desc')->get();
         $advisors = User::where('role', 'sales')->whereNull('deleted_at')->select('id', 'first_name', 'last_name')->get();
 
         return Inertia::render('Admin/Sales/Leads/Edit', [
             'lead'     => $lead,
             'events'   => $events,
+            'opportunityStatuses' => DesignerLead::OPPORTUNITY_STATUSES,
             'advisors' => $advisors,
             'sources'  => DesignerLead::SOURCES,
         ]);
@@ -333,13 +335,46 @@ class LeadController extends Controller
             'designs_ready'          => 'nullable|string|max:50',
             'budget'                 => 'nullable|string|max:100',
             'past_shows'             => 'nullable|string|max:10',
-            'event_id'               => 'nullable|exists:events,id',
             'preferred_contact_time' => 'nullable|string|max:20',
             'source'                 => 'nullable|string|max:50',
             'notes'                  => 'nullable|string',
+            'event_ids'              => 'nullable|array',
+            'event_ids.*'            => 'exists:events,id',
+            'event_statuses'         => 'nullable|array',
         ]);
 
+        $eventIds = $validated['event_ids'] ?? [];
+        $eventStatuses = $validated['event_statuses'] ?? [];
+        unset($validated['event_ids'], $validated['event_statuses']);
+
         $lead->update($validated);
+
+        // Sync events: add new, remove unchecked (protect converted)
+        $currentEventIds = $lead->leadEvents()->pluck('event_id')->toArray();
+        $newIds = array_diff($eventIds, $currentEventIds);
+        $removeIds = array_diff($currentEventIds, $eventIds);
+
+        // Add new events
+        foreach ($newIds as $eid) {
+            $lead->events()->attach($eid, ['status' => $eventStatuses[$eid] ?? 'new']);
+        }
+
+        // Remove events (protect converted)
+        foreach ($removeIds as $eid) {
+            $leadEvent = $lead->leadEvents()->where('event_id', $eid)->first();
+            if ($leadEvent && $leadEvent->status !== 'converted') {
+                $lead->events()->detach($eid);
+            }
+        }
+
+        // Update statuses of existing events
+        foreach ($eventStatuses as $eid => $status) {
+            if (in_array($eid, $eventIds)) {
+                $lead->leadEvents()->where('event_id', $eid)->update(['status' => $status]);
+            }
+        }
+
+        $lead->recalculateStatus();
 
         return redirect()->route('admin.sales.leads.show', $lead)
             ->with('success', 'Prospecto actualizado correctamente.');
