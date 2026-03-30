@@ -46,7 +46,8 @@ class LeadRegistrationController extends Controller
             'designs_ready'          => 'required|string|max:50',
             'budget'                 => 'required|string|max:100',
             'past_shows'             => 'required|string|max:10',
-            'event_id'               => 'required|exists:events,id',
+            'event_ids'              => 'required|array|min:1',
+            'event_ids.*'            => 'exists:events,id',
             'preferred_contact_time' => 'nullable|string|max:20',
         ]);
 
@@ -60,22 +61,26 @@ class LeadRegistrationController extends Controller
             $validated['instagram'] = $ig;
         }
 
-        $eventId = $validated['event_id'];
-        unset($validated['event_id']);
+        $eventIds = $validated['event_ids'];
+        unset($validated['event_ids']);
 
         // Check if lead with same email already exists
         $existingLead = DesignerLead::where('email', $validated['email'])->first();
 
         if ($existingLead) {
-            // Check if already registered for this event
-            if ($existingLead->events()->where('events.id', $eventId)->exists()) {
+            // Attach only new events
+            $existingEventIds = $existingLead->events()->pluck('events.id')->toArray();
+            $newEventIds = array_diff($eventIds, $existingEventIds);
+
+            if (empty($newEventIds)) {
                 return response()->json([
-                    'message' => 'You have already submitted an application for this event. Our team will contact you soon. If you need immediate assistance, please email us at designers@runway7fashion.com or reach us via WhatsApp at https://wa.me/message/4M6DBP2NATXFC1',
+                    'message' => 'You have already submitted an application for the selected event(s). Our team will contact you soon. If you need immediate assistance, please email us at designers@runway7fashion.com or reach us via WhatsApp at https://wa.me/message/4M6DBP2NATXFC1',
                 ], 422);
             }
 
-            // Add new event to existing lead
-            $existingLead->events()->attach($eventId);
+            foreach ($newEventIds as $eid) {
+                $existingLead->events()->attach($eid);
+            }
 
             // Update fields if changed
             $existingLead->update(array_filter([
@@ -91,11 +96,12 @@ class LeadRegistrationController extends Controller
                 $existingLead->update(['status' => 'qualified']);
             }
 
+            $eventNames = \App\Models\Event::whereIn('id', $newEventIds)->pluck('name')->join(', ');
             LeadActivity::create([
                 'lead_id'      => $existingLead->id,
                 'user_id'      => null,
                 'type'         => 'system',
-                'title'        => 'Nuevo evento agregado desde la web: ' . \App\Models\Event::find($eventId)?->name,
+                'title'        => 'Nuevo(s) evento(s) agregado(s) desde la web: ' . $eventNames,
                 'status'       => 'completed',
                 'completed_at' => now(),
             ]);
@@ -107,8 +113,10 @@ class LeadRegistrationController extends Controller
                 'source' => 'website_designers',
             ]));
 
-            // Link event
-            $lead->events()->attach($eventId);
+            // Link events
+            foreach ($eventIds as $eid) {
+                $lead->events()->attach($eid);
+            }
 
             // Log creation activity
             LeadActivity::create([

@@ -198,7 +198,8 @@ class LeadController extends Controller
             'designs_ready'          => 'nullable|string|max:50',
             'budget'                 => 'nullable|string|max:100',
             'past_shows'             => 'nullable|string|max:10',
-            'event_id'               => 'required|exists:events,id',
+            'event_ids'              => 'required|array|min:1',
+            'event_ids.*'            => 'exists:events,id',
             'preferred_contact_time' => 'nullable|string|max:20',
             'assigned_to'            => 'nullable|exists:users,id',
             'source'                 => 'nullable|string|max:50',
@@ -208,8 +209,8 @@ class LeadController extends Controller
             'note_files.*'           => 'file|max:10240',
         ]);
 
-        $eventId = $validated['event_id'];
-        unset($validated['event_id']);
+        $eventIds = $validated['event_ids'];
+        unset($validated['event_ids']);
 
         // Auto-assign to current user if not leader
         $user = auth()->user();
@@ -222,34 +223,40 @@ class LeadController extends Controller
         $existingLead = DesignerLead::where('email', $validated['email'])->first();
 
         if ($existingLead) {
-            // Check if this event is already linked
-            if ($existingLead->events()->where('events.id', $eventId)->exists()) {
-                return back()->withErrors(['email' => 'Este prospecto ya está registrado para este evento.'])->withInput();
+            $existingEventIds = $existingLead->events()->pluck('events.id')->toArray();
+            $newEventIds = array_diff($eventIds, $existingEventIds);
+
+            if (empty($newEventIds)) {
+                return back()->withErrors(['event_ids' => 'Este prospecto ya está registrado para todos los eventos seleccionados.'])->withInput();
             }
 
-            // Add new event to existing lead
-            $existingLead->events()->attach($eventId);
+            foreach ($newEventIds as $eid) {
+                $existingLead->events()->attach($eid);
+            }
 
+            $eventNames = Event::whereIn('id', $newEventIds)->pluck('name')->join(', ');
             LeadActivity::create([
                 'lead_id'      => $existingLead->id,
                 'user_id'      => auth()->id(),
                 'type'         => 'system',
-                'title'        => 'Nuevo evento agregado: ' . Event::find($eventId)?->name,
+                'title'        => 'Evento(s) agregado(s): ' . $eventNames,
                 'status'       => 'completed',
                 'completed_at' => now(),
             ]);
 
             return redirect()->route('admin.sales.leads.show', $existingLead)
-                ->with('success', 'Evento agregado al prospecto existente.');
+                ->with('success', 'Evento(s) agregado(s) al prospecto existente.');
         }
 
         $lead = DesignerLead::create(array_merge($validated, [
             'status' => 'new',
-            'source' => 'manual',
+            'source' => $validated['source'] ?? 'manual',
         ]));
 
-        // Link event
-        $lead->events()->attach($eventId);
+        // Link events
+        foreach ($eventIds as $eid) {
+            $lead->events()->attach($eid);
+        }
 
         LeadActivity::create([
             'lead_id'      => $lead->id,
@@ -419,6 +426,61 @@ class LeadController extends Controller
         ]);
 
         return back()->with('success', "Prospecto asignado a {$advisor->first_name}.");
+    }
+
+    public function addEvent(Request $request, DesignerLead $lead)
+    {
+        $request->validate(['event_id' => 'required|exists:events,id']);
+
+        if ($lead->events()->where('events.id', $request->event_id)->exists()) {
+            return back()->with('error', 'Este prospecto ya está registrado para este evento.');
+        }
+
+        $lead->events()->attach($request->event_id);
+
+        $eventName = Event::find($request->event_id)?->name;
+        LeadActivity::create([
+            'lead_id'      => $lead->id,
+            'user_id'      => auth()->id(),
+            'type'         => 'system',
+            'title'        => 'Evento agregado: ' . $eventName,
+            'status'       => 'completed',
+            'completed_at' => now(),
+        ]);
+
+        return back()->with('success', "Evento {$eventName} agregado.");
+    }
+
+    public function removeEvent(Request $request, DesignerLead $lead)
+    {
+        $request->validate(['event_id' => 'required|exists:events,id']);
+
+        $leadEvent = $lead->leadEvents()->where('event_id', $request->event_id)->first();
+        if (!$leadEvent) {
+            return back()->with('error', 'Este evento no está asignado.');
+        }
+
+        // Don't allow removing converted events
+        if ($leadEvent->status === 'converted') {
+            return back()->with('error', 'No se puede quitar un evento con venta cerrada.');
+        }
+
+        $eventName = Event::find($request->event_id)?->name;
+        $lead->events()->detach($request->event_id);
+
+        LeadActivity::create([
+            'lead_id'      => $lead->id,
+            'user_id'      => auth()->id(),
+            'type'         => 'system',
+            'title'        => 'Evento removido: ' . $eventName,
+            'status'       => 'completed',
+            'completed_at' => now(),
+        ]);
+
+        // Recalculate lead status
+        $lead->recalculateStatus();
+
+        return back()->with('success', "Evento {$eventName} removido.");
     }
 
     public function syncTags(Request $request, DesignerLead $lead)

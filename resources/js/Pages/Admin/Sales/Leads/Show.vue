@@ -181,6 +181,26 @@ function changeActivityStatus(activityId, status) {
 const showDeleteModal = ref(false);
 const showActivityModal = ref(false);
 const showStatusInfo = ref(false);
+const showAddEventModal = ref(false);
+const newEventId = ref('');
+
+function removeEvent(eventId) {
+    if (!confirm('¿Quitar este evento del lead?')) return;
+    router.delete(`/admin/sales/leads/${props.lead.id}/remove-event`, { data: { event_id: eventId }, preserveScroll: true });
+}
+
+function addEvent() {
+    if (!newEventId.value) return;
+    router.post(`/admin/sales/leads/${props.lead.id}/add-event`, { event_id: newEventId.value }, {
+        preserveScroll: true,
+        onSuccess: () => { showAddEventModal.value = false; newEventId.value = ''; },
+    });
+}
+
+const availableEvents = computed(() => {
+    const assignedIds = (props.lead.events || []).map(e => e.id);
+    return (props.events || []).filter(e => !assignedIds.includes(e.id));
+});
 function deleteLead() {
     router.delete(`/admin/sales/leads/${props.lead.id}`, {
         onSuccess: () => { showDeleteModal.value = false; },
@@ -483,11 +503,18 @@ const sortedActivities = computed(() => {
                         </div>
 
                         <!-- Status per event -->
-                        <div v-if="lead.events?.length">
-                            <label class="block text-xs text-gray-400 mb-2">Estado por evento</label>
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-xs text-gray-400">Estado por evento</label>
+                                <button @click="showAddEventModal = true" class="text-xs text-blue-600 hover:text-blue-800 font-medium">+ Agregar evento</button>
+                            </div>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <div v-for="ev in lead.events" :key="ev.id" class="border border-gray-100 rounded-lg p-3">
-                                <p class="text-xs font-medium text-gray-700 mb-1.5">{{ ev.name }}</p>
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <p class="text-xs font-medium text-gray-700">{{ ev.name }}</p>
+                                    <button v-if="ev.pivot?.status !== 'converted'" @click="removeEvent(ev.id)"
+                                        class="text-gray-300 hover:text-red-500 transition-colors text-xs" title="Quitar evento">&times;</button>
+                                </div>
                                 <select @change="changeEventStatus(ev.id, $event.target.value)" :value="ev.pivot?.status || 'new'"
                                     :disabled="ev.pivot?.status === 'converted' && !isLeader"
                                     :class="ev.pivot?.status === 'converted' && !isLeader ? 'w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-gray-100 text-green-700 cursor-not-allowed' : 'w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-1 focus:ring-black focus:border-black'">
@@ -699,6 +726,27 @@ const sortedActivities = computed(() => {
                                 <p>• Si un lead perdido se registra para un nuevo evento → vuelve a <span class="font-medium text-purple-600">Calificado</span></p>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Event Modal -->
+            <div v-if="showAddEventModal" class="fixed inset-0 z-50 flex items-center justify-center">
+                <div class="absolute inset-0 bg-black/50" @click="showAddEventModal = false"></div>
+                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Agregar Evento</h3>
+                    <div v-if="availableEvents.length" class="space-y-2 mb-5">
+                        <label v-for="ev in availableEvents" :key="ev.id"
+                            class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-colors"
+                            :class="newEventId == ev.id ? 'border-black bg-gray-50' : 'border-gray-200 hover:bg-gray-50'">
+                            <input type="radio" :value="ev.id" v-model="newEventId" class="accent-black" />
+                            <span class="text-sm font-medium text-gray-900">{{ ev.name }}</span>
+                        </label>
+                    </div>
+                    <p v-else class="text-sm text-gray-400 mb-5">No hay eventos disponibles para agregar.</p>
+                    <div class="flex gap-3">
+                        <button @click="showAddEventModal = false" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancelar</button>
+                        <button @click="addEvent" :disabled="!newEventId" class="flex-1 px-4 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">Agregar</button>
                     </div>
                 </div>
             </div>

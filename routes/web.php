@@ -270,6 +270,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::patch('activities/{activity}/not-completed', [LeadController::class, 'notCompletedActivity'])->name('leads.not-completed-activity');
                 Route::delete('leads/{lead}', [LeadController::class, 'destroy'])->name('leads.destroy');
                 Route::patch('leads/{lead}/tags', [LeadController::class, 'syncTags'])->name('leads.sync-tags');
+                Route::post('leads/{lead}/add-event', [LeadController::class, 'addEvent'])->name('leads.add-event');
+                Route::delete('leads/{lead}/remove-event', [LeadController::class, 'removeEvent'])->name('leads.remove-event');
                 Route::post('toggle-availability', [LeadController::class, 'toggleAvailability'])->name('toggle-availability');
                 // Tags CRUD
                 Route::get('tags', [LeadTagController::class, 'index'])->name('tags.index');

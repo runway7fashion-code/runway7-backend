@@ -36,7 +36,7 @@ const form = useForm({
     designs_ready: '',
     budget: '',
     past_shows: '',
-    event_id: '',
+    event_ids: [],
     preferred_contact_time: '',
     assigned_to: '',
     source: 'manual',
@@ -231,13 +231,15 @@ function submit() {
                     <div class="grid grid-cols-1 gap-4">
                         
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Evento *</label>
-                            <select v-model="form.event_id"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
-                                <option value="">-- Sin asignar --</option>
-                                <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
-                            </select>
-                            <p v-if="form.errors.event_id" class="mt-1 text-red-500 text-xs">{{ form.errors.event_id }}</p>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Eventos * <span class="text-gray-400 font-normal">(selecciona uno o más)</span></label>
+                            <div class="space-y-2">
+                                <label v-for="e in events" :key="e.id" class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-colors"
+                                    :class="form.event_ids.includes(e.id) ? 'border-black bg-gray-50' : 'border-gray-200 hover:bg-gray-50'">
+                                    <input type="checkbox" :value="e.id" v-model="form.event_ids" class="accent-black w-4 h-4" />
+                                    <span class="text-sm font-medium text-gray-900">{{ e.name }}</span>
+                                </label>
+                            </div>
+                            <p v-if="form.errors.event_ids" class="mt-1 text-red-500 text-xs">{{ form.errors.event_ids }}</p>
                         </div>
                     </div>
                 </div>
