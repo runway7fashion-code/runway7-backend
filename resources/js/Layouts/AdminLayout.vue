@@ -29,6 +29,7 @@ import {
     ClipboardDocumentCheckIcon,
     UserPlusIcon,
     TagIcon,
+    QuestionMarkCircleIcon,
 } from '@heroicons/vue/24/outline';
 
 const page = usePage();
@@ -436,6 +437,14 @@ function logout() {
                     </div>
                 </div>
             </nav>
+
+            <!-- Help link -->
+            <div :class="['border-t border-gray-800', sidebarCollapsed ? 'px-2 py-2' : 'px-4 py-3']">
+                <Link href="/admin/help" :class="['flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors', page.url.startsWith('/admin/help') ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800/50']">
+                    <QuestionMarkCircleIcon class="w-5 h-5 flex-shrink-0" />
+                    <span v-if="!sidebarCollapsed">Help Center</span>
+                </Link>
+            </div>
 
             <!-- User info + logout -->
             <div :class="['py-6 border-t border-gray-800', sidebarCollapsed ? 'px-2' : 'px-4']">

@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\VolunteerController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\SalesController;
+use App\Http\Controllers\Admin\HelpController;
 use App\Http\Controllers\Admin\LeadController;
 use App\Http\Controllers\Admin\LeadTagController;
 use App\Http\Controllers\Admin\AttendanceController;
@@ -303,6 +304,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::middleware('section:activity_logs')->group(function () {
             Route::get('logs', [ActivityLogController::class, 'index'])->name('logs.index');
         });
+
+        // Help / Knowledge Base - all internal users
+        Route::get('help', [HelpController::class, 'index'])->name('help.index');
+        Route::get('help/create', [HelpController::class, 'create'])->name('help.create');
+        Route::post('help', [HelpController::class, 'store'])->name('help.store');
+        Route::get('help/{article}', [HelpController::class, 'show'])->name('help.show');
+        Route::get('help/{article}/edit', [HelpController::class, 'edit'])->name('help.edit');
+        Route::put('help/{article}', [HelpController::class, 'update'])->name('help.update');
+        Route::delete('help/{article}', [HelpController::class, 'destroy'])->name('help.destroy');
+        Route::delete('help-attachments/{attachment}', [HelpController::class, 'deleteAttachment'])->name('help.delete-attachment');
 
         // Ajustes - solo admin
         Route::middleware('section:settings')->group(function () {
