@@ -2,12 +2,15 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
-import { EyeIcon } from '@heroicons/vue/24/outline';
+import { EyeIcon, PencilSquareIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     leads: Object,
     stats: Object,
+    opportunityStats: Object,
     statuses: Object,
+    opportunityStatuses: Object,
+    sources: Object,
     advisors: Array,
     events: Array,
     allTags: Array,
@@ -21,6 +24,8 @@ const event = ref(props.filters?.event || '');
 const assignedTo = ref(props.filters?.assigned_to || '');
 const budget = ref(props.filters?.budget || '');
 const tag = ref(props.filters?.tag || '');
+const oppStatus = ref(props.filters?.opp_status || '');
+const source = ref(props.filters?.source || '');
 const perPage = ref(props.filters?.per_page || '20');
 const isAvailable = ref(null);
 
@@ -32,7 +37,7 @@ watch(search, () => {
 });
 
 // Immediate filters
-watch([status, event, assignedTo, budget, tag, perPage], () => applyFilters());
+watch([status, event, assignedTo, budget, tag, oppStatus, source, perPage], () => applyFilters());
 
 function applyFilters() {
     router.get('/admin/sales/leads', {
@@ -42,6 +47,8 @@ function applyFilters() {
         assigned_to: assignedTo.value || undefined,
         budget: budget.value || undefined,
         tag: tag.value || undefined,
+        opp_status: oppStatus.value || undefined,
+        source: source.value || undefined,
         per_page: perPage.value !== '20' ? perPage.value : undefined,
     }, { preserveState: true, replace: true });
 }
@@ -63,6 +70,7 @@ function toggleAvailability() {
 
 // Events modal
 const eventsModalLead = ref(null);
+const showStatusInfo = ref(false);
 const tagsModalLead = ref(null);
 
 function openEventsModal(lead) {
@@ -115,21 +123,31 @@ function formatDate(dateStr) {
 }
 
 // Stats cards config
-const statsCards = computed(() => {
+// Lead stats (marketing)
+const leadCards = computed(() => {
     const cards = [
         { key: 'total', label: 'Total', value: props.stats?.total ?? 0, color: '#6B7280' },
         { key: 'new', label: 'Nuevos', value: props.stats?.new ?? 0, color: props.statuses?.new?.color ?? '#3B82F6' },
-        { key: 'contacted', label: 'Contactados', value: props.stats?.contacted ?? 0, color: props.statuses?.contacted?.color ?? '#8B5CF6' },
-        { key: 'follow_up', label: 'Seguimiento', value: props.stats?.follow_up ?? 0, color: props.statuses?.follow_up?.color ?? '#F59E0B' },
-        { key: 'negotiating', label: 'Negociando', value: props.stats?.negotiating ?? 0, color: props.statuses?.negotiating?.color ?? '#EC4899' },
-        { key: 'converted', label: 'Convertidos', value: props.stats?.converted ?? 0, color: props.statuses?.converted?.color ?? '#059669' },
+        { key: 'qualified', label: 'Calificados', value: props.stats?.qualified ?? 0, color: props.statuses?.qualified?.color ?? '#8B5CF6' },
+        { key: 'client', label: 'Clientes', value: props.stats?.client ?? 0, color: props.statuses?.client?.color ?? '#10B981' },
         { key: 'lost', label: 'Perdidos', value: props.stats?.lost ?? 0, color: props.statuses?.lost?.color ?? '#EF4444' },
+        { key: 'spam', label: 'Spam', value: props.stats?.spam ?? 0, color: props.statuses?.spam?.color ?? '#1F2937' },
     ];
     if (props.isLeader) {
         cards.push({ key: 'unassigned', label: 'Sin asignar', value: props.stats?.unassigned ?? 0, color: '#9CA3AF' });
     }
     return cards;
 });
+
+// Opportunity stats (ventas)
+const oppCards = computed(() => [
+    { key: 'opp_total', label: 'Total', value: props.opportunityStats?.opp_total ?? 0, color: '#6B7280' },
+    { key: 'opp_negotiating', label: 'Negociando', value: props.opportunityStats?.opp_negotiating ?? 0, color: '#8B5CF6' },
+    { key: 'opp_converted', label: 'Ventas', value: props.opportunityStats?.opp_converted ?? 0, color: '#10B981' },
+    { key: 'opp_follow_up', label: 'Seguimiento', value: props.opportunityStats?.opp_follow_up ?? 0, color: '#F97316' },
+    { key: 'opp_contacted', label: 'Contactados', value: props.opportunityStats?.opp_contacted ?? 0, color: '#EAB308' },
+    { key: 'opp_lost', label: 'Perdidos', value: props.opportunityStats?.opp_lost ?? 0, color: '#EF4444' },
+]);
 
 function advisorName(lead) {
     if (!lead.assigned_to || typeof lead.assigned_to !== 'object') return null;
@@ -149,7 +167,10 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
 <template>
     <AdminLayout>
         <template #header>
-            <h2 class="text-lg font-semibold text-gray-900">Prospectos</h2>
+            <div class="flex items-center gap-2">
+                <h2 class="text-lg font-semibold text-gray-900">Prospectos</h2>
+                <button @click="showStatusInfo = true" class="w-5 h-5 rounded-full border border-gray-300 text-gray-400 flex items-center justify-center hover:bg-gray-100 hover:text-gray-600 transition-colors text-[10px] font-bold">?</button>
+            </div>
         </template>
 
         <div @click="closeDropdowns">
@@ -180,16 +201,35 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 </div>
             </div>
 
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
-                <div v-for="card in statsCards" :key="card.key"
-                    class="bg-white rounded-lg border border-gray-200 px-4 py-3 cursor-pointer hover:shadow-sm transition-shadow"
-                    @click.stop="status = status === card.key ? '' : (card.key === 'total' ? '' : card.key)">
-                    <div class="flex items-center justify-between">
-                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">{{ card.label }}</p>
-                        <span class="w-2.5 h-2.5 rounded-full" :style="{ backgroundColor: card.color }"></span>
+            <!-- Lead Stats (Marketing) -->
+            <div class="mb-2">
+                <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Leads</p>
+                <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                    <div v-for="card in leadCards" :key="card.key"
+                        class="bg-white rounded-lg border border-gray-200 px-4 py-3 cursor-pointer hover:shadow-sm transition-shadow"
+                        @click.stop="status = status === card.key ? '' : (card.key === 'total' ? '' : card.key)">
+                        <div class="flex items-center justify-between">
+                            <p class="text-[10px] font-medium text-gray-500 uppercase tracking-wide">{{ card.label }}</p>
+                            <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: card.color }"></span>
+                        </div>
+                        <p class="text-xl font-bold mt-1" :style="{ color: card.color }">{{ card.value }}</p>
                     </div>
-                    <p class="text-2xl font-bold mt-1" :style="{ color: card.color }">{{ card.value }}</p>
+                </div>
+            </div>
+
+            <!-- Opportunity Stats (Ventas) -->
+            <div class="mb-6">
+                <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Oportunidades</p>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div v-for="card in oppCards" :key="card.key"
+                        class="bg-white rounded-lg border border-gray-200 px-4 py-3 cursor-pointer hover:shadow-sm transition-shadow"
+                        @click.stop="oppStatus = oppStatus === card.key.replace('opp_','') ? '' : card.key.replace('opp_','')">
+                        <div class="flex items-center justify-between">
+                            <p class="text-[10px] font-medium text-gray-500 uppercase tracking-wide">{{ card.label }}</p>
+                            <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: card.color }"></span>
+                        </div>
+                        <p class="text-xl font-bold mt-1" :style="{ color: card.color }">{{ card.value }}</p>
+                    </div>
                 </div>
             </div>
 
@@ -225,6 +265,10 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <option value="">Todos los tags</option>
                     <option v-for="t in allTags" :key="t.id" :value="t.id">{{ t.name }}</option>
                 </select>
+                <select v-model="source" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">Todas las fuentes</option>
+                    <option v-for="(label, key) in sources" :key="key" :value="key">{{ label }}</option>
+                </select>
                 <select v-model="perPage" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
                     <option value="20">20 por pagina</option>
                     <option value="50">50 por pagina</option>
@@ -241,13 +285,14 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                             <tr>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Lead</th>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Empresa</th>
-                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Teléfono</th>
+                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Instagram</th>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Presupuesto</th>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Evento</th>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Tags</th>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Asesor</th>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Registro</th>
+                                <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Fuente</th>
                                 <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
@@ -262,6 +307,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                         <div class="min-w-0">
                                             <p class="font-medium text-gray-900 text-sm">{{ lead.first_name }} {{ lead.last_name }}</p>
                                             <p class="text-gray-500 text-xs truncate">{{ lead.email }}</p>
+                                            <p v-if="lead.phone" class="text-gray-400 text-xs truncate">{{ lead.phone }}</p>
                                         </div>
                                     </div>
                                 </td>
@@ -272,9 +318,14 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                     <span v-else class="text-gray-400">—</span>
                                 </td>
 
-                                <!-- Phone -->
-                                <td class="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
-                                    {{ lead.phone || '—' }}
+
+                                <!-- Instagram -->
+                                <td class="px-4 py-4 text-sm" @click.stop>
+                                    <a v-if="lead.instagram" :href="`https://instagram.com/${lead.instagram}`" target="_blank"
+                                        class="text-pink-600 hover:text-pink-700 hover:underline">
+                                        @{{ lead.instagram }}
+                                    </a>
+                                    <span v-else class="text-gray-400">—</span>
                                 </td>
 
                                 <!-- Budget -->
@@ -292,14 +343,16 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
 
                                 <!-- Tags -->
                                 <td class="px-4 py-4" @click.stop>
-                                    <div v-if="lead.tags?.length" class="flex items-center gap-1">
+                                    <div v-if="lead.tags?.length === 1">
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium"
-                                            :style="{ backgroundColor: lead.tags[0].color + '20', color: lead.tags[0].color }">
+                                            :style="{ backgroundColor: lead.tags[0].color + '30', color: '#1f2937' }">
                                             {{ lead.tags[0].name }}
                                         </span>
-                                        <button v-if="lead.tags.length > 1" @click="tagsModalLead = lead"
-                                            class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-[10px] font-bold hover:bg-gray-200 transition-colors">
-                                            +{{ lead.tags.length - 1 }}
+                                    </div>
+                                    <div v-else-if="lead.tags?.length > 1">
+                                        <button @click="tagsModalLead = lead"
+                                            class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                                            Varios ({{ lead.tags.length }})
                                         </button>
                                     </div>
                                     <span v-else class="text-gray-400 text-xs">—</span>
@@ -369,9 +422,19 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                     {{ formatDate(lead.created_at) }}
                                 </td>
 
+                                <!-- Source -->
+                                <td class="px-4 py-4 text-xs text-gray-500">
+                                    {{ sources[lead.source] || lead.source || '—' }}
+                                </td>
+
                                 <!-- Actions -->
                                 <td class="px-4 py-4" @click.stop>
-                                    <div class="flex items-center justify-end">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <Link :href="`/admin/sales/leads/${lead.id}/edit`"
+                                            class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors cursor-pointer"
+                                            title="Editar">
+                                            <PencilSquareIcon class="w-4 h-4" />
+                                        </Link>
                                         <Link :href="`/admin/sales/leads/${lead.id}`"
                                             class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors cursor-pointer"
                                             title="Ver detalle">
@@ -401,6 +464,53 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
             </div>
         </div>
 
+        <!-- Status Info Modal -->
+        <Teleport to="body">
+            <div v-if="showStatusInfo" class="fixed inset-0 z-50 flex items-center justify-center">
+                <div class="absolute inset-0 bg-black/50" @click="showStatusInfo = false"></div>
+                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
+                    <div class="sticky top-0 bg-white px-6 py-4 border-b flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900">Guía de Estados</h3>
+                        <button @click="showStatusInfo = false" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    </div>
+                    <div class="px-6 py-5 space-y-6 text-sm">
+                        <div>
+                            <h4 class="font-semibold text-gray-900 mb-3">Estado del Lead (persona)</h4>
+                            <p class="text-gray-500 text-xs mb-3">Representa el ciclo de vida del contacto como prospecto.</p>
+                            <div class="space-y-2">
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-blue-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Nuevo</span><span class="text-gray-500"> — Acaba de registrarse. El líder debe revisar y calificar.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-purple-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Calificado</span><span class="text-gray-500"> — Es un prospecto real. Se asigna automáticamente a un asesor.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-green-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Cliente</span><span class="text-gray-500"> — Se cerró al menos 1 venta. Cambia automáticamente.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-red-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Perdido</span><span class="text-gray-500"> — No tiene interés. Cambia automáticamente si todos los eventos son negativos.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-gray-800 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Spam</span><span class="text-gray-500"> — No es un prospecto real.</span></div></div>
+                            </div>
+                        </div>
+                        <div class="border-t pt-5">
+                            <h4 class="font-semibold text-gray-900 mb-3">Estado por Evento (oportunidad)</h4>
+                            <p class="text-gray-500 text-xs mb-3">Progreso de la negociación para cada evento.</p>
+                            <div class="space-y-2">
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-blue-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Nuevo</span><span class="text-gray-500"> — Registrado, sin contactar.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-yellow-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Contactado</span><span class="text-gray-500"> — Primer contacto realizado.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-orange-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Seguimiento</span><span class="text-gray-500"> — Pendiente de respuesta.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-purple-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Negociando</span><span class="text-gray-500"> — Discutiendo paquete. Se habilita convertir.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-green-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">Venta</span><span class="text-gray-500"> — Venta cerrada.</span></div></div>
+                                <div class="flex items-start gap-3"><span class="w-3 h-3 rounded-full bg-red-500 mt-1 flex-shrink-0"></span><div><span class="font-medium text-gray-900">No Venta</span><span class="text-gray-500"> — No se concretó.</span></div></div>
+                            </div>
+                        </div>
+                        <div class="border-t pt-5">
+                            <h4 class="font-semibold text-gray-900 mb-3">Cambios Automáticos</h4>
+                            <div class="space-y-2 text-gray-600 text-xs">
+                                <p>• Al calificar → se asigna asesor automáticamente</p>
+                                <p>• Al convertir a designer → lead pasa a <span class="font-medium text-green-600">Cliente</span>, evento a <span class="font-medium text-green-600">Venta</span></p>
+                                <p>• Todos los eventos negativos → lead pasa a <span class="font-medium text-red-600">Perdido</span></p>
+                                <p>• Lead perdido se re-registra → vuelve a <span class="font-medium text-purple-600">Calificado</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
         <!-- Tags Modal -->
         <Teleport to="body">
             <div v-if="tagsModalLead" class="fixed inset-0 z-50 flex items-center justify-center">
@@ -417,7 +527,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         <div class="flex flex-wrap gap-2">
                             <span v-for="t in tagsModalLead.tags" :key="t.id"
                                 class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium"
-                                :style="{ backgroundColor: t.color + '20', color: t.color }">
+                                :style="{ backgroundColor: t.color + '30', color: '#1f2937' }">
                                 {{ t.name }}
                             </span>
                         </div>
@@ -458,7 +568,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                     :value="ev.pivot?.status || 'new'"
                                     @change="changeEventStatus(eventsModalLead, ev.id, $event.target.value)"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black focus:border-black">
-                                    <option v-for="(info, key) in statuses" :key="key" :value="key">{{ info.label }}</option>
+                                    <option v-for="(info, key) in opportunityStatuses" :key="key" :value="key">{{ info.label }}</option>
                                 </select>
                             </div>
                         </div>

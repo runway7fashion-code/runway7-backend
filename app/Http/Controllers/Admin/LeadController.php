@@ -64,21 +64,40 @@ class LeadController extends Controller
             $query->whereHas('tags', fn($q) => $q->where('lead_tags.id', $request->tag));
         }
 
+        if ($request->filled('opp_status')) {
+            $query->whereHas('leadEvents', fn($q) => $q->where('status', $request->opp_status));
+        }
+
+        if ($request->filled('source')) {
+            $query->where('source', $request->source);
+        }
+
         // Stats
         $baseQuery = DesignerLead::whereNull('deleted_at');
         if (!$isLeader) {
             $baseQuery->where('assigned_to', $user->id);
         }
 
+        // Lead stats (marketing)
         $stats = [
-            'total'       => (clone $baseQuery)->count(),
-            'new'         => (clone $baseQuery)->where('status', 'new')->count(),
-            'contacted'   => (clone $baseQuery)->where('status', 'contacted')->count(),
-            'follow_up'   => (clone $baseQuery)->where('status', 'follow_up')->count(),
-            'negotiating' => (clone $baseQuery)->where('status', 'negotiating')->count(),
-            'converted'   => (clone $baseQuery)->where('status', 'converted')->count(),
-            'lost'        => (clone $baseQuery)->where('status', 'lost')->count(),
-            'unassigned'  => (clone $baseQuery)->whereNull('assigned_to')->count(),
+            'total'     => (clone $baseQuery)->count(),
+            'new'       => (clone $baseQuery)->where('status', 'new')->count(),
+            'qualified' => (clone $baseQuery)->where('status', 'qualified')->count(),
+            'client'    => (clone $baseQuery)->where('status', 'client')->count(),
+            'lost'      => (clone $baseQuery)->where('status', 'lost')->count(),
+            'spam'      => (clone $baseQuery)->where('status', 'spam')->count(),
+            'unassigned'=> (clone $baseQuery)->whereNull('assigned_to')->count(),
+        ];
+
+        // Opportunity stats (ventas)
+        $opportunityStats = [
+            'opp_total'      => \DB::table('lead_events')->count(),
+            'opp_new'        => \DB::table('lead_events')->where('status', 'new')->count(),
+            'opp_contacted'  => \DB::table('lead_events')->where('status', 'contacted')->count(),
+            'opp_follow_up'  => \DB::table('lead_events')->where('status', 'follow_up')->count(),
+            'opp_negotiating'=> \DB::table('lead_events')->where('status', 'negotiating')->count(),
+            'opp_converted'  => \DB::table('lead_events')->where('status', 'converted')->count(),
+            'opp_lost'       => \DB::table('lead_events')->where('status', 'lost')->count(),
         ];
 
         $perPage = in_array($request->per_page, [20, 50, 100, 200]) ? $request->per_page : 20;
@@ -96,14 +115,17 @@ class LeadController extends Controller
         $events = Event::whereNull('deleted_at')->select('id', 'name')->orderBy('start_date', 'desc')->get();
 
         return Inertia::render('Admin/Sales/Leads/Index', [
-            'leads'    => $leads,
-            'stats'    => $stats,
-            'statuses' => DesignerLead::STATUSES,
-            'advisors' => $advisors,
-            'events'   => $events,
-            'allTags'  => LeadTag::orderBy('name')->get(['id', 'name', 'color']),
-            'filters'  => $request->only(['search', 'status', 'event', 'assigned_to', 'budget', 'tag', 'per_page']),
-            'isLeader' => $isLeader,
+            'leads'              => $leads,
+            'stats'              => $stats,
+            'opportunityStats'   => $opportunityStats,
+            'statuses'           => DesignerLead::STATUSES,
+            'opportunityStatuses'=> DesignerLead::OPPORTUNITY_STATUSES,
+            'sources'            => DesignerLead::SOURCES,
+            'advisors'           => $advisors,
+            'events'             => $events,
+            'allTags'            => LeadTag::orderBy('name')->get(['id', 'name', 'color']),
+            'filters'            => $request->only(['search', 'status', 'opp_status', 'event', 'assigned_to', 'budget', 'tag', 'source', 'per_page']),
+            'isLeader'           => $isLeader,
         ]);
     }
 
@@ -122,6 +144,7 @@ class LeadController extends Controller
             'assignedTo:id,first_name,last_name',
             'convertedDesigner:id,first_name,last_name',
             'activities.user:id,first_name,last_name',
+            'activities.files',
         ]);
 
         $advisors = $isLeader
@@ -133,6 +156,8 @@ class LeadController extends Controller
         return Inertia::render('Admin/Sales/Leads/Show', [
             'lead'     => $lead,
             'statuses' => DesignerLead::STATUSES,
+            'opportunityStatuses' => DesignerLead::OPPORTUNITY_STATUSES,
+            'sources' => DesignerLead::SOURCES,
             'activityTypes' => LeadActivity::TYPES,
             'advisors' => $advisors,
             'events'   => $events,
@@ -153,6 +178,7 @@ class LeadController extends Controller
         return Inertia::render('Admin/Sales/Leads/Create', [
             'events'   => $events,
             'advisors' => $advisors,
+            'sources'  => DesignerLead::SOURCES,
             'isLeader' => $isLeader,
         ]);
     }
@@ -175,7 +201,11 @@ class LeadController extends Controller
             'event_id'               => 'required|exists:events,id',
             'preferred_contact_time' => 'nullable|string|max:20',
             'assigned_to'            => 'nullable|exists:users,id',
+            'source'                 => 'nullable|string|max:50',
             'notes'                  => 'nullable|string',
+            'note_title'             => 'nullable|string|max:255',
+            'note_files'             => 'nullable|array',
+            'note_files.*'           => 'file|max:10240',
         ]);
 
         $eventId = $validated['event_id'];
@@ -241,6 +271,29 @@ class LeadController extends Controller
             ]);
         }
 
+        // Create initial note if provided
+        if (!empty($validated['notes'])) {
+            $note = LeadActivity::create([
+                'lead_id'      => $lead->id,
+                'user_id'      => auth()->id(),
+                'type'         => 'note',
+                'title'        => $validated['note_title'] ?? 'Nota',
+                'description'  => $validated['notes'],
+                'status'       => 'completed',
+                'completed_at' => now(),
+            ]);
+
+            if ($request->hasFile('note_files')) {
+                foreach ($request->file('note_files') as $file) {
+                    $path = $file->store('lead-files', 'public');
+                    $note->files()->create([
+                        'file_path' => $path,
+                        'file_name' => $file->getClientOriginalName(),
+                    ]);
+                }
+            }
+        }
+
         return redirect()->route('admin.sales.leads.show', $lead)
             ->with('success', 'Prospecto creado correctamente.');
     }
@@ -254,6 +307,7 @@ class LeadController extends Controller
             'lead'     => $lead,
             'events'   => $events,
             'advisors' => $advisors,
+            'sources'  => DesignerLead::SOURCES,
         ]);
     }
 
@@ -274,6 +328,7 @@ class LeadController extends Controller
             'past_shows'             => 'nullable|string|max:10',
             'event_id'               => 'nullable|exists:events,id',
             'preferred_contact_time' => 'nullable|string|max:20',
+            'source'                 => 'nullable|string|max:50',
             'notes'                  => 'nullable|string',
         ]);
 
@@ -300,6 +355,17 @@ class LeadController extends Controller
             'completed_at' => now(),
         ]);
 
+        // Auto-assign via round-robin when lead is qualified and not yet assigned
+        if ($request->status === 'qualified' && !$lead->assigned_to) {
+            $assignmentService = new LeadAssignmentService();
+            $assignedTo = $assignmentService->assignRoundRobin($lead);
+
+            if ($assignedTo) {
+                $lead->refresh();
+                $assignmentService->scheduleInitialCall($lead);
+            }
+        }
+
         return back()->with('success', 'Estado actualizado.');
     }
 
@@ -307,7 +373,7 @@ class LeadController extends Controller
     {
         $request->validate([
             'event_id' => 'required|exists:events,id',
-            'status'   => 'required|string|in:' . implode(',', array_keys(DesignerLead::STATUSES)),
+            'status'   => 'required|string|in:' . implode(',', array_keys(DesignerLead::OPPORTUNITY_STATUSES)),
         ]);
 
         $leadEvent = $lead->leadEvents()->where('event_id', $request->event_id)->first();
@@ -325,10 +391,13 @@ class LeadController extends Controller
             'user_id'      => auth()->id(),
             'type'         => 'status_change',
             'title'        => "Estado de {$eventName}: {$oldStatus} → {$request->status}",
-            'description'  => DesignerLead::STATUSES[$oldStatus]['label'] . ' → ' . DesignerLead::STATUSES[$request->status]['label'],
+            'description'  => (DesignerLead::OPPORTUNITY_STATUSES[$oldStatus]['label'] ?? $oldStatus) . ' → ' . (DesignerLead::OPPORTUNITY_STATUSES[$request->status]['label'] ?? $request->status),
             'status'       => 'completed',
             'completed_at' => now(),
         ]);
+
+        // Auto-recalculate lead status based on all event statuses
+        $lead->recalculateStatus();
 
         return back()->with('success', 'Estado del evento actualizado.');
     }
@@ -366,25 +435,27 @@ class LeadController extends Controller
             'title'        => 'required|string|max:255',
             'description'  => 'nullable|string',
             'scheduled_at' => 'nullable|date',
-            'file'         => 'nullable|file|max:10240', // 10MB max
+            'files'        => 'nullable|array',
+            'files.*'      => 'file|max:10240',
         ]);
 
-        $fileData = [];
-        if ($request->hasFile('file')) {
-            $file = $request->file('file');
-            $path = $file->store('lead-files', 'public');
-            $fileData = [
-                'file_path' => $path,
-                'file_name' => $file->getClientOriginalName(),
-            ];
-        }
-
-        $activity = LeadActivity::create(array_merge($validated, $fileData, [
+        $activity = LeadActivity::create(array_merge($validated, [
             'lead_id' => $lead->id,
             'user_id' => auth()->id(),
             'status'  => ($validated['scheduled_at'] ?? null) ? 'pending' : 'completed',
             'completed_at' => ($validated['scheduled_at'] ?? null) ? null : now(),
         ]));
+
+        // Save attached files
+        if ($request->hasFile('files')) {
+            foreach ($request->file('files') as $file) {
+                $path = $file->store('lead-files', 'public');
+                $activity->files()->create([
+                    'file_path' => $path,
+                    'file_name' => $file->getClientOriginalName(),
+                ]);
+            }
+        }
 
         // Update last_contacted_at for call/email/meeting types
         if (in_array($validated['type'], ['call', 'email', 'meeting']) && !($validated['scheduled_at'] ?? null)) {
@@ -440,6 +511,28 @@ class LeadController extends Controller
         }
 
         return back()->with('success', 'Actividad completada.');
+    }
+
+    public function cancelActivity(LeadActivity $activity)
+    {
+        $activity->update(['status' => 'cancelled']);
+
+        if (request()->wantsJson()) {
+            return response()->json(['ok' => true]);
+        }
+
+        return back()->with('success', 'Actividad cancelada.');
+    }
+
+    public function notCompletedActivity(LeadActivity $activity)
+    {
+        $activity->update(['status' => 'not_completed']);
+
+        if (request()->wantsJson()) {
+            return response()->json(['ok' => true]);
+        }
+
+        return back()->with('success', 'Actividad marcada como no completada.');
     }
 
     public function toggleAvailability(Request $request)
@@ -551,10 +644,38 @@ class LeadController extends Controller
         return response()->json($events);
     }
 
+    public function botAsk(Request $request)
+    {
+        $request->validate(['message' => 'required|string|max:500']);
+
+        // Save user message
+        SalesBotMessage::create([
+            'user_id'      => auth()->id(),
+            'type'         => 'user_msg',
+            'title'        => '',
+            'message'      => $request->message,
+            'is_read'      => true,
+        ]);
+
+        $botService = new \App\Services\R7BotService();
+        $response = $botService->ask(auth()->user(), $request->message);
+
+        // Save bot response
+        SalesBotMessage::create([
+            'user_id'      => auth()->id(),
+            'type'         => 'bot_response',
+            'title'        => 'R7',
+            'message'      => $response,
+            'is_read'      => true,
+        ]);
+
+        return response()->json(['response' => $response]);
+    }
+
     public function botMessages()
     {
         $messages = SalesBotMessage::where('user_id', auth()->id())
-            ->orderBy('created_at', 'desc')
+            ->orderBy('created_at', 'asc')
             ->limit(50)
             ->get();
 

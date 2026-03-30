@@ -8,6 +8,7 @@ const props = defineProps({
     lead: Object,
     events: Array,
     advisors: Array,
+    sources: Object,
 });
 
 const phoneCodes = [
@@ -31,6 +32,9 @@ const parsed = parsePhone(props.lead.phone);
 const phoneCode = ref(parsed.code);
 const phoneNumber = ref(parsed.number);
 
+const fromParam = new URLSearchParams(window.location.search).get('from');
+const cancelUrl = fromParam === 'show' ? `/admin/sales/leads/${props.lead.id}` : '/admin/sales/leads';
+
 const form = useForm({
     first_name: props.lead.first_name || '',
     last_name: props.lead.last_name || '',
@@ -46,6 +50,7 @@ const form = useForm({
     past_shows: props.lead.past_shows || '',
     event_id: props.lead.event_id || '',
     preferred_contact_time: props.lead.preferred_contact_time || '',
+    source: props.lead.source || 'manual',
     notes: props.lead.notes || '',
 });
 
@@ -69,7 +74,7 @@ function submit() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link href="/admin/sales/leads" class="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
+                <Link :href="cancelUrl" class="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
                     <ArrowLeftIcon class="w-4 h-4" /> Leads
                 </Link>
                 <span class="text-gray-300">/</span>
@@ -229,21 +234,21 @@ function submit() {
                     </div>
                 </div>
 
-                <!-- Section 4: Notas (sin Asignacion en Edit) -->
+                <!-- Source -->
                 <div class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
-                    <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">Notas</h3>
-
+                    <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">Fuente</h3>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Notas</label>
-                        <textarea v-model="form.notes" rows="3"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"></textarea>
-                        <p v-if="form.errors.notes" class="mt-1 text-red-500 text-xs">{{ form.errors.notes }}</p>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">¿De dónde proviene este lead?</label>
+                        <select v-model="form.source"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
+                            <option v-for="(label, key) in sources" :key="key" :value="key">{{ label }}</option>
+                        </select>
                     </div>
                 </div>
 
                 <!-- Botones -->
                 <div class="flex justify-between">
-                    <Link href="/admin/sales/leads"
+                    <Link :href="cancelUrl"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                         Cancelar
                     </Link>

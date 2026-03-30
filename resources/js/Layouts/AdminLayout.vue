@@ -1,6 +1,6 @@
 <script setup>
 import { Link, usePage, router } from '@inertiajs/vue3';
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import {
     HomeIcon,
     CalendarDaysIcon,
@@ -82,8 +82,8 @@ const salesItems = computed(() => {
     if (hasSection('sales_designers')) items.push({ name: 'Diseñadores', href: '/admin/sales/designers', icon: PaintBrushIcon });
     if (hasSection('sales_leads')) items.push({ name: 'Leads web', href: '/admin/sales/leads', icon: UserPlusIcon });
     if (hasSection('sales_calendar')) items.push({ name: 'Calendario', href: '/admin/sales/calendar', icon: CalendarDaysIcon });
-    if (hasSection('sales_leads') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Tags', href: '/admin/sales/tags', icon: TagIcon });
     if (hasSection('sales_dashboard') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Sales History', href: '/admin/sales/history', icon: ChartBarIcon });
+    if (hasSection('sales_leads') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Tags', href: '/admin/sales/tags', icon: TagIcon });
     if (hasSection('designer_packages') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Paquetes', href: '/admin/settings/designer-packages', icon: CurrencyDollarIcon });
     return items;
 });
@@ -102,11 +102,14 @@ async function fetchBotMessages() {
         if (res.ok) {
             const data = await res.json();
             const prevUnread = botUnreadCount.value;
+            const hadMessages = botMessages.value.length;
             botMessages.value = data.messages;
             botUnreadCount.value = data.unread_count;
+            if (!hadMessages && data.messages.length) scrollBotToBottom();
             // Play sound if new unread messages arrived
             if (data.unread_count > prevUnread) {
                 playNotifSound();
+                scrollBotToBottom();
             }
         }
     } catch(e) {}
@@ -135,8 +138,56 @@ async function markAllBotRead() {
     } catch(e) {}
 }
 
+// Bot chat
+const botInput = ref('');
+const showBotInfo = ref(false);
+const botLoading = ref(false);
+const botChatContainer = ref(null);
+
+function scrollBotToBottom() {
+    nextTick(() => {
+        if (botChatContainer.value) {
+            botChatContainer.value.scrollTop = botChatContainer.value.scrollHeight;
+        }
+    });
+}
+
+async function sendBotMessage() {
+    if (!botInput.value.trim() || botLoading.value) return;
+    const msg = botInput.value.trim();
+    botInput.value = '';
+    botLoading.value = true;
+
+    // Add user message locally for instant feedback
+    botMessages.value.push({ id: 'user-' + Date.now(), type: 'user_msg', title: '', message: msg, is_read: true, created_at: new Date().toISOString() });
+    scrollBotToBottom();
+
+    try {
+        const token = document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1];
+        const res = await fetch('/admin/sales/bot/ask', {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-XSRF-TOKEN': token ? decodeURIComponent(token) : '' },
+            body: JSON.stringify({ message: msg }),
+        });
+        if (res.ok) {
+            const data = await res.json();
+            botMessages.value.push({ id: 'bot-' + Date.now(), type: 'bot_response', title: 'R7', message: data.response, is_read: true, created_at: new Date().toISOString() });
+            scrollBotToBottom();
+            // Reload page data if bot performed an action (created activity, note, etc.)
+            if (data.response?.startsWith('Listo.')) {
+                router.reload({ preserveScroll: true });
+            }
+        }
+    } catch(e) {
+        botMessages.value.push({ id: 'err-' + Date.now(), type: 'bot_response', title: 'R7', message: 'Error al procesar tu consulta.', is_read: true, created_at: new Date().toISOString() });
+        scrollBotToBottom();
+    } finally {
+        botLoading.value = false;
+    }
+}
+
 function botTypeIcon(type) {
-    const icons = { new_lead: '🆕', reminder: '⏰', overdue: '🔴', alert: '⚠️', info: 'ℹ️', converted: '🎉' };
+    const icons = { new_lead: '🆕', reminder: '⏰', overdue: '🔴', alert: '⚠️', info: 'ℹ️', converted: '🎉', bot_response: '🤖', user_msg: '💬' };
     return icons[type] || '📌';
 }
 
@@ -472,7 +523,7 @@ function logout() {
     <!-- Sales Bot Widget -->
     <div v-if="showBotWidget" class="fixed bottom-6 right-6 z-50">
         <!-- Bot button -->
-        <button v-if="!botOpen" @click="botOpen = true" class="relative w-14 h-14 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition flex items-center justify-center">
+        <button v-if="!botOpen" @click="botOpen = true; scrollBotToBottom()" class="relative w-14 h-14 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
             <span v-if="botUnreadCount > 0" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">{{ botUnreadCount > 9 ? '9+' : botUnreadCount }}</span>
         </button>
@@ -484,33 +535,36 @@ function logout() {
                 <div class="flex items-center gap-2">
                     <span class="text-lg">🤖</span>
                     <div>
-                        <div class="text-sm font-semibold">Sales Bot</div>
-                        <div class="text-xs text-gray-400">Runway 7 CRM</div>
+                        <div class="text-sm font-semibold">Hola {{ user?.first_name }}, soy R7</div>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <button v-if="botUnreadCount > 0" @click="markAllBotRead" class="text-xs text-gray-400 hover:text-white">Leer todo</button>
+                    <button @click="showBotInfo = true" class="text-gray-400 hover:text-white text-sm leading-none" title="¿Qué puede hacer R7?">?</button>
                     <button @click="botOpen = false" class="text-gray-400 hover:text-white text-lg leading-none">&times;</button>
                 </div>
             </div>
 
             <!-- Messages -->
-            <div class="flex-1 overflow-y-auto p-3 space-y-2">
+            <div ref="botChatContainer" class="flex-1 overflow-y-auto p-3 space-y-2">
                 <div v-if="botMessages.length === 0" class="text-center text-gray-400 text-sm mt-16">
                     <span class="text-3xl block mb-2">🤖</span>
                     No hay mensajes aún
                 </div>
                 <div v-for="msg in botMessages" :key="msg.id"
                     @click="!msg.is_read && markBotRead(msg.id)"
-                    :class="['rounded-xl p-3 text-sm transition cursor-pointer', msg.is_read ? 'bg-gray-50' : 'bg-blue-50 border border-blue-100']">
+                    :class="['rounded-xl p-3 text-sm transition',
+                        msg.type === 'user_msg' ? 'bg-black text-white ml-8' :
+                        msg.type === 'bot_response' ? 'bg-gray-100 mr-8' :
+                        msg.is_read ? 'bg-gray-50 cursor-pointer' : 'bg-blue-50 border border-blue-100 cursor-pointer']">
                     <div class="flex items-start gap-2">
-                        <span class="text-base flex-shrink-0 mt-0.5">{{ botTypeIcon(msg.type) }}</span>
+                        <span v-if="msg.type !== 'user_msg'" class="text-base flex-shrink-0 mt-0.5">{{ botTypeIcon(msg.type) }}</span>
                         <div class="flex-1 min-w-0">
-                            <div class="flex items-center justify-between gap-1">
+                            <div v-if="msg.type !== 'user_msg'" class="flex items-center justify-between gap-1">
                                 <span class="font-semibold text-gray-900 text-xs">{{ msg.title }}</span>
                                 <span class="text-[10px] text-gray-400 flex-shrink-0">{{ botTimeAgo(msg.created_at) }}</span>
                             </div>
-                            <p class="text-gray-600 text-xs mt-0.5 whitespace-pre-line leading-relaxed">{{ msg.message }}</p>
+                            <p :class="msg.type === 'user_msg' ? 'text-white text-xs leading-relaxed' : 'text-gray-600 text-xs mt-0.5 whitespace-pre-line leading-relaxed'">{{ msg.message }}</p>
                             <a v-if="msg.action_url" :href="msg.action_url" class="inline-block mt-1.5 text-[11px] font-medium text-blue-600 hover:text-blue-800">
                                 {{ msg.action_label || 'Ver detalle' }} →
                             </a>
@@ -519,9 +573,54 @@ function logout() {
                 </div>
             </div>
 
-            <!-- Footer -->
-            <div class="border-t border-gray-100 px-4 py-2 flex-shrink-0">
-                <p class="text-[10px] text-gray-400 text-center">Verificaciones cada hora · Recordatorios automáticos</p>
+            <!-- Chat input -->
+            <div class="border-t border-gray-100 px-3 py-2 flex-shrink-0">
+                <form @submit.prevent="sendBotMessage" class="flex items-center gap-2">
+                    <input v-model="botInput" type="text" :disabled="botLoading"
+                        :placeholder="botLoading ? 'R7 está pensando...' : 'Pregúntale algo a R7...'"
+                        class="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-black focus:ring-1 focus:ring-black" />
+                    <button type="submit" :disabled="!botInput.trim() || botLoading"
+                        class="w-8 h-8 bg-black text-white rounded-lg flex items-center justify-center hover:bg-gray-800 disabled:opacity-30 transition-colors flex-shrink-0">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Bot Info Modal -->
+            <div v-if="showBotInfo" class="absolute inset-0 bg-white rounded-2xl z-10 flex flex-col overflow-hidden">
+                <div class="bg-black text-white px-4 py-3 flex items-center justify-between flex-shrink-0">
+                    <span class="text-sm font-semibold">¿Qué puede hacer R7?</span>
+                    <button @click="showBotInfo = false" class="text-gray-400 hover:text-white text-lg leading-none">&times;</button>
+                </div>
+                <div class="flex-1 overflow-y-auto p-4 space-y-4 text-xs text-gray-700">
+                    <div>
+                        <p class="font-semibold text-gray-900 mb-1.5">Crear actividades</p>
+                        <div class="space-y-1.5 text-gray-500">
+                            <p>📞 "Agenda una llamada con Joseph para mañana a las 3pm"</p>
+                            <p>📧 "Programa un email para Joseph el lunes a las 10am"</p>
+                            <p>👥 "Agenda una reunión con Joseph para el viernes a las 2pm"</p>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-900 mb-1.5">Crear notas</p>
+                        <div class="space-y-1.5 text-gray-500">
+                            <p>📝 "Crea una nota para Joseph que contestó la llamada y hará el pago"</p>
+                            <p>📝 "Agrega nota a Joseph: pidió más info del paquete Gold"</p>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-900 mb-1.5">Consultar información</p>
+                        <div class="space-y-1.5 text-gray-500">
+                            <p>📊 "¿Cuántas actividades tengo hoy?"</p>
+                            <p>📊 "¿Cuántos leads nuevos hay?"</p>
+                            <p>📊 "¿Qué leads están en negociación?"</p>
+                            <p>📊 "Dame un resumen de mi semana"</p>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-gray-100">
+                        <p class="text-[10px] text-gray-400">R7 siempre pedirá confirmación antes de crear cualquier actividad o nota. Puedes cancelar respondiendo "no".</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

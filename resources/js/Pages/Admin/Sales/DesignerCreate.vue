@@ -62,6 +62,7 @@ function selectLead(lead) {
     selectedLead.value = lead;
     leadSearch.value = '';
     showLeadDropdown.value = false;
+    form.lead_id = lead.id;
     form.first_name = lead.first_name || '';
     form.last_name = lead.last_name || '';
     form.email = lead.email || '';
@@ -87,7 +88,7 @@ function selectLead(lead) {
 
 function clearLead() {
     selectedLead.value = null;
-    form.first_name = ''; form.last_name = ''; form.email = ''; form.brand_name = '';
+    form.lead_id = ''; form.first_name = ''; form.last_name = ''; form.email = ''; form.brand_name = '';
     form.country = ''; form.event_id = ''; form.sales_rep_id = '';
     phoneNumber.value = ''; phoneCode.value = '+1';
 }
@@ -104,6 +105,7 @@ onMounted(() => {
 });
 
 const form = useForm({
+    lead_id: '',
     first_name: '',
     last_name: '',
     email: '',
@@ -210,37 +212,37 @@ function submit() {
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-                                <input v-model="form.first_name" type="text" class="input" />
+                                <input v-model="form.first_name" type="text" :disabled="!!selectedLead" :class="selectedLead ? 'input bg-gray-100 cursor-not-allowed' : 'input'" />
                                 <p v-if="form.errors.first_name" class="err">{{ form.errors.first_name }}</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
-                                <input v-model="form.last_name" type="text" class="input" />
+                                <input v-model="form.last_name" type="text" :disabled="!!selectedLead" :class="selectedLead ? 'input bg-gray-100 cursor-not-allowed' : 'input'" />
                                 <p v-if="form.errors.last_name" class="err">{{ form.errors.last_name }}</p>
                             </div>
                             <div class="col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                                <input v-model="form.email" type="email" class="input" />
+                                <input v-model="form.email" type="email" :disabled="!!selectedLead" :class="selectedLead ? 'input bg-gray-100 cursor-not-allowed' : 'input'" />
                                 <p v-if="form.errors.email" class="err">{{ form.errors.email }}</p>
                             </div>
                             <div class="col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
                                 <div class="flex gap-2">
-                                    <select v-model="phoneCode" class="w-28 border border-gray-300 rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-yellow-400">
+                                    <select v-model="phoneCode" :disabled="!!selectedLead" :class="selectedLead ? 'w-28 border border-gray-300 rounded-lg px-2 py-2 text-sm bg-gray-100 cursor-not-allowed' : 'w-28 border border-gray-300 rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-yellow-400'">
                                         <option v-for="pc in phoneCodes" :key="pc.code" :value="pc.code">{{ pc.flag }} {{ pc.code }}</option>
                                     </select>
-                                    <input v-model="phoneNumber" type="text" placeholder="Número..." class="input flex-1" />
+                                    <input v-model="phoneNumber" type="text" placeholder="Número..." :disabled="!!selectedLead" :class="selectedLead ? 'input flex-1 bg-gray-100 cursor-not-allowed' : 'input flex-1'" />
                                 </div>
                                 <p v-if="form.errors.phone" class="err">{{ form.errors.phone }}</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Marca / Brand *</label>
-                                <input v-model="form.brand_name" type="text" class="input" />
+                                <input v-model="form.brand_name" type="text" :disabled="!!selectedLead" :class="selectedLead ? 'input bg-gray-100 cursor-not-allowed' : 'input'" />
                                 <p v-if="form.errors.brand_name" class="err">{{ form.errors.brand_name }}</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">País *</label>
-                                <select v-model="form.country" class="input bg-white">
+                                <select v-model="form.country" :disabled="!!selectedLead" :class="selectedLead ? 'input bg-gray-100 cursor-not-allowed' : 'input bg-white'">
                                     <option value="">Seleccionar...</option>
                                     <option v-for="c in countries" :key="c" :value="c">{{ c }}</option>
                                 </select>
@@ -301,7 +303,7 @@ function submit() {
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Evento *</label>
-                                    <select v-model="form.event_id" class="input bg-white">
+                                    <select v-model="form.event_id" :disabled="!!selectedLead && !!form.event_id" :class="selectedLead && form.event_id ? 'input bg-gray-100 cursor-not-allowed' : 'input bg-white'">
                                         <option value="">Seleccionar evento...</option>
                                         <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
                                     </select>

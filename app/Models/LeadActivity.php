@@ -58,6 +58,11 @@ class LeadActivity extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function files()
+    {
+        return $this->hasMany(LeadActivityFile::class, 'activity_id');
+    }
+
     public function getTypeLabelAttribute(): string
     {
         return self::TYPES[$this->type]['label'] ?? $this->type;

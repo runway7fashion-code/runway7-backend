@@ -10,7 +10,7 @@ use App\Models\LeadActivity;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 use App\Notifications\NewDesignerLead;
-use App\Services\LeadAssignmentService;
+
 use Illuminate\Http\Request;
 
 class LeadRegistrationController extends Controller
@@ -86,6 +86,11 @@ class LeadRegistrationController extends Controller
                 'instagram'      => $validated['instagram'] ?? null,
             ]));
 
+            // Reactivate lost leads (client stays client)
+            if ($existingLead->status === 'lost') {
+                $existingLead->update(['status' => 'qualified']);
+            }
+
             LeadActivity::create([
                 'lead_id'      => $existingLead->id,
                 'user_id'      => null,
@@ -99,7 +104,7 @@ class LeadRegistrationController extends Controller
         } else {
             $lead = DesignerLead::create(array_merge($validated, [
                 'status' => 'new',
-                'source' => 'website',
+                'source' => 'website_designers',
             ]));
 
             // Link event
@@ -117,16 +122,6 @@ class LeadRegistrationController extends Controller
             ]);
         }
 
-        // Round-robin assignment
-        $assignmentService = new LeadAssignmentService();
-        $assignedTo = $assignmentService->assignRoundRobin($lead);
-
-        // Schedule initial call if preferred time provided
-        if ($assignedTo) {
-            $lead->refresh();
-            $assignmentService->scheduleInitialCall($lead);
-        }
-
         // Send confirmation email to the lead
         try {
             $lead->load('events');
@@ -136,7 +131,7 @@ class LeadRegistrationController extends Controller
             \Log::warning('Lead confirmation email failed: ' . $e->getMessage());
         }
 
-        // Notify leader(s) and assigned advisor
+        // Notify leader(s) only — no assignment yet, leader qualifies first
         try {
             $leaders = User::where('role', 'sales')
                 ->where('sales_type', 'lider')
@@ -145,10 +140,6 @@ class LeadRegistrationController extends Controller
 
             foreach ($leaders as $leader) {
                 $leader->notify(new NewDesignerLead($lead));
-            }
-
-            if ($assignedTo) {
-                $assignedTo->notify(new NewDesignerLead($lead));
             }
         } catch (\Exception $e) {
             \Log::warning('Lead notification failed: ' . $e->getMessage());

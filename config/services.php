@@ -39,4 +39,8 @@ return [
         'google' => env('PLAY_STORE_URL', 'https://play.google.com/store/apps/details?id=com.runway7'),
     ],
 
+    'google_ai' => [
+        'key' => env('GOOGLE_AI_KEY'),
+    ],
+
 ];

@@ -7,6 +7,7 @@ import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 const props = defineProps({
     events: Array,
     advisors: Array,
+    sources: Object,
     isLeader: Boolean,
 });
 
@@ -38,8 +39,26 @@ const form = useForm({
     event_id: '',
     preferred_contact_time: '',
     assigned_to: '',
+    source: 'manual',
     notes: '',
+    note_title: '',
+    note_file: null,
 });
+
+const noteShowTitle = ref(false);
+const noteFiles = ref([]);
+const noteFileInput = ref(null);
+
+function handleNoteFile(e) {
+    for (const file of e.target.files) {
+        noteFiles.value.push({ file, name: file.name });
+    }
+    e.target.value = '';
+}
+
+function removeNoteFile(index) {
+    noteFiles.value.splice(index, 1);
+}
 
 const countryOptions = ['United States','Canada','Mexico','United Kingdom','France','Germany','Italy','Spain','Portugal','Netherlands','Belgium','Switzerland','Sweden','Norway','Denmark','Finland','Ireland','Austria','Poland','Greece','Turkey','Brazil','Argentina','Colombia','Chile','Peru','Venezuela','Ecuador','Dominican Republic','Puerto Rico','Costa Rica','Panama','Guatemala','Cuba','Japan','South Korea','China','India','Indonesia','Philippines','Thailand','Vietnam','Malaysia','Singapore','United Arab Emirates','Saudi Arabia','Israel','Lebanon','Egypt','Morocco','Nigeria','South Africa','Kenya','Ghana','Australia','New Zealand','Russia','Ukraine','Other'];
 const retailCategoryOptions = ['Athleisure','Accessories','Activewear/Sportswear','Bridal','Eveningwear/Gowns','Indigenous','Kids/Youth','Lingerie','Resort/Swimwear','Streetwear','Suits','Upcycle/Organic','Other'];
@@ -53,7 +72,8 @@ const contactTimeOptions = [
 
 function submit() {
     form.phone = phoneNumber.value ? `${phoneCode.value} ${phoneNumber.value}` : '';
-    form.post('/admin/sales/leads');
+    noteFiles.value.forEach((f, i) => { form[`note_files[${i}]`] = f.file; });
+    form.post('/admin/sales/leads', { forceFormData: true });
 }
 </script>
 
@@ -222,12 +242,19 @@ function submit() {
                     </div>
                 </div>
 
-                <!-- Section 4: Asignacion y Notas -->
+                <!-- Section 4: Asignacion + Nota inicial -->
                 <div class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
-                    <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">{{ isLeader ? 'Asignacion y Notas' : 'Notas' }}</h3>
+                    <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">{{ isLeader ? 'Asignacion y Nota' : 'Nota inicial' }}</h3>
 
-                    <div v-if="isLeader" class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Fuente</label>
+                            <select v-model="form.source"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
+                                <option v-for="(label, key) in sources" :key="key" :value="key">{{ label }}</option>
+                            </select>
+                        </div>
+                        <div v-if="isLeader">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Asignar a</label>
                             <select v-model="form.assigned_to"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
@@ -238,11 +265,37 @@ function submit() {
                         </div>
                     </div>
 
+                    <!-- Nota inicial con titulo y archivo -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Notas</label>
-                        <textarea v-model="form.notes" rows="3"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"></textarea>
-                        <p v-if="form.errors.notes" class="mt-1 text-red-500 text-xs">{{ form.errors.notes }}</p>
+                        <div class="border border-gray-200 rounded-xl overflow-hidden">
+                            <div v-if="noteShowTitle" class="px-4 pt-3">
+                                <input v-model="form.note_title" type="text" placeholder="Titulo (opcional)"
+                                    class="w-full border-0 p-0 text-sm font-semibold text-gray-900 focus:ring-0 placeholder-gray-400 focus:outline-none" />
+                            </div>
+                            <textarea v-model="form.notes" rows="2" placeholder="What's this note about? (opcional)"
+                                class="w-full border-0 px-4 py-3 text-sm text-gray-700 focus:ring-0 focus:outline-none placeholder-gray-400 resize-none"></textarea>
+                            <!-- Attached files preview -->
+                            <div v-if="noteFiles.length" class="px-4 py-2 border-t border-gray-100 space-y-1">
+                                <div v-for="(f, idx) in noteFiles" :key="idx" class="flex items-center justify-between bg-blue-50 rounded-lg px-3 py-1.5">
+                                    <div class="flex items-center gap-2 text-xs text-blue-700">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                        <span class="truncate max-w-48">{{ f.name }}</span>
+                                    </div>
+                                    <button type="button" @click="removeNoteFile(idx)" class="text-xs text-red-500 hover:text-red-700">&times;</button>
+                                </div>
+                            </div>
+                            <div class="px-4 py-2 bg-gray-50 flex items-center gap-3 border-t border-gray-100">
+                                <label class="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 cursor-pointer transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                    Attach File
+                                    <input type="file" ref="noteFileInput" @change="handleNoteFile" multiple class="hidden" />
+                                </label>
+                                <button v-if="!noteShowTitle" type="button" @click="noteShowTitle = true"
+                                    class="text-xs text-gray-500 hover:text-gray-700 transition-colors">
+                                    Add a Title
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

@@ -37,16 +37,39 @@ class DesignerLead extends Model
         'last_contacted_at' => 'datetime',
     ];
 
+    // Lead status (persona/marketing)
     const STATUSES = [
+        'new'       => ['label' => 'Nuevo',      'color' => '#3B82F6'],
+        'qualified' => ['label' => 'Calificado', 'color' => '#8B5CF6'],
+        'client'    => ['label' => 'Cliente',    'color' => '#10B981'],
+        'lost'      => ['label' => 'Perdido',    'color' => '#EF4444'],
+        'spam'      => ['label' => 'Spam',       'color' => '#1F2937'],
+    ];
+
+    // Opportunity status (ventas/evento)
+    const OPPORTUNITY_STATUSES = [
         'new'        => ['label' => 'Nuevo',       'color' => '#3B82F6'],
         'contacted'  => ['label' => 'Contactado',  'color' => '#EAB308'],
         'follow_up'  => ['label' => 'Seguimiento', 'color' => '#F97316'],
         'negotiating'=> ['label' => 'Negociando',  'color' => '#8B5CF6'],
         'converted'  => ['label' => 'Venta',       'color' => '#10B981'],
-        'no_response'=> ['label' => 'No Responde', 'color' => '#9CA3AF'],
-        'no_contact' => ['label' => 'Sin Contacto','color' => '#6B7280'],
         'lost'       => ['label' => 'No Venta',    'color' => '#EF4444'],
-        'spam'       => ['label' => 'Spam',         'color' => '#1F2937'],
+    ];
+
+    const SOURCES = [
+        'website_designers' => 'Web Designers',
+        'website_organic'   => 'Web Orgánico',
+        'facebook'          => 'Facebook',
+        'instagram'         => 'Instagram',
+        'tiktok'            => 'TikTok',
+        'google_ads'        => 'Google Ads',
+        'referral'          => 'Referido',
+        'cold_call'         => 'Llamada',
+        'event'             => 'Evento presencial',
+        'email_campaign'    => 'Email',
+        'whatsapp'          => 'WhatsApp',
+        'manual'            => 'Manual',
+        'other'             => 'Otro',
     ];
 
     public function event()
@@ -89,6 +112,35 @@ class DesignerLead extends Model
     public function getFullNameAttribute(): string
     {
         return $this->first_name . ' ' . $this->last_name;
+    }
+
+    /**
+     * Recalculate lead status based on event statuses.
+     */
+    public function recalculateStatus(): void
+    {
+        $eventStatuses = $this->leadEvents()->pluck('status')->toArray();
+
+        if (empty($eventStatuses)) return;
+
+        // If at least 1 event is converted → client
+        if (in_array('converted', $eventStatuses)) {
+            if ($this->status !== 'client') {
+                $this->update(['status' => 'client']);
+            }
+            return;
+        }
+
+        $negativeStatuses = ['lost'];
+
+        // If ALL events are negative → lost
+        $allNegative = collect($eventStatuses)->every(fn($s) => in_array($s, $negativeStatuses));
+        if ($allNegative) {
+            if ($this->status !== 'lost' && $this->status !== 'spam') {
+                $this->update(['status' => 'lost']);
+            }
+            return;
+        }
     }
 
     public function getStatusLabelAttribute(): string

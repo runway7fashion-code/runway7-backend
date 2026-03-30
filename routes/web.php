@@ -266,6 +266,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::patch('leads/{lead}/assign', [LeadController::class, 'assign'])->name('leads.assign');
                 Route::post('leads/{lead}/activity', [LeadController::class, 'addActivity'])->name('leads.add-activity');
                 Route::patch('activities/{activity}/complete', [LeadController::class, 'completeActivity'])->name('leads.complete-activity');
+                Route::patch('activities/{activity}/cancel', [LeadController::class, 'cancelActivity'])->name('leads.cancel-activity');
+                Route::patch('activities/{activity}/not-completed', [LeadController::class, 'notCompletedActivity'])->name('leads.not-completed-activity');
                 Route::delete('leads/{lead}', [LeadController::class, 'destroy'])->name('leads.destroy');
                 Route::patch('leads/{lead}/tags', [LeadController::class, 'syncTags'])->name('leads.sync-tags');
                 Route::post('toggle-availability', [LeadController::class, 'toggleAvailability'])->name('toggle-availability');
@@ -281,6 +283,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             });
             // Bot messages API (all sales users)
             Route::get('bot/messages', [LeadController::class, 'botMessages'])->name('bot.messages');
+            Route::post('bot/ask', [LeadController::class, 'botAsk'])->name('bot.ask');
             Route::post('bot/mark-read', [LeadController::class, 'botMarkRead'])->name('bot.mark-read');
             Route::post('bot/mark-all-read', [LeadController::class, 'botMarkAllRead'])->name('bot.mark-all-read');
         });

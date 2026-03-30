@@ -309,6 +309,25 @@ class SalesController extends Controller
             $notifyUser->notify(new NewDesignerRegistered($designer, $currentUser));
         }
 
+        // Auto-update lead statuses if converted from a lead
+        if ($request->filled('lead_id')) {
+            $lead = \App\Models\DesignerLead::find($request->lead_id);
+            if ($lead) {
+                $lead->update(['converted_designer_id' => $designer->id]);
+
+                // Update event status to converted
+                if ($request->filled('event_id')) {
+                    $leadEvent = $lead->leadEvents()->where('event_id', $request->event_id)->first();
+                    if ($leadEvent) {
+                        $leadEvent->update(['status' => 'converted']);
+                    }
+                }
+
+                // Recalculate lead status (will set to client if converted event exists)
+                $lead->recalculateStatus();
+            }
+        }
+
         return redirect()->route('admin.sales.designers.index')
             ->with('success', "Diseñador {$designer->full_name} registrado exitosamente.");
     }
