@@ -37,7 +37,7 @@ function toggleCategory(cat) {
 }
 
 function deleteCategory(cat) {
-    if (!confirm(`¿Eliminar la categoría "${cat.name}"?`)) return;
+    if (!confirm(`Delete category "${cat.name}"?`)) return;
     router.delete(`/admin/settings/designer-categories/${cat.id}`, { preserveScroll: true });
 }
 </script>
@@ -45,7 +45,7 @@ function deleteCategory(cat) {
 <template>
     <AdminLayout>
         <template #header>
-            <h2 class="text-lg font-semibold text-gray-900">Categorías de Diseñadores</h2>
+            <h2 class="text-lg font-semibold text-gray-900">Designer Categories</h2>
         </template>
 
         <div class="max-w-3xl">
@@ -71,7 +71,7 @@ function deleteCategory(cat) {
                 <table class="w-full">
                     <thead class="bg-gray-50 border-b border-gray-200">
                         <tr>
-                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Nombre</th>
+                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
                             <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Slug</th>
                             <th class="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
                             <th class="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
@@ -100,14 +100,14 @@ function deleteCategory(cat) {
                             <td class="px-6 py-3">
                                 <div class="flex items-center justify-end gap-1">
                                     <template v-if="editingCategory === cat.id">
-                                        <button @click="saveCategory(cat)" class="text-xs px-3 py-1.5 bg-black text-white rounded-lg hover:bg-gray-800">Guardar</button>
-                                        <button @click="editingCategory = null" class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50">Cancelar</button>
+                                        <button @click="saveCategory(cat)" class="text-xs px-3 py-1.5 bg-black text-white rounded-lg hover:bg-gray-800">Save</button>
+                                        <button @click="editingCategory = null" class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50">Cancel</button>
                                     </template>
                                     <template v-else>
-                                        <button @click="startEditCategory(cat)" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors" title="Editar">
+                                        <button @click="startEditCategory(cat)" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors" title="Edit">
                                             <PencilSquareIcon class="w-4 h-4" />
                                         </button>
-                                        <button @click="deleteCategory(cat)" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors" title="Eliminar">
+                                        <button @click="deleteCategory(cat)" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors" title="Delete">
                                             <TrashIcon class="w-4 h-4" />
                                         </button>
                                     </template>
@@ -115,7 +115,7 @@ function deleteCategory(cat) {
                             </td>
                         </tr>
                         <tr v-if="categories.length === 0">
-                            <td colspan="4" class="px-6 py-12 text-center text-gray-400 text-sm">No hay categorías creadas.</td>
+                            <td colspan="4" class="px-6 py-12 text-center text-gray-400 text-sm">No hay categories creadas.</td>
                         </tr>
                     </tbody>
                 </table>

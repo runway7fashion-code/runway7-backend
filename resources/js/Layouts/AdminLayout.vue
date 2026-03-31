@@ -55,7 +55,7 @@ const allNavItems = [
     { name: 'Usuarios',     href: '/admin/users',     exact: false, section: 'users',              icon: UsersIcon },
     { name: 'Pases',        href: '/admin/passes',    exact: false, section: 'tickets_management', icon: TicketIcon },
     { name: 'Logs',         href: '/admin/logs',      exact: false, section: 'activity_logs',      icon: DocumentTextIcon },
-    { name: 'Categorías',   href: '/admin/settings/designer-categories', exact: false, section: 'designer_categories', icon: Cog6ToothIcon },
+    { name: 'Categories',   href: '/admin/settings/designer-categories', exact: false, section: 'designer_categories', icon: Cog6ToothIcon },
 ];
 
 const navItems = computed(() => allNavItems.filter(item => hasSection(item.section)));
@@ -202,11 +202,9 @@ function botTimeAgo(date) {
     return Math.floor(diff / 86400) + 'd';
 }
 
-const showSettings = computed(() => hasSection('settings'));
-const settingsOpen = ref(page.url.startsWith('/admin/settings'));
-const settingsItems = [
-    { name: 'Diseñadores', href: '/admin/settings/designers' },
-];
+const showSettings = computed(() => false); // Settings page removed
+const settingsOpen = ref(false);
+const settingsItems = [];
 
 // Notifications
 const notifications = ref([]);
