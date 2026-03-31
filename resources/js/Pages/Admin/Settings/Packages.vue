@@ -54,7 +54,7 @@ function togglePackage(pkg) {
 }
 
 function deletePackage(pkg) {
-    if (!confirm(`¿Eliminar el paquete "${pkg.name}"?`)) return;
+    if (!confirm(`Delete package "${pkg.name}"?`)) return;
     router.delete(`/admin/settings/designer-packages/${pkg.id}`, { preserveScroll: true });
 }
 
@@ -66,20 +66,20 @@ function formatPrice(val) {
 <template>
     <AdminLayout>
         <template #header>
-            <h2 class="text-lg font-semibold text-gray-900">Paquetes de Diseñadores</h2>
+            <h2 class="text-lg font-semibold text-gray-900">Designer Packages</h2>
         </template>
 
         <div class="max-w-4xl">
             <!-- Add/Edit form -->
             <div v-if="showPackageForm" class="bg-white rounded-xl border border-gray-200 p-6 mb-5">
-                <h4 class="font-semibold text-gray-900 mb-4">{{ editingPackage ? 'Editar Paquete' : 'Nuevo Paquete' }}</h4>
+                <h4 class="font-semibold text-gray-900 mb-4">{{ editingPackage ? 'Edit Package' : 'New Package' }}</h4>
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Nombre *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Name *</label>
                         <input v-model="packageForm.name" type="text" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Precio (USD) *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Price (USD) *</label>
                         <input v-model.number="packageForm.price" type="number" min="0" step="100" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
                     </div>
                     <div>
@@ -91,16 +91,16 @@ function formatPrice(val) {
                         <input v-model.number="packageForm.default_assistants" type="number" min="0" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
                     </div>
                     <div class="col-span-2">
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Descripción</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
                         <input v-model="packageForm.description" type="text" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
                     </div>
                 </div>
                 <div class="flex gap-2">
                     <button @click="savePackage" class="px-4 py-2.5 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
-                        {{ editingPackage ? 'Guardar Cambios' : 'Crear Paquete' }}
+                        {{ editingPackage ? 'Save Changes' : 'Create Package' }}
                     </button>
                     <button @click="resetPackageForm" class="px-4 py-2.5 rounded-lg border border-gray-200 text-sm font-medium hover:bg-gray-50 transition-colors">
-                        Cancelar
+                        Cancel
                     </button>
                 </div>
             </div>
@@ -117,7 +117,7 @@ function formatPrice(val) {
                     <thead class="bg-gray-50 border-b border-gray-200">
                         <tr>
                             <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Paquete</th>
-                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Precio</th>
+                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Price</th>
                             <th class="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Looks</th>
                             <th class="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Asistentes</th>
                             <th class="text-center px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
@@ -139,7 +139,7 @@ function formatPrice(val) {
                                 <button @click="togglePackage(pkg)"
                                     class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors"
                                     :class="pkg.is_active ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'">
-                                    {{ pkg.is_active ? 'Activo' : 'Inactivo' }}
+                                    {{ pkg.is_active ? 'Active' : 'Inactive' }}
                                 </button>
                             </td>
                             <td class="px-6 py-3">
@@ -154,7 +154,7 @@ function formatPrice(val) {
                             </td>
                         </tr>
                         <tr v-if="packages.length === 0">
-                            <td colspan="6" class="px-6 py-12 text-center text-gray-400 text-sm">No hay paquetes creados.</td>
+                            <td colspan="6" class="px-6 py-12 text-center text-gray-400 text-sm">No packages creados.</td>
                         </tr>
                     </tbody>
                 </table>
