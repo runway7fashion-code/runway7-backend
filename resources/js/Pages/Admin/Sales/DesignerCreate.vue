@@ -172,9 +172,9 @@ function submit() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-2">
-                <Link href="/admin/sales/designers" class="text-gray-400 hover:text-gray-600 text-sm">&larr; Registros</Link>
+                <Link href="/admin/sales/designers" class="text-gray-400 hover:text-gray-600 text-sm">&larr; Registrations</Link>
                 <span class="text-gray-300">/</span>
-                <h2 class="text-lg font-semibold text-gray-900">Registrar Diseñador</h2>
+                <h2 class="text-lg font-semibold text-gray-900">Register Designer</h2>
             </div>
         </template>
 
@@ -184,11 +184,11 @@ function submit() {
                 <div class="flex items-center gap-3">
                     <MagnifyingGlassIcon class="w-5 h-5 text-gray-400 flex-shrink-0" />
                     <div class="flex-1 relative">
-                        <input v-if="!selectedLead" v-model="leadSearch" type="text" placeholder="Buscar prospecto existente para autocompletar..." class="w-full border-0 p-0 text-sm focus:ring-0 placeholder-gray-400" />
+                        <input v-if="!selectedLead" v-model="leadSearch" type="text" placeholder="Search existing prospect to autocomplete..." class="w-full border-0 p-0 text-sm focus:ring-0 placeholder-gray-400" />
                         <div v-else class="flex items-center gap-2">
                             <span class="text-sm font-medium">{{ selectedLead.first_name }} {{ selectedLead.last_name }}</span>
                             <span class="text-xs text-gray-500">{{ selectedLead.company_name }} — {{ selectedLead.email }}</span>
-                            <button type="button" @click="clearLead" class="text-xs text-red-500 hover:text-red-700 ml-2">Quitar</button>
+                            <button type="button" @click="clearLead" class="text-xs text-red-500 hover:text-red-700 ml-2">Remove</button>
                         </div>
                         <div v-if="showLeadDropdown" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-30 max-h-48 overflow-y-auto">
                             <button v-for="l in leadResults" :key="l.id" type="button" @click="selectLead(l)" class="w-full text-left px-3 py-2 hover:bg-gray-50 flex justify-between items-center">
@@ -205,18 +205,18 @@ function submit() {
 
             <form @submit.prevent="submit">
                 <div class="flex flex-col lg:grid lg:grid-cols-2 gap-6 lg:items-start">
-                    <!-- Columna izquierda: Info del Diseñador + Documentos (lg) -->
+                    <!-- Columna izquierda: Info del Diseñador + Documents (lg) -->
                     <div class="contents lg:block lg:space-y-6">
                     <div class="bg-white rounded-xl border border-gray-200 p-6 order-1">
-                        <h3 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Información del Diseñador</h3>
+                        <h3 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Designer Information</h3>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
                                 <input v-model="form.first_name" type="text" :disabled="!!selectedLead" :class="selectedLead ? 'input bg-gray-100 cursor-not-allowed' : 'input'" />
                                 <p v-if="form.errors.first_name" class="err">{{ form.errors.first_name }}</p>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
                                 <input v-model="form.last_name" type="text" :disabled="!!selectedLead" :class="selectedLead ? 'input bg-gray-100 cursor-not-allowed' : 'input'" />
                                 <p v-if="form.errors.last_name" class="err">{{ form.errors.last_name }}</p>
                             </div>
@@ -226,24 +226,24 @@ function submit() {
                                 <p v-if="form.errors.email" class="err">{{ form.errors.email }}</p>
                             </div>
                             <div class="col-span-2">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                                 <div class="flex gap-2">
                                     <select v-model="phoneCode" :disabled="!!selectedLead" :class="selectedLead ? 'w-28 border border-gray-300 rounded-lg px-2 py-2 text-sm bg-gray-100 cursor-not-allowed' : 'w-28 border border-gray-300 rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-yellow-400'">
                                         <option v-for="pc in phoneCodes" :key="pc.code" :value="pc.code">{{ pc.flag }} {{ pc.code }}</option>
                                     </select>
-                                    <input v-model="phoneNumber" type="text" placeholder="Número..." :disabled="!!selectedLead" :class="selectedLead ? 'input flex-1 bg-gray-100 cursor-not-allowed' : 'input flex-1'" />
+                                    <input v-model="phoneNumber" type="text" placeholder="Number..." :disabled="!!selectedLead" :class="selectedLead ? 'input flex-1 bg-gray-100 cursor-not-allowed' : 'input flex-1'" />
                                 </div>
                                 <p v-if="form.errors.phone" class="err">{{ form.errors.phone }}</p>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Marca / Brand *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Brand *</label>
                                 <input v-model="form.brand_name" type="text" :disabled="!!selectedLead" :class="selectedLead ? 'input bg-gray-100 cursor-not-allowed' : 'input'" />
                                 <p v-if="form.errors.brand_name" class="err">{{ form.errors.brand_name }}</p>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">País *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Country *</label>
                                 <select v-model="form.country" :disabled="!!selectedLead" :class="selectedLead ? 'input bg-gray-100 cursor-not-allowed' : 'input bg-white'">
-                                    <option value="">Seleccionar...</option>
+                                    <option value="">Select...</option>
                                     <option v-for="c in countries" :key="c" :value="c">{{ c }}</option>
                                 </select>
                                 <p v-if="form.errors.country" class="err">{{ form.errors.country }}</p>
@@ -251,7 +251,7 @@ function submit() {
                         </div>
                     </div>
 
-                        <!-- Documentos (columna izquierda, fila 2) -->
+                        <!-- Documents (columna izquierda, fila 2) -->
                         <div class="bg-white rounded-xl border border-gray-200 p-6 order-3">
                             <h3 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Documents <span class="normal-case font-normal text-gray-400">(optional)</span></h3>
                             <div class="flex flex-wrap items-end gap-3 mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -297,58 +297,58 @@ function submit() {
 
                     <!-- Columna derecha: solo Evento/Paquete -->
                     <div class="contents lg:block">
-                        <!-- Evento y Paquete -->
+                        <!-- Event & Package -->
                         <div class="bg-white rounded-xl border border-gray-200 p-6 order-2">
-                            <h3 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Evento y Paquete</h3>
+                            <h3 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Event & Package</h3>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Evento *</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Event *</label>
                                     <select v-model="form.event_id" :disabled="!!selectedLead && !!form.event_id" :class="selectedLead && form.event_id ? 'input bg-gray-100 cursor-not-allowed' : 'input bg-white'">
-                                        <option value="">Seleccionar evento...</option>
+                                        <option value="">Select event...</option>
                                         <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
                                     </select>
                                     <p v-if="form.errors.event_id" class="err">{{ form.errors.event_id }}</p>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Paquete *</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Package *</label>
                                     <select v-model="form.package_id" class="input bg-white">
-                                        <option value="">Seleccionar paquete...</option>
+                                        <option value="">Select package...</option>
                                         <option v-for="p in packages" :key="p.id" :value="p.id">{{ p.name }} — ${{ Number(p.price).toLocaleString() }}</option>
                                     </select>
                                     <p v-if="form.errors.package_id" class="err">{{ form.errors.package_id }}</p>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Looks negociados *</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Negotiated Looks *</label>
                                     <input v-model="form.looks" type="number" min="1" max="100" class="input" placeholder="Ej. 10" />
                                     <p v-if="form.errors.looks" class="err">{{ form.errors.looks }}</p>
-                                    <p v-if="selectedPackage" class="text-xs text-gray-400 mt-1">Default del paquete: {{ selectedPackage.default_looks }}</p>
+                                    <p v-if="selectedPackage" class="text-xs text-gray-400 mt-1">Package default: {{ selectedPackage.default_looks }}</p>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Asistentes negociados *</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Negotiated Assistants *</label>
                                     <input v-model="form.assistants" type="number" min="0" max="20" class="input" placeholder="Ej. 2" />
                                     <p v-if="form.errors.assistants" class="err">{{ form.errors.assistants }}</p>
-                                    <p v-if="selectedPackage" class="text-xs text-gray-400 mt-1">Default del paquete: {{ selectedPackage.default_assistants }}</p>
+                                    <p v-if="selectedPackage" class="text-xs text-gray-400 mt-1">Package default: {{ selectedPackage.default_assistants }}</p>
                                 </div>
 
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Precio Acordado ($) *</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Agreed Price ($) *</label>
                                     <input v-model="form.agreed_price" type="number" step="0.01" min="0" class="input" />
                                     <p v-if="form.errors.agreed_price" class="err">{{ form.errors.agreed_price }}</p>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Inicial / Downpayment ($) *</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Downpayment ($) *</label>
                                     <input v-model="form.downpayment" type="number" step="0.01" min="0" class="input" />
                                     <p v-if="form.errors.downpayment" class="err">{{ form.errors.downpayment }}</p>
                                 </div>
                                 <div class="col-span-2">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Número de Cuotas *</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Number of Installments *</label>
                                     <input v-model="form.installments_count" type="number" min="1" max="12" class="input" />
                                     <p v-if="form.errors.installments_count" class="err">{{ form.errors.installments_count }}</p>
                                 </div>
                                 <div v-if="salesReps?.length" class="col-span-2">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Asignar a Asesor</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Assign to Advisor</label>
                                     <select v-model="form.sales_rep_id" class="input bg-white">
-                                        <option value="">— Sin asignar (yo mismo) —</option>
+                                        <option value="">— Unassigned (myself) —</option>
                                         <option v-for="rep in salesReps" :key="rep.id" :value="rep.id">{{ rep.first_name }} {{ rep.last_name }}</option>
                                     </select>
                                 </div>
@@ -375,7 +375,7 @@ function submit() {
                                     </label>
                                 </div>
                                 <div class="col-span-2">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                                     <textarea v-model="form.notes" rows="3" class="input resize-none"></textarea>
                                 </div>
                             </div>
@@ -387,10 +387,10 @@ function submit() {
                 <!-- Actions -->
                 <div class="flex items-center gap-3 mt-6">
                     <button type="submit" :disabled="form.processing" class="px-6 py-2.5 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50">
-                        {{ form.processing ? 'Registrando...' : 'Registrar Diseñador' }}
+                        {{ form.processing ? 'Registering...' : 'Register Designer' }}
                     </button>
                     <Link href="/admin/sales/designers" class="px-6 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
-                        Cancelar
+                        Cancel
                     </Link>
                 </div>
             </form>

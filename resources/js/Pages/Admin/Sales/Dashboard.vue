@@ -57,7 +57,7 @@ function salesTypeLabel(type) {
             <!-- All cards in one row -->
             <div class="grid grid-cols-5 gap-3 mb-10">
                 <div class="rounded-xl p-5 border border-gray-200 bg-black text-white">
-                    <p class="text-xs uppercase tracking-widest text-gray-400 mb-2">Total Registros</p>
+                    <p class="text-xs uppercase tracking-widest text-gray-400 mb-2">Total Registrations</p>
                     <p class="text-3xl font-bold text-white">{{ stats.total_registrations }}</p>
                 </div>
                 <div
@@ -84,7 +84,7 @@ function salesTypeLabel(type) {
                         <p class="text-2xl font-bold text-green-600">{{ formatMoney(financeStats.total_downpayments) }}</p>
                     </div>
                     <div class="bg-white rounded-xl border border-gray-200 p-5">
-                        <p class="text-xs uppercase tracking-widest text-gray-400 mb-2">Registros Este Mes</p>
+                        <p class="text-xs uppercase tracking-widest text-gray-400 mb-2">Registrations This Month</p>
                         <p class="text-2xl font-bold text-gray-900">{{ financeStats.this_month_count }}</p>
                     </div>
                     <div class="bg-white rounded-xl border border-gray-200 p-5">
@@ -92,7 +92,7 @@ function salesTypeLabel(type) {
                         <p class="text-2xl font-bold text-gray-900">{{ financeStats.confirmation_rate }}%</p>
                     </div>
                 </div>
-                <!-- Líder/Admin: 3 cols con Top Vendedores en row-span-2 -->
+                <!-- Líder/Admin: 3 cols con Top Sellers en row-span-2 -->
                 <div v-else class="grid grid-cols-3 gap-3">
                     <div class="bg-white rounded-xl border border-gray-200 p-5">
                         <p class="text-xs uppercase tracking-widest text-gray-400 mb-2">Ingresos Totales</p>
@@ -104,7 +104,7 @@ function salesTypeLabel(type) {
                     </div>
                     <!-- Top 3 vendedores — ocupa col 3, filas 1-2 -->
                     <div v-if="financeStats.top_sellers?.length" class="bg-white rounded-xl border border-gray-200 p-5 row-span-2 flex flex-col">
-                        <p class="text-xs uppercase tracking-widest text-gray-400 mb-4">Top Vendedores</p>
+                        <p class="text-xs uppercase tracking-widest text-gray-400 mb-4">Top Sellers</p>
                         <div class="space-y-3 flex-1">
                             <div v-for="(seller, i) in financeStats.top_sellers" :key="i" class="flex items-center justify-between">
                                 <div class="flex items-center gap-3">
@@ -119,7 +119,7 @@ function salesTypeLabel(type) {
                         </div>
                     </div>
                     <div class="bg-white rounded-xl border border-gray-200 p-5">
-                        <p class="text-xs uppercase tracking-widest text-gray-400 mb-2">Registros Este Mes</p>
+                        <p class="text-xs uppercase tracking-widest text-gray-400 mb-2">Registrations This Month</p>
                         <p class="text-2xl font-bold text-gray-900">{{ financeStats.this_month_count }}</p>
                     </div>
                     <div class="bg-white rounded-xl border border-gray-200 p-5">
@@ -131,12 +131,12 @@ function salesTypeLabel(type) {
 
             <!-- Sales Rep Stats (solo líder y admin) -->
             <div v-if="isLider && salesRepStats?.length" class="mb-10">
-                <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Ventas por Vendedor</h4>
+                <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Sales by Advisor</h4>
                 <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
                     <table class="w-full text-sm">
                         <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-widest">
                             <tr>
-                                <th class="px-4 py-3 text-left">Vendedor</th>
+                                <th class="px-4 py-3 text-left">Advisor</th>
                                 <th class="px-4 py-3 text-left">Tipo</th>
                                 <th class="px-4 py-3 text-center">Total</th>
                                 <th class="px-4 py-3 text-center">Registrados</th>
@@ -167,38 +167,38 @@ function salesTypeLabel(type) {
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Quick actions -->
                 <div class="space-y-4">
-                    <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-2">Acciones Rápidas</h4>
+                    <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-2">Actions Rápidas</h4>
                     <Link href="/admin/sales/designers/create" class="block p-5 bg-white rounded-xl border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all group">
                         <div class="flex items-center justify-between mb-2">
-                            <h4 class="font-semibold text-gray-900">Registrar Diseñador</h4>
+                            <h4 class="font-semibold text-gray-900">Register Designer</h4>
                             <span class="text-xl group-hover:scale-110 transition-transform">+</span>
                         </div>
                         <p class="text-gray-500 text-sm">Registrar un nuevo diseñador para un evento</p>
                     </Link>
                     <Link href="/admin/sales/designers" class="block p-5 bg-white rounded-xl border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all group">
                         <div class="flex items-center justify-between mb-2">
-                            <h4 class="font-semibold text-gray-900">Ver Registros</h4>
+                            <h4 class="font-semibold text-gray-900">View Registrations</h4>
                             <span class="text-xl group-hover:scale-110 transition-transform">&rarr;</span>
                         </div>
-                        <p class="text-gray-500 text-sm">Ver y gestionar todos los registros de diseñadores</p>
+                        <p class="text-gray-500 text-sm">Ver y gestionar todos los registrations de diseñadores</p>
                     </Link>
                 </div>
 
                 <!-- Recent registrations -->
                 <div class="md:col-span-2">
-                    <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Registros Recientes</h4>
+                    <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Recent Registrations</h4>
                     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
                         <div v-if="!recentRegistrations.length" class="p-6 text-center text-gray-400 text-sm">
-                            Sin registros aún
+                            No registrations aún
                         </div>
                         <table v-else class="w-full text-sm">
                             <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-widest">
                                 <tr>
-                                    <th class="px-4 py-3 text-left">Diseñador</th>
-                                    <th class="px-4 py-3 text-left">Evento</th>
-                                    <th v-if="isLider" class="px-4 py-3 text-left">Vendedor</th>
-                                    <th class="px-4 py-3 text-left">Estado</th>
-                                    <th class="px-4 py-3 text-left">Fecha</th>
+                                    <th class="px-4 py-3 text-left">Designer</th>
+                                    <th class="px-4 py-3 text-left">Event</th>
+                                    <th v-if="isLider" class="px-4 py-3 text-left">Advisor</th>
+                                    <th class="px-4 py-3 text-left">Status</th>
+                                    <th class="px-4 py-3 text-left">Date</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100">

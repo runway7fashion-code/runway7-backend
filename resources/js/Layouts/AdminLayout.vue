@@ -80,12 +80,12 @@ const showSales = computed(() => hasSection('sales_dashboard') || hasSection('sa
 const salesItems = computed(() => {
     const items = [];
     if (hasSection('sales_dashboard')) items.push({ name: 'Dashboard', href: '/admin/sales/dashboard', icon: PresentationChartBarIcon });
-    if (hasSection('sales_designers')) items.push({ name: 'Diseñadores', href: '/admin/sales/designers', icon: PaintBrushIcon });
-    if (hasSection('sales_leads')) items.push({ name: 'Leads web', href: '/admin/sales/leads', icon: UserPlusIcon });
-    if (hasSection('sales_calendar')) items.push({ name: 'Calendario', href: '/admin/sales/calendar', icon: CalendarDaysIcon });
+    if (hasSection('sales_designers')) items.push({ name: 'Designers', href: '/admin/sales/designers', icon: PaintBrushIcon });
+    if (hasSection('sales_leads')) items.push({ name: 'Web Leads', href: '/admin/sales/leads', icon: UserPlusIcon });
+    if (hasSection('sales_calendar')) items.push({ name: 'Calendar', href: '/admin/sales/calendar', icon: CalendarDaysIcon });
     if (hasSection('sales_dashboard') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Sales History', href: '/admin/sales/history', icon: ChartBarIcon });
     if (hasSection('sales_leads') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Tags', href: '/admin/sales/tags', icon: TagIcon });
-    if (hasSection('designer_packages') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Paquetes', href: '/admin/settings/designer-packages', icon: CurrencyDollarIcon });
+    if (hasSection('designer_packages') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Packages', href: '/admin/settings/designer-packages', icon: CurrencyDollarIcon });
     return items;
 });
 
@@ -389,10 +389,10 @@ function logout() {
                     </div>
                 </template>
 
-                <!-- Ventas -->
+                <!-- Sales -->
                 <template v-if="showSales">
                     <div class="pt-3 mt-3 border-t border-gray-800">
-                        <p v-if="!sidebarCollapsed" class="px-3 mb-2 text-xs uppercase tracking-widest text-gray-600">Ventas</p>
+                        <p v-if="!sidebarCollapsed" class="px-3 mb-2 text-xs uppercase tracking-widest text-gray-600">Sales</p>
                         <Link v-for="sub in salesItems" :key="sub.name" :href="sub.href"
                             :title="sidebarCollapsed ? sub.name : ''"
                             class="flex items-center py-2.5 rounded-lg text-sm font-medium transition-all duration-150"

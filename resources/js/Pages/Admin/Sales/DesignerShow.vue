@@ -35,10 +35,10 @@ function statusBadge(s) {
 
 function statusLabel(s) {
     return {
-        registered: 'Registrado',
+        registered: 'Registered',
         onboarded:  'Onboarded',
-        confirmed:  'Confirmado',
-        cancelled:  'Cancelado',
+        confirmed:  'Confirmed',
+        cancelled:  'Cancelled',
     }[s] ?? s;
 }
 
@@ -94,12 +94,12 @@ function submitDocument() {
 }
 
 function deleteDocument(doc) {
-    if (!confirm(`¿Eliminar el documento "${doc.original_name}"?`)) return;
+    if (!confirm(`¿Delete el documento "${doc.original_name}"?`)) return;
     router.delete(`/admin/sales/documents/${doc.id}`, { preserveScroll: true });
 }
 
 function docTypeLabel(type) {
-    return { contract: 'Contrato', payment_proof: 'Comprobante de Pago', other: 'Otro' }[type] ?? type;
+    return { contract: 'Contract', payment_proof: 'Comprobante de Pago', other: 'Other' }[type] ?? type;
 }
 
 function storageUrl(path) {
@@ -154,26 +154,26 @@ function storageUrl(path) {
 
                 <!-- Event & Package -->
                 <div class="bg-white rounded-xl border border-gray-200 p-6">
-                    <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Evento y Paquete</h4>
+                    <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Event y Package</h4>
                     <div class="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Evento</p>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Event</p>
                             <p class="text-gray-900 font-medium">{{ r.event?.name }}</p>
                         </div>
                         <div>
-                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Paquete</p>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Package</p>
                             <p class="text-gray-900">{{ r.package?.name ?? 'Sin paquete' }}</p>
                         </div>
                         <div>
-                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Precio Acordado</p>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Agreed Price</p>
                             <p class="text-gray-900 font-bold text-lg">${{ Number(r.agreed_price).toLocaleString() }}</p>
                         </div>
                         <div>
-                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Inicial / Downpayment</p>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Downpayment / Downpayment</p>
                             <p class="text-gray-900 font-bold text-lg">{{ r.downpayment ? `$${Number(r.downpayment).toLocaleString()}` : '-' }}</p>
                         </div>
                         <div>
-                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Cuotas</p>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Installments</p>
                             <p class="text-gray-900 font-medium">{{ r.installments_count ?? '-' }}</p>
                         </div>
                         <div>
@@ -189,15 +189,15 @@ function storageUrl(path) {
                         </div>
                     </div>
 
-                    <!-- Notas -->
+                    <!-- Notes -->
                     <div class="mt-4">
                         <template v-if="isLider && editing">
-                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Notas</p>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Notes</p>
                             <textarea v-model="editForm.notes" rows="3"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 resize-none"></textarea>
                         </template>
                         <div v-else-if="r.notes" class="p-3 bg-gray-50 rounded-lg text-sm text-gray-700">
-                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Notas</p>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Notes</p>
                             {{ r.notes }}
                         </div>
                     </div>
@@ -207,11 +207,11 @@ function storageUrl(path) {
                         <template v-if="editing">
                             <button @click="submitEdit" :disabled="editForm.processing"
                                 class="px-4 py-1.5 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50">
-                                {{ editForm.processing ? 'Guardando...' : 'Guardar' }}
+                                {{ editForm.processing ? 'Guardando...' : 'Save' }}
                             </button>
                             <button @click="editing = false; editForm.reset()"
                                 class="px-4 py-1.5 border border-gray-300 text-gray-600 text-xs rounded-lg hover:bg-gray-50 transition-colors">
-                                Cancelar
+                                Cancel
                             </button>
                         </template>
                         <button v-else @click="editing = true"
@@ -224,15 +224,15 @@ function storageUrl(path) {
                 <!-- Documents -->
                 <div class="bg-white rounded-xl border border-gray-200 p-6">
                     <div class="flex items-center justify-between mb-4">
-                        <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500">Documentos</h4>
+                        <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500">Documents</h4>
                         <button @click="showUploadModal = true" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-800 transition-colors">
                             <DocumentArrowUpIcon class="h-4 w-4" />
-                            Subir Documento
+                            Upload Document
                         </button>
                     </div>
 
                     <div v-if="!r.documents?.length" class="text-center py-8 text-gray-400 text-sm">
-                        Sin documentos adjuntos
+                        No documents adjuntos
                     </div>
                     <div v-else class="space-y-3">
                         <div v-for="doc in r.documents" :key="doc.id" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -246,10 +246,10 @@ function storageUrl(path) {
                                 <p v-if="doc.notes" class="text-xs text-gray-500 mt-1">{{ doc.notes }}</p>
                             </div>
                             <div class="flex items-center gap-2 ml-3">
-                                <a :href="storageUrl(doc.file_path)" target="_blank" class="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" title="Descargar">
+                                <a :href="storageUrl(doc.file_path)" target="_blank" class="p-1.5 text-gray-400 hover:text-blue-600 transition-colors" title="Download">
                                     <ArrowDownTrayIcon class="h-4 w-4" />
                                 </a>
-                                <button @click="deleteDocument(doc)" class="p-1.5 text-gray-400 hover:text-red-600 transition-colors" title="Eliminar">
+                                <button @click="deleteDocument(doc)" class="p-1.5 text-gray-400 hover:text-red-600 transition-colors" title="Delete">
                                     <TrashIcon class="h-4 w-4" />
                                 </button>
                             </div>
@@ -298,14 +298,14 @@ function storageUrl(path) {
             <div v-if="showUploadModal" class="fixed inset-0 z-50 flex items-center justify-center p-4" @click.self="showUploadModal = false">
                 <div class="fixed inset-0 bg-black/50"></div>
                 <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6 z-10">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Subir Documento</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Upload Document</h3>
                     <form @submit.prevent="submitDocument" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de documento *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Type de documento *</label>
                             <select v-model="docType" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400">
-                                <option value="contract">Contrato</option>
+                                <option value="contract">Contract</option>
                                 <option value="payment_proof">Comprobante de Pago</option>
-                                <option value="other">Otro</option>
+                                <option value="other">Other</option>
                             </select>
                         </div>
                         <div>
@@ -314,7 +314,7 @@ function storageUrl(path) {
                             <p v-if="docErrors.file" class="text-red-500 text-xs mt-1">{{ docErrors.file }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                             <textarea v-model="docNotes" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400"></textarea>
                         </div>
                         <div class="flex items-center gap-3 pt-2">
@@ -322,7 +322,7 @@ function storageUrl(path) {
                                 {{ docUploading ? 'Subiendo...' : 'Subir' }}
                             </button>
                             <button type="button" @click="showUploadModal = false" class="px-5 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50">
-                                Cancelar
+                                Cancel
                             </button>
                         </div>
                     </form>
