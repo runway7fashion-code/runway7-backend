@@ -96,7 +96,7 @@ function submit() {
                 <div class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
                     <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">Personal Information</h3>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
                             <input v-model="form.first_name" type="text"
@@ -111,7 +111,7 @@ function submit() {
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
                             <input v-model="form.email" type="email"
@@ -131,7 +131,7 @@ function submit() {
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Country</label>
                             <select v-model="form.country"
@@ -148,7 +148,7 @@ function submit() {
                 <div class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
                     <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">Business Information</h3>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
                             <input v-model="form.company_name" type="text"
@@ -166,7 +166,7 @@ function submit() {
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Website URL</label>
                             <input v-model="form.website_url" type="url" placeholder="https://..."
@@ -186,7 +186,7 @@ function submit() {
                 <div class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
                     <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">Details</h3>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Designs Ready</label>
                             <select v-model="form.designs_ready"
@@ -207,7 +207,7 @@ function submit() {
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Past Shows</label>
                             <select v-model="form.past_shows"
@@ -248,7 +248,7 @@ function submit() {
                 <div class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
                     <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37]">{{ isLeader ? 'Assignment & Note' : 'Initial Note' }}</h3>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Source</label>
                             <select v-model="form.source"

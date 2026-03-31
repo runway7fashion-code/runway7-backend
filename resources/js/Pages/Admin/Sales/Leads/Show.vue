@@ -310,8 +310,8 @@ const sortedActivities = computed(() => {
         <div class="max-w-8xl mx-auto space-y-6">
             <!-- Header Card (full width) -->
             <div class="bg-white rounded-2xl border border-gray-200 p-4">
-                <div class="flex items-center justify-between">
-                    <div class="flex gap-4 items-center flex-1">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="flex flex-wrap gap-4 items-center flex-1">
                         <div class="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
                             <span class="text-lg font-bold text-gray-400">{{ lead.first_name?.[0] }}{{ lead.last_name?.[0] }}</span>
                         </div>
@@ -348,7 +348,7 @@ const sortedActivities = computed(() => {
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
                 <!-- Col 1: Contacto + Tags + Negocio -->
                 <div class="space-y-6">
@@ -484,7 +484,7 @@ const sortedActivities = computed(() => {
                 </div>
 
                 <!-- Col 2-3: Estado + Notas (ocupa 2 columnas) -->
-                <div class="lg:col-span-2 space-y-6">
+                <div class="md:col-span-2 lg:col-span-2 space-y-6">
 
                     <!-- Estado y Asignacion Card -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-4">

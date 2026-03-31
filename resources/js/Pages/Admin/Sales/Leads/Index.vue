@@ -175,7 +175,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
 
         <div @click="closeDropdowns">
             <!-- Header -->
-            <div class="flex items-center justify-between mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
                     <h3 class="text-2xl font-bold text-gray-900">Prospects</h3>
                     <p class="text-gray-500 text-sm mt-1">{{ leads.total }} registered prospects</p>
@@ -279,8 +279,8 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
 
             <!-- Table -->
             <div class="bg-white rounded-xl border border-gray-200">
-                <div>
-                    <table class="w-full">
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[900px]">
                         <thead class="bg-gray-50 border-b border-gray-200">
                             <tr>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Lead</th>
