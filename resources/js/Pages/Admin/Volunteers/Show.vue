@@ -90,14 +90,14 @@ function formatDayDate(date) {
 // Status change
 function updateStatus(newStatus) {
     if (!confirm(`¿Cambiar estado a "${statusBadgeLabel(newStatus)}"?`)) return;
-    router.patch(`/admin/volunteers/${props.volunteer.id}/status`, { status: newStatus }, { preserveScroll: true });
+    router.patch(`/admin/operations/volunteers/${props.volunteer.id}/status`, { status: newStatus }, { preserveScroll: true });
 }
 
 // Assign event
 const showAssignModal = ref(false);
 const assignForm = useForm({ event_id: '', area: '' });
 function submitAssignEvent() {
-    assignForm.post(`/admin/volunteers/${props.volunteer.id}/assign-event`, {
+    assignForm.post(`/admin/operations/volunteers/${props.volunteer.id}/assign-event`, {
         preserveScroll: true,
         onSuccess: () => { showAssignModal.value = false; assignForm.reset(); },
     });
@@ -106,7 +106,7 @@ function submitAssignEvent() {
 // Remove event
 function removeEvent(eventId, eventName) {
     if (!confirm(`¿Quitar a ${props.volunteer.first_name} del evento "${eventName}"?`)) return;
-    router.delete(`/admin/volunteers/${props.volunteer.id}/remove-event/${eventId}`, { preserveScroll: true });
+    router.delete(`/admin/operations/volunteers/${props.volunteer.id}/remove-event/${eventId}`, { preserveScroll: true });
 }
 
 // Add schedule
@@ -121,7 +121,7 @@ function onScheduleEventChange() {
 }
 
 function submitSchedule() {
-    scheduleForm.post(`/admin/volunteers/${props.volunteer.id}/schedules`, {
+    scheduleForm.post(`/admin/operations/volunteers/${props.volunteer.id}/schedules`, {
         preserveScroll: true,
         onSuccess: () => { showScheduleModal.value = false; scheduleForm.reset(); selectedEventDays.value = []; },
     });
@@ -129,25 +129,25 @@ function submitSchedule() {
 
 function removeSchedule(scheduleId) {
     if (!confirm('¿Eliminar este horario?')) return;
-    router.delete(`/admin/volunteers/${props.volunteer.id}/schedules/${scheduleId}`, { preserveScroll: true });
+    router.delete(`/admin/operations/volunteers/${props.volunteer.id}/schedules/${scheduleId}`, { preserveScroll: true });
 }
 
 // Onboarding email
 function sendOnboarding() {
     if (!confirm(`¿Enviar email de onboarding a ${props.volunteer.first_name}?`)) return;
-    router.post(`/admin/volunteers/${props.volunteer.id}/send-onboarding`, {}, { preserveScroll: true });
+    router.post(`/admin/operations/volunteers/${props.volunteer.id}/send-onboarding`, {}, { preserveScroll: true });
 }
 
 // Onboarding SMS
 function sendSms() {
     if (!confirm(`¿Enviar SMS de onboarding a ${props.volunteer.first_name}?`)) return;
-    router.post(`/admin/volunteers/${props.volunteer.id}/send-onboarding-sms`, {}, { preserveScroll: true });
+    router.post(`/admin/operations/volunteers/${props.volunteer.id}/send-onboarding-sms`, {}, { preserveScroll: true });
 }
 
 // Delete
 const showDeleteModal = ref(false);
 function deleteVolunteer() {
-    router.delete(`/admin/volunteers/${props.volunteer.id}`, {
+    router.delete(`/admin/operations/volunteers/${props.volunteer.id}`, {
         onSuccess: () => { showDeleteModal.value = false; },
     });
 }
@@ -157,7 +157,7 @@ function deleteVolunteer() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link href="/admin/volunteers" class="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-sm">
+                <Link href="/admin/operations/volunteers" class="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-sm">
                     <ArrowLeftIcon class="w-4 h-4" /> Voluntarios
                 </Link>
                 <span class="text-gray-300">/</span>
@@ -191,7 +191,7 @@ function deleteVolunteer() {
                                 <span :class="statusBadgeClass(volunteer.status)" class="text-xs font-medium rounded-lg px-3 py-1.5">
                                     {{ statusBadgeLabel(volunteer.status) }}
                                 </span>
-                                <Link :href="`/admin/volunteers/${volunteer.id}/edit`"
+                                <Link :href="`/admin/operations/volunteers/${volunteer.id}/edit`"
                                     class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
                                     Editar
                                 </Link>
@@ -316,7 +316,7 @@ function deleteVolunteer() {
                         </span>
                     </div>
                     <a v-if="certificates?.[ev.id]"
-                        :href="`/admin/volunteers/${volunteer.id}/certificate/${ev.id}`"
+                        :href="`/admin/operations/volunteers/${volunteer.id}/certificate/${ev.id}`"
                         target="_blank"
                         class="flex items-center gap-1.5 text-xs font-medium text-black bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors">
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">

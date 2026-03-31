@@ -31,7 +31,7 @@ watch([eventId, role, method, type], () => applyFilters());
 watch(eventId, async (val) => {
     eventDayId.value = '';
     if (!val) { availableDays.value = []; return; }
-    const res = await fetch(`/admin/attendance/event-days/${val}`, {
+    const res = await fetch(`/admin/operations/attendance/event-days/${val}`, {
         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
     });
     availableDays.value = await res.json();
@@ -42,7 +42,7 @@ watch(eventDayId, () => applyFilters());
 const availableDays = ref(props.event_days ?? []);
 
 function applyFilters() {
-    router.get('/admin/attendance', {
+    router.get('/admin/operations/attendance', {
         search:       search.value     || undefined,
         event_id:     eventId.value    || undefined,
         event_day_id: eventDayId.value || undefined,
@@ -67,7 +67,7 @@ function exportData() {
     if (role.value)       params.set('role', role.value);
     if (method.value)     params.set('method', method.value);
     if (search.value)     params.set('search', search.value);
-    window.location.href = '/admin/attendance/export?' + params.toString();
+    window.location.href = '/admin/operations/attendance/export?' + params.toString();
 }
 
 // ─── Modal marcación manual ────────────────────────────────────────────────
@@ -120,7 +120,7 @@ watch(userSearch, val => {
 
 async function doSearch(q) {
     try {
-        const res = await fetch(`/admin/attendance/user-search?q=${encodeURIComponent(q)}`, {
+        const res = await fetch(`/admin/operations/attendance/user-search?q=${encodeURIComponent(q)}`, {
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
         });
         searchResults.value = await res.json();
@@ -137,7 +137,7 @@ async function selectUser(user) {
     modalDays.value = [];
 
     try {
-        const res = await fetch(`/admin/attendance/user-events?user_id=${user.id}`, {
+        const res = await fetch(`/admin/operations/attendance/user-events?user_id=${user.id}`, {
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
         });
         const data = await res.json();
@@ -178,7 +178,7 @@ watch(() => manualForm.event_id, async (val) => {
         manualForm.checked_at = nowInTimezone(selectedEvent.timezone);
     }
 
-    const res = await fetch(`/admin/attendance/event-days/${val}`, {
+    const res = await fetch(`/admin/operations/attendance/event-days/${val}`, {
         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
     });
     const days = await res.json();
@@ -190,7 +190,7 @@ watch(() => manualForm.event_id, async (val) => {
 });
 
 function submitManual() {
-    manualForm.post('/admin/attendance', {
+    manualForm.post('/admin/operations/attendance', {
         onSuccess: () => resetModal(),
     });
 }
@@ -229,7 +229,7 @@ function formatForInput(dt, tz) {
 }
 
 function submitEdit() {
-    editForm.put(`/admin/attendance/${editingCheckin.value.id}`, {
+    editForm.put(`/admin/operations/attendance/${editingCheckin.value.id}`, {
         onSuccess: () => { showEditModal.value = false; editingCheckin.value = null; },
     });
 }
@@ -237,7 +237,7 @@ function submitEdit() {
 // ─── Eliminar ──────────────────────────────────────────────────────────────
 function deleteCheckin(id) {
     if (!confirm('¿Eliminar esta marcación?')) return;
-    router.delete(`/admin/attendance/${id}`, { preserveScroll: true });
+    router.delete(`/admin/operations/attendance/${id}`, { preserveScroll: true });
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────

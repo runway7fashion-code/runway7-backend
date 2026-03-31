@@ -85,7 +85,7 @@ let timer = null;
 function applyFilters() {
     clearTimeout(timer);
     timer = setTimeout(() => {
-        router.get('/admin/models', {
+        router.get('/admin/operations/models', {
             search:          search.value         || undefined,
             event:           event.value          || undefined,
             compcard:        compcard.value       || undefined,
@@ -143,7 +143,7 @@ const exportUrl = computed(() => {
     if (merch.value)          params.set('merch',          merch.value);
     if (model_kit.value)      params.set('model_kit',      model_kit.value);
     const qs = params.toString();
-    return '/admin/models/export' + (qs ? '?' + qs : '');
+    return '/admin/operations/models/export' + (qs ? '?' + qs : '');
 });
 
 // --- Import Excel ---
@@ -156,7 +156,7 @@ function handleFileChange(e) {
 }
 
 function submitImport() {
-    importForm.post('/admin/models/import', {
+    importForm.post('/admin/operations/models/import', {
         forceFormData: true,
         onSuccess: () => {
             showImportModal.value = false;
@@ -184,7 +184,7 @@ function canSendSms(m) {
 
 function sendIndividualSms(m) {
     if (!confirm(`¿Enviar SMS de onboarding a ${m.first_name} ${m.last_name}?`)) return;
-    router.post(`/admin/models/${m.id}/send-onboarding-sms`, {}, { preserveScroll: true });
+    router.post(`/admin/operations/models/${m.id}/send-onboarding-sms`, {}, { preserveScroll: true });
 }
 
 // Modal historial de correos
@@ -231,7 +231,7 @@ function scheduledEvents(m) {
 
 function confirmSendWelcomeEmail() {
     const model = emailModalModel.value;
-    router.post(`/admin/models/${model.id}/send-welcome-email`, {}, { preserveScroll: true });
+    router.post(`/admin/operations/models/${model.id}/send-welcome-email`, {}, { preserveScroll: true });
     emailModalModel.value = null;
 }
 
@@ -250,12 +250,12 @@ function updateModelStatus(m, newStatus) {
             return;
         }
     }
-    router.patch(`/admin/models/${m.id}/status`, { status: newStatus }, { preserveScroll: true });
+    router.patch(`/admin/operations/models/${m.id}/status`, { status: newStatus }, { preserveScroll: true });
 }
 
 function toggleTop(m, e) {
     e.stopPropagation();
-    router.post(`/admin/models/${m.id}/toggle-top`, {}, { preserveScroll: true });
+    router.post(`/admin/operations/models/${m.id}/toggle-top`, {}, { preserveScroll: true });
 }
 
 // --- Modal eventos ---
@@ -267,7 +267,7 @@ function openEventsModal(model, e) {
 }
 
 function updateCastingStatus(model, eventId, newStatus) {
-    router.patch(`/admin/models/${model.id}/events/${eventId}/casting-status`,
+    router.patch(`/admin/operations/models/${model.id}/events/${eventId}/casting-status`,
         { casting_status: newStatus },
         {
             preserveScroll: true,
@@ -280,7 +280,7 @@ function updateCastingStatus(model, eventId, newStatus) {
 }
 
 function updateModelTag(model, eventId, newTag) {
-    router.patch(`/admin/models/${model.id}/events/${eventId}/model-tag`,
+    router.patch(`/admin/operations/models/${model.id}/events/${eventId}/model-tag`,
         { model_tag: newTag || null },
         {
             preserveScroll: true,
@@ -294,7 +294,7 @@ function updateModelTag(model, eventId, newTag) {
 
 function sendOnboarding(model, eventId) {
     if (!confirm('¿Enviar email de onboarding personalizado?')) return;
-    router.post(`/admin/models/${model.id}/events/${eventId}/send-onboarding`, {}, {
+    router.post(`/admin/operations/models/${model.id}/events/${eventId}/send-onboarding`, {}, {
         preserveScroll: true,
         onSuccess: () => {
             const fresh = props.models.data.find(m => m.id === model.id);
@@ -429,22 +429,22 @@ function timeAgo(dt) {
 // --- Send pending emails/SMS ---
 function sendPendingEmails() {
     if (!confirm(`¿Enviar email de onboarding a ${props.pendingEmailCount} modelo(s) pendiente(s)?`)) return;
-    router.post('/admin/models/send-pending-emails', {}, { preserveScroll: true });
+    router.post('/admin/operations/models/send-pending-emails', {}, { preserveScroll: true });
 }
 
 function sendPendingSms() {
     if (!confirm(`¿Enviar SMS de onboarding a ${props.pendingSmsCount} modelo(s) pendiente(s)?`)) return;
-    router.post('/admin/models/send-bulk-onboarding-sms', {}, { preserveScroll: true });
+    router.post('/admin/operations/models/send-bulk-onboarding-sms', {}, { preserveScroll: true });
 }
 
 function sendBulkRejectionEmails() {
     if (!confirm(`¿Enviar email de rechazo a ${props.rejectedEmailCount} modelo(s) rechazada(s)?`)) return;
-    router.post('/admin/models/send-bulk-rejection-emails', {}, { preserveScroll: true });
+    router.post('/admin/operations/models/send-bulk-rejection-emails', {}, { preserveScroll: true });
 }
 
 function sendBulkRejectionSms() {
     if (!confirm(`¿Enviar SMS de rechazo a ${props.rejectedSmsCount} modelo(s) rechazada(s)?`)) return;
-    router.post('/admin/models/send-bulk-rejection-sms', {}, { preserveScroll: true });
+    router.post('/admin/operations/models/send-bulk-rejection-sms', {}, { preserveScroll: true });
 }
 
 // --- Helpers ---
@@ -592,7 +592,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         Importar Excel
                     </button>
 
-                    <Link href="/admin/models/create"
+                    <Link href="/admin/operations/models/create"
                         class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
                         + Crear Modelo
                     </Link>
@@ -843,7 +843,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         </tr>
                         <tr v-for="m in models.data" :key="m.id"
                             class="hover:bg-gray-50 cursor-pointer transition-colors"
-                            @click="router.visit(`/admin/models/${m.id}`)">
+                            @click="router.visit(`/admin/operations/models/${m.id}`)">
                             <td class="px-5 py-3">
                                 <div class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-full flex-shrink-0"
@@ -992,7 +992,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                         title="Enviar SMS">
                                         <DevicePhoneMobileIcon class="w-4 h-4" />
                                     </button>
-                                    <Link :href="`/admin/models/${m.id}/edit`"
+                                    <Link :href="`/admin/operations/models/${m.id}/edit`"
                                         class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
                                         title="Editar">
                                         <PencilSquareIcon class="w-4 h-4" />
@@ -1172,7 +1172,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
 
                         <!-- Footer -->
                         <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
-                            <Link :href="`/admin/models/${checkinModel.id}`"
+                            <Link :href="`/admin/operations/models/${checkinModel.id}`"
                                 class="text-sm font-semibold text-black hover:underline underline-offset-2">
                                 Ver perfil completo →
                             </Link>
@@ -1439,7 +1439,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
 
                         <!-- Footer -->
                         <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
-                            <Link :href="`/admin/models/${selectedModel.id}`"
+                            <Link :href="`/admin/operations/models/${selectedModel.id}`"
                                 class="text-sm font-semibold text-black hover:underline underline-offset-2">
                                 Ver perfil completo →
                             </Link>
@@ -1523,7 +1523,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
 
                         <!-- Footer -->
                         <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
-                            <Link :href="`/admin/models/${participationModel.id}`"
+                            <Link :href="`/admin/operations/models/${participationModel.id}`"
                                 class="text-sm font-semibold text-black hover:underline underline-offset-2">
                                 Ver perfil completo →
                             </Link>
@@ -1554,7 +1554,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
 
                 <!-- Download template -->
                 <div class="mb-4">
-                    <a href="/admin/models/import-template"
+                    <a href="/admin/operations/models/import-template"
                         class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-xl transition-colors">
                         <ArrowDownTrayIcon class="w-4 h-4" />
                         Download Template (.xlsx)

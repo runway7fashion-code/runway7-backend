@@ -150,7 +150,7 @@ function submit() {
                     <div>
                         <p class="text-sm font-semibold text-amber-800">Este usuario es un diseñador</p>
                         <p class="text-sm text-amber-700 mt-1">El perfil completo (marca, paquete, materiales, displays, asistentes) se gestiona desde el modulo de Diseñadores.</p>
-                        <Link :href="`/admin/designers/${user.id}/edit`"
+                        <Link :href="`/admin/operations/designers/${user.id}/edit`"
                             class="inline-block mt-2 text-sm font-medium text-amber-700 underline hover:text-amber-900">
                             Ir al perfil de diseñador →
                         </Link>

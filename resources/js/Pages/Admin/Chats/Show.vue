@@ -40,7 +40,7 @@ function shouldShowDate(index) {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link href="/admin/chats" class="text-gray-400 hover:text-gray-600 text-sm">Chats</Link>
+                <Link href="/admin/operations/chats" class="text-gray-400 hover:text-gray-600 text-sm">Chats</Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900">Conversacion</h2>
             </div>

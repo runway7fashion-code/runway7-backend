@@ -467,10 +467,10 @@ const sortedActivities = computed(() => {
                                 <dt class="text-gray-500">Past Shows:</dt>
                                 <dd class="font-medium text-gray-900">{{ lead.past_shows || '—' }}</dd>
                             </div>
-                            <div v-if="lead.events?.length" class="flex justify-between sm:flex-col sm:gap-0.5 sm:col-span-2">
-                                <dt class="text-gray-500">Events of Interest:</dt>
-                                <dd class="font-medium text-gray-900">
-                                    <div class="flex flex-wrap gap-2 mt-1">
+                            <div v-if="lead.events?.length" class="col-span-2">
+                                <dt class="text-gray-500 mb-1.5">Events of Interest:</dt>
+                                <dd>
+                                    <div class="flex flex-wrap gap-2">
                                         <span v-for="ev in lead.events" :key="ev.id" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
                                             {{ ev.name }}
                                             <span v-if="ev.city" class="text-gray-400 ml-1">· {{ ev.city }}</span>

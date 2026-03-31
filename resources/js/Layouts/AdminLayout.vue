@@ -43,22 +43,33 @@ function hasSection(section) {
 }
 
 const allNavItems = [
-    { name: 'Dashboard',    href: '/admin',           exact: true,  section: 'dashboard',          icon: HomeIcon },
-    { name: 'Eventos',      href: '/admin/events',    exact: false, section: 'events',             icon: CalendarDaysIcon },
-    { name: 'Modelos',      href: '/admin/models',    exact: false, section: 'models',             icon: UserIcon },
-    { name: 'Diseñadores',  href: '/admin/designers', exact: false, section: 'designers',          icon: PaintBrushIcon },
-    { name: 'Voluntarios', href: '/admin/volunteers', exact: false, section: 'volunteers',         icon: HandRaisedIcon },
-    { name: 'Media',       href: '/admin/media',      exact: false, section: 'media',              icon: CameraIcon },
-    { name: 'Asistencia',  href: '/admin/attendance', exact: false, section: 'attendance',         icon: ClipboardDocumentCheckIcon },
-    { name: 'Chats',        href: '/admin/chats',     exact: false, section: 'chats',              icon: ChatBubbleLeftRightIcon },
-    { name: 'Banners',      href: '/admin/banners',   exact: false, section: 'banners',            icon: PhotoIcon },
-    { name: 'Usuarios',     href: '/admin/users',     exact: false, section: 'users',              icon: UsersIcon },
-    { name: 'Pases',        href: '/admin/passes',    exact: false, section: 'tickets_management', icon: TicketIcon },
-    { name: 'Logs',         href: '/admin/logs',      exact: false, section: 'activity_logs',      icon: DocumentTextIcon },
-    { name: 'Categories',   href: '/admin/settings/designer-categories', exact: false, section: 'designer_categories', icon: Cog6ToothIcon },
+    { name: 'Dashboard',    href: '/admin',       exact: true,  section: 'dashboard',          icon: HomeIcon },
+    { name: 'Usuarios',     href: '/admin/users',  exact: false, section: 'users',              icon: UsersIcon },
+    { name: 'Pases',        href: '/admin/passes', exact: false, section: 'tickets_management', icon: TicketIcon },
+    { name: 'Logs',         href: '/admin/logs',   exact: false, section: 'activity_logs',      icon: DocumentTextIcon },
 ];
 
 const navItems = computed(() => allNavItems.filter(item => hasSection(item.section)));
+
+// Operations section
+const showOperations = computed(() =>
+    hasSection('events') || hasSection('models') || hasSection('designers') ||
+    hasSection('volunteers') || hasSection('media') || hasSection('attendance') ||
+    hasSection('chats') || hasSection('banners') || hasSection('designer_categories')
+);
+const operationsItems = computed(() => {
+    const items = [];
+    if (hasSection('events'))              items.push({ name: 'Events',      href: '/admin/operations/events',      icon: CalendarDaysIcon });
+    if (hasSection('models'))              items.push({ name: 'Models',      href: '/admin/operations/models',      icon: UserIcon });
+    if (hasSection('designers'))           items.push({ name: 'Designers',   href: '/admin/operations/designers',   icon: PaintBrushIcon });
+    if (hasSection('volunteers'))          items.push({ name: 'Volunteers',  href: '/admin/operations/volunteers',  icon: HandRaisedIcon });
+    if (hasSection('media'))               items.push({ name: 'Media',       href: '/admin/operations/media',       icon: CameraIcon });
+    if (hasSection('attendance'))           items.push({ name: 'Attendance',  href: '/admin/operations/attendance',  icon: ClipboardDocumentCheckIcon });
+    if (hasSection('chats'))               items.push({ name: 'Chats',       href: '/admin/operations/chats',       icon: ChatBubbleLeftRightIcon });
+    if (hasSection('banners'))             items.push({ name: 'Banners',     href: '/admin/operations/banners',     icon: PhotoIcon });
+    if (hasSection('designer_categories')) items.push({ name: 'Categories',  href: '/admin/operations/categories',  icon: Cog6ToothIcon });
+    return items;
+});
 
 const showAccounting = computed(() => hasSection('accounting_dashboard') || hasSection('accounting_payments'));
 const accountingItems = computed(() => {
@@ -85,7 +96,7 @@ const salesItems = computed(() => {
     if (hasSection('sales_calendar')) items.push({ name: 'Calendar', href: '/admin/sales/calendar', icon: CalendarDaysIcon });
     if (hasSection('sales_dashboard') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Sales History', href: '/admin/sales/history', icon: ChartBarIcon });
     if (hasSection('sales_leads') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Tags', href: '/admin/sales/tags', icon: TagIcon });
-    if (hasSection('designer_packages') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Packages', href: '/admin/settings/designer-packages', icon: CurrencyDollarIcon });
+    if (hasSection('designer_packages') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Packages', href: '/admin/sales/packages', icon: CurrencyDollarIcon });
     return items;
 });
 
@@ -367,6 +378,25 @@ function logout() {
                     <component :is="item.icon" :class="['h-5 w-5 flex-shrink-0', sidebarCollapsed ? '' : 'mr-3']" />
                     <span v-if="!sidebarCollapsed">{{ item.name }}</span>
                 </Link>
+
+                <!-- Operations -->
+                <template v-if="showOperations">
+                    <div class="pt-3 mt-3 border-t border-gray-800">
+                        <p v-if="!sidebarCollapsed" class="px-3 mb-2 text-xs uppercase tracking-widest text-gray-600">Operations</p>
+                        <Link v-for="sub in operationsItems" :key="sub.name" :href="sub.href"
+                            :title="sidebarCollapsed ? sub.name : ''"
+                            class="flex items-center py-2.5 rounded-lg text-sm font-medium transition-all duration-150"
+                            :class="[
+                                $page.url.startsWith(sub.href)
+                                    ? 'bg-yellow-900/30 text-yellow-400'
+                                    : 'text-gray-400 hover:text-white hover:bg-gray-800',
+                                sidebarCollapsed ? 'justify-center px-0' : 'px-3'
+                            ]">
+                            <component :is="sub.icon" :class="['h-5 w-5 flex-shrink-0', sidebarCollapsed ? '' : 'mr-3']" />
+                            <span v-if="!sidebarCollapsed">{{ sub.name }}</span>
+                        </Link>
+                    </div>
+                </template>
 
                 <!-- Contabilidad -->
                 <template v-if="showAccounting">

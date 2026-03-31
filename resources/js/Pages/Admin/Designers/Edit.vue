@@ -130,7 +130,7 @@ function toggleShow(showId) {
 
 function assignEvent() {
     if (!selectedEventId.value) return;
-    router.post(`/admin/designers/${props.designer.id}/assign-event`, {
+    router.post(`/admin/operations/designers/${props.designer.id}/assign-event`, {
         event_id:              selectedEventId.value,
         package_id:            selectedPackageId.value || null,
         looks:                 assignLooks.value || null,
@@ -162,12 +162,12 @@ function assignEvent() {
 
 function cancelFromEvent(eventId, eventName) {
     if (!confirm(`¿Cancelar participación en "${eventName}"? Se cancelarán todos sus shows y pases, pero se conservarán materiales y asistentes.`)) return;
-    router.patch(`/admin/designers/${props.designer.id}/cancel-event/${eventId}`, {}, { preserveScroll: true });
+    router.patch(`/admin/operations/designers/${props.designer.id}/cancel-event/${eventId}`, {}, { preserveScroll: true });
 }
 
 function removeFromEvent(eventId, eventName) {
     if (!confirm(`¿Quitar completamente del evento "${eventName}"? Se eliminarán todos los datos asociados.`)) return;
-    router.delete(`/admin/designers/${props.designer.id}/remove-event/${eventId}`, { preserveScroll: true });
+    router.delete(`/admin/operations/designers/${props.designer.id}/remove-event/${eventId}`, { preserveScroll: true });
 }
 
 // Asistentes
@@ -188,7 +188,7 @@ const assistantLimitReached = computed(() =>
 
 function addAssistant() {
     if (!newAssistant.value.full_name || !assistantEventId.value) return;
-    router.post(`/admin/designers/${props.designer.id}/assistants`, {
+    router.post(`/admin/operations/designers/${props.designer.id}/assistants`, {
         event_id:    assistantEventId.value,
         ...newAssistant.value,
     }, {
@@ -201,14 +201,14 @@ function addAssistant() {
 
 function removeAssistant(assistantId) {
     if (!confirm('Eliminar asistente?')) return;
-    router.delete(`/admin/designers/assistants/${assistantId}`, { preserveScroll: true });
+    router.delete(`/admin/operations/designers/assistants/${assistantId}`, { preserveScroll: true });
 }
 
 // Materiales
 const materials = computed(() => props.designer.materials ?? []);
 
 function updateMaterial(material, field, value) {
-    router.put(`/admin/designer-materials/${material.id}`, {
+    router.put(`/admin/operations/designer-materials/${material.id}`, {
         [field]: value,
     }, { preserveScroll: true });
 }
@@ -217,7 +217,7 @@ function updateMaterial(material, field, value) {
 const displays = computed(() => props.designer.displays ?? []);
 
 function updateDisplay(display, data) {
-    router.put(`/admin/designer-displays/${display.id}`, data, { preserveScroll: true });
+    router.put(`/admin/operations/designer-displays/${display.id}`, data, { preserveScroll: true });
 }
 
 function uploadDisplayFile(displayId, type) {
@@ -230,7 +230,7 @@ function uploadDisplayFile(displayId, type) {
         const formData = new FormData();
         formData.append('file', file);
         const endpoint = type === 'video' ? 'upload-video' : 'upload-audio';
-        router.post(`/admin/designer-displays/${displayId}/${endpoint}`, formData, { preserveScroll: true });
+        router.post(`/admin/operations/designer-displays/${displayId}/${endpoint}`, formData, { preserveScroll: true });
     };
     input.click();
 }
@@ -276,13 +276,13 @@ function showStatusLabel(s) {
 // Cancelar participación en un show (mantiene historial, status=cancelled)
 function cancelShow(showId, showName) {
     if (!confirm(`¿Cancelar participación en "${showName}"? El show quedará marcado como cancelado.`)) return;
-    router.patch(`/admin/designers/${props.designer.id}/shows/${showId}/cancel`, {}, { preserveScroll: true });
+    router.patch(`/admin/operations/designers/${props.designer.id}/shows/${showId}/cancel`, {}, { preserveScroll: true });
 }
 
 // Quitar show completamente (elimina el registro)
 function removeShow(showId, showName) {
     if (!confirm(`¿Quitar completamente el show "${showName}"? Esta acción no se puede deshacer.`)) return;
-    router.delete(`/admin/designers/${props.designer.id}/shows/${showId}`, { preserveScroll: true });
+    router.delete(`/admin/operations/designers/${props.designer.id}/shows/${showId}`, { preserveScroll: true });
 }
 
 // Shows agrupados por evento
@@ -333,7 +333,7 @@ function fittingSlotsForEvent(eventId) {
 }
 
 function updateFitting(eventId, fittingSlotId) {
-    router.put(`/admin/designers/${props.designer.id}/fitting`, {
+    router.put(`/admin/operations/designers/${props.designer.id}/fitting`, {
         event_id: eventId,
         fitting_slot_id: fittingSlotId || null,
     }, { preserveScroll: true });
@@ -342,7 +342,7 @@ function updateFitting(eventId, fittingSlotId) {
 function addShowToEvent(eventId) {
     const state = addShowState.value[eventId];
     if (!state?.showId) return;
-    router.post(`/admin/designers/${props.designer.id}/shows`, {
+    router.post(`/admin/operations/designers/${props.designer.id}/shows`, {
         show_id: state.showId,
         collection_name: state.collection || null,
     }, {
@@ -355,7 +355,7 @@ function addShowToEvent(eventId) {
 
 function submit() {
     form.phone = phoneNumber.value ? `${phoneCode.value}${phoneNumber.value.replace(/\D/g, '')}` : '';
-    form.put(`/admin/designers/${props.designer.id}`);
+    form.put(`/admin/operations/designers/${props.designer.id}`);
 }
 </script>
 
@@ -363,7 +363,7 @@ function submit() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link :href="`/admin/designers/${designer.id}`" class="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
+                <Link :href="`/admin/operations/designers/${designer.id}`" class="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
                     <ArrowLeftIcon class="w-4 h-4" /> Ver diseñador
                 </Link>
                 <span class="text-gray-300">/</span>
@@ -927,7 +927,7 @@ function submit() {
 
                 <!-- Botones (solo en tab 1 se muestran guardar/cancelar) -->
                 <div v-if="activeTab === 1" class="flex justify-between">
-                    <Link :href="`/admin/designers/${designer.id}`"
+                    <Link :href="`/admin/operations/designers/${designer.id}`"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                         Cancelar
                     </Link>
@@ -938,7 +938,7 @@ function submit() {
                     </button>
                 </div>
                 <div v-else class="flex justify-end">
-                    <Link :href="`/admin/designers/${designer.id}`"
+                    <Link :href="`/admin/operations/designers/${designer.id}`"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                         Volver al perfil
                     </Link>

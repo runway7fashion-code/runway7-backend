@@ -274,7 +274,7 @@ function statusLabel(status) {
                             <tr v-for="event in activeEvents" :key="event.id"
                                 class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                                 <td class="px-6 py-3 font-medium text-gray-900">
-                                    <a :href="`/admin/events/${event.id}`" class="hover:text-[#D4AF37] transition-colors">
+                                    <a :href="`/admin/operations/events/${event.id}`" class="hover:text-[#D4AF37] transition-colors">
                                         {{ event.name }}
                                     </a>
                                 </td>

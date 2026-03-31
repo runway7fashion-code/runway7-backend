@@ -105,7 +105,7 @@ function formatSlotTime(t) {
 
 function submit() {
     form.phone = phoneNumber.value ? `${phoneCode.value}${phoneNumber.value.replace(/\D/g, '')}` : '';
-    form.post('/admin/models');
+    form.post('/admin/operations/models');
 }
 </script>
 
@@ -113,7 +113,7 @@ function submit() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link href="/admin/models" class="text-gray-400 hover:text-gray-600 text-sm">← Modelos</Link>
+                <Link href="/admin/operations/models" class="text-gray-400 hover:text-gray-600 text-sm">← Modelos</Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900">Crear Modelo</h2>
             </div>
@@ -397,7 +397,7 @@ function submit() {
 
                 <!-- Botones -->
                 <div class="flex justify-between">
-                    <Link href="/admin/models"
+                    <Link href="/admin/operations/models"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                         Cancelar
                     </Link>

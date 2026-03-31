@@ -30,7 +30,7 @@ let timer = null;
 function applyFilters() {
     clearTimeout(timer);
     timer = setTimeout(() => {
-        router.get('/admin/designers', {
+        router.get('/admin/operations/designers', {
             search:    search.value    || undefined,
             event:     event.value     || undefined,
             category:  category.value  || undefined,
@@ -90,7 +90,7 @@ function updateDesignerStatus(d, newStatus, event) {
             return;
         }
     }
-    router.patch(`/admin/designers/${d.id}/status`, { status: newStatus }, { preserveScroll: true });
+    router.patch(`/admin/operations/designers/${d.id}/status`, { status: newStatus }, { preserveScroll: true });
 }
 
 // Communication log modals
@@ -203,7 +203,7 @@ function sendOnboardingEmail(d, e) {
     const events = d.events_as_designer ?? [];
     if (events.length <= 1) {
         // Un solo evento o sin evento — enviar directo
-        router.post(`/admin/designers/${d.id}/send-onboarding`,
+        router.post(`/admin/operations/designers/${d.id}/send-onboarding`,
             { event_id: events[0]?.id ?? null },
             { preserveScroll: true }
         );
@@ -215,7 +215,7 @@ function sendOnboardingEmail(d, e) {
 
 function confirmSendEmail() {
     const d = emailModalDesigner.value;
-    router.post(`/admin/designers/${d.id}/send-onboarding`,
+    router.post(`/admin/operations/designers/${d.id}/send-onboarding`,
         { event_id: emailModalEventId.value },
         { preserveScroll: true, onSuccess: () => { emailModalDesigner.value = null; } }
     );
@@ -223,7 +223,7 @@ function confirmSendEmail() {
 
 function sendPendingOnboarding() {
     if (!confirm(`¿Enviar email de onboarding a ${props.pendingEmailCount} diseñador(es) pendiente(s)? Los emails se procesarán en cola.`)) return;
-    router.post('/admin/designers/send-bulk-onboarding', {}, { preserveScroll: true });
+    router.post('/admin/operations/designers/send-bulk-onboarding', {}, { preserveScroll: true });
 }
 
 function canSendEmail(d) {
@@ -239,7 +239,7 @@ function sendOnboardingSms(d, e) {
     if (!d.phone) return alert(`${d.first_name} no tiene número de teléfono registrado.`);
     const events = d.events_as_designer ?? [];
     if (events.length <= 1) {
-        router.post(`/admin/designers/${d.id}/send-onboarding-sms`,
+        router.post(`/admin/operations/designers/${d.id}/send-onboarding-sms`,
             { event_id: events[0]?.id ?? null },
             { preserveScroll: true }
         );
@@ -251,7 +251,7 @@ function sendOnboardingSms(d, e) {
 
 function confirmSendSms() {
     const d = smsModalDesigner.value;
-    router.post(`/admin/designers/${d.id}/send-onboarding-sms`,
+    router.post(`/admin/operations/designers/${d.id}/send-onboarding-sms`,
         { event_id: smsModalEventId.value },
         { preserveScroll: true, onSuccess: () => { smsModalDesigner.value = null; } }
     );
@@ -259,7 +259,7 @@ function confirmSendSms() {
 
 function sendPendingSms() {
     if (!confirm(`¿Enviar SMS de onboarding a ${props.pendingSmsCount} diseñador(es) con teléfono? Los SMS se procesarán en cola.`)) return;
-    router.post('/admin/designers/send-bulk-onboarding-sms', {}, { preserveScroll: true });
+    router.post('/admin/operations/designers/send-bulk-onboarding-sms', {}, { preserveScroll: true });
 }
 
 // --- Modal eventos ---
@@ -303,7 +303,7 @@ const exportUrl = computed(() => {
     if (materials.value) params.set('materials', materials.value);
     if (country.value)   params.set('country',   country.value);
     const qs = params.toString();
-    return '/admin/designers/export' + (qs ? '?' + qs : '');
+    return '/admin/operations/designers/export' + (qs ? '?' + qs : '');
 });
 
 // --- Import Excel ---
@@ -316,7 +316,7 @@ function handleFileChange(e) {
 }
 
 function submitImport() {
-    importForm.post('/admin/designers/import', {
+    importForm.post('/admin/operations/designers/import', {
         forceFormData: true,
         onSuccess: () => {
             showImportModal.value = false;
@@ -384,7 +384,7 @@ function submitImport() {
                         Importar Excel
                     </button>
 
-                    <Link href="/admin/designers/create" class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
+                    <Link href="/admin/operations/designers/create" class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
                         + Crear Diseñador
                     </Link>
                 </div>
@@ -464,7 +464,7 @@ function submitImport() {
                         </tr>
                         <tr v-for="d in designers.data" :key="d.id"
                             class="hover:bg-gray-50 cursor-pointer transition-colors"
-                            @click="router.visit(`/admin/designers/${d.id}`)">
+                            @click="router.visit(`/admin/operations/designers/${d.id}`)">
                             <!-- Registro -->
                             <td class="px-4 py-3">
                                 <p class="text-xs text-gray-700">{{ fmtDateTime(d.created_at) }}</p>
@@ -610,7 +610,7 @@ function submitImport() {
                                         title="Enviar SMS">
                                         <DevicePhoneMobileIcon class="w-4 h-4" />
                                     </button>
-                                    <Link :href="`/admin/designers/${d.id}/edit`"
+                                    <Link :href="`/admin/operations/designers/${d.id}/edit`"
                                         class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
                                         title="Editar">
                                         <PencilSquareIcon class="w-4 h-4" />
@@ -736,7 +736,7 @@ function submitImport() {
 
                         <!-- Footer -->
                         <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
-                            <Link :href="`/admin/designers/${checkinDesigner.id}`"
+                            <Link :href="`/admin/operations/designers/${checkinDesigner.id}`"
                                 class="text-sm font-semibold text-black hover:underline underline-offset-2">
                                 Ver perfil completo →
                             </Link>
@@ -900,7 +900,7 @@ function submitImport() {
 
                         <!-- Footer -->
                         <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
-                            <Link :href="`/admin/designers/${selectedDesigner.id}`"
+                            <Link :href="`/admin/operations/designers/${selectedDesigner.id}`"
                                 class="text-sm font-semibold text-black hover:underline underline-offset-2">
                                 Ver perfil completo →
                             </Link>

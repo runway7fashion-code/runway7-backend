@@ -46,140 +46,154 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::resource('users', UserController::class);
         });
 
-        // Modelos - admin, operation
-        Route::middleware('section:models')->group(function () {
-            // Rutas sin {model} deben ir antes del resource
-            Route::get('models/export', [ModelController::class, 'exportModels'])->name('models.export');
-            Route::post('models/import', [ModelController::class, 'importModels'])->name('models.import');
-            Route::get('models/import-template', [ModelController::class, 'downloadImportTemplate'])->name('models.import-template');
-            Route::post('models/send-pending-emails', [ModelController::class, 'sendPendingWelcomeEmails'])->name('models.send-pending-emails');
-            Route::resource('models', ModelController::class);
-            Route::post('models/{model}/assign-event', [ModelController::class, 'assignEvent'])->name('models.assign-event');
-            Route::delete('models/{model}/remove-event/{event}', [ModelController::class, 'removeEvent'])->name('models.remove-event');
-            Route::post('models/{model}/upload-photo/{position}', [ModelController::class, 'uploadPhoto'])->name('models.upload-photo');
-            Route::delete('models/{model}/delete-photo/{position}', [ModelController::class, 'deletePhoto'])->name('models.delete-photo');
-            Route::post('models/{model}/send-welcome-email', [ModelController::class, 'sendWelcomeEmail'])->name('models.send-welcome-email');
-            Route::post('models/{model}/upload-profile-picture', [ModelController::class, 'uploadProfilePicture'])->name('models.upload-profile-picture');
-            Route::delete('models/{model}/delete-profile-picture', [ModelController::class, 'deleteProfilePicture'])->name('models.delete-profile-picture');
-            Route::patch('models/{model}/status', [ModelController::class, 'updateStatus'])->name('models.update-status');
-            Route::patch('models/{model}/events/{event}/casting-status', [ModelController::class, 'updateEventCastingStatus'])->name('models.update-event-casting-status');
-            Route::patch('models/{model}/events/{event}/model-tag', [ModelController::class, 'updateModelTag'])->name('models.update-model-tag');
-            Route::post('models/{model}/events/{event}/send-onboarding', [ModelController::class, 'sendModelOnboarding'])->name('models.send-onboarding');
-            Route::post('models/{model}/toggle-top', [ModelController::class, 'toggleTop'])->name('models.toggle-top');
-            Route::post('models/{model}/send-onboarding-sms', [ModelController::class, 'sendOnboardingSms'])->name('models.send-onboarding-sms');
-            Route::post('models/{model}/send-rejection-email', [ModelController::class, 'sendRejectionEmail'])->name('models.send-rejection-email');
-            Route::post('models/send-bulk-rejection-emails', [ModelController::class, 'sendBulkRejectionEmails'])->name('models.send-bulk-rejection-emails');
-            Route::post('models/send-bulk-onboarding-sms', [ModelController::class, 'sendBulkOnboardingSms'])->name('models.send-bulk-onboarding-sms');
-            Route::post('models/send-bulk-rejection-sms', [ModelController::class, 'sendBulkRejectionSms'])->name('models.send-bulk-rejection-sms');
-        });
+        // ═══════════════════════════════════════════
+        // OPERATIONS — /admin/operations/...
+        // ═══════════════════════════════════════════
+        Route::prefix('operations')->group(function () {
 
-        // Diseñadores - admin, operation, sales
-        Route::middleware('section:designers')->group(function () {
-            Route::get('designers/export', [DesignerController::class, 'exportDesigners'])->name('designers.export');
-            Route::post('designers/import', [DesignerController::class, 'importDesigners'])->name('designers.import');
-            Route::resource('designers', DesignerController::class);
-            Route::patch('designers/{designer}/status', [DesignerController::class, 'updateStatus'])->name('designers.update-status');
-            Route::post('designers/{designer}/assign-event', [DesignerController::class, 'assignEvent'])->name('designers.assign-event');
-            Route::post('designers/{designer}/events/{event}/toggle-feature', [DesignerController::class, 'toggleEventFeature'])->name('designers.toggle-event-feature');
-            Route::patch('designers/{designer}/cancel-event/{event}', [DesignerController::class, 'cancelEvent'])->name('designers.cancel-event');
-            Route::delete('designers/{designer}/remove-event/{event}', [DesignerController::class, 'removeEvent'])->name('designers.remove-event');
-            Route::post('designers/{designer}/assistants', [DesignerController::class, 'addAssistant'])->name('designers.add-assistant');
-            Route::delete('designers/assistants/{assistant}', [DesignerController::class, 'removeAssistant'])->name('designers.remove-assistant');
-            Route::patch('designers/{designer}/shows/{show}/cancel', [DesignerController::class, 'cancelShow'])->name('designers.cancel-show');
-            Route::delete('designers/{designer}/shows/{show}', [DesignerController::class, 'removeShow'])->name('designers.remove-show');
-            Route::post('designers/{designer}/shows', [DesignerController::class, 'addShow'])->name('designers.add-show');
-            Route::put('designers/{designer}/fitting', [DesignerController::class, 'updateFitting'])->name('designers.update-fitting');
-            Route::put('designer-materials/{material}', [DesignerController::class, 'updateMaterial'])->name('designers.update-material');
-            Route::put('designer-displays/{display}', [DesignerController::class, 'updateDisplay'])->name('designers.update-display');
-            Route::post('designer-displays/{display}/upload-video', [DesignerController::class, 'uploadVideo'])->name('designers.upload-video');
-            Route::post('designer-displays/{display}/upload-audio', [DesignerController::class, 'uploadAudio'])->name('designers.upload-audio');
-            Route::post('designers/{designer}/send-onboarding', [DesignerController::class, 'sendOnboardingEmail'])->name('designers.send-onboarding');
-            Route::post('designers/send-bulk-onboarding', [DesignerController::class, 'sendBulkOnboardingEmail'])->name('designers.send-bulk-onboarding');
-            Route::post('designers/{designer}/send-onboarding-sms', [DesignerController::class, 'sendOnboardingSms'])->name('designers.send-onboarding-sms');
-            Route::post('designers/send-bulk-onboarding-sms', [DesignerController::class, 'sendBulkOnboardingSms'])->name('designers.send-bulk-onboarding-sms');
-        });
+            // Modelos - admin, operation
+            Route::middleware('section:models')->group(function () {
+                Route::get('models/export', [ModelController::class, 'exportModels'])->name('models.export');
+                Route::post('models/import', [ModelController::class, 'importModels'])->name('models.import');
+                Route::get('models/import-template', [ModelController::class, 'downloadImportTemplate'])->name('models.import-template');
+                Route::post('models/send-pending-emails', [ModelController::class, 'sendPendingWelcomeEmails'])->name('models.send-pending-emails');
+                Route::resource('models', ModelController::class);
+                Route::post('models/{model}/assign-event', [ModelController::class, 'assignEvent'])->name('models.assign-event');
+                Route::delete('models/{model}/remove-event/{event}', [ModelController::class, 'removeEvent'])->name('models.remove-event');
+                Route::post('models/{model}/upload-photo/{position}', [ModelController::class, 'uploadPhoto'])->name('models.upload-photo');
+                Route::delete('models/{model}/delete-photo/{position}', [ModelController::class, 'deletePhoto'])->name('models.delete-photo');
+                Route::post('models/{model}/send-welcome-email', [ModelController::class, 'sendWelcomeEmail'])->name('models.send-welcome-email');
+                Route::post('models/{model}/upload-profile-picture', [ModelController::class, 'uploadProfilePicture'])->name('models.upload-profile-picture');
+                Route::delete('models/{model}/delete-profile-picture', [ModelController::class, 'deleteProfilePicture'])->name('models.delete-profile-picture');
+                Route::patch('models/{model}/status', [ModelController::class, 'updateStatus'])->name('models.update-status');
+                Route::patch('models/{model}/events/{event}/casting-status', [ModelController::class, 'updateEventCastingStatus'])->name('models.update-event-casting-status');
+                Route::patch('models/{model}/events/{event}/model-tag', [ModelController::class, 'updateModelTag'])->name('models.update-model-tag');
+                Route::post('models/{model}/events/{event}/send-onboarding', [ModelController::class, 'sendModelOnboarding'])->name('models.send-onboarding');
+                Route::post('models/{model}/toggle-top', [ModelController::class, 'toggleTop'])->name('models.toggle-top');
+                Route::post('models/{model}/send-onboarding-sms', [ModelController::class, 'sendOnboardingSms'])->name('models.send-onboarding-sms');
+                Route::post('models/{model}/send-rejection-email', [ModelController::class, 'sendRejectionEmail'])->name('models.send-rejection-email');
+                Route::post('models/send-bulk-rejection-emails', [ModelController::class, 'sendBulkRejectionEmails'])->name('models.send-bulk-rejection-emails');
+                Route::post('models/send-bulk-onboarding-sms', [ModelController::class, 'sendBulkOnboardingSms'])->name('models.send-bulk-onboarding-sms');
+                Route::post('models/send-bulk-rejection-sms', [ModelController::class, 'sendBulkRejectionSms'])->name('models.send-bulk-rejection-sms');
+            });
 
-        // Asistencia - admin, operation
-        Route::middleware('section:attendance')->group(function () {
-            Route::get('attendance/export', [AttendanceController::class, 'export'])->name('attendance.export');
-            Route::get('attendance/user-search', [AttendanceController::class, 'userSearch'])->name('attendance.user-search');
-            Route::get('attendance/user-events', [AttendanceController::class, 'userEvents'])->name('attendance.user-events');
-            Route::get('attendance/event-days/{event}', [AttendanceController::class, 'eventDays'])->name('attendance.event-days');
-            Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
-            Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
-            Route::put('attendance/{checkin}', [AttendanceController::class, 'update'])->name('attendance.update');
-            Route::delete('attendance/{checkin}', [AttendanceController::class, 'destroy'])->name('attendance.destroy');
-        });
+            // Diseñadores - admin, operation, sales
+            Route::middleware('section:designers')->group(function () {
+                Route::get('designers/export', [DesignerController::class, 'exportDesigners'])->name('designers.export');
+                Route::post('designers/import', [DesignerController::class, 'importDesigners'])->name('designers.import');
+                Route::resource('designers', DesignerController::class);
+                Route::patch('designers/{designer}/status', [DesignerController::class, 'updateStatus'])->name('designers.update-status');
+                Route::post('designers/{designer}/assign-event', [DesignerController::class, 'assignEvent'])->name('designers.assign-event');
+                Route::post('designers/{designer}/events/{event}/toggle-feature', [DesignerController::class, 'toggleEventFeature'])->name('designers.toggle-event-feature');
+                Route::patch('designers/{designer}/cancel-event/{event}', [DesignerController::class, 'cancelEvent'])->name('designers.cancel-event');
+                Route::delete('designers/{designer}/remove-event/{event}', [DesignerController::class, 'removeEvent'])->name('designers.remove-event');
+                Route::post('designers/{designer}/assistants', [DesignerController::class, 'addAssistant'])->name('designers.add-assistant');
+                Route::delete('designers/assistants/{assistant}', [DesignerController::class, 'removeAssistant'])->name('designers.remove-assistant');
+                Route::patch('designers/{designer}/shows/{show}/cancel', [DesignerController::class, 'cancelShow'])->name('designers.cancel-show');
+                Route::delete('designers/{designer}/shows/{show}', [DesignerController::class, 'removeShow'])->name('designers.remove-show');
+                Route::post('designers/{designer}/shows', [DesignerController::class, 'addShow'])->name('designers.add-show');
+                Route::put('designers/{designer}/fitting', [DesignerController::class, 'updateFitting'])->name('designers.update-fitting');
+                Route::put('designer-materials/{material}', [DesignerController::class, 'updateMaterial'])->name('designers.update-material');
+                Route::put('designer-displays/{display}', [DesignerController::class, 'updateDisplay'])->name('designers.update-display');
+                Route::post('designer-displays/{display}/upload-video', [DesignerController::class, 'uploadVideo'])->name('designers.upload-video');
+                Route::post('designer-displays/{display}/upload-audio', [DesignerController::class, 'uploadAudio'])->name('designers.upload-audio');
+                Route::post('designers/{designer}/send-onboarding', [DesignerController::class, 'sendOnboardingEmail'])->name('designers.send-onboarding');
+                Route::post('designers/send-bulk-onboarding', [DesignerController::class, 'sendBulkOnboardingEmail'])->name('designers.send-bulk-onboarding');
+                Route::post('designers/{designer}/send-onboarding-sms', [DesignerController::class, 'sendOnboardingSms'])->name('designers.send-onboarding-sms');
+                Route::post('designers/send-bulk-onboarding-sms', [DesignerController::class, 'sendBulkOnboardingSms'])->name('designers.send-bulk-onboarding-sms');
+            });
 
-        // Voluntarios - admin, operation
-        Route::middleware('section:volunteers')->group(function () {
-            Route::get('volunteers/export', [VolunteerController::class, 'exportVolunteers'])->name('volunteers.export');
-            Route::post('volunteers/import', [VolunteerController::class, 'importVolunteers'])->name('volunteers.import');
-            Route::post('volunteers/send-bulk-onboarding', [VolunteerController::class, 'sendBulkOnboardingEmails'])->name('volunteers.send-bulk-onboarding');
-            Route::post('volunteers/send-bulk-onboarding-sms', [VolunteerController::class, 'sendBulkOnboardingSms'])->name('volunteers.send-bulk-onboarding-sms');
-            Route::resource('volunteers', VolunteerController::class);
-            Route::patch('volunteers/{volunteer}/status', [VolunteerController::class, 'updateStatus'])->name('volunteers.update-status');
-            Route::post('volunteers/{volunteer}/assign-event', [VolunteerController::class, 'assignEvent'])->name('volunteers.assign-event');
-            Route::delete('volunteers/{volunteer}/remove-event/{event}', [VolunteerController::class, 'removeEvent'])->name('volunteers.remove-event');
-            Route::patch('volunteers/{volunteer}/events/{event}/area', [VolunteerController::class, 'updateEventArea'])->name('volunteers.update-event-area');
-            Route::patch('volunteers/{volunteer}/events/{event}/status', [VolunteerController::class, 'updateEventStatus'])->name('volunteers.update-event-status');
-            Route::post('volunteers/{volunteer}/schedules', [VolunteerController::class, 'addSchedule'])->name('volunteers.add-schedule');
-            Route::delete('volunteers/{volunteer}/schedules/{schedule}', [VolunteerController::class, 'removeSchedule'])->name('volunteers.remove-schedule');
-            Route::post('volunteers/{volunteer}/send-onboarding', [VolunteerController::class, 'sendOnboardingEmail'])->name('volunteers.send-onboarding');
-            Route::post('volunteers/{volunteer}/send-onboarding-sms', [VolunteerController::class, 'sendOnboardingSms'])->name('volunteers.send-onboarding-sms');
-            Route::get('volunteers/{volunteer}/certificate/{event}', [VolunteerController::class, 'certificate'])->name('volunteers.certificate');
-        });
+            // Asistencia - admin, operation
+            Route::middleware('section:attendance')->group(function () {
+                Route::get('attendance/export', [AttendanceController::class, 'export'])->name('attendance.export');
+                Route::get('attendance/user-search', [AttendanceController::class, 'userSearch'])->name('attendance.user-search');
+                Route::get('attendance/user-events', [AttendanceController::class, 'userEvents'])->name('attendance.user-events');
+                Route::get('attendance/event-days/{event}', [AttendanceController::class, 'eventDays'])->name('attendance.event-days');
+                Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+                Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
+                Route::put('attendance/{checkin}', [AttendanceController::class, 'update'])->name('attendance.update');
+                Route::delete('attendance/{checkin}', [AttendanceController::class, 'destroy'])->name('attendance.destroy');
+            });
 
-        // Media - admin, operation
-        Route::middleware('section:media')->group(function () {
-            Route::resource('media', MediaController::class)->parameters(['media' => 'media']);
-            Route::patch('media/{media}/status', [MediaController::class, 'updateStatus'])->name('media.update-status');
-            Route::post('media/{media}/assign-event', [MediaController::class, 'assignEvent'])->name('media.assign-event');
-            Route::delete('media/{media}/remove-event/{event}', [MediaController::class, 'removeEvent'])->name('media.remove-event');
-            Route::patch('media/{media}/events/{event}/status', [MediaController::class, 'updateEventStatus'])->name('media.update-event-status');
-            Route::post('media/{media}/send-onboarding', [MediaController::class, 'sendOnboardingEmail'])->name('media.send-onboarding');
-            Route::post('media/{media}/send-onboarding-sms', [MediaController::class, 'sendOnboardingSms'])->name('media.send-onboarding-sms');
-            Route::post('media/send-bulk-onboarding', [MediaController::class, 'sendBulkOnboardingEmails'])->name('media.send-bulk-onboarding');
-            Route::post('media/send-bulk-onboarding-sms', [MediaController::class, 'sendBulkOnboardingSms'])->name('media.send-bulk-onboarding-sms');
-            Route::post('media/{media}/assistants', [MediaController::class, 'storeAssistant'])->name('media.store-assistant');
-            Route::delete('media/{media}/assistants/{assistant}', [MediaController::class, 'destroyAssistant'])->name('media.destroy-assistant');
-        });
+            // Voluntarios - admin, operation
+            Route::middleware('section:volunteers')->group(function () {
+                Route::get('volunteers/export', [VolunteerController::class, 'exportVolunteers'])->name('volunteers.export');
+                Route::post('volunteers/import', [VolunteerController::class, 'importVolunteers'])->name('volunteers.import');
+                Route::post('volunteers/send-bulk-onboarding', [VolunteerController::class, 'sendBulkOnboardingEmails'])->name('volunteers.send-bulk-onboarding');
+                Route::post('volunteers/send-bulk-onboarding-sms', [VolunteerController::class, 'sendBulkOnboardingSms'])->name('volunteers.send-bulk-onboarding-sms');
+                Route::resource('volunteers', VolunteerController::class);
+                Route::patch('volunteers/{volunteer}/status', [VolunteerController::class, 'updateStatus'])->name('volunteers.update-status');
+                Route::post('volunteers/{volunteer}/assign-event', [VolunteerController::class, 'assignEvent'])->name('volunteers.assign-event');
+                Route::delete('volunteers/{volunteer}/remove-event/{event}', [VolunteerController::class, 'removeEvent'])->name('volunteers.remove-event');
+                Route::patch('volunteers/{volunteer}/events/{event}/area', [VolunteerController::class, 'updateEventArea'])->name('volunteers.update-event-area');
+                Route::patch('volunteers/{volunteer}/events/{event}/status', [VolunteerController::class, 'updateEventStatus'])->name('volunteers.update-event-status');
+                Route::post('volunteers/{volunteer}/schedules', [VolunteerController::class, 'addSchedule'])->name('volunteers.add-schedule');
+                Route::delete('volunteers/{volunteer}/schedules/{schedule}', [VolunteerController::class, 'removeSchedule'])->name('volunteers.remove-schedule');
+                Route::post('volunteers/{volunteer}/send-onboarding', [VolunteerController::class, 'sendOnboardingEmail'])->name('volunteers.send-onboarding');
+                Route::post('volunteers/{volunteer}/send-onboarding-sms', [VolunteerController::class, 'sendOnboardingSms'])->name('volunteers.send-onboarding-sms');
+                Route::get('volunteers/{volunteer}/certificate/{event}', [VolunteerController::class, 'certificate'])->name('volunteers.certificate');
+            });
 
-        // Eventos - admin, operation
-        Route::middleware('section:events')->group(function () {
-            Route::resource('events', EventController::class);
-            Route::post('events/{event}/duplicate', [EventController::class, 'duplicate'])->name('events.duplicate');
-            Route::post('events/{event}/generate-shows', [ShowController::class, 'generateShows'])->name('events.generate-shows');
+            // Media - admin, operation
+            Route::middleware('section:media')->group(function () {
+                Route::resource('media', MediaController::class)->parameters(['media' => 'media']);
+                Route::patch('media/{media}/status', [MediaController::class, 'updateStatus'])->name('media.update-status');
+                Route::post('media/{media}/assign-event', [MediaController::class, 'assignEvent'])->name('media.assign-event');
+                Route::delete('media/{media}/remove-event/{event}', [MediaController::class, 'removeEvent'])->name('media.remove-event');
+                Route::patch('media/{media}/events/{event}/status', [MediaController::class, 'updateEventStatus'])->name('media.update-event-status');
+                Route::post('media/{media}/send-onboarding', [MediaController::class, 'sendOnboardingEmail'])->name('media.send-onboarding');
+                Route::post('media/{media}/send-onboarding-sms', [MediaController::class, 'sendOnboardingSms'])->name('media.send-onboarding-sms');
+                Route::post('media/send-bulk-onboarding', [MediaController::class, 'sendBulkOnboardingEmails'])->name('media.send-bulk-onboarding');
+                Route::post('media/send-bulk-onboarding-sms', [MediaController::class, 'sendBulkOnboardingSms'])->name('media.send-bulk-onboarding-sms');
+                Route::post('media/{media}/assistants', [MediaController::class, 'storeAssistant'])->name('media.store-assistant');
+                Route::delete('media/{media}/assistants/{assistant}', [MediaController::class, 'destroyAssistant'])->name('media.destroy-assistant');
+            });
 
-            // Días del evento
-            Route::post('events/{event}/days', [EventDayController::class, 'store'])->name('events.days.store');
-            Route::put('events/{event}/days/{day}', [EventDayController::class, 'update'])->name('events.days.update');
-            Route::delete('events/{event}/days/{day}', [EventDayController::class, 'destroy'])->name('events.days.destroy');
-            Route::post('events/{event}/days/{day}/shows', [ShowController::class, 'store'])->name('events.days.shows.store');
+            // Eventos - admin, operation
+            Route::middleware('section:events')->group(function () {
+                Route::resource('events', EventController::class);
+                Route::post('events/{event}/duplicate', [EventController::class, 'duplicate'])->name('events.duplicate');
+                Route::post('events/{event}/generate-shows', [ShowController::class, 'generateShows'])->name('events.generate-shows');
 
-            // Shows
-            Route::put('shows/{show}', [ShowController::class, 'update'])->name('shows.update');
-            Route::delete('shows/{show}', [ShowController::class, 'destroy'])->name('shows.destroy');
-            Route::post('shows/{show}/assign-designer', [ShowController::class, 'assignDesigner'])->name('shows.assign-designer');
-            Route::post('shows/{show}/remove-designer', [ShowController::class, 'removeDesigner'])->name('shows.remove-designer');
+                // Días del evento
+                Route::post('events/{event}/days', [EventDayController::class, 'store'])->name('events.days.store');
+                Route::put('events/{event}/days/{day}', [EventDayController::class, 'update'])->name('events.days.update');
+                Route::delete('events/{event}/days/{day}', [EventDayController::class, 'destroy'])->name('events.days.destroy');
+                Route::post('events/{event}/days/{day}/shows', [ShowController::class, 'store'])->name('events.days.shows.store');
 
-            // Fitting — asignación de diseñadores a slots
-            Route::post('fitting-slots/{fittingSlot}/assign-designer', [EventController::class, 'assignDesignerToFitting'])->name('fitting-slots.assign-designer');
-            Route::delete('fitting-slots/{fittingSlot}/remove-designer/{designer}', [EventController::class, 'removeDesignerFromFitting'])->name('fitting-slots.remove-designer');
-        });
+                // Shows
+                Route::put('shows/{show}', [ShowController::class, 'update'])->name('shows.update');
+                Route::delete('shows/{show}', [ShowController::class, 'destroy'])->name('shows.destroy');
+                Route::post('shows/{show}/assign-designer', [ShowController::class, 'assignDesigner'])->name('shows.assign-designer');
+                Route::post('shows/{show}/remove-designer', [ShowController::class, 'removeDesigner'])->name('shows.remove-designer');
 
-        // Chats - admin, operation
-        Route::middleware('section:chats')->group(function () {
-            Route::get('chats', [ChatController::class, 'index'])->name('chats.index');
-            Route::get('chats/{conversation}', [ChatController::class, 'show'])->name('chats.show');
-        });
+                // Fitting — asignación de diseñadores a slots
+                Route::post('fitting-slots/{fittingSlot}/assign-designer', [EventController::class, 'assignDesignerToFitting'])->name('fitting-slots.assign-designer');
+                Route::delete('fitting-slots/{fittingSlot}/remove-designer/{designer}', [EventController::class, 'removeDesignerFromFitting'])->name('fitting-slots.remove-designer');
+            });
 
-        // Banners - admin, marketing
-        Route::middleware('section:banners')->group(function () {
-            Route::resource('banners', BannerController::class);
-            Route::post('banners/{banner}/upload-image', [BannerController::class, 'uploadImage'])->name('banners.upload-image');
-            Route::post('banners/reorder', [BannerController::class, 'reorder'])->name('banners.reorder');
-        });
+            // Chats - admin, operation
+            Route::middleware('section:chats')->group(function () {
+                Route::get('chats', [ChatController::class, 'index'])->name('chats.index');
+                Route::get('chats/{conversation}', [ChatController::class, 'show'])->name('chats.show');
+            });
+
+            // Categorías de diseñadores - admin, operation
+            Route::middleware('section:designer_categories')->group(function () {
+                Route::get('categories', [DesignerSettingsController::class, 'categories'])->name('settings.categories');
+                Route::post('categories', [DesignerSettingsController::class, 'storeCategory'])->name('settings.designer-categories.store');
+                Route::put('categories/{category}', [DesignerSettingsController::class, 'updateCategory'])->name('settings.designer-categories.update');
+                Route::delete('categories/{category}', [DesignerSettingsController::class, 'destroyCategory'])->name('settings.designer-categories.destroy');
+            });
+
+            // Banners - admin, marketing
+            Route::middleware('section:banners')->group(function () {
+                Route::resource('banners', BannerController::class);
+                Route::post('banners/{banner}/upload-image', [BannerController::class, 'uploadImage'])->name('banners.upload-image');
+                Route::post('banners/reorder', [BannerController::class, 'reorder'])->name('banners.reorder');
+            });
+
+        }); // end operations
 
         // Contabilidad - admin, accounting
         Route::prefix('accounting')->name('accounting.')->group(function () {
@@ -289,6 +303,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('bot/ask', [LeadController::class, 'botAsk'])->name('bot.ask');
             Route::post('bot/mark-read', [LeadController::class, 'botMarkRead'])->name('bot.mark-read');
             Route::post('bot/mark-all-read', [LeadController::class, 'botMarkAllRead'])->name('bot.mark-all-read');
+            // Paquetes de diseñadores - admin, sales lider
+            Route::middleware('section:designer_packages')->group(function () {
+                Route::get('packages', [DesignerSettingsController::class, 'packages'])->name('packages');
+                Route::post('packages', [DesignerSettingsController::class, 'storePackage'])->name('packages.store');
+                Route::put('packages/{package}', [DesignerSettingsController::class, 'updatePackage'])->name('packages.update');
+                Route::delete('packages/{package}', [DesignerSettingsController::class, 'destroyPackage'])->name('packages.destroy');
+            });
         });
 
         // API de notificaciones (polling)
@@ -320,22 +341,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::prefix('settings')->name('settings.')->group(function () {
                 Route::get('designers', [DesignerSettingsController::class, 'index'])->name('designers');
             });
-        });
-
-        // Categorías de diseñadores - admin, operation
-        Route::middleware('section:designer_categories')->group(function () {
-            Route::get('settings/designer-categories', [DesignerSettingsController::class, 'categories'])->name('settings.categories');
-            Route::post('settings/designer-categories', [DesignerSettingsController::class, 'storeCategory'])->name('settings.designer-categories.store');
-            Route::put('settings/designer-categories/{category}', [DesignerSettingsController::class, 'updateCategory'])->name('settings.designer-categories.update');
-            Route::delete('settings/designer-categories/{category}', [DesignerSettingsController::class, 'destroyCategory'])->name('settings.designer-categories.destroy');
-        });
-
-        // Paquetes de diseñadores - admin, accounting
-        Route::middleware('section:designer_packages')->group(function () {
-            Route::get('settings/designer-packages', [DesignerSettingsController::class, 'packages'])->name('settings.packages');
-            Route::post('settings/designer-packages', [DesignerSettingsController::class, 'storePackage'])->name('settings.designer-packages.store');
-            Route::put('settings/designer-packages/{package}', [DesignerSettingsController::class, 'updatePackage'])->name('settings.designer-packages.update');
-            Route::delete('settings/designer-packages/{package}', [DesignerSettingsController::class, 'destroyPackage'])->name('settings.designer-packages.destroy');
         });
     });
 });

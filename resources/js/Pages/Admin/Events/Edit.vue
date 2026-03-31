@@ -120,7 +120,7 @@ function removeDay(index) {
     const day = form.days[index];
     if (day.has_assigned_shows) return;
     if (day.id) {
-        router.delete(`/admin/events/${props.event.id}/days/${day.id}`, { preserveScroll: true });
+        router.delete(`/admin/operations/events/${props.event.id}/days/${day.id}`, { preserveScroll: true });
     }
     form.days.splice(index, 1);
 }
@@ -144,7 +144,7 @@ function onTypeChange(day) {
 
 function deleteShow(day, show) {
     if (!confirm('¿Eliminar este show?')) return;
-    router.delete(`/admin/shows/${show.id}`, { preserveScroll: true });
+    router.delete(`/admin/operations/shows/${show.id}`, { preserveScroll: true });
     day.shows = day.shows.filter(s => s.id !== show.id);
 }
 
@@ -155,7 +155,7 @@ function addShow(day) {
     const time = newShowTimes[day.id];
     if (!time) return;
     router.post(
-        `/admin/events/${props.event.id}/days/${day.id}/shows`,
+        `/admin/operations/events/${props.event.id}/days/${day.id}/shows`,
         { scheduled_time: time },
         {
             preserveScroll: true,
@@ -230,7 +230,7 @@ function submit() {
             }
             return day;
         }),
-    })).put(`/admin/events/${props.event.id}`);
+    })).put(`/admin/operations/events/${props.event.id}`);
 }
 </script>
 
@@ -238,7 +238,7 @@ function submit() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link :href="`/admin/events/${event.id}`" class="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-sm">
+                <Link :href="`/admin/operations/events/${event.id}`" class="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-sm">
                     <ArrowLeftIcon class="w-4 h-4" /> Volver
                 </Link>
                 <span class="text-gray-300">/</span>
@@ -592,7 +592,7 @@ function submit() {
 
                 <!-- Submit -->
                 <div class="flex justify-between">
-                    <Link :href="`/admin/events/${event.id}`" class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+                    <Link :href="`/admin/operations/events/${event.id}`" class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                         Cancelar
                     </Link>
                     <button

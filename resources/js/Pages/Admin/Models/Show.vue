@@ -71,23 +71,23 @@ function progressColor(pct) {
 
 function sendWelcomeEmail() {
     if (!confirm('¿Enviar email de bienvenida a ' + props.model.first_name + '?')) return;
-    router.post(`/admin/models/${props.model.id}/send-welcome-email`, {}, { preserveScroll: true });
+    router.post(`/admin/operations/models/${props.model.id}/send-welcome-email`, {}, { preserveScroll: true });
 }
 
 function removeFromEvent(eventId, eventName) {
     if (!confirm(`¿Quitar a ${props.model.first_name} del evento "${eventName}"?`)) return;
-    router.delete(`/admin/models/${props.model.id}/remove-event/${eventId}`, { preserveScroll: true });
+    router.delete(`/admin/operations/models/${props.model.id}/remove-event/${eventId}`, { preserveScroll: true });
 }
 
 function updateCastingStatus(eventId, newStatus) {
-    router.patch(`/admin/models/${props.model.id}/events/${eventId}/casting-status`,
+    router.patch(`/admin/operations/models/${props.model.id}/events/${eventId}/casting-status`,
         { casting_status: newStatus },
         { preserveScroll: true }
     );
 }
 
 function updateModelTag(eventId, newTag) {
-    router.patch(`/admin/models/${props.model.id}/events/${eventId}/model-tag`,
+    router.patch(`/admin/operations/models/${props.model.id}/events/${eventId}/model-tag`,
         { model_tag: newTag || null },
         { preserveScroll: true }
     );
@@ -95,7 +95,7 @@ function updateModelTag(eventId, newTag) {
 
 function sendOnboarding(eventId) {
     if (!confirm('¿Enviar email de onboarding personalizado?')) return;
-    router.post(`/admin/models/${props.model.id}/events/${eventId}/send-onboarding`, {}, { preserveScroll: true });
+    router.post(`/admin/operations/models/${props.model.id}/events/${eventId}/send-onboarding`, {}, { preserveScroll: true });
 }
 
 function statusBadgeClass(s) {
@@ -126,7 +126,7 @@ function closePassModal()   { passModal.value = null; }
 // Modal eliminar
 const showDeleteModal = ref(false);
 function deleteModel() {
-    router.delete(`/admin/models/${props.model.id}`, {
+    router.delete(`/admin/operations/models/${props.model.id}`, {
         onSuccess: () => { showDeleteModal.value = false; },
     });
 }
@@ -136,7 +136,7 @@ function deleteModel() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link href="/admin/models" class="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-sm">
+                <Link href="/admin/operations/models" class="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-sm">
                     <ArrowLeftIcon class="w-4 h-4" /> Modelos
                 </Link>
                 <span class="text-gray-300">/</span>
@@ -183,7 +183,7 @@ function deleteModel() {
                                     class="text-xs font-medium rounded-lg px-3 py-1.5">
                                     {{ statusBadgeLabel(model.status) }}
                                 </span>
-                                <Link :href="`/admin/models/${model.id}/edit`"
+                                <Link :href="`/admin/operations/models/${model.id}/edit`"
                                     class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
                                     Editar
                                 </Link>
@@ -332,7 +332,7 @@ function deleteModel() {
                             <!-- Header del evento -->
                             <div class="bg-gray-50 px-4 py-3 flex items-center justify-between">
                                 <div class="min-w-0">
-                                    <Link :href="`/admin/events/${evt.id}`"
+                                    <Link :href="`/admin/operations/events/${evt.id}`"
                                         class="text-sm font-semibold text-gray-900 hover:text-black hover:underline leading-tight">
                                         {{ evt.name }}
                                     </Link>

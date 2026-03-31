@@ -51,7 +51,7 @@ watch(search, () => {
 watch([status, eventId], () => applyFilters());
 
 function applyFilters() {
-    router.get('/admin/volunteers', {
+    router.get('/admin/operations/volunteers', {
         search: search.value,
         status: status.value,
         event_id: eventId.value,
@@ -65,7 +65,7 @@ const exportUrl = computed(() => {
     if (status.value) params.set('status', status.value);
     if (eventId.value) params.set('event_id', eventId.value);
     const qs = params.toString();
-    return '/admin/volunteers/export' + (qs ? '?' + qs : '');
+    return '/admin/operations/volunteers/export' + (qs ? '?' + qs : '');
 });
 
 // --- Import ---
@@ -78,7 +78,7 @@ function handleFileChange(e) {
 }
 
 function submitImport() {
-    importForm.post('/admin/volunteers/import', {
+    importForm.post('/admin/operations/volunteers/import', {
         forceFormData: true,
         onSuccess: () => {
             showImportModal.value = false;
@@ -127,7 +127,7 @@ function formatTime(t) {
 }
 
 function updateEventStatus(vol, eventId, newStatus) {
-    router.patch(`/admin/volunteers/${vol.id}/events/${eventId}/status`,
+    router.patch(`/admin/operations/volunteers/${vol.id}/events/${eventId}/status`,
         { status: newStatus },
         { preserveScroll: true, onSuccess: () => {
             const fresh = props.volunteers.data.find(v => v.id === vol.id);
@@ -157,28 +157,28 @@ function updateStatus(vol, newStatus) {
             return;
         }
     }
-    router.patch(`/admin/volunteers/${vol.id}/status`, { status: newStatus }, { preserveScroll: true });
+    router.patch(`/admin/operations/volunteers/${vol.id}/status`, { status: newStatus }, { preserveScroll: true });
 }
 
 function sendBulkOnboarding() {
     if (!confirm(`¿Enviar email de onboarding a ${props.pendingEmailCount} voluntarios pendientes?`)) return;
-    router.post('/admin/volunteers/send-bulk-onboarding', {}, { preserveScroll: true });
+    router.post('/admin/operations/volunteers/send-bulk-onboarding', {}, { preserveScroll: true });
 }
 
 function sendBulkSms() {
     if (!confirm(`¿Enviar SMS de onboarding a ${props.pendingSmsCount} voluntarios pendientes?`)) return;
-    router.post('/admin/volunteers/send-bulk-onboarding-sms', {}, { preserveScroll: true });
+    router.post('/admin/operations/volunteers/send-bulk-onboarding-sms', {}, { preserveScroll: true });
 }
 
 function sendOnboardingEmail(vol) {
     if (!confirm(`¿Enviar email de onboarding a ${vol.first_name} ${vol.last_name}?`)) return;
-    router.post(`/admin/volunteers/${vol.id}/send-onboarding`, {}, { preserveScroll: true });
+    router.post(`/admin/operations/volunteers/${vol.id}/send-onboarding`, {}, { preserveScroll: true });
 }
 
 function sendOnboardingSms(vol) {
     if (!vol.phone) { alert('Este voluntario no tiene teléfono registrado.'); return; }
     if (!confirm(`¿Enviar SMS de onboarding a ${vol.first_name} ${vol.last_name}?`)) return;
-    router.post(`/admin/volunteers/${vol.id}/send-onboarding-sms`, {}, { preserveScroll: true });
+    router.post(`/admin/operations/volunteers/${vol.id}/send-onboarding-sms`, {}, { preserveScroll: true });
 }
 
 // Auto-refresh cuando llega notificación de nuevo voluntario
@@ -247,7 +247,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         <ArrowUpTrayIcon class="w-4 h-4 text-gray-500" />
                         Importar Excel
                     </button>
-                    <Link href="/admin/volunteers/create"
+                    <Link href="/admin/operations/volunteers/create"
                         class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
                         + Crear Voluntario
                     </Link>
@@ -294,7 +294,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                        <tr v-for="vol in volunteers.data" :key="vol.id" class="hover:bg-gray-50 transition-colors cursor-pointer" @click="router.visit(`/admin/volunteers/${vol.id}`)">
+                        <tr v-for="vol in volunteers.data" :key="vol.id" class="hover:bg-gray-50 transition-colors cursor-pointer" @click="router.visit(`/admin/operations/volunteers/${vol.id}`)">
                             <td class="px-6 py-4">
                                 <div class="flex items-center space-x-3">
                                     <div class="w-9 h-9 rounded-full bg-black flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
@@ -374,7 +374,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                         title="Enviar SMS onboarding">
                                         <DevicePhoneMobileIcon class="w-4 h-4" />
                                     </button>
-                                    <Link :href="`/admin/volunteers/${vol.id}/edit`" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors cursor-pointer" title="Editar">
+                                    <Link :href="`/admin/operations/volunteers/${vol.id}/edit`" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors cursor-pointer" title="Editar">
                                         <PencilSquareIcon class="w-4 h-4" />
                                     </Link>
                                 </div>
@@ -552,7 +552,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
 
                         <!-- Footer -->
                         <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
-                            <Link :href="`/admin/volunteers/${selectedVol.id}`"
+                            <Link :href="`/admin/operations/volunteers/${selectedVol.id}`"
                                 class="text-sm font-semibold text-black hover:underline underline-offset-2">
                                 Ver perfil completo →
                             </Link>

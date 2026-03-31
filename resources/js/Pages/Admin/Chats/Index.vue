@@ -16,7 +16,7 @@ let timer = null;
 function applyFilters() {
     clearTimeout(timer);
     timer = setTimeout(() => {
-        router.get('/admin/chats', {
+        router.get('/admin/operations/chats', {
             search: search.value || undefined,
             event:  event.value  || undefined,
         }, { preserveState: true, replace: true });
@@ -130,7 +130,7 @@ function timeAgo(dateStr) {
                         </td>
                         <!-- Acciones -->
                         <td class="px-4 py-3">
-                            <Link :href="`/admin/chats/${c.id}`"
+                            <Link :href="`/admin/operations/chats/${c.id}`"
                                 class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                                 Ver
                             </Link>

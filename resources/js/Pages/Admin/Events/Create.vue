@@ -253,7 +253,7 @@ function submit() {
             return day;
         }),
     };
-    form.transform(() => payload).post('/admin/events');
+    form.transform(() => payload).post('/admin/operations/events');
 }
 </script>
 

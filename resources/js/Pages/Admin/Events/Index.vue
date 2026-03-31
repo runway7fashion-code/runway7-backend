@@ -30,7 +30,7 @@ const statusConfig = {
 };
 
 function applyFilter() {
-    router.get('/admin/events', { status: statusFilter.value || undefined }, { preserveState: true });
+    router.get('/admin/operations/events', { status: statusFilter.value || undefined }, { preserveState: true });
 }
 
 
@@ -49,7 +49,7 @@ function openDuplicate(event) {
 }
 
 function submitDuplicate() {
-    router.post(`/admin/events/${duplicatingEvent.value.id}/duplicate`, duplicateForm.value, {
+    router.post(`/admin/operations/events/${duplicatingEvent.value.id}/duplicate`, duplicateForm.value, {
         onSuccess: () => { duplicateModal.value = false; },
     });
 }
@@ -74,7 +74,7 @@ function submitDuplicate() {
                     </select>
                 </div>
                 <Link
-                    href="/admin/events/create"
+                    href="/admin/operations/events/create"
                     class="px-4 py-2 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors"
                 >
                     + Crear Evento
@@ -124,13 +124,13 @@ function submitDuplicate() {
                     <!-- Actions -->
                     <div class="flex items-center gap-2 p-4">
                         <Link
-                            :href="`/admin/events/${event.id}`"
+                            :href="`/admin/operations/events/${event.id}`"
                             class="flex-1 text-center py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
                         >
                             Ver
                         </Link>
                         <Link
-                            :href="`/admin/events/${event.id}/edit`"
+                            :href="`/admin/operations/events/${event.id}/edit`"
                             class="flex-1 text-center py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
                         >
                             Editar
@@ -151,7 +151,7 @@ function submitDuplicate() {
                 <CalendarDaysIcon class="mx-auto h-16 w-16 text-gray-300 mb-4" />
                 <h3 class="text-lg font-semibold text-gray-900 mb-1">No hay eventos</h3>
                 <p class="text-gray-500 text-sm mb-6">Crea el primer evento para comenzar</p>
-                <Link href="/admin/events/create" class="px-5 py-2 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800">
+                <Link href="/admin/operations/events/create" class="px-5 py-2 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800">
                     Crear Evento
                 </Link>
             </div>

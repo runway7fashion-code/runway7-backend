@@ -24,12 +24,12 @@ function resetPackageForm() {
 
 function savePackage() {
     if (editingPackage.value) {
-        router.put(`/admin/settings/designer-packages/${editingPackage.value}`, packageForm.value, {
+        router.put(`/admin/sales/packages/${editingPackage.value}`, packageForm.value, {
             preserveScroll: true,
             onSuccess: () => resetPackageForm(),
         });
     } else {
-        router.post('/admin/settings/designer-packages', packageForm.value, {
+        router.post('/admin/sales/packages', packageForm.value, {
             preserveScroll: true,
             onSuccess: () => resetPackageForm(),
         });
@@ -50,12 +50,12 @@ function startEditPackage(pkg) {
 }
 
 function togglePackage(pkg) {
-    router.put(`/admin/settings/designer-packages/${pkg.id}`, { is_active: !pkg.is_active }, { preserveScroll: true });
+    router.put(`/admin/sales/packages/${pkg.id}`, { is_active: !pkg.is_active }, { preserveScroll: true });
 }
 
 function deletePackage(pkg) {
     if (!confirm(`Delete package "${pkg.name}"?`)) return;
-    router.delete(`/admin/settings/designer-packages/${pkg.id}`, { preserveScroll: true });
+    router.delete(`/admin/sales/packages/${pkg.id}`, { preserveScroll: true });
 }
 
 function formatPrice(val) {

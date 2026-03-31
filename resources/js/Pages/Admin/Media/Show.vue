@@ -31,26 +31,26 @@ function commStatusClass(s) {
 
 function sendOnboardingEmail() {
     if (!confirm('¿Enviar email de onboarding?')) return;
-    router.post(`/admin/media/${props.media.id}/send-onboarding`, {}, { preserveScroll: true });
+    router.post(`/admin/operations/media/${props.media.id}/send-onboarding`, {}, { preserveScroll: true });
 }
 function sendOnboardingSms() {
     if (!confirm('¿Enviar SMS de onboarding?')) return;
-    router.post(`/admin/media/${props.media.id}/send-onboarding-sms`, {}, { preserveScroll: true });
+    router.post(`/admin/operations/media/${props.media.id}/send-onboarding-sms`, {}, { preserveScroll: true });
 }
 
 function updateEventStatus(eventId, newStatus) {
-    router.patch(`/admin/media/${props.media.id}/events/${eventId}/status`, { status: newStatus }, { preserveScroll: true });
+    router.patch(`/admin/operations/media/${props.media.id}/events/${eventId}/status`, { status: newStatus }, { preserveScroll: true });
 }
 function removeFromEvent(eventId, eventName) {
     if (!confirm(`¿Quitar a ${props.media.first_name} del evento "${eventName}"?`)) return;
-    router.delete(`/admin/media/${props.media.id}/remove-event/${eventId}`, { preserveScroll: true });
+    router.delete(`/admin/operations/media/${props.media.id}/remove-event/${eventId}`, { preserveScroll: true });
 }
 
 // Assign event
 const assignEventId = ref('');
 function assignEvent() {
     if (!assignEventId.value) return;
-    router.post(`/admin/media/${props.media.id}/assign-event`, { event_id: assignEventId.value }, {
+    router.post(`/admin/operations/media/${props.media.id}/assign-event`, { event_id: assignEventId.value }, {
         preserveScroll: true,
         onSuccess: () => { assignEventId.value = ''; },
     });
@@ -59,21 +59,21 @@ function assignEvent() {
 // Delete
 const showDeleteModal = ref(false);
 function confirmDelete() {
-    router.delete(`/admin/media/${props.media.id}`, { onSuccess: () => { showDeleteModal.value = false; } });
+    router.delete(`/admin/operations/media/${props.media.id}`, { onSuccess: () => { showDeleteModal.value = false; } });
 }
 
 // Assistant
 const assistantForm = ref({ full_name: '', document_id: '', phone: '', email: '', event_id: '' });
 function addAssistant() {
     if (!assistantForm.value.full_name || !assistantForm.value.event_id) return;
-    router.post(`/admin/media/${props.media.id}/assistants`, assistantForm.value, {
+    router.post(`/admin/operations/media/${props.media.id}/assistants`, assistantForm.value, {
         preserveScroll: true,
         onSuccess: () => { assistantForm.value = { full_name: '', document_id: '', phone: '', email: '', event_id: '' }; },
     });
 }
 function removeAssistant(id) {
     if (!confirm('¿Eliminar asistente?')) return;
-    router.delete(`/admin/media/${props.media.id}/assistants/${id}`, { preserveScroll: true });
+    router.delete(`/admin/operations/media/${props.media.id}/assistants/${id}`, { preserveScroll: true });
 }
 
 // Pass modal
@@ -85,7 +85,7 @@ function openPassModal(evt) { passModal.value = evt.pass; }
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-2">
-                <Link href="/admin/media" class="text-gray-400 hover:text-gray-600"><ArrowLeftIcon class="w-5 h-5" /></Link>
+                <Link href="/admin/operations/media" class="text-gray-400 hover:text-gray-600"><ArrowLeftIcon class="w-5 h-5" /></Link>
                 <h2 class="text-lg font-semibold text-gray-900">{{ media.first_name }} {{ media.last_name }}</h2>
             </div>
         </template>
@@ -128,7 +128,7 @@ function openPassModal(evt) { passModal.value = evt.pass; }
                             <button @click="sendOnboardingSms" class="px-3 py-1.5 border border-gray-200 text-xs font-medium rounded-lg hover:bg-gray-50 text-gray-700">
                                 <DevicePhoneMobileIcon class="w-3.5 h-3.5 inline mr-1" /> Enviar SMS
                             </button>
-                            <Link :href="`/admin/media/${media.id}/edit`" class="px-3 py-1.5 border border-gray-200 text-xs font-medium rounded-lg hover:bg-gray-50 text-gray-700">Editar</Link>
+                            <Link :href="`/admin/operations/media/${media.id}/edit`" class="px-3 py-1.5 border border-gray-200 text-xs font-medium rounded-lg hover:bg-gray-50 text-gray-700">Editar</Link>
                             <button @click="showDeleteModal = true" class="px-3 py-1.5 border border-red-200 text-xs font-medium rounded-lg hover:bg-red-50 text-red-600">Eliminar</button>
                         </div>
                     </div>

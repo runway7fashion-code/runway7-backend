@@ -49,8 +49,8 @@ function deleteTag() {
             <!-- Create tag -->
             <div class="bg-white rounded-2xl border border-gray-200 p-6">
                 <h3 class="text-sm font-semibold text-gray-800 pb-2 border-b-2 border-[#D4AF37] mb-4">Create new tag</h3>
-                <form @submit.prevent="createTag" class="flex items-end gap-4">
-                    <div class="flex-1">
+                <form @submit.prevent="createTag" class="space-y-4">
+                    <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
                         <input v-model="createForm.name" type="text" placeholder="Ej: Interested / Follow Up"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
@@ -58,17 +58,19 @@ function deleteTag() {
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Color</label>
-                        <div class="flex flex-wrap gap-1.5">
+                        <div class="flex flex-wrap gap-2">
                             <button v-for="c in colors" :key="c" type="button" @click="createForm.color = c"
                                 class="w-7 h-7 rounded-full border-2 transition-all"
                                 :class="createForm.color === c ? 'border-black scale-110' : 'border-transparent hover:border-gray-300'"
                                 :style="{ backgroundColor: c }"></button>
                         </div>
                     </div>
-                    <button type="submit" :disabled="createForm.processing || !createForm.name"
-                        class="px-5 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 flex items-center gap-1.5 flex-shrink-0">
-                        <PlusIcon class="w-4 h-4" /> Create
-                    </button>
+                    <div class="flex justify-end">
+                        <button type="submit" :disabled="createForm.processing || !createForm.name"
+                            class="px-5 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 flex items-center gap-1.5">
+                            <PlusIcon class="w-4 h-4" /> Create
+                        </button>
+                    </div>
                 </form>
             </div>
 
@@ -95,16 +97,18 @@ function deleteTag() {
                         </div>
 
                         <!-- Edit mode -->
-                        <div v-if="editingTag === tag.id" class="flex items-center gap-3 flex-1">
-                            <input v-model="editForm.name" type="text" class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-black flex-1" />
-                            <div class="flex gap-1">
+                        <div v-if="editingTag === tag.id" class="flex-1 space-y-3">
+                            <input v-model="editForm.name" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-black" />
+                            <div class="flex flex-wrap gap-1.5">
                                 <button v-for="c in colors" :key="c" type="button" @click="editForm.color = c"
-                                    class="w-5 h-5 rounded-full border-2 transition-all"
-                                    :class="editForm.color === c ? 'border-black scale-110' : 'border-transparent'"
+                                    class="w-6 h-6 rounded-full border-2 transition-all"
+                                    :class="editForm.color === c ? 'border-black scale-110' : 'border-transparent hover:border-gray-300'"
                                     :style="{ backgroundColor: c }"></button>
                             </div>
-                            <button @click="saveEdit(tag)" class="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800">Save</button>
-                            <button @click="cancelEdit" class="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50">Cancel</button>
+                            <div class="flex justify-end gap-2">
+                                <button @click="cancelEdit" class="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50">Cancel</button>
+                                <button @click="saveEdit(tag)" class="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800">Save</button>
+                            </div>
                         </div>
                     </div>
                     <div v-if="!tags.length" class="px-6 py-8 text-center text-gray-400 text-sm">

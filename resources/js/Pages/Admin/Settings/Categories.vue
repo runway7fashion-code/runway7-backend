@@ -14,7 +14,7 @@ const editCategoryName = ref('');
 
 function addCategory() {
     if (!categoryForm.name.trim()) return;
-    categoryForm.post('/admin/settings/designer-categories', {
+    categoryForm.post('/admin/operations/categories', {
         preserveScroll: true,
         onSuccess: () => { categoryForm.reset(); },
     });
@@ -26,19 +26,19 @@ function startEditCategory(cat) {
 }
 
 function saveCategory(cat) {
-    router.put(`/admin/settings/designer-categories/${cat.id}`, { name: editCategoryName.value }, {
+    router.put(`/admin/operations/categories/${cat.id}`, { name: editCategoryName.value }, {
         preserveScroll: true,
         onSuccess: () => { editingCategory.value = null; },
     });
 }
 
 function toggleCategory(cat) {
-    router.put(`/admin/settings/designer-categories/${cat.id}`, { is_active: !cat.is_active }, { preserveScroll: true });
+    router.put(`/admin/operations/categories/${cat.id}`, { is_active: !cat.is_active }, { preserveScroll: true });
 }
 
 function deleteCategory(cat) {
     if (!confirm(`Delete category "${cat.name}"?`)) return;
-    router.delete(`/admin/settings/designer-categories/${cat.id}`, { preserveScroll: true });
+    router.delete(`/admin/operations/categories/${cat.id}`, { preserveScroll: true });
 }
 </script>
 

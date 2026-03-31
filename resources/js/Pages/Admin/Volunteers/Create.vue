@@ -110,7 +110,7 @@ function formatDayDate(date) {
 
 function submit() {
     form.phone = phoneNumber.value ? `${phoneCode.value}${phoneNumber.value.replace(/\D/g, '')}` : '';
-    form.post('/admin/volunteers');
+    form.post('/admin/operations/volunteers');
 }
 </script>
 
@@ -118,7 +118,7 @@ function submit() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link href="/admin/volunteers" class="text-gray-400 hover:text-gray-600 text-sm">&larr; Voluntarios</Link>
+                <Link href="/admin/operations/volunteers" class="text-gray-400 hover:text-gray-600 text-sm">&larr; Voluntarios</Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900">Crear Voluntario</h2>
             </div>
@@ -395,7 +395,7 @@ function submit() {
 
                 <!-- Botones -->
                 <div class="flex justify-between">
-                    <Link href="/admin/volunteers"
+                    <Link href="/admin/operations/volunteers"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                         Cancelar
                     </Link>

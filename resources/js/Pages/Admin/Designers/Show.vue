@@ -67,11 +67,11 @@ function storageUrl(path) {
 
 function removeFromEvent(eventId, eventName) {
     if (!confirm(`Quitar a ${props.designer.first_name} del evento "${eventName}"?`)) return;
-    router.delete(`/admin/designers/${props.designer.id}/remove-event/${eventId}`, { preserveScroll: true });
+    router.delete(`/admin/operations/designers/${props.designer.id}/remove-event/${eventId}`, { preserveScroll: true });
 }
 
 function toggleFeature(eventId, field) {
-    router.post(`/admin/designers/${props.designer.id}/events/${eventId}/toggle-feature`, { field }, { preserveScroll: true });
+    router.post(`/admin/operations/designers/${props.designer.id}/events/${eventId}/toggle-feature`, { field }, { preserveScroll: true });
 }
 
 // Onboarding email
@@ -79,7 +79,7 @@ const sendingOnboarding = ref(false);
 function sendOnboardingEmail() {
     if (!confirm(`Enviar email de onboarding a ${props.designer.first_name} ${props.designer.last_name}?`)) return;
     sendingOnboarding.value = true;
-    router.post(`/admin/designers/${props.designer.id}/send-onboarding`, {}, {
+    router.post(`/admin/operations/designers/${props.designer.id}/send-onboarding`, {}, {
         preserveScroll: true,
         onFinish: () => sendingOnboarding.value = false,
     });
@@ -99,7 +99,7 @@ function sendOnboardingSms() {
     if (!props.designer.phone) return alert('Este diseñador no tiene teléfono registrado.');
     if (!confirm(`Enviar SMS de onboarding a ${props.designer.first_name} ${props.designer.last_name}?`)) return;
     sendingSms.value = true;
-    router.post(`/admin/designers/${props.designer.id}/send-onboarding-sms`, {}, {
+    router.post(`/admin/operations/designers/${props.designer.id}/send-onboarding-sms`, {}, {
         preserveScroll: true,
         onFinish: () => sendingSms.value = false,
     });
@@ -109,7 +109,7 @@ function sendOnboardingSms() {
 const showDeleteModal = ref(false);
 const previewDoc = ref(null);
 function deleteDesigner() {
-    router.delete(`/admin/designers/${props.designer.id}`, {
+    router.delete(`/admin/operations/designers/${props.designer.id}`, {
         onSuccess: () => showDeleteModal.value = false,
     });
 }
@@ -190,7 +190,7 @@ const socialLinks = computed(() => {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link href="/admin/designers" class="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
+                <Link href="/admin/operations/designers" class="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
                     <ArrowLeftIcon class="w-4 h-4" /> Diseñadores
                 </Link>
                 <span class="text-gray-300">/</span>
@@ -227,7 +227,7 @@ const socialLinks = computed(() => {
                                     class="px-2.5 py-1 rounded-full text-xs font-medium border">
                                     {{ statusBadgeLabel() }}
                                 </span>
-                                <Link :href="`/admin/designers/${designer.id}/edit`"
+                                <Link :href="`/admin/operations/designers/${designer.id}/edit`"
                                     class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
                                     Editar
                                 </Link>
@@ -426,7 +426,7 @@ const socialLinks = computed(() => {
                     <!-- Info del evento -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-5">
                         <div class="flex items-start justify-between mb-3">
-                            <Link :href="`/admin/events/${selectedEvent.id}`"
+                            <Link :href="`/admin/operations/events/${selectedEvent.id}`"
                                 class="text-sm font-bold text-gray-900 hover:underline leading-snug">
                                 {{ selectedEvent.name }}
                             </Link>

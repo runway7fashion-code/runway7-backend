@@ -79,7 +79,7 @@ const usStates = [
 
 function submit() {
     form.phone = phoneNumber.value ? `${phoneCode.value}${phoneNumber.value.replace(/\D/g, '')}` : '';
-    form.put(`/admin/volunteers/${props.volunteer.id}`);
+    form.put(`/admin/operations/volunteers/${props.volunteer.id}`);
 }
 
 // Event management
@@ -88,11 +88,11 @@ const schedules = computed(() => props.volunteer.volunteer_schedules ?? []);
 
 const assignForm = useForm({ event_id: '', area: '' });
 function submitAssignEvent() {
-    assignForm.post(`/admin/volunteers/${props.volunteer.id}/assign-event`, { preserveScroll: true });
+    assignForm.post(`/admin/operations/volunteers/${props.volunteer.id}/assign-event`, { preserveScroll: true });
 }
 
 function updateEventArea(eventId, area) {
-    router.patch(`/admin/volunteers/${props.volunteer.id}/events/${eventId}/area`, { area }, { preserveScroll: true });
+    router.patch(`/admin/operations/volunteers/${props.volunteer.id}/events/${eventId}/area`, { area }, { preserveScroll: true });
 }
 
 let areaTimeout = null;
@@ -107,7 +107,7 @@ function getSchedulesForEvent(eventId) {
 
 function removeEvent(eventId, eventName) {
     if (!confirm(`¿Quitar del evento "${eventName}"?`)) return;
-    router.delete(`/admin/volunteers/${props.volunteer.id}/remove-event/${eventId}`, { preserveScroll: true });
+    router.delete(`/admin/operations/volunteers/${props.volunteer.id}/remove-event/${eventId}`, { preserveScroll: true });
 }
 
 // Schedule management
@@ -130,7 +130,7 @@ function formatDayDate(date) {
 }
 
 function submitSchedule() {
-    scheduleForm.post(`/admin/volunteers/${props.volunteer.id}/schedules`, {
+    scheduleForm.post(`/admin/operations/volunteers/${props.volunteer.id}/schedules`, {
         preserveScroll: true,
         onSuccess: () => { showScheduleModal.value = false; scheduleForm.reset(); selectedEventDays.value = []; },
     });
@@ -138,7 +138,7 @@ function submitSchedule() {
 
 function removeSchedule(scheduleId) {
     if (!confirm('¿Eliminar este horario?')) return;
-    router.delete(`/admin/volunteers/${props.volunteer.id}/schedules/${scheduleId}`, { preserveScroll: true });
+    router.delete(`/admin/operations/volunteers/${props.volunteer.id}/schedules/${scheduleId}`, { preserveScroll: true });
 }
 
 function formatTime(t) {
@@ -155,7 +155,7 @@ function formatTime(t) {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link :href="`/admin/volunteers/${volunteer.id}`" class="text-gray-400 hover:text-gray-600 text-sm">&larr; {{ volunteer.first_name }} {{ volunteer.last_name }}</Link>
+                <Link :href="`/admin/operations/volunteers/${volunteer.id}`" class="text-gray-400 hover:text-gray-600 text-sm">&larr; {{ volunteer.first_name }} {{ volunteer.last_name }}</Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900">Editar</h2>
             </div>
@@ -398,7 +398,7 @@ function formatTime(t) {
 
                 <!-- Botones -->
                 <div class="flex justify-between">
-                    <Link :href="`/admin/volunteers/${volunteer.id}`"
+                    <Link :href="`/admin/operations/volunteers/${volunteer.id}`"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                         Cancelar
                     </Link>

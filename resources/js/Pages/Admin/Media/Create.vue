@@ -33,7 +33,7 @@ const form = useForm({
 });
 
 function submit() {
-    form.post('/admin/media');
+    form.post('/admin/operations/media');
 }
 </script>
 
@@ -41,7 +41,7 @@ function submit() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-2">
-                <Link href="/admin/media" class="text-gray-400 hover:text-gray-600"><ArrowLeftIcon class="w-5 h-5" /></Link>
+                <Link href="/admin/operations/media" class="text-gray-400 hover:text-gray-600"><ArrowLeftIcon class="w-5 h-5" /></Link>
                 <h2 class="text-lg font-semibold text-gray-900">Crear Media</h2>
             </div>
         </template>
@@ -127,7 +127,7 @@ function submit() {
                 </div>
 
                 <div class="flex gap-3 pt-4">
-                    <Link href="/admin/media" class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 text-center hover:bg-gray-50">Cancelar</Link>
+                    <Link href="/admin/operations/media" class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 text-center hover:bg-gray-50">Cancelar</Link>
                     <button type="submit" :disabled="form.processing" class="flex-1 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-40">
                         {{ form.processing ? 'Creando...' : 'Crear Media' }}
                     </button>

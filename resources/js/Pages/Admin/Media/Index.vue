@@ -31,7 +31,7 @@ let timer = null;
 function applyFilters() {
     clearTimeout(timer);
     timer = setTimeout(() => {
-        router.get('/admin/media', {
+        router.get('/admin/operations/media', {
             search:   search.value   || undefined,
             status:   status.value   || undefined,
             event_id: eventId.value  || undefined,
@@ -47,12 +47,12 @@ const showSmsInfoModal = ref(false);
 
 function sendBulkEmails() {
     if (!confirm(`¿Enviar email de onboarding a ${props.pendingEmailCount} media pendiente(s)?`)) return;
-    router.post('/admin/media/send-bulk-onboarding', {}, { preserveScroll: true });
+    router.post('/admin/operations/media/send-bulk-onboarding', {}, { preserveScroll: true });
 }
 
 function sendBulkSms() {
     if (!confirm(`¿Enviar SMS de onboarding a ${props.pendingSmsCount} media pendiente(s)?`)) return;
-    router.post('/admin/media/send-bulk-onboarding-sms', {}, { preserveScroll: true });
+    router.post('/admin/operations/media/send-bulk-onboarding-sms', {}, { preserveScroll: true });
 }
 
 function canSendEmail(m) {
@@ -65,16 +65,16 @@ function canSendSms(m) {
 
 function sendIndividualEmail(m) {
     if (!confirm(`¿Enviar email de onboarding a ${m.first_name} ${m.last_name}?`)) return;
-    router.post(`/admin/media/${m.id}/send-onboarding`, {}, { preserveScroll: true });
+    router.post(`/admin/operations/media/${m.id}/send-onboarding`, {}, { preserveScroll: true });
 }
 
 function sendIndividualSms(m) {
     if (!confirm(`¿Enviar SMS de onboarding a ${m.first_name} ${m.last_name}?`)) return;
-    router.post(`/admin/media/${m.id}/send-onboarding-sms`, {}, { preserveScroll: true });
+    router.post(`/admin/operations/media/${m.id}/send-onboarding-sms`, {}, { preserveScroll: true });
 }
 
 function updateStatus(m, newStatus) {
-    router.patch(`/admin/media/${m.id}/status`, { status: newStatus }, { preserveScroll: true });
+    router.patch(`/admin/operations/media/${m.id}/status`, { status: newStatus }, { preserveScroll: true });
 }
 
 function categoryLabel(c) {
@@ -137,7 +137,7 @@ function commStatusClass(s) {
                     </div>
 
                     <!-- Create -->
-                    <Link href="/admin/media/create"
+                    <Link href="/admin/operations/media/create"
                         class="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors">
                         + Crear Media
                     </Link>
@@ -187,7 +187,7 @@ function commStatusClass(s) {
                         </tr>
                         <tr v-for="m in mediaUsers.data" :key="m.id"
                             class="hover:bg-gray-50 transition-colors cursor-pointer"
-                            @click="$inertia.visit(`/admin/media/${m.id}`)">
+                            @click="$inertia.visit(`/admin/operations/media/${m.id}`)">
                             <td class="px-6 py-4">
                                 <p class="text-sm font-semibold text-gray-900">{{ m.first_name }} {{ m.last_name }}</p>
                                 <p class="text-xs text-gray-500">{{ m.email }}</p>
@@ -240,7 +240,7 @@ function commStatusClass(s) {
                                         :disabled="!canSendSms(m)" title="Enviar SMS">
                                         <DevicePhoneMobileIcon class="w-4 h-4" />
                                     </button>
-                                    <Link :href="`/admin/media/${m.id}/edit`"
+                                    <Link :href="`/admin/operations/media/${m.id}/edit`"
                                         class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors" title="Editar">
                                         <PencilSquareIcon class="w-4 h-4" />
                                     </Link>

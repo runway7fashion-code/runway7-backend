@@ -128,7 +128,7 @@ function uploadPhoto(position) {
         formData.append('photo', file);
         formData.append('_method', 'POST');
 
-        router.post(`/admin/models/${props.model.id}/upload-photo/${position}`, formData, {
+        router.post(`/admin/operations/models/${props.model.id}/upload-photo/${position}`, formData, {
             preserveScroll: true,
             onSuccess: () => {
                 uploading.value[position] = false;
@@ -143,7 +143,7 @@ function uploadPhoto(position) {
 
 function deletePhoto(position) {
     if (!confirm(`¿Eliminar foto ${position}?`)) return;
-    router.delete(`/admin/models/${props.model.id}/delete-photo/${position}`, {
+    router.delete(`/admin/operations/models/${props.model.id}/delete-photo/${position}`, {
         preserveScroll: true,
         onSuccess: () => { compCardPhotos.value[position - 1] = null; },
     });
@@ -164,7 +164,7 @@ function uploadProfilePicture() {
         const formData = new FormData();
         formData.append('photo', file);
 
-        router.post(`/admin/models/${props.model.id}/upload-profile-picture`, formData, {
+        router.post(`/admin/operations/models/${props.model.id}/upload-profile-picture`, formData, {
             preserveScroll: true,
             onSuccess: () => {
                 uploadingProfile.value = false;
@@ -178,7 +178,7 @@ function uploadProfilePicture() {
 
 function deleteProfilePicture() {
     if (!confirm('¿Eliminar la foto de perfil?')) return;
-    router.delete(`/admin/models/${props.model.id}/delete-profile-picture`, {
+    router.delete(`/admin/operations/models/${props.model.id}/delete-profile-picture`, {
         preserveScroll: true,
         onSuccess: () => { profilePicture.value = null; },
     });
@@ -222,7 +222,7 @@ function formatSlotTime(t) {
 
 function assignEvent() {
     if (!selectedEventId.value) return;
-    router.post(`/admin/models/${props.model.id}/assign-event`, {
+    router.post(`/admin/operations/models/${props.model.id}/assign-event`, {
         event_id:     selectedEventId.value,
         casting_time: selectedSlotTime.value || null,
     }, { preserveScroll: true });
@@ -230,12 +230,12 @@ function assignEvent() {
 
 function removeFromEvent(eventId, eventName) {
     if (!confirm(`¿Quitar del evento "${eventName}"?`)) return;
-    router.delete(`/admin/models/${props.model.id}/remove-event/${eventId}`, { preserveScroll: true });
+    router.delete(`/admin/operations/models/${props.model.id}/remove-event/${eventId}`, { preserveScroll: true });
 }
 
 function submit() {
     form.phone = phoneNumber.value ? `${phoneCode.value}${phoneNumber.value.replace(/\D/g, '')}` : '';
-    form.put(`/admin/models/${props.model.id}`);
+    form.put(`/admin/operations/models/${props.model.id}`);
 }
 </script>
 
@@ -243,7 +243,7 @@ function submit() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link :href="`/admin/models/${model.id}`" class="text-gray-400 hover:text-gray-600 text-sm">← Ver modelo</Link>
+                <Link :href="`/admin/operations/models/${model.id}`" class="text-gray-400 hover:text-gray-600 text-sm">← Ver modelo</Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900">Editar: {{ model.first_name }} {{ model.last_name }}</h2>
             </div>
@@ -632,7 +632,7 @@ function submit() {
 
                 <!-- Botones (no en pestaña 3 ni 4 que tienen sus propias acciones) -->
                 <div v-if="activeTab <= 2" class="flex justify-between">
-                    <Link :href="`/admin/models/${model.id}`"
+                    <Link :href="`/admin/operations/models/${model.id}`"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                         Cancelar
                     </Link>
@@ -653,7 +653,7 @@ function submit() {
                     </div>
                 </div>
                 <div v-else class="flex justify-end">
-                    <Link :href="`/admin/models/${model.id}`"
+                    <Link :href="`/admin/operations/models/${model.id}`"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                         Volver al perfil
                     </Link>

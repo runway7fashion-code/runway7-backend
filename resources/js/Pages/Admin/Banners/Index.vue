@@ -25,7 +25,7 @@ watch(search, () => {
 watch([status, role, event_id], () => applyFilters());
 
 function applyFilters() {
-    router.get('/admin/banners', {
+    router.get('/admin/operations/banners', {
         search: search.value || undefined,
         status: status.value || undefined,
         role: role.value || undefined,
@@ -54,13 +54,13 @@ const availableRoles = [
 
 function deleteBanner(banner) {
     if (!confirm(`Eliminar banner "${banner.title}"?`)) return;
-    router.delete(`/admin/banners/${banner.id}`);
+    router.delete(`/admin/operations/banners/${banner.id}`);
 }
 
 function moveUp(banner, index) {
     if (index === 0) return;
     const prev = props.banners[index - 1];
-    router.post('/admin/banners/reorder', {
+    router.post('/admin/operations/banners/reorder', {
         order: [
             { id: banner.id, order: prev.order },
             { id: prev.id, order: banner.order },
@@ -71,7 +71,7 @@ function moveUp(banner, index) {
 function moveDown(banner, index) {
     if (index >= props.banners.length - 1) return;
     const next = props.banners[index + 1];
-    router.post('/admin/banners/reorder', {
+    router.post('/admin/operations/banners/reorder', {
         order: [
             { id: banner.id, order: next.order },
             { id: next.id, order: banner.order },
@@ -93,7 +93,7 @@ function moveDown(banner, index) {
                     <h3 class="text-2xl font-bold text-gray-900">Banners</h3>
                     <p class="text-gray-500 text-sm mt-1">{{ banners.length }} banners registrados</p>
                 </div>
-                <Link href="/admin/banners/create" class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
+                <Link href="/admin/operations/banners/create" class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
                     + Crear Banner
                 </Link>
             </div>
@@ -193,7 +193,7 @@ function moveDown(banner, index) {
                                 &darr;
                             </button>
                             <div class="flex-1"></div>
-                            <Link :href="`/admin/banners/${banner.id}/edit`"
+                            <Link :href="`/admin/operations/banners/${banner.id}/edit`"
                                 class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                                 Editar
                             </Link>
