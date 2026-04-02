@@ -282,9 +282,9 @@ const podiumLabels  = ['2nd', '1st', '3rd'];
                     <p class="text-2xl font-black leading-tight text-blue-400">{{ fmt(kpis.avg_deal) }}</p>
                 </div>
                 <div class="bg-black text-white rounded-2xl p-4 flex flex-col gap-1">
-                    <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Confirmation Rate</p>
-                    <p class="text-3xl font-black" :class="kpis.confirmation_rate >= 60 ? 'text-green-400' : kpis.confirmation_rate >= 30 ? 'text-yellow-400' : 'text-red-400'">
-                        {{ kpis.confirmation_rate }}%
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Conversion Rate</p>
+                    <p class="text-3xl font-black" :class="kpis.conversion_rate >= 60 ? 'text-green-400' : kpis.conversion_rate >= 30 ? 'text-yellow-400' : 'text-red-400'">
+                        {{ kpis.conversion_rate }}%
                     </p>
                 </div>
                 <div class="bg-black text-white rounded-2xl p-4 flex flex-col gap-1">
@@ -415,8 +415,8 @@ const podiumLabels  = ['2nd', '1st', '3rd'];
                             <td class="py-3 text-right text-red-500 font-semibold">{{ r.cancelled }}</td>
                             <td class="py-3 text-right">
                                 <span class="text-xs font-bold px-2 py-0.5 rounded-full"
-                                    :class="r.confirmation_rate >= 60 ? 'bg-green-100 text-green-700' : r.confirmation_rate >= 30 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-600'">
-                                    {{ r.confirmation_rate }}%
+                                    :class="r.conversion_rate >= 60 ? 'bg-green-100 text-green-700' : r.conversion_rate >= 30 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-600'">
+                                    {{ r.conversion_rate }}%
                                 </span>
                             </td>
                             <td class="py-3 text-right font-bold text-gray-900">{{ fmt(r.revenue) }}</td>

@@ -2,17 +2,25 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
-import { MagnifyingGlassIcon, PlusIcon } from '@heroicons/vue/24/outline';
+import { MagnifyingGlassIcon, PlusIcon, ArrowDownTrayIcon, ArrowUpTrayIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     registrations: Object,
+    totalCount: Number,
     events: Array,
+    packages: Array,
+    salesReps: Array,
+    isLeader: Boolean,
     filters: Object,
 });
 
 const search = ref(props.filters?.search ?? '');
 const status = ref(props.filters?.status ?? '');
 const event = ref(props.filters?.event ?? '');
+const pkg = ref(props.filters?.package ?? '');
+const salesRep = ref(props.filters?.sales_rep ?? '');
+const dateFrom = ref(props.filters?.date_from ?? '');
+const dateTo = ref(props.filters?.date_to ?? '');
 
 let debounceTimer;
 function applyFilters() {
@@ -22,11 +30,27 @@ function applyFilters() {
             search: search.value || undefined,
             status: status.value || undefined,
             event: event.value || undefined,
+            package: pkg.value || undefined,
+            sales_rep: salesRep.value || undefined,
+            date_from: dateFrom.value || undefined,
+            date_to: dateTo.value || undefined,
         }, { preserveState: true, replace: true });
     }, 300);
 }
 
-watch([search, status, event], applyFilters);
+watch([search, status, event, pkg, salesRep, dateFrom, dateTo], applyFilters);
+
+function exportCsv() {
+    const params = new URLSearchParams();
+    if (search.value) params.set('search', search.value);
+    if (status.value) params.set('status', status.value);
+    if (event.value) params.set('event', event.value);
+    if (pkg.value) params.set('package', pkg.value);
+    if (salesRep.value) params.set('sales_rep', salesRep.value);
+    if (dateFrom.value) params.set('date_from', dateFrom.value);
+    if (dateTo.value) params.set('date_to', dateTo.value);
+    window.location.href = `/admin/sales/designers/export?${params.toString()}`;
+}
 
 function statusBadge(s) {
     return {
@@ -54,27 +78,73 @@ function statusLabel(s) {
         </template>
 
         <div>
-            <!-- Toolbar -->
-            <div class="flex flex-wrap items-center gap-3 mb-6">
-                <div class="relative flex-1 min-w-[200px]">
-                    <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input v-model="search" type="text" placeholder="Search by name, email, brand..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400" />
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-900">Designer Registrations</h3>
+                    <p class="text-gray-500 text-sm mt-1">{{ totalCount }} registrations</p>
                 </div>
-                <select v-model="status" class="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:ring-2 focus:ring-yellow-400">
-                    <option value="">All statuses</option>
-                    <option value="registered">Registered</option>
-                    <option value="onboarded">Onboarded</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="cancelled">Cancelled</option>
-                </select>
-                <select v-model="event" class="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:ring-2 focus:ring-yellow-400">
-                    <option value="">All events</option>
-                    <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
-                </select>
-                <Link href="/admin/sales/designers/create" class="inline-flex items-center gap-2 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
-                    <PlusIcon class="h-4 w-4" />
-                    Register Designer
-                </Link>
+                <div class="flex items-center gap-2">
+                    <button @click="exportCsv" class="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                        <ArrowDownTrayIcon class="h-4 w-4" /> Export
+                    </button>
+                    <Link href="/admin/sales/designers/create" class="inline-flex items-center gap-1.5 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                        <PlusIcon class="h-4 w-4" /> Register Designer
+                    </Link>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="bg-white rounded-2xl border border-gray-200 p-4 mb-6">
+                <div class="flex flex-wrap items-end gap-3">
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Search</label>
+                        <div class="relative">
+                            <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <input v-model="search" type="text" placeholder="Name, email, brand..."
+                                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-black/10 focus:outline-none" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Status</label>
+                        <select v-model="status" class="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:ring-2 focus:ring-black/10 focus:outline-none">
+                            <option value="">All statuses</option>
+                            <option value="registered">Registered</option>
+                            <option value="onboarded">Onboarded</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Event</label>
+                        <select v-model="event" class="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:ring-2 focus:ring-black/10 focus:outline-none">
+                            <option value="">All events</option>
+                            <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Package</label>
+                        <select v-model="pkg" class="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:ring-2 focus:ring-black/10 focus:outline-none">
+                            <option value="">All packages</option>
+                            <option v-for="p in packages" :key="p.id" :value="p.id">{{ p.name }}</option>
+                        </select>
+                    </div>
+                    <div v-if="isLeader">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Sales Rep</label>
+                        <select v-model="salesRep" class="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:ring-2 focus:ring-black/10 focus:outline-none">
+                            <option value="">All reps</option>
+                            <option v-for="r in salesReps" :key="r.id" :value="r.id">{{ r.first_name }} {{ r.last_name }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">From</label>
+                        <input v-model="dateFrom" type="date" class="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:ring-2 focus:ring-black/10 focus:outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">To</label>
+                        <input v-model="dateTo" type="date" class="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:ring-2 focus:ring-black/10 focus:outline-none" />
+                    </div>
+                </div>
             </div>
 
             <!-- Table -->

@@ -158,14 +158,24 @@ function removeDoc(index) {
 
 const docTypeLabel = (type) => ({ contract: 'Contract', payment_proof: 'Payment Proof', other: 'Other' }[type] ?? type);
 
+const showConfirmModal = ref(false);
+
 function submit() {
     form.phone = phoneNumber.value ? `${phoneCode.value}${phoneNumber.value}` : '';
     form.documents = pendingDocs.value.map(d => ({ file: d.file, type: d.type, notes: d.notes }));
+    showConfirmModal.value = true;
+}
+
+function confirmSubmit() {
+    showConfirmModal.value = false;
     form.post('/admin/sales/designers', {
         preserveScroll: true,
         forceFormData: true,
     });
 }
+
+const selectedEvent = computed(() => props.events?.find(e => e.id == form.event_id) ?? null);
+const selectedRep = computed(() => props.salesReps?.find(r => r.id == form.sales_rep_id) ?? null);
 </script>
 
 <template>
@@ -395,6 +405,64 @@ function submit() {
                 </div>
             </form>
         </div>
+        <!-- Confirmation Modal -->
+        <Teleport to="body">
+            <div v-if="showConfirmModal" class="fixed inset-0 z-50 flex items-center justify-center">
+                <div class="absolute inset-0 bg-black/50" @click="showConfirmModal = false"></div>
+                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
+                    <div class="px-6 py-5 border-b border-gray-100">
+                        <h3 class="text-lg font-semibold text-gray-900">Confirm Registration</h3>
+                        <p class="text-sm text-gray-500 mt-1">Please review the details before registering this designer. This action cannot be undone.</p>
+                    </div>
+                    <div class="px-6 py-4 space-y-3">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Designer</span>
+                            <span class="font-medium text-gray-900">{{ form.first_name }} {{ form.last_name }}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Email</span>
+                            <span class="font-medium text-gray-900">{{ form.email }}</span>
+                        </div>
+                        <div v-if="form.brand_name" class="flex justify-between text-sm">
+                            <span class="text-gray-500">Brand</span>
+                            <span class="font-medium text-gray-900">{{ form.brand_name }}</span>
+                        </div>
+                        <div v-if="selectedEvent" class="flex justify-between text-sm">
+                            <span class="text-gray-500">Event</span>
+                            <span class="font-medium text-gray-900">{{ selectedEvent.name }}</span>
+                        </div>
+                        <div v-if="selectedPackage" class="flex justify-between text-sm">
+                            <span class="text-gray-500">Package</span>
+                            <span class="font-medium text-gray-900">{{ selectedPackage.name }}</span>
+                        </div>
+                        <div v-if="form.agreed_price" class="flex justify-between text-sm">
+                            <span class="text-gray-500">Price</span>
+                            <span class="font-bold text-gray-900">${{ Number(form.agreed_price).toLocaleString() }}</span>
+                        </div>
+                        <div v-if="form.downpayment" class="flex justify-between text-sm">
+                            <span class="text-gray-500">Down Payment</span>
+                            <span class="font-medium text-emerald-600">${{ Number(form.downpayment).toLocaleString() }}</span>
+                        </div>
+                        <div v-if="selectedLead" class="flex justify-between text-sm">
+                            <span class="text-gray-500">From Lead</span>
+                            <span class="font-medium text-blue-600">{{ selectedLead.first_name }} {{ selectedLead.last_name }} #{{ selectedLead.id }}</span>
+                        </div>
+                        <div v-if="selectedRep" class="flex justify-between text-sm">
+                            <span class="text-gray-500">Sales Rep</span>
+                            <span class="font-medium text-gray-900">{{ selectedRep.first_name }} {{ selectedRep.last_name }}</span>
+                        </div>
+                    </div>
+                    <div class="px-6 py-4 border-t border-gray-100 flex gap-3">
+                        <button @click="showConfirmModal = false" class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                            Go Back
+                        </button>
+                        <button @click="confirmSubmit" :disabled="form.processing" class="flex-1 px-4 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50">
+                            {{ form.processing ? 'Registering...' : 'Confirm & Register' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </AdminLayout>
 </template>
 

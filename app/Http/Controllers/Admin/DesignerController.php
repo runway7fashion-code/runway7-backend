@@ -351,6 +351,13 @@ class DesignerController extends Controller
 
         $designer->update(['status' => $request->status]);
 
+        // Auto-cancelled: when designer is set to inactive, cancel sales registrations
+        if ($request->status === 'inactive') {
+            \App\Models\SalesRegistration::where('designer_id', $designer->id)
+                ->whereIn('status', ['registered', 'onboarded', 'confirmed'])
+                ->update(['status' => 'cancelled']);
+        }
+
         if ($request->status === 'pending') {
             $salesUsers = User::where('role', 'sales')->where('status', 'active')->get();
             $designer->loadMissing('designerProfile');

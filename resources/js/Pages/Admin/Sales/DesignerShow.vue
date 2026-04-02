@@ -11,6 +11,8 @@ import {
 const props = defineProps({
     registration: Object,
     salesReps: Array,
+    canUndo: Boolean,
+    undoBlockReason: Array,
 });
 
 const page = usePage();
@@ -21,6 +23,15 @@ const isLider = computed(() => {
     return u?.role === 'admin' || u?.sales_type === 'lider';
 });
 const r = computed(() => props.registration);
+const showUndoModal = ref(false);
+const undoProcessing = ref(false);
+
+function confirmUndo() {
+    undoProcessing.value = true;
+    router.delete(`/admin/sales/designers/${r.value.id}/undo`, {
+        onFinish: () => { undoProcessing.value = false; showUndoModal.value = false; },
+    });
+}
 const designer = computed(() => r.value.designer);
 const profile = computed(() => designer.value?.designer_profile);
 
@@ -111,7 +122,7 @@ function storageUrl(path) {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-2">
-                <Link href="/admin/sales/designers" class="text-gray-400 hover:text-gray-600 text-sm">&larr; Registros</Link>
+                <Link href="/admin/sales/designers" class="text-gray-400 hover:text-gray-600 text-sm">&larr; Registrations</Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900">{{ designer?.first_name }} {{ designer?.last_name }}</h2>
             </div>
@@ -138,15 +149,15 @@ function storageUrl(path) {
                             <p class="text-gray-900">{{ designer?.email }}</p>
                         </div>
                         <div>
-                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Teléfono</p>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Phone</p>
                             <p class="text-gray-900">{{ designer?.phone || '-' }}</p>
                         </div>
                         <div>
-                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">País</p>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Country</p>
                             <p class="text-gray-900">{{ profile?.country || '-' }}</p>
                         </div>
                         <div>
-                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Status del Diseñador</p>
+                            <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Designer Status</p>
                             <p class="text-gray-900 capitalize">{{ designer?.status }}</p>
                         </div>
                     </div>
@@ -162,7 +173,7 @@ function storageUrl(path) {
                         </div>
                         <div>
                             <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Package</p>
-                            <p class="text-gray-900">{{ r.package?.name ?? 'Sin paquete' }}</p>
+                            <p class="text-gray-900">{{ r.package?.name ?? 'No package' }}</p>
                         </div>
                         <div>
                             <p class="text-gray-400 text-xs uppercase tracking-widest mb-1">Agreed Price</p>
@@ -260,32 +271,39 @@ function storageUrl(path) {
 
             <!-- Sidebar -->
             <div class="space-y-6">
+                <!-- Undo Conversion -->
+                <button v-if="isLider && r.status === 'registered'"
+                    @click="showUndoModal = true"
+                    class="w-full px-4 py-2.5 bg-red-600 text-white text-sm font-medium rounded-xl hover:bg-red-700 transition-colors">
+                    Undo Conversion
+                </button>
+
                 <!-- Timeline -->
                 <div class="bg-white rounded-xl border border-gray-200 p-6">
-                    <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Línea de Tiempo</h4>
+                    <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Timeline</h4>
                     <div class="space-y-4 text-sm">
                         <div class="flex items-start gap-3">
                             <div class="w-2 h-2 rounded-full bg-blue-400 mt-1.5 flex-shrink-0"></div>
                             <div>
-                                <p class="text-gray-900 font-medium">Registrado</p>
-                                <p class="text-gray-400 text-xs">{{ new Date(r.created_at).toLocaleString('es-US') }}</p>
-                                <p class="text-gray-500 text-xs">por {{ r.sales_rep?.first_name }} {{ r.sales_rep?.last_name }}</p>
+                                <p class="text-gray-900 font-medium">Registered</p>
+                                <p class="text-gray-400 text-xs">{{ new Date(r.created_at).toLocaleString('en-US') }}</p>
+                                <p class="text-gray-500 text-xs">by {{ r.sales_rep?.first_name }} {{ r.sales_rep?.last_name }}</p>
                             </div>
                         </div>
                         <div v-if="r.onboarded_at" class="flex items-start gap-3">
                             <div class="w-2 h-2 rounded-full bg-purple-400 mt-1.5 flex-shrink-0"></div>
                             <div>
                                 <p class="text-gray-900 font-medium">Onboarded</p>
-                                <p class="text-gray-400 text-xs">{{ new Date(r.onboarded_at).toLocaleString('es-US') }}</p>
-                                <p class="text-gray-500 text-xs">Onboarding enviado por operaciones</p>
+                                <p class="text-gray-400 text-xs">{{ new Date(r.onboarded_at).toLocaleString('en-US') }}</p>
+                                <p class="text-gray-500 text-xs">Onboarding sent by Operations</p>
                             </div>
                         </div>
                         <div v-if="r.confirmed_at" class="flex items-start gap-3">
                             <div class="w-2 h-2 rounded-full bg-green-400 mt-1.5 flex-shrink-0"></div>
                             <div>
-                                <p class="text-gray-900 font-medium">Confirmado</p>
-                                <p class="text-gray-400 text-xs">{{ new Date(r.confirmed_at).toLocaleString('es-US') }}</p>
-                                <p class="text-gray-500 text-xs">Primer inicio de sesión en la app</p>
+                                <p class="text-gray-900 font-medium">Confirmed</p>
+                                <p class="text-gray-400 text-xs">{{ new Date(r.confirmed_at).toLocaleString('en-US') }}</p>
+                                <p class="text-gray-500 text-xs">First login in the app</p>
                             </div>
                         </div>
                     </div>
@@ -326,6 +344,72 @@ function storageUrl(path) {
                             </button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </Teleport>
+        <!-- Undo Conversion Modal -->
+        <Teleport to="body">
+            <div v-if="showUndoModal" class="fixed inset-0 z-50 flex items-center justify-center">
+                <div class="absolute inset-0 bg-black/50" @click="showUndoModal = false"></div>
+                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
+                    <!-- Can undo -->
+                    <template v-if="canUndo">
+                        <div class="px-6 py-5 border-b border-gray-100">
+                            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <TrashIcon class="w-6 h-6 text-red-500" />
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-900 text-center">Undo Conversion</h3>
+                            <p class="text-sm text-gray-500 text-center mt-2">This will permanently delete the designer account and registration. The lead will be reverted to its previous state.</p>
+                        </div>
+                        <div class="px-6 py-4 space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Designer</span>
+                                <span class="font-medium text-gray-900">{{ designer?.first_name }} {{ designer?.last_name }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Email</span>
+                                <span class="font-medium text-gray-900">{{ designer?.email }}</span>
+                            </div>
+                            <div v-if="r.event" class="flex justify-between">
+                                <span class="text-gray-500">Event</span>
+                                <span class="font-medium text-gray-900">{{ r.event?.name }}</span>
+                            </div>
+                            <div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+                                This action cannot be undone. The designer user will be permanently deleted.
+                            </div>
+                        </div>
+                        <div class="px-6 py-4 border-t border-gray-100 flex gap-3">
+                            <button @click="showUndoModal = false" class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                                Cancel
+                            </button>
+                            <button @click="confirmUndo" :disabled="undoProcessing" class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50">
+                                {{ undoProcessing ? 'Undoing...' : 'Yes, Undo Conversion' }}
+                            </button>
+                        </div>
+                    </template>
+                    <!-- Cannot undo -->
+                    <template v-else>
+                        <div class="px-6 py-5 border-b border-gray-100">
+                            <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-900 text-center">Cannot Undo Conversion</h3>
+                            <p class="text-sm text-gray-500 text-center mt-2">This conversion cannot be reversed because other departments have already processed this designer.</p>
+                        </div>
+                        <div class="px-6 py-4">
+                            <ul class="space-y-2">
+                                <li v-for="reason in undoBlockReason" :key="reason" class="flex items-start gap-2 text-sm text-gray-700">
+                                    <span class="text-red-400 mt-0.5">&#x2022;</span>
+                                    {{ reason }}
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="px-6 py-4 border-t border-gray-100">
+                            <button @click="showUndoModal = false" class="w-full px-4 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
+                                Understood
+                            </button>
+                        </div>
+                    </template>
                 </div>
             </div>
         </Teleport>

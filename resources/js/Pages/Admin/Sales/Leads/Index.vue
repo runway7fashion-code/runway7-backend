@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
-import { EyeIcon, PencilSquareIcon } from '@heroicons/vue/24/outline';
+import { EyeIcon, PencilSquareIcon, ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     leads: Object,
@@ -51,6 +51,15 @@ function applyFilters() {
         source: source.value || undefined,
         per_page: perPage.value !== '20' ? perPage.value : undefined,
     }, { preserveState: true, replace: true });
+}
+
+function exportCsv() {
+    const params = new URLSearchParams();
+    if (search.value) params.set('search', search.value);
+    if (status.value) params.set('status', status.value);
+    if (source.value) params.set('source', source.value);
+    if (assignedTo.value) params.set('assigned_to', assignedTo.value);
+    window.location.href = `/admin/sales/leads/export?${params.toString()}`;
 }
 
 // Inline status change
@@ -194,6 +203,9 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         </button>
                     </div>
 
+                    <button @click.stop="exportCsv" class="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                        <ArrowDownTrayIcon class="h-4 w-4" /> Export
+                    </button>
                     <Link href="/admin/sales/leads/create"
                         class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
                         + New Prospect
@@ -269,18 +281,12 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <option value="">All sources</option>
                     <option v-for="(label, key) in sources" :key="key" :value="key">{{ label }}</option>
                 </select>
-                <select v-model="perPage" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="20">20 per page</option>
-                    <option value="50">50 per page</option>
-                    <option value="100">100 per page</option>
-                    <option value="200">200 per page</option>
-                </select>
             </div>
 
             <!-- Table -->
             <div class="bg-white rounded-xl border border-gray-200">
-                <div class="overflow-x-auto">
-                    <table class="w-full min-w-[900px]">
+                <div>
+                    <table class="w-full">
                         <thead class="bg-gray-50 border-b border-gray-200">
                             <tr>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Lead</th>
@@ -453,9 +459,17 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 </div>
 
                 <!-- Pagination -->
-                <div v-if="leads.last_page > 1" class="border-t border-gray-200 px-4 py-4 flex items-center justify-between">
-                    <p class="text-sm text-gray-500">Showing {{ leads.from }}–{{ leads.to }} of {{ leads.total }}</p>
-                    <div class="flex gap-1">
+                <div class="border-t border-gray-200 px-4 py-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <p class="text-sm text-gray-500">Showing {{ leads.from }}–{{ leads.to }} of {{ leads.total }}</p>
+                        <select v-model="perPage" class="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-black/10 bg-white">
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="200">200</option>
+                        </select>
+                    </div>
+                    <div v-if="leads.last_page > 1" class="flex gap-1">
                         <Link v-for="link in leads.links" :key="link.label" :href="link.url || '#'" v-html="link.label"
                             class="px-3 py-1.5 text-sm rounded-lg border transition-colors"
                             :class="link.active ? 'border-black bg-black text-white font-medium' : link.url ? 'border-gray-200 text-gray-600 hover:bg-gray-50' : 'border-gray-100 text-gray-300 cursor-not-allowed'" />

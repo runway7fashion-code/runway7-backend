@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\DesignerLead;
 use App\Models\DesignerPackage;
 use App\Models\Event;
 use App\Models\SalesDocument;
@@ -67,11 +68,18 @@ class SalesController extends Controller
             ])->values();
         }
 
+        // Conversion rate = designers registered / total leads assigned
+        $totalLeadsForUser = DesignerLead::whereNull('deleted_at')
+            ->when($isAsesor, fn($q) => $q->where('assigned_to', $user->id))
+            ->count();
+        $conversionRate = $totalLeadsForUser > 0 ? round(($totalRegistrations / $totalLeadsForUser) * 100) : 0;
+
         $financeStats = [
             'total_revenue'      => (float) $totalRevenue,
             'total_downpayments' => (float) $totalDownpayments,
             'this_month_count'   => $thisMonthCount,
-            'confirmation_rate'  => $totalRegistrations > 0 ? round(($confirmed / $totalRegistrations) * 100) : 0,
+            'conversion_rate'    => $conversionRate,
+            'total_leads'        => $totalLeadsForUser,
             'top_sellers'        => $topSellers,
         ];
 
@@ -103,11 +111,47 @@ class SalesController extends Controller
                 });
         }
 
+        // Rep ranking for podium (only for asesor role)
+        $year = now()->year;
+        $repRanking = collect();
+        if ($isAsesor) $repRanking = User::where('role', 'sales')->where('sales_type', 'asesor')
+            ->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name', 'sales_type'])
+            ->map(function ($rep) use ($year) {
+                $q = fn() => SalesRegistration::whereHas('designer')
+                    ->whereYear('sales_registrations.created_at', $year)
+                    ->where('sales_rep_id', $rep->id);
+
+                $total     = $q()->count();
+                $confirmed = $q()->where('status', 'confirmed')->count();
+                $cancelled = $q()->where('status', 'cancelled')->count();
+                $revenue   = (float) $q()->where('status', '!=', 'cancelled')->sum('agreed_price');
+
+                $totalLeads = DesignerLead::where('assigned_to', $rep->id)->whereNull('deleted_at')->count();
+
+                return [
+                    'id'              => $rep->id,
+                    'name'            => $rep->full_name,
+                    'sales_type'      => $rep->sales_type,
+                    'total'           => $total,
+                    'confirmed'       => $confirmed,
+                    'cancelled'       => $cancelled,
+                    'revenue'         => $revenue,
+                    'total_leads'     => $totalLeads,
+                    'conversion_rate' => $totalLeads > 0 ? round(($total / $totalLeads) * 100) : 0,
+                ];
+            })
+            ->filter(fn($r) => $r['total'] > 0 || $r['total_leads'] > 0)
+            ->sortByDesc('total')
+            ->values();
+
         return Inertia::render('Admin/Sales/Dashboard', [
             'stats'               => $stats,
             'financeStats'        => $financeStats,
             'recentRegistrations' => $recentRegistrations,
             'salesRepStats'       => $salesRepStats,
+            'repRanking'          => $repRanking,
+            'currentYear'         => $year,
         ]);
     }
 
@@ -146,6 +190,24 @@ class SalesController extends Controller
             $query->where('event_id', $request->event);
         }
 
+        if ($request->filled('package')) {
+            $query->where('package_id', $request->package);
+        }
+
+        if ($request->filled('sales_rep')) {
+            $query->where('sales_rep_id', $request->sales_rep);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('sales_registrations.created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('sales_registrations.created_at', '<=', $request->date_to);
+        }
+
+        $totalCount = (clone $query)->count();
+
         $registrations = $query->orderBy('created_at', 'desc')
             ->paginate(20)
             ->withQueryString();
@@ -154,11 +216,70 @@ class SalesController extends Controller
             ->orderBy('start_date', 'desc')
             ->get(['id', 'name']);
 
+        $packages = DesignerPackage::ordered()->get(['id', 'name']);
+
+        $isLider = $user->role === 'admin' || ($user->role === 'sales' && $user->sales_type === 'lider');
+        $salesReps = $isLider
+            ? User::where('role', 'sales')->orderBy('first_name')->get(['id', 'first_name', 'last_name'])
+            : collect();
+
         return Inertia::render('Admin/Sales/Designers', [
             'registrations' => $registrations,
+            'totalCount'    => $totalCount,
             'events'        => $events,
-            'filters'       => $request->only(['search', 'status', 'event']),
+            'packages'      => $packages,
+            'salesReps'     => $salesReps,
+            'isLeader'      => $isLider,
+            'filters'       => $request->only(['search', 'status', 'event', 'package', 'sales_rep', 'date_from', 'date_to']),
         ]);
+    }
+
+    public function exportDesigners(Request $request)
+    {
+        $user = $request->user();
+        $isAsesor = $user->role === 'sales' && $user->sales_type !== 'lider';
+
+        $query = SalesRegistration::with(['designer:id,first_name,last_name,email,phone', 'designer.designerProfile:id,user_id,brand_name', 'event:id,name', 'package:id,name', 'salesRep:id,first_name,last_name'])
+            ->whereHas('designer')
+            ->when($isAsesor, fn($q) => $q->where('sales_rep_id', $user->id));
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('designer', fn($q) => $q->where('first_name', 'ilike', "%{$search}%")->orWhere('last_name', 'ilike', "%{$search}%")->orWhere('email', 'ilike', "%{$search}%"));
+        }
+        if ($request->filled('status')) $query->where('status', $request->status);
+        if ($request->filled('event')) $query->where('event_id', $request->event);
+        if ($request->filled('package')) $query->where('package_id', $request->package);
+        if ($request->filled('sales_rep')) $query->where('sales_rep_id', $request->sales_rep);
+        if ($request->filled('date_from')) $query->whereDate('sales_registrations.created_at', '>=', $request->date_from);
+        if ($request->filled('date_to')) $query->whereDate('sales_registrations.created_at', '<=', $request->date_to);
+
+        $rows = $query->orderByDesc('created_at')->get();
+
+        $csv = fopen('php://temp', 'r+');
+        fputcsv($csv, ['Designer', 'Email', 'Phone', 'Brand', 'Event', 'Package', 'Price', 'Down Payment', 'Sales Rep', 'Status', 'Date']);
+        foreach ($rows as $r) {
+            fputcsv($csv, [
+                ($r->designer?->first_name ?? '') . ' ' . ($r->designer?->last_name ?? ''),
+                $r->designer?->email,
+                $r->designer?->phone,
+                $r->designer?->designerProfile?->brand_name,
+                $r->event?->name,
+                $r->package?->name,
+                $r->agreed_price,
+                $r->downpayment,
+                ($r->salesRep?->first_name ?? '') . ' ' . ($r->salesRep?->last_name ?? ''),
+                $r->status,
+                $r->created_at?->format('Y-m-d'),
+            ]);
+        }
+        rewind($csv);
+        $content = stream_get_contents($csv);
+        fclose($csv);
+
+        return response($content)
+            ->header('Content-Type', 'text/csv')
+            ->header('Content-Disposition', 'attachment; filename="designer-registrations-' . now()->format('Y-m-d') . '.csv"');
     }
 
     public function create(Request $request): Response
@@ -329,7 +450,7 @@ class SalesController extends Controller
         }
 
         return redirect()->route('admin.sales.designers.index')
-            ->with('success', "Diseñador {$designer->full_name} registrado exitosamente.");
+            ->with('success', "Designer {$designer->full_name} registered successfully.");
     }
 
     public function show(SalesRegistration $registration): Response
@@ -355,9 +476,46 @@ class SalesController extends Controller
             $salesReps = User::where('role', 'sales')->where('status', 'active')->orderBy('first_name')->get(['id', 'first_name', 'last_name']);
         }
 
+        // Check if undo conversion is safe
+        $canUndo = false;
+        $undoBlockReason = null;
+        $isLider = $user->role === 'admin' || $user->sales_type === 'lider';
+
+        if ($isLider && $registration->designer) {
+            $designerId = $registration->designer->id;
+            $reasons = [];
+
+            // Check if operations touched the designer
+            if ($registration->status !== 'registered') {
+                $reasons[] = 'Registration has been processed (status: ' . $registration->status . ')';
+            }
+            if ($registration->designer->status !== 'registered') {
+                $reasons[] = 'Designer status has changed (status: ' . $registration->designer->status . ')';
+            }
+            if ($registration->designer->eventsAsDesigner()->exists()) {
+                $reasons[] = 'Designer has events assigned by Operations';
+            }
+            if ($registration->designer->designedShows()->exists()) {
+                $reasons[] = 'Designer has shows assigned';
+            }
+
+            // Check if accounting touched the designer
+            if (\App\Models\DesignerPaymentPlan::where('designer_id', $designerId)->exists()) {
+                $reasons[] = 'Accounting has created a payment plan';
+            }
+
+            if (empty($reasons)) {
+                $canUndo = true;
+            } else {
+                $undoBlockReason = $reasons;
+            }
+        }
+
         return Inertia::render('Admin/Sales/DesignerShow', [
-            'registration' => $registration,
-            'salesReps'    => $salesReps,
+            'registration'    => $registration,
+            'salesReps'       => $salesReps,
+            'canUndo'         => $canUndo,
+            'undoBlockReason' => $undoBlockReason,
         ]);
     }
 
@@ -380,7 +538,67 @@ class SalesController extends Controller
             'notes'        => $request->notes,
         ]);
 
-        return back()->with('success', 'Registro actualizado.');
+        return back()->with('success', 'Registration updated.');
+    }
+
+    public function undoConversion(SalesRegistration $registration)
+    {
+        $user = request()->user();
+        $isLider = $user->role === 'admin' || ($user->role === 'sales' && $user->sales_type === 'lider');
+        if (!$isLider) abort(403);
+
+        $designer = $registration->designer;
+        if (!$designer) {
+            return back()->withErrors(['error' => 'Designer not found for this registration.']);
+        }
+
+        // Safety validations
+        if ($registration->status !== 'registered') {
+            return back()->withErrors(['error' => 'Cannot undo: registration has already been processed by Operations (status: ' . $registration->status . ').']);
+        }
+        if ($designer->status !== 'registered') {
+            return back()->withErrors(['error' => 'Cannot undo: designer status has changed (status: ' . $designer->status . ').']);
+        }
+        if ($designer->eventsAsDesigner()->exists()) {
+            return back()->withErrors(['error' => 'Cannot undo: Operations has assigned events to this designer.']);
+        }
+        if ($designer->designedShows()->exists()) {
+            return back()->withErrors(['error' => 'Cannot undo: designer has shows assigned.']);
+        }
+        if (\App\Models\DesignerPaymentPlan::where('designer_id', $designer->id)->exists()) {
+            return back()->withErrors(['error' => 'Cannot undo: Accounting has created a payment plan.']);
+        }
+
+        // Revert the lead
+        $lead = DesignerLead::where('converted_designer_id', $designer->id)->first();
+        if ($lead) {
+            $lead->update(['converted_designer_id' => null]);
+
+            // Revert lead_event status from converted → negotiating
+            $lead->leadEvents()
+                ->where('status', 'converted')
+                ->update(['status' => 'negotiating']);
+
+            $lead->recalculateStatus();
+        }
+
+        // Delete registration documents from disk
+        foreach ($registration->documents as $doc) {
+            \Storage::disk('public')->delete($doc->file_path);
+            $doc->delete();
+        }
+
+        // Delete registration
+        $registration->delete();
+
+        // Delete designer profile and user
+        if ($designer->designerProfile) {
+            $designer->designerProfile->delete();
+        }
+        $designer->forceDelete();
+
+        return redirect()->route('admin.sales.designers.index')
+            ->with('success', 'Conversion undone successfully. The lead has been reverted to its previous state.');
     }
 
     public function uploadDocument(Request $request, SalesRegistration $registration)
@@ -410,7 +628,7 @@ class SalesController extends Controller
             'notes'                 => $request->notes,
         ]);
 
-        return back()->with('success', 'Documento subido exitosamente.');
+        return back()->with('success', 'Document uploaded successfully.');
     }
 
     public function deleteDocument(SalesDocument $document)
@@ -425,7 +643,7 @@ class SalesController extends Controller
         Storage::disk('public')->delete($document->file_path);
         $document->delete();
 
-        return back()->with('success', 'Documento eliminado.');
+        return back()->with('success', 'Document deleted.');
     }
 
     public function history(Request $request): Response
@@ -452,7 +670,11 @@ class SalesController extends Controller
         $revenue    = (float) $base()->where('status', '!=', 'cancelled')->sum('agreed_price');
         $downpay    = (float) $base()->where('status', '!=', 'cancelled')->sum('downpayment');
         $avgDeal    = ($total - $cancelled) > 0 ? round($revenue / ($total - $cancelled), 2) : 0;
-        $confRate   = $total > 0 ? round(($confirmed / $total) * 100) : 0;
+        // Conversion rate = designers registered / total leads
+        $totalLeadsHistory = DesignerLead::whereNull('deleted_at')
+            ->when($repId, fn($q) => $q->where('assigned_to', $repId))
+            ->count();
+        $confRate = $totalLeadsHistory > 0 ? round(($total / $totalLeadsHistory) * 100) : 0;
 
         // Best month (most registrations)
         $byMonth = $base()
@@ -484,7 +706,7 @@ class SalesController extends Controller
         }
 
         // ── Sales rep ranking ────────────────────────────────────────────
-        $reps = User::where('role', 'sales')
+        $reps = User::where('role', 'sales')->where('sales_type', 'asesor')
             ->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name', 'sales_type']);
 
@@ -499,6 +721,9 @@ class SalesController extends Controller
             $cancelled = $q()->where('status', 'cancelled')->count();
             $revenue   = (float) $q()->where('status', '!=', 'cancelled')->sum('agreed_price');
 
+            // Conversion rate = designers registered / total leads assigned
+            $totalLeads = \App\Models\DesignerLead::where('assigned_to', $rep->id)->whereNull('deleted_at')->count();
+
             return [
                 'id'               => $rep->id,
                 'name'             => $rep->full_name,
@@ -507,10 +732,11 @@ class SalesController extends Controller
                 'confirmed'        => $confirmed,
                 'cancelled'        => $cancelled,
                 'revenue'          => $revenue,
-                'confirmation_rate'=> $total > 0 ? round(($confirmed / $total) * 100) : 0,
+                'total_leads'      => $totalLeads,
+                'conversion_rate'  => $totalLeads > 0 ? round(($total / $totalLeads) * 100) : 0,
             ];
         })
-        ->filter(fn($r) => $r['total'] > 0)
+        ->filter(fn($r) => $r['total'] > 0 || $r['total_leads'] > 0)
         ->sortByDesc('total')
         ->values();
 
@@ -579,7 +805,7 @@ class SalesController extends Controller
                 'revenue'           => $revenue,
                 'downpayments'      => $downpay,
                 'avg_deal'          => $avgDeal,
-                'confirmation_rate' => $confRate,
+                'conversion_rate'   => $confRate,
                 'best_month'        => $bestMonth,
             ],
             'monthly_regs'       => $monthlyRegs,

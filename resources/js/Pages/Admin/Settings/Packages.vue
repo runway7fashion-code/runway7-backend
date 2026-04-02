@@ -1,8 +1,11 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { router, usePage } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
 import { PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/outline';
+
+const page = usePage();
+const errors = computed(() => page.props.errors);
 
 const props = defineProps({
     packages: Array,
@@ -13,7 +16,7 @@ const editingPackage = ref(null);
 const packageForm = ref(getEmptyPackage());
 
 function getEmptyPackage() {
-    return { name: '', description: '', price: 0, default_looks: 10, default_assistants: 2, features: [] };
+    return { name: '', description: '', price: 0, default_looks: 10, default_assistants: 2 };
 }
 
 function resetPackageForm() {
@@ -44,7 +47,6 @@ function startEditPackage(pkg) {
         price: pkg.price,
         default_looks: pkg.default_looks,
         default_assistants: pkg.default_assistants,
-        features: pkg.features || [],
     };
     showPackageForm.value = true;
 }
@@ -70,6 +72,10 @@ function formatPrice(val) {
         </template>
 
         <div class="max-w-4xl">
+            <!-- Error banner -->
+            <div v-if="errors?.package" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                {{ errors.package }}
+            </div>
             <!-- Add/Edit form -->
             <div v-if="showPackageForm" class="bg-white rounded-xl border border-gray-200 p-6 mb-5">
                 <h4 class="font-semibold text-gray-900 mb-4">{{ editingPackage ? 'Edit Package' : 'New Package' }}</h4>

@@ -22,6 +22,8 @@ use App\Http\Controllers\Admin\HelpController;
 use App\Http\Controllers\Admin\LeadController;
 use App\Http\Controllers\Admin\LeadTagController;
 use App\Http\Controllers\Admin\AttendanceController;
+use App\Http\Controllers\Admin\LeadAnalyticsController;
+use App\Http\Controllers\Admin\SalesAuditController;
 
 Route::get('/', function () {
     return redirect()->route('admin.login');
@@ -253,7 +255,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         });
 
         // Ventas - admin, sales
-        Route::prefix('sales')->name('sales.')->group(function () {
+        Route::prefix('sales')->name('sales.')->middleware('sales.audit')->group(function () {
             Route::middleware('section:sales_dashboard')->group(function () {
                 Route::get('dashboard', [SalesController::class, 'dashboard'])->name('dashboard');
                 Route::get('history', [SalesController::class, 'history'])->name('history');
@@ -261,15 +263,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
             });
             Route::middleware('section:sales_designers')->group(function () {
                 Route::get('designers', [SalesController::class, 'index'])->name('designers.index');
+                Route::get('designers/export', [SalesController::class, 'exportDesigners'])->name('designers.export');
                 Route::get('designers/create', [SalesController::class, 'create'])->name('designers.create');
                 Route::post('designers', [SalesController::class, 'store'])->name('designers.store');
                 Route::get('designers/{registration}', [SalesController::class, 'show'])->name('designers.show');
                 Route::patch('designers/{registration}', [SalesController::class, 'update'])->name('designers.update');
+                Route::delete('designers/{registration}/undo', [SalesController::class, 'undoConversion'])->name('designers.undo');
                 Route::post('designers/{registration}/documents', [SalesController::class, 'uploadDocument'])->name('designers.upload-document');
                 Route::delete('documents/{document}', [SalesController::class, 'deleteDocument'])->name('documents.destroy');
             });
             Route::middleware('section:sales_leads')->group(function () {
                 Route::get('leads', [LeadController::class, 'index'])->name('leads.index');
+                Route::get('leads/export', [LeadController::class, 'export'])->name('leads.export');
                 Route::get('leads/create', [LeadController::class, 'create'])->name('leads.create');
                 Route::post('leads', [LeadController::class, 'store'])->name('leads.store');
                 Route::get('leads/search', [LeadController::class, 'search'])->name('leads.search');
@@ -297,6 +302,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::middleware('section:sales_calendar')->group(function () {
                 Route::get('calendar', [LeadController::class, 'calendar'])->name('calendar');
                 Route::get('calendar/events', [LeadController::class, 'calendarEvents'])->name('calendar.events');
+            });
+            // Analytics - admin, sales lider
+            Route::middleware('section:sales_leads')->group(function () {
+                Route::get('analytics', [LeadAnalyticsController::class, 'index'])->name('analytics');
+                Route::get('analytics/export', [LeadAnalyticsController::class, 'export'])->name('analytics.export');
+            });
+            // Sales Audit Logs - admin, sales lider
+            Route::middleware('section:sales_leads')->group(function () {
+                Route::get('logs', [SalesAuditController::class, 'index'])->name('logs');
             });
             // Bot messages API (all sales users)
             Route::get('bot/messages', [LeadController::class, 'botMessages'])->name('bot.messages');

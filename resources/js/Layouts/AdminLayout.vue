@@ -30,6 +30,7 @@ import {
     UserPlusIcon,
     TagIcon,
     QuestionMarkCircleIcon,
+    ChartBarSquareIcon,
 } from '@heroicons/vue/24/outline';
 
 const page = usePage();
@@ -94,9 +95,11 @@ const salesItems = computed(() => {
     if (hasSection('sales_designers')) items.push({ name: 'Designers', href: '/admin/sales/designers', icon: PaintBrushIcon });
     if (hasSection('sales_leads')) items.push({ name: 'Web Leads', href: '/admin/sales/leads', icon: UserPlusIcon });
     if (hasSection('sales_calendar')) items.push({ name: 'Calendar', href: '/admin/sales/calendar', icon: CalendarDaysIcon });
+    if (hasSection('sales_leads')) items.push({ name: 'Analytics', href: '/admin/sales/analytics', icon: ChartBarSquareIcon });
     if (hasSection('sales_dashboard') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Sales History', href: '/admin/sales/history', icon: ChartBarIcon });
     if (hasSection('sales_leads') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Tags', href: '/admin/sales/tags', icon: TagIcon });
     if (hasSection('designer_packages') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Packages', href: '/admin/sales/packages', icon: CurrencyDollarIcon });
+    if (hasSection('sales_leads') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Logs', href: '/admin/sales/logs', icon: ClipboardDocumentListIcon });
     return items;
 });
 

@@ -129,6 +129,52 @@ class LeadController extends Controller
         ]);
     }
 
+    public function export(Request $request)
+    {
+        $user = auth()->user();
+        $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
+
+        $query = DesignerLead::with(['events:id,name', 'assignedTo:id,first_name,last_name', 'tags:id,name'])
+            ->whereNull('deleted_at');
+        if (!$isLeader) $query->where('assigned_to', $user->id);
+
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(fn($q) => $q->where('first_name', 'ilike', "%{$s}%")->orWhere('last_name', 'ilike', "%{$s}%")->orWhere('email', 'ilike', "%{$s}%")->orWhere('company_name', 'ilike', "%{$s}%"));
+        }
+        if ($request->filled('status')) $query->where('status', $request->status);
+        if ($request->filled('source')) $query->where('source', $request->source);
+        if ($request->filled('assigned_to')) $query->where('assigned_to', $request->assigned_to);
+
+        $leads = $query->orderByDesc('created_at')->get();
+
+        $csv = fopen('php://temp', 'r+');
+        fputcsv($csv, ['Name', 'Email', 'Phone', 'Company', 'Country', 'Source', 'Status', 'Assigned To', 'Events', 'Tags', 'Budget', 'Created At']);
+        foreach ($leads as $lead) {
+            fputcsv($csv, [
+                $lead->first_name . ' ' . $lead->last_name,
+                $lead->email,
+                $lead->phone,
+                $lead->company_name,
+                $lead->country,
+                DesignerLead::SOURCES[$lead->source] ?? $lead->source,
+                DesignerLead::STATUSES[$lead->status]['label'] ?? $lead->status,
+                $lead->assignedTo ? $lead->assignedTo->first_name . ' ' . $lead->assignedTo->last_name : 'Unassigned',
+                $lead->events->pluck('name')->join(', '),
+                $lead->tags->pluck('name')->join(', '),
+                $lead->budget,
+                $lead->created_at->format('Y-m-d H:i'),
+            ]);
+        }
+        rewind($csv);
+        $content = stream_get_contents($csv);
+        fclose($csv);
+
+        return response($content)
+            ->header('Content-Type', 'text/csv')
+            ->header('Content-Disposition', 'attachment; filename="leads-' . now()->format('Y-m-d') . '.csv"');
+    }
+
     public function show(DesignerLead $lead)
     {
         $user = auth()->user();
@@ -227,7 +273,7 @@ class LeadController extends Controller
             $newEventIds = array_diff($eventIds, $existingEventIds);
 
             if (empty($newEventIds)) {
-                return back()->withErrors(['event_ids' => 'Este prospecto ya está registrado para todos los eventos seleccionados.'])->withInput();
+                return back()->withErrors(['event_ids' => 'This prospect is already registered for all selected events.'])->withInput();
             }
 
             foreach ($newEventIds as $eid) {
@@ -245,7 +291,7 @@ class LeadController extends Controller
             ]);
 
             return redirect()->route('admin.sales.leads.show', $existingLead)
-                ->with('success', 'Evento(s) agregado(s) al prospecto existente.');
+                ->with('success', 'Event(s) added to existing prospect.');
         }
 
         $lead = DesignerLead::create(array_merge($validated, [
@@ -262,7 +308,7 @@ class LeadController extends Controller
             'lead_id'      => $lead->id,
             'user_id'      => auth()->id(),
             'type'         => 'system',
-            'title'        => 'Lead creado manualmente',
+            'title'        => 'Lead created manually',
             'status'       => 'completed',
             'completed_at' => now(),
         ]);
@@ -302,7 +348,7 @@ class LeadController extends Controller
         }
 
         return redirect()->route('admin.sales.leads.show', $lead)
-            ->with('success', 'Prospecto creado correctamente.');
+            ->with('success', 'Prospect created successfully.');
     }
 
     public function edit(DesignerLead $lead)
@@ -377,7 +423,7 @@ class LeadController extends Controller
         $lead->recalculateStatus();
 
         return redirect()->route('admin.sales.leads.show', $lead)
-            ->with('success', 'Prospecto actualizado correctamente.');
+            ->with('success', 'Prospect updated successfully.');
     }
 
     public function updateStatus(Request $request, DesignerLead $lead)
@@ -408,7 +454,7 @@ class LeadController extends Controller
             }
         }
 
-        return back()->with('success', 'Estado actualizado.');
+        return back()->with('success', 'Status updated.');
     }
 
     public function updateEventStatus(Request $request, DesignerLead $lead)
@@ -420,7 +466,7 @@ class LeadController extends Controller
 
         $leadEvent = $lead->leadEvents()->where('event_id', $request->event_id)->first();
         if (!$leadEvent) {
-            return back()->with('error', 'Este lead no está registrado para este evento.');
+            return back()->with('error', 'This lead is not registered for this event.');
         }
 
         $oldStatus = $leadEvent->status;
@@ -441,7 +487,7 @@ class LeadController extends Controller
         // Auto-recalculate lead status based on all event statuses
         $lead->recalculateStatus();
 
-        return back()->with('success', 'Estado del evento actualizado.');
+        return back()->with('success', 'Event status updated.');
     }
 
     public function assign(Request $request, DesignerLead $lead)
@@ -460,7 +506,7 @@ class LeadController extends Controller
             'completed_at' => now(),
         ]);
 
-        return back()->with('success', "Prospecto asignado a {$advisor->first_name}.");
+        return back()->with('success', "Prospect assigned to {$advisor->first_name}.");
     }
 
     public function addEvent(Request $request, DesignerLead $lead)
@@ -468,7 +514,7 @@ class LeadController extends Controller
         $request->validate(['event_id' => 'required|exists:events,id']);
 
         if ($lead->events()->where('events.id', $request->event_id)->exists()) {
-            return back()->with('error', 'Este prospecto ya está registrado para este evento.');
+            return back()->with('error', 'This prospect is already registered for this event.');
         }
 
         $lead->events()->attach($request->event_id);
@@ -483,7 +529,7 @@ class LeadController extends Controller
             'completed_at' => now(),
         ]);
 
-        return back()->with('success', "Evento {$eventName} agregado.");
+        return back()->with('success', "Event {$eventName} added.");
     }
 
     public function removeEvent(Request $request, DesignerLead $lead)
@@ -492,12 +538,12 @@ class LeadController extends Controller
 
         $leadEvent = $lead->leadEvents()->where('event_id', $request->event_id)->first();
         if (!$leadEvent) {
-            return back()->with('error', 'Este evento no está asignado.');
+            return back()->with('error', 'This event is not assigned.');
         }
 
         // Don't allow removing converted events
         if ($leadEvent->status === 'converted') {
-            return back()->with('error', 'No se puede quitar un evento con venta cerrada.');
+            return back()->with('error', 'Cannot remove an event with a closed sale.');
         }
 
         $eventName = Event::find($request->event_id)?->name;
@@ -515,14 +561,14 @@ class LeadController extends Controller
         // Recalculate lead status
         $lead->recalculateStatus();
 
-        return back()->with('success', "Evento {$eventName} removido.");
+        return back()->with('success', "Event {$eventName} removed.");
     }
 
     public function syncTags(Request $request, DesignerLead $lead)
     {
         $request->validate(['tag_ids' => 'array', 'tag_ids.*' => 'exists:lead_tags,id']);
         $lead->tags()->sync($request->tag_ids ?? []);
-        return back()->with('success', 'Tags actualizados.');
+        return back()->with('success', 'Tags updated.');
     }
 
     public function addActivity(Request $request, DesignerLead $lead)
@@ -569,10 +615,10 @@ class LeadController extends Controller
                 SalesBotMessage::create([
                     'user_id'      => auth()->id(),
                     'type'         => 'reminder',
-                    'title'        => "Actividad en {$minutesUntil} min: {$activity->title}",
+                    'title'        => "Activity in {$minutesUntil} min: {$activity->title}",
                     'message'      => "Tienes programado a las {$scheduledTime->format('g:i A')}: {$activity->title} — {$lead->full_name} ({$lead->company_name})",
                     'action_url'   => "/admin/sales/leads/{$lead->id}",
-                    'action_label' => 'Ver prospecto',
+                    'action_label' => 'View prospect',
                 ]);
             }
 
@@ -581,15 +627,15 @@ class LeadController extends Controller
                 SalesBotMessage::create([
                     'user_id'      => auth()->id(),
                     'type'         => 'overdue',
-                    'title'        => "Actividad vencida: {$activity->title}",
+                    'title'        => "Overdue activity: {$activity->title}",
                     'message'      => "Esta actividad ya pasó su hora programada ({$scheduledTime->format('g:i A')}): {$activity->title} — {$lead->full_name}",
                     'action_url'   => "/admin/sales/leads/{$lead->id}",
-                    'action_label' => 'Ver prospecto',
+                    'action_label' => 'View prospect',
                 ]);
             }
         }
 
-        return back()->with('success', 'Actividad registrada.');
+        return back()->with('success', 'Activity created.');
     }
 
     public function completeActivity(LeadActivity $activity)
@@ -607,7 +653,7 @@ class LeadController extends Controller
             return response()->json(['ok' => true]);
         }
 
-        return back()->with('success', 'Actividad completada.');
+        return back()->with('success', 'Activity completed.');
     }
 
     public function cancelActivity(LeadActivity $activity)
@@ -618,7 +664,7 @@ class LeadController extends Controller
             return response()->json(['ok' => true]);
         }
 
-        return back()->with('success', 'Actividad cancelada.');
+        return back()->with('success', 'Activity cancelled.');
     }
 
     public function notCompletedActivity(LeadActivity $activity)
@@ -629,7 +675,7 @@ class LeadController extends Controller
             return response()->json(['ok' => true]);
         }
 
-        return back()->with('success', 'Actividad marcada como no completada.');
+        return back()->with('success', 'Activity marked as not completed.');
     }
 
     public function toggleAvailability(Request $request)
@@ -637,7 +683,7 @@ class LeadController extends Controller
         $user = auth()->user();
         $user->update(['is_available' => !$user->is_available]);
 
-        return back()->with('success', $user->is_available ? 'Estás disponible para recibir leads.' : 'No recibirás nuevos leads.');
+        return back()->with('success', $user->is_available ? 'You are now available to receive leads.' : 'You will no longer receive new leads.');
     }
 
     public function destroy(DesignerLead $lead)
@@ -651,7 +697,7 @@ class LeadController extends Controller
 
         $lead->forceDelete();
 
-        return redirect()->route('admin.sales.leads.index')->with('success', 'Prospecto eliminado.');
+        return redirect()->route('admin.sales.leads.index')->with('success', 'Prospect deleted.');
     }
 
     /**

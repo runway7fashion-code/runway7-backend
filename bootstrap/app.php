@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\CheckSectionAccess;
 use App\Http\Middleware\EnsureUserIsInternal;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\LogSalesAction;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -23,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'internal' => EnsureUserIsInternal::class,
             'section' => CheckSectionAccess::class,
+            'sales.audit' => LogSalesAction::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
