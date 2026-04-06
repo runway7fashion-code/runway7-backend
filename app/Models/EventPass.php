@@ -13,7 +13,7 @@ class EventPass extends Model
     protected $fillable = [
         'event_id', 'user_id', 'issued_by',
         'qr_code', 'pass_type', 'holder_name', 'holder_email',
-        'valid_days', 'status', 'checked_in_at', 'check_in_history',
+        'valid_days', 'status', 'is_preferential', 'checked_in_at', 'check_in_history',
         'notes', 'issued_at',
     ];
 

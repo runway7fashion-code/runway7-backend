@@ -20,6 +20,20 @@ class DesignerSettingsController extends Controller
         ]);
     }
 
+    public function categories(): Response
+    {
+        return Inertia::render('Admin/Settings/Categories', [
+            'categories' => DesignerCategory::ordered()->get(),
+        ]);
+    }
+
+    public function packages(): Response
+    {
+        return Inertia::render('Admin/Settings/Packages', [
+            'packages' => DesignerPackage::ordered()->get(),
+        ]);
+    }
+
     // --- Categorías ---
 
     public function storeCategory(Request $request)
@@ -40,7 +54,7 @@ class DesignerSettingsController extends Controller
             'order' => (DesignerCategory::max('order') ?? 0) + 1,
         ]);
 
-        return back()->with('success', 'Categoría creada.');
+        return back()->with('success', 'Category created.');
     }
 
     public function updateCategory(Request $request, DesignerCategory $category)
@@ -58,18 +72,18 @@ class DesignerSettingsController extends Controller
 
         $category->update($data);
 
-        return back()->with('success', 'Categoría actualizada.');
+        return back()->with('success', 'Category updated.');
     }
 
     public function destroyCategory(DesignerCategory $category)
     {
         if ($category->designerProfiles()->exists()) {
-            return back()->with('error', 'No se puede eliminar: hay diseñadores usando esta categoría.');
+            return back()->with('error', 'Cannot delete: there are designers using this category.');
         }
 
         $category->delete();
 
-        return back()->with('success', 'Categoría eliminada.');
+        return back()->with('success', 'Category deleted.');
     }
 
     // --- Paquetes ---
@@ -96,7 +110,7 @@ class DesignerSettingsController extends Controller
             'order'              => (DesignerPackage::max('order') ?? 0) + 1,
         ]);
 
-        return back()->with('success', 'Paquete creado.');
+        return back()->with('success', 'Package created.');
     }
 
     public function updatePackage(Request $request, DesignerPackage $package)
@@ -119,13 +133,17 @@ class DesignerSettingsController extends Controller
 
         $package->update($data);
 
-        return back()->with('success', 'Paquete actualizado.');
+        return back()->with('success', 'Package updated.');
     }
 
     public function destroyPackage(DesignerPackage $package)
     {
+        if (\App\Models\SalesRegistration::where('package_id', $package->id)->exists()) {
+            return back()->withErrors(['package' => 'This package cannot be deleted because it has designer registrations associated. You can deactivate it instead.']);
+        }
+
         $package->delete();
 
-        return back()->with('success', 'Paquete eliminado.');
+        return back()->with('success', 'Package deleted.');
     }
 }

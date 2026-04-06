@@ -25,6 +25,7 @@ const form = useForm({
     email: props.user.email,
     phone: props.user.phone || '',
     role: props.user.role,
+    sales_type: props.user.sales_type || '',
     status: props.user.status,
     password: '',
     password_confirmation: '',
@@ -48,6 +49,7 @@ function formatRole(r) {
 
 const isModel = computed(() => form.role === 'model');
 const isDesigner = computed(() => form.role === 'designer');
+const isSales = computed(() => form.role === 'sales');
 const showPressFields = computed(() => form.role === 'press');
 const showSponsorFields = computed(() => form.role === 'sponsor');
 const showProfileSection = computed(() => ['press', 'sponsor'].includes(form.role));
@@ -118,6 +120,14 @@ function submit() {
                                 <option value="pending">Pendiente</option>
                             </select>
                         </div>
+                        <div v-if="isSales">
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Tipo de Vendedor *</label>
+                            <select v-model="form.sales_type" class="input bg-white">
+                                <option value="">Seleccionar...</option>
+                                <option value="lider">Líder</option>
+                                <option value="asesor">Asesor</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -140,7 +150,7 @@ function submit() {
                     <div>
                         <p class="text-sm font-semibold text-amber-800">Este usuario es un diseñador</p>
                         <p class="text-sm text-amber-700 mt-1">El perfil completo (marca, paquete, materiales, displays, asistentes) se gestiona desde el modulo de Diseñadores.</p>
-                        <Link :href="`/admin/designers/${user.id}/edit`"
+                        <Link :href="`/admin/operations/designers/${user.id}/edit`"
                             class="inline-block mt-2 text-sm font-medium text-amber-700 underline hover:text-amber-900">
                             Ir al perfil de diseñador →
                         </Link>

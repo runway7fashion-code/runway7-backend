@@ -1,5 +1,6 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import GoogleMapPicker from '@/Components/GoogleMapPicker.vue';
 import { useForm } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
 import { formatDayLabel } from '@/utils/dates.js';
@@ -12,12 +13,17 @@ const form = useForm({
     city: '',
     city_custom: '',
     venue: '',
+    venue_address: '',
+    venue_latitude: '',
+    venue_longitude: '',
     timezone: 'America/New_York',
     start_date: '',
     end_date: '',
     description: '',
     status: 'draft',
     model_number_start: 1,
+    call_time: '',
+    hmua_address: '',
     days: [],
     time_slots: ['11:00', '13:00', '15:00', '17:00', '19:00', '21:00'],
     apply_same_schedule: true,
@@ -56,10 +62,16 @@ watch([() => form.start_date, () => form.end_date], () => {
             type: 'show_day',
             start_time: '',
             end_time: '',
-            casting_start: '08:00',
-            casting_end: '23:00',
+            casting_start: '',
+            casting_end: '',
             casting_interval: 30,
             casting_capacity: 50,
+            casting_slots: [],
+            merch_casting_start: '',
+            merch_casting_end: '',
+            merch_casting_interval: 30,
+            merch_casting_capacity: 50,
+            merch_casting_slots: [],
             time_slots: [...form.time_slots],
             has_fitting: false,
             fitting_start: '08:00',
@@ -108,6 +120,12 @@ function addDay() {
         casting_end: '23:00',
         casting_interval: 30,
         casting_capacity: 50,
+        casting_slots: [],
+        merch_casting_start: '',
+        merch_casting_end: '',
+        merch_casting_interval: 30,
+        merch_casting_capacity: 50,
+        merch_casting_slots: [],
         time_slots: [...form.time_slots],
         has_fitting: false,
         fitting_start: '08:00',
@@ -154,6 +172,58 @@ function removeDaySlot(day, index) {
     day.time_slots.splice(index, 1);
 }
 
+function generateCastingSlots(day) {
+    if (!day.casting_start || !day.casting_end || !day.casting_interval) return;
+    const slots = [];
+    const [sh, sm] = day.casting_start.split(':').map(Number);
+    const [eh, em] = day.casting_end.split(':').map(Number);
+    let current = sh * 60 + sm;
+    const end = eh * 60 + em;
+    while (current <= end) {
+        const h = String(Math.floor(current / 60)).padStart(2, '0');
+        const m = String(current % 60).padStart(2, '0');
+        slots.push({ time: `${h}:${m}`, capacity: day.casting_capacity || 50 });
+        current += Number(day.casting_interval);
+    }
+    day.casting_slots = slots;
+}
+
+function addCastingSlot(day) {
+    if (!day.casting_slots) day.casting_slots = [];
+    const lastTime = day.casting_slots.length > 0 ? day.casting_slots[day.casting_slots.length - 1].time : '12:00';
+    day.casting_slots.push({ time: lastTime, capacity: day.casting_capacity || 50 });
+}
+
+function removeCastingSlot(day, index) {
+    day.casting_slots.splice(index, 1);
+}
+
+function generateMerchSlots(day) {
+    if (!day.merch_casting_start || !day.merch_casting_end || !day.merch_casting_interval) return;
+    const slots = [];
+    const [sh, sm] = day.merch_casting_start.split(':').map(Number);
+    const [eh, em] = day.merch_casting_end.split(':').map(Number);
+    let current = sh * 60 + sm;
+    const end = eh * 60 + em;
+    while (current <= end) {
+        const h = String(Math.floor(current / 60)).padStart(2, '0');
+        const m = String(current % 60).padStart(2, '0');
+        slots.push({ time: `${h}:${m}`, capacity: day.merch_casting_capacity || 50 });
+        current += Number(day.merch_casting_interval);
+    }
+    day.merch_casting_slots = slots;
+}
+
+function addMerchSlot(day) {
+    if (!day.merch_casting_slots) day.merch_casting_slots = [];
+    const lastTime = day.merch_casting_slots.length > 0 ? day.merch_casting_slots[day.merch_casting_slots.length - 1].time : '12:00';
+    day.merch_casting_slots.push({ time: lastTime, capacity: day.merch_casting_capacity || 50 });
+}
+
+function removeMerchSlot(day, index) {
+    day.merch_casting_slots.splice(index, 1);
+}
+
 function nextStep() {
     if (step.value === 1 && Object.keys(step1Errors.value).length > 0) return;
     step.value++;
@@ -189,7 +259,7 @@ function submit() {
             return day;
         }),
     };
-    form.transform(() => payload).post('/admin/events');
+    form.transform(() => payload).post('/admin/operations/events');
 }
 </script>
 
@@ -246,6 +316,17 @@ function submit() {
                         </div>
                     </div>
 
+                    <GoogleMapPicker
+                        :latitude="form.venue_latitude"
+                        :longitude="form.venue_longitude"
+                        :address="form.venue_address"
+                        :venue-name="form.venue"
+                        @update:latitude="form.venue_latitude = $event"
+                        @update:longitude="form.venue_longitude = $event"
+                        @update:address="form.venue_address = $event"
+                        @update:venue-name="form.venue = $event"
+                    />
+
                     <div class="grid grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5">Fecha Inicio *</label>
@@ -289,6 +370,23 @@ function submit() {
                                 placeholder="ej. 4058"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             <p class="mt-1 text-xs text-gray-400">Primera modelo de este evento recibirá este número.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Call Time</label>
+                            <input v-model="form.call_time" type="text"
+                                placeholder="e.g. 3 hours before showtime"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            <p class="mt-1 text-xs text-gray-400">When models should arrive for hair & makeup.</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Hair & Makeup Address</label>
+                            <input v-model="form.hmua_address" type="text"
+                                placeholder="e.g. 713 8th Ave, New York, NY 10036"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            <p class="mt-1 text-xs text-gray-400">Location for hair & makeup preparation.</p>
                         </div>
                     </div>
                 </div>
@@ -368,30 +466,121 @@ function submit() {
                         </div>
 
                         <!-- Casting extra fields -->
-                        <div v-if="day.type === 'casting'" class="mt-3 pt-3 border-t border-yellow-200 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <div>
-                                <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Inicio casting</label>
-                                <input v-model="day.casting_start" type="time"
-                                    class="w-full border border-yellow-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400/30" />
+                        <div v-if="day.type === 'casting'" class="mt-3 pt-3 border-t border-yellow-200">
+                            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                                <div>
+                                    <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Inicio casting</label>
+                                    <input v-model="day.casting_start" type="time"
+                                        class="w-full border border-yellow-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400/30" />
+                                </div>
+                                <div>
+                                    <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Fin casting</label>
+                                    <input v-model="day.casting_end" type="time"
+                                        class="w-full border border-yellow-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400/30" />
+                                </div>
+                                <div>
+                                    <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Intervalo (min)</label>
+                                    <select v-model="day.casting_interval"
+                                        class="w-full border border-yellow-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400/30">
+                                        <option :value="15">15 min</option>
+                                        <option :value="30">30 min</option>
+                                        <option :value="45">45 min</option>
+                                        <option :value="60">60 min</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Cap. por slot</label>
+                                    <input v-model.number="day.casting_capacity" type="number" min="1"
+                                        class="w-full border border-yellow-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400/30" />
+                                </div>
+                                <div class="flex items-end">
+                                    <button @click="generateCastingSlots(day)" type="button"
+                                        class="w-full px-3 py-1.5 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors">
+                                        Generar slots
+                                    </button>
+                                </div>
                             </div>
-                            <div>
-                                <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Fin casting</label>
-                                <input v-model="day.casting_end" type="time"
-                                    class="w-full border border-yellow-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400/30" />
+
+                            <!-- Casting slots preview/edit -->
+                            <div v-if="day.casting_slots?.length" class="mt-3 pt-3 border-t border-yellow-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <p class="text-xs font-semibold text-yellow-800">{{ day.casting_slots.length }} slots generados — edita los horarios según necesites</p>
+                                    <button @click="addCastingSlot(day)" type="button"
+                                        class="text-xs text-yellow-700 hover:text-yellow-900 font-medium">+ Agregar slot</button>
+                                </div>
+                                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                                    <div v-for="(slot, si) in day.casting_slots" :key="si"
+                                        class="flex items-center gap-1 bg-white border border-yellow-200 rounded-lg px-2 py-1">
+                                        <input v-model="slot.time" type="time"
+                                            class="border-0 text-sm font-medium text-gray-800 p-0 focus:outline-none focus:ring-0 w-[70px]" />
+                                        <input v-model.number="slot.capacity" type="number" min="1"
+                                            class="border-0 text-xs text-gray-500 p-0 focus:outline-none focus:ring-0 w-[35px] text-center"
+                                            title="Capacidad" />
+                                        <button @click="removeCastingSlot(day, si)" type="button" class="text-red-300 hover:text-red-500 flex-shrink-0">
+                                            <XMarkIcon class="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Intervalo (min)</label>
-                                <select v-model="day.casting_interval"
-                                    class="w-full border border-yellow-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400/30">
-                                    <option :value="15">15 min</option>
-                                    <option :value="30">30 min</option>
-                                    <option :value="60">60 min</option>
-                                </select>
+                        </div>
+
+                        <!-- Merch casting slots -->
+                        <div v-if="day.type === 'casting'" class="mt-3 pt-3 border-t border-orange-200">
+                            <p class="text-xs font-bold text-orange-700 uppercase tracking-wider mb-2">Casting Merch (Runway Merch)</p>
+                            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                                <div>
+                                    <label class="text-xs text-orange-600 font-medium mb-0.5 block">Inicio</label>
+                                    <input v-model="day.merch_casting_start" type="time"
+                                        class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
+                                </div>
+                                <div>
+                                    <label class="text-xs text-orange-600 font-medium mb-0.5 block">Fin</label>
+                                    <input v-model="day.merch_casting_end" type="time"
+                                        class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
+                                </div>
+                                <div>
+                                    <label class="text-xs text-orange-600 font-medium mb-0.5 block">Intervalo (min)</label>
+                                    <select v-model="day.merch_casting_interval"
+                                        class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30">
+                                        <option :value="15">15 min</option>
+                                        <option :value="30">30 min</option>
+                                        <option :value="45">45 min</option>
+                                        <option :value="60">60 min</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-xs text-orange-600 font-medium mb-0.5 block">Cap. por slot</label>
+                                    <input v-model.number="day.merch_casting_capacity" type="number" min="1"
+                                        class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
+                                </div>
+                                <div class="flex items-end">
+                                    <button @click="generateMerchSlots(day)" type="button"
+                                        class="w-full px-3 py-1.5 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors">
+                                        Generar slots
+                                    </button>
+                                </div>
                             </div>
-                            <div>
-                                <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Cap. por slot</label>
-                                <input v-model.number="day.casting_capacity" type="number" min="1"
-                                    class="w-full border border-yellow-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400/30" />
+
+                            <!-- Merch slots preview/edit -->
+                            <div v-if="day.merch_casting_slots?.length" class="mt-3 pt-3 border-t border-orange-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <p class="text-xs font-semibold text-orange-700">{{ day.merch_casting_slots.length }} slots merch generados</p>
+                                    <button @click="addMerchSlot(day)" type="button"
+                                        class="text-xs text-orange-600 hover:text-orange-800 font-medium">+ Agregar slot</button>
+                                </div>
+                                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                                    <div v-for="(slot, si) in day.merch_casting_slots" :key="si"
+                                        class="flex items-center gap-1 bg-white border border-orange-200 rounded-lg px-2 py-1">
+                                        <input v-model="slot.time" type="time"
+                                            class="border-0 text-sm font-medium text-gray-800 p-0 focus:outline-none focus:ring-0 w-[70px]" />
+                                        <input v-model.number="slot.capacity" type="number" min="1"
+                                            class="border-0 text-xs text-gray-500 p-0 focus:outline-none focus:ring-0 w-[35px] text-center"
+                                            title="Capacidad" />
+                                        <button @click="removeMerchSlot(day, si)" type="button" class="text-red-300 hover:text-red-500 flex-shrink-0">
+                                            <XMarkIcon class="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

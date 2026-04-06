@@ -3,24 +3,32 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import QrCode from '@/Components/QrCode.vue';
-import { ArrowLeftIcon, EnvelopeIcon, ChevronLeftIcon, ChevronRightIcon, XMarkIcon, ArrowRightIcon } from '@heroicons/vue/24/outline';
+import { ArrowLeftIcon, EnvelopeIcon, ChevronLeftIcon, ChevronRightIcon, XMarkIcon, ArrowRightIcon, TrashIcon, DevicePhoneMobileIcon, ArrowDownTrayIcon, DocumentTextIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     designer: Object,
+    salesDocs: { type: Array, default: () => [] },
 });
 
-const profile    = props.designer.designer_profile;
-const events     = props.designer.events     ?? [];
-const shows      = props.designer.shows      ?? [];
-const fittings   = props.designer.fittings   ?? [];
-const assistants = props.designer.assistants  ?? [];
-const materials  = props.designer.materials   ?? [];
-const displays   = props.designer.displays    ?? [];
+const docTypeLabel = (type) => ({
+    contract:    'Contrato',
+    invoice:     'Factura',
+    id_document: 'ID',
+    other:       'Otro',
+})[type] ?? type;
+
+const profile    = computed(() => props.designer.designer_profile);
+const events     = computed(() => props.designer.events     ?? []);
+const shows      = computed(() => props.designer.shows      ?? []);
+const fittings   = computed(() => props.designer.fittings   ?? []);
+const assistants = computed(() => props.designer.assistants  ?? []);
+const materials  = computed(() => props.designer.materials   ?? []);
+const displays   = computed(() => props.designer.displays    ?? []);
 
 // ── Tab seleccionado ─────────────────────────────────────────────
-const firstActive = events.find(e => e.designer_status === 'confirmed') ?? events[0];
+const firstActive = (props.designer.events ?? []).find(e => e.designer_status === 'confirmed') ?? (props.designer.events ?? [])[0];
 const selectedEventId = ref(firstActive?.id ?? null);
-const selectedEvent   = computed(() => events.find(e => e.id === selectedEventId.value) ?? null);
+const selectedEvent   = computed(() => events.value.find(e => e.id === selectedEventId.value) ?? null);
 
 // ── Tab bar scroll ────────────────────────────────────────────────
 const tabScroll = ref(null);
@@ -30,19 +38,19 @@ function scrollTabs(dir) {
 
 // ── Datos filtrados por evento ───────────────────────────────────
 const tabShows = computed(() =>
-    shows.filter(s => s.event_day?.event_id === selectedEventId.value)
+    shows.value.filter(s => s.event_day?.event_id === selectedEventId.value)
 );
 const tabFitting = computed(() =>
-    fittings.find(f => f.event_id === selectedEventId.value) ?? null
+    fittings.value.find(f => f.event_id === selectedEventId.value) ?? null
 );
 const tabMaterials = computed(() =>
-    materials.filter(m => m.event_id === selectedEventId.value)
+    materials.value.filter(m => m.event_id === selectedEventId.value)
 );
 const tabDisplays = computed(() =>
-    displays.filter(d => d.event_id === selectedEventId.value)
+    displays.value.filter(d => d.event_id === selectedEventId.value)
 );
 const tabAssistants = computed(() =>
-    assistants.filter(a => a.event_id === selectedEventId.value)
+    assistants.value.filter(a => a.event_id === selectedEventId.value)
 );
 const tabProgress = computed(() => {
     if (!tabMaterials.value.length) return 0;
@@ -59,7 +67,51 @@ function storageUrl(path) {
 
 function removeFromEvent(eventId, eventName) {
     if (!confirm(`Quitar a ${props.designer.first_name} del evento "${eventName}"?`)) return;
-    router.delete(`/admin/designers/${props.designer.id}/remove-event/${eventId}`, { preserveScroll: true });
+    router.delete(`/admin/operations/designers/${props.designer.id}/remove-event/${eventId}`, { preserveScroll: true });
+}
+
+function toggleFeature(eventId, field) {
+    router.post(`/admin/operations/designers/${props.designer.id}/events/${eventId}/toggle-feature`, { field }, { preserveScroll: true });
+}
+
+// Onboarding email
+const sendingOnboarding = ref(false);
+function sendOnboardingEmail() {
+    if (!confirm(`Enviar email de onboarding a ${props.designer.first_name} ${props.designer.last_name}?`)) return;
+    sendingOnboarding.value = true;
+    router.post(`/admin/operations/designers/${props.designer.id}/send-onboarding`, {}, {
+        preserveScroll: true,
+        onFinish: () => sendingOnboarding.value = false,
+    });
+}
+
+// Status badge
+function statusBadgeClass() {
+    return { active: 'bg-green-50 text-green-700 border-green-200', pending: 'bg-yellow-50 text-yellow-700 border-yellow-200', inactive: 'bg-red-50 text-red-600 border-red-200', registered: 'bg-blue-50 text-blue-700 border-blue-200' }[props.designer.status] ?? 'bg-gray-50 text-gray-600 border-gray-200';
+}
+function statusBadgeLabel() {
+    return { active: 'Activo', pending: 'Pendiente', inactive: 'Inactivo', registered: 'Registrado' }[props.designer.status] ?? props.designer.status;
+}
+
+// Onboarding SMS
+const sendingSms = ref(false);
+function sendOnboardingSms() {
+    if (!props.designer.phone) return alert('Este diseñador no tiene teléfono registrado.');
+    if (!confirm(`Enviar SMS de onboarding a ${props.designer.first_name} ${props.designer.last_name}?`)) return;
+    sendingSms.value = true;
+    router.post(`/admin/operations/designers/${props.designer.id}/send-onboarding-sms`, {}, {
+        preserveScroll: true,
+        onFinish: () => sendingSms.value = false,
+    });
+}
+
+// Delete designer
+const showDeleteModal = ref(false);
+const previewDoc = ref(null);
+function deleteDesigner() {
+    router.delete(`/admin/operations/designers/${props.designer.id}`, {
+        onSuccess: () => showDeleteModal.value = false,
+    });
 }
 
 // Modal pase
@@ -138,7 +190,7 @@ const socialLinks = computed(() => {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link href="/admin/designers" class="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
+                <Link href="/admin/operations/designers" class="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
                     <ArrowLeftIcon class="w-4 h-4" /> Diseñadores
                 </Link>
                 <span class="text-gray-300">/</span>
@@ -170,10 +222,33 @@ const socialLinks = computed(() => {
                                     <span v-if="profile?.country"> · {{ profile.country }}</span>
                                 </p>
                             </div>
-                            <Link :href="`/admin/designers/${designer.id}/edit`"
-                                class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
-                                Editar
-                            </Link>
+                            <div class="flex items-center gap-2">
+                                <span :class="statusBadgeClass()"
+                                    class="px-2.5 py-1 rounded-full text-xs font-medium border">
+                                    {{ statusBadgeLabel() }}
+                                </span>
+                                <Link :href="`/admin/operations/designers/${designer.id}/edit`"
+                                    class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
+                                    Editar
+                                </Link>
+                                <button @click="showDeleteModal = true"
+                                    class="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors flex items-center gap-1.5">
+                                    <TrashIcon class="w-3.5 h-3.5" />
+                                    Eliminar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Documentos de Sales -->
+                        <div v-if="salesDocs.length" class="mt-3 flex flex-wrap gap-2">
+                            <button v-for="doc in salesDocs" :key="doc.id"
+                                @click="previewDoc = doc"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition-colors cursor-pointer">
+                                <DocumentTextIcon class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                <span class="font-medium text-gray-500">{{ docTypeLabel(doc.type) }}:</span>
+                                <span class="truncate max-w-[140px]">{{ doc.original_name }}</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </button>
                         </div>
 
                         <div class="mt-3 flex flex-wrap gap-3 text-sm">
@@ -351,7 +426,7 @@ const socialLinks = computed(() => {
                     <!-- Info del evento -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-5">
                         <div class="flex items-start justify-between mb-3">
-                            <Link :href="`/admin/events/${selectedEvent.id}`"
+                            <Link :href="`/admin/operations/events/${selectedEvent.id}`"
                                 class="text-sm font-bold text-gray-900 hover:underline leading-snug">
                                 {{ selectedEvent.name }}
                             </Link>
@@ -381,12 +456,20 @@ const socialLinks = computed(() => {
                                     Ver
                                 </button>
                             </p>
-                            <p class="text-xs text-gray-500">
-                                Casting:
-                                <span :class="selectedEvent.model_casting_enabled ? 'text-green-600' : 'text-red-500'" class="font-medium">
-                                    {{ selectedEvent.model_casting_enabled ? 'Habilitado' : 'Deshabilitado' }}
-                                </span>
-                            </p>
+                            <div class="flex flex-wrap gap-1.5 mt-1">
+                                <button v-for="feat in [
+                                    { field: 'model_casting_enabled', label: 'Model Casting', value: selectedEvent.model_casting_enabled },
+                                    { field: 'media_package', label: 'Media Package', value: selectedEvent.media_package },
+                                    { field: 'custom_background', label: 'Custom BG', value: selectedEvent.custom_background },
+                                    { field: 'courtesy_tickets', label: 'Courtesy Tickets', value: selectedEvent.courtesy_tickets },
+                                ]" :key="feat.field"
+                                    @click="toggleFeature(selectedEvent.id, feat.field)"
+                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium cursor-pointer transition-colors"
+                                    :class="feat.value ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
+                                    <span class="w-1.5 h-1.5 rounded-full" :class="feat.value ? 'bg-green-500' : 'bg-gray-300'"></span>
+                                    {{ feat.label }}
+                                </button>
+                            </div>
                             <p v-if="tabFitting" class="text-xs text-gray-500">
                                 Fitting: <span class="font-medium text-orange-600">{{ tabFitting.day_label }} · {{ tabFitting.time }}</span>
                             </p>
@@ -409,7 +492,14 @@ const socialLinks = computed(() => {
 
                     <!-- Asistentes del evento -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-5">
-                        <h4 class="font-bold text-gray-900 mb-3">Asistentes</h4>
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-bold text-gray-900">Asistentes</h4>
+                            <span v-if="selectedEvent?.assistants != null"
+                                :class="tabAssistants.length >= selectedEvent.assistants ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-500'"
+                                class="text-xs font-medium px-2 py-0.5 rounded-full">
+                                {{ tabAssistants.length }} / {{ selectedEvent.assistants }}
+                            </span>
+                        </div>
                         <div v-if="tabAssistants.length === 0" class="text-sm text-gray-400 italic">Sin asistentes.</div>
                         <div v-for="a in tabAssistants" :key="a.id"
                             class="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
@@ -471,6 +561,76 @@ const socialLinks = computed(() => {
                     <p v-if="passModal.valid_days_labels" class="text-xs text-gray-500 font-medium">Días válidos</p>
                     <p v-if="passModal.valid_days_labels" class="text-xs text-gray-400 mt-0.5">{{ passModal.valid_days_labels }}</p>
                     <p v-else class="text-xs text-gray-400">Válido todos los días</p>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Modal: Previsualización de documento -->
+    <Teleport to="body">
+        <div v-if="previewDoc" class="fixed inset-0 z-50 flex items-center justify-center p-6">
+            <div class="absolute inset-0 bg-black/60" @click="previewDoc = null"></div>
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden z-10">
+                <!-- Header -->
+                <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <DocumentTextIcon class="w-5 h-5 text-gray-400 flex-shrink-0" />
+                        <span class="text-sm font-medium text-gray-500">{{ docTypeLabel(previewDoc.type) }}:</span>
+                        <span class="text-sm text-gray-800 truncate">{{ previewDoc.original_name }}</span>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <a :href="previewDoc.url" download
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
+                            <ArrowDownTrayIcon class="w-3.5 h-3.5" />
+                            Descargar
+                        </a>
+                        <button @click="previewDoc = null" class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                            <XMarkIcon class="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
+                <!-- PDF Viewer -->
+                <div class="flex-1 bg-gray-100">
+                    <iframe :src="previewDoc.url" class="w-full h-full border-0"></iframe>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Modal: Confirmar eliminación -->
+    <Teleport to="body">
+        <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/60" @click="showDeleteModal = false"></div>
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+                <button @click="showDeleteModal = false" class="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600">
+                    <XMarkIcon class="h-5 w-5" />
+                </button>
+                <div class="flex justify-center mb-3">
+                    <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
+                        <TrashIcon class="w-6 h-6 text-red-500" />
+                    </div>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-1 text-center">¿Eliminar a {{ designer.first_name }} {{ designer.last_name }}?</h3>
+                <p class="text-sm text-gray-500 mb-4 text-center">Esta acción es permanente y no se puede deshacer.</p>
+                <div class="bg-red-50 border border-red-100 rounded-xl p-4 mb-5">
+                    <p class="text-sm font-medium text-red-700 mb-2">Se eliminará de forma definitiva:</p>
+                    <ul class="text-sm text-red-600 space-y-1 list-disc list-inside">
+                        <li>Cuenta de usuario y datos personales</li>
+                        <li>Perfil de diseñador y marca</li>
+                        <li>Asignaciones a eventos y shows</li>
+                        <li>Materiales y displays enviados</li>
+                        <li>Pases de acceso generados</li>
+                    </ul>
+                </div>
+                <div class="flex gap-3">
+                    <button @click="showDeleteModal = false"
+                        class="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
+                        Cancelar
+                    </button>
+                    <button @click="deleteDesigner"
+                        class="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors">
+                        Eliminar definitivamente
+                    </button>
                 </div>
             </div>
         </div>

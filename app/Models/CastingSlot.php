@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class CastingSlot extends Model
 {
-    protected $fillable = ['event_day_id', 'time', 'capacity', 'booked'];
+    protected $fillable = ['event_day_id', 'time', 'capacity', 'booked', 'slot_type'];
 
     protected function casts(): array
     {

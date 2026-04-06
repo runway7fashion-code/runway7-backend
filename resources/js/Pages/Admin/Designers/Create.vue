@@ -13,6 +13,31 @@ const props = defineProps({
 });
 
 const activeTab = ref(1);
+const phoneCode = ref('+1');
+const phoneNumber = ref('');
+
+const countryCodes = [
+    { code: '+1',   label: 'US/CA +1' },
+    { code: '+44',  label: 'UK +44' },
+    { code: '+33',  label: 'FR +33' },
+    { code: '+39',  label: 'IT +39' },
+    { code: '+34',  label: 'ES +34' },
+    { code: '+49',  label: 'DE +49' },
+    { code: '+55',  label: 'BR +55' },
+    { code: '+52',  label: 'MX +52' },
+    { code: '+57',  label: 'CO +57' },
+    { code: '+51',  label: 'PE +51' },
+    { code: '+54',  label: 'AR +54' },
+    { code: '+56',  label: 'CL +56' },
+    { code: '+91',  label: 'IN +91' },
+    { code: '+86',  label: 'CN +86' },
+    { code: '+81',  label: 'JP +81' },
+    { code: '+82',  label: 'KR +82' },
+    { code: '+61',  label: 'AU +61' },
+    { code: '+971', label: 'AE +971' },
+    { code: '+234', label: 'NG +234' },
+    { code: '+27',  label: 'ZA +27' },
+];
 
 const form = useForm({
     // Tab 1 - Datos personales
@@ -40,6 +65,9 @@ const form = useForm({
     package_id:            '',
     looks:                 '',
     model_casting_enabled: true,
+    media_package:         false,
+    custom_background:     false,
+    courtesy_tickets:      false,
     package_price:         '',
     notes:                 '',
     shows:                 [],
@@ -91,7 +119,7 @@ function toggleShow(showId) {
 
 // Asistentes
 function addAssistant() {
-    form.assistants.push({ full_name: '', document_id: '', phone: '', email: '' });
+    form.assistants.push({ first_name: '', last_name: '', document_id: '', phone: '', email: '' });
 }
 
 function removeAssistant(index) {
@@ -99,7 +127,8 @@ function removeAssistant(index) {
 }
 
 function submit() {
-    form.post('/admin/designers');
+    form.phone = phoneNumber.value ? `${phoneCode.value}${phoneNumber.value.replace(/\D/g, '')}` : '';
+    form.post('/admin/operations/designers');
 }
 </script>
 
@@ -107,7 +136,7 @@ function submit() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link href="/admin/designers" class="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
+                <Link href="/admin/operations/designers" class="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
                     <ArrowLeftIcon class="w-4 h-4" /> Diseñadores
                 </Link>
                 <span class="text-gray-300">/</span>
@@ -163,8 +192,14 @@ function submit() {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
-                            <input v-model="form.phone" type="tel"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            <div class="flex gap-2">
+                                <select v-model="phoneCode"
+                                    class="w-28 border border-gray-300 rounded-lg px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
+                                    <option v-for="c in countryCodes" :key="c.code" :value="c.code">{{ c.label }}</option>
+                                </select>
+                                <input v-model="phoneNumber" type="tel" placeholder="3055550404"
+                                    class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
                         </div>
                     </div>
 
@@ -300,13 +335,30 @@ function submit() {
                                 <input v-model="form.package_price" type="number" step="0.01" min="0"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
-                            <div class="flex items-end pb-1">
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input v-model="form.model_casting_enabled" type="checkbox"
-                                        class="rounded border-gray-300 text-black focus:ring-black/20" />
-                                    <span class="text-sm text-gray-700">Casting de modelos habilitado</span>
-                                </label>
-                            </div>
+                        </div>
+
+                        <!-- Feature flags -->
+                        <div class="grid grid-cols-2 gap-x-6 gap-y-3 bg-gray-50 rounded-xl p-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input v-model="form.model_casting_enabled" type="checkbox"
+                                    class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                <span class="text-sm text-gray-700">Model Casting</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input v-model="form.media_package" type="checkbox"
+                                    class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                <span class="text-sm text-gray-700">Media Package</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input v-model="form.custom_background" type="checkbox"
+                                    class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                <span class="text-sm text-gray-700">Custom Background</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input v-model="form.courtesy_tickets" type="checkbox"
+                                    class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                <span class="text-sm text-gray-700">Courtesy Tickets</span>
+                            </label>
                         </div>
 
                         <div>
@@ -373,8 +425,13 @@ function submit() {
 
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-xs text-gray-500 mb-1">Nombre completo *</label>
-                                <input v-model="assistant.full_name" type="text"
+                                <label class="block text-xs text-gray-500 mb-1">First Name *</label>
+                                <input v-model="assistant.first_name" type="text"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Last Name</label>
+                                <input v-model="assistant.last_name" type="text"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
                             <div>
@@ -406,7 +463,7 @@ function submit() {
 
                 <!-- Botones -->
                 <div class="flex justify-between">
-                    <Link href="/admin/designers"
+                    <Link href="/admin/operations/designers"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                         Cancelar
                     </Link>

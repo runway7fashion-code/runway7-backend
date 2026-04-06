@@ -76,7 +76,7 @@ function onImageChange(e) {
     imagePreview.value = URL.createObjectURL(file);
     uploadingImage.value = true;
 
-    router.post(`/admin/banners/${props.banner.id}/upload-image`, { image: file }, {
+    router.post(`/admin/operations/banners/${props.banner.id}/upload-image`, { image: file }, {
         forceFormData: true,
         preserveScroll: true,
         onSuccess: () => {
@@ -92,7 +92,7 @@ function onImageChange(e) {
 }
 
 function submit() {
-    form.put(`/admin/banners/${props.banner.id}`);
+    form.put(`/admin/operations/banners/${props.banner.id}`);
 }
 </script>
 
@@ -100,7 +100,7 @@ function submit() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link href="/admin/banners" class="text-gray-400 hover:text-gray-600 text-sm">Banners</Link>
+                <Link href="/admin/operations/banners" class="text-gray-400 hover:text-gray-600 text-sm">Banners</Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900">Editar Banner</h2>
             </div>
@@ -212,7 +212,7 @@ function submit() {
 
                 <!-- Botones -->
                 <div class="flex justify-between">
-                    <Link href="/admin/banners"
+                    <Link href="/admin/operations/banners"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                         Cancelar
                     </Link>

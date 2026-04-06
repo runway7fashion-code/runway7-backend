@@ -11,14 +11,13 @@ class DesignerPackage extends Model
 
     protected $fillable = [
         'name', 'slug', 'description', 'price', 'default_looks',
-        'default_assistants', 'features', 'order', 'is_active',
+        'default_assistants', 'order', 'is_active',
     ];
 
     protected function casts(): array
     {
         return [
             'price'      => 'decimal:2',
-            'features'   => 'array',
             'is_active'  => 'boolean',
         ];
     }

@@ -64,11 +64,16 @@ class AccountingService
         ?array $customDates = null
     ): DesignerPaymentPlan {
         return DB::transaction(function () use ($plan, $totalAmount, $downpayment, $installmentsCount, $notes, $customAmounts, $customDates) {
-            $paidInstallments = $plan->installments()->where('status', 'paid')->get();
-            $paidInstallmentsTotal = (float) $paidInstallments->sum('amount');
+            // Preserve paid AND partial installments (they have money allocated)
+            $preservedInstallments = $plan->installments()
+                ->whereIn('status', ['paid', 'partial'])
+                ->get();
+            $preservedPaidTotal = (float) $preservedInstallments->sum('paid_amount');
 
-            // Delete unpaid installments (pending, overdue, cancelled)
-            $plan->installments()->where('status', '!=', 'paid')->delete();
+            // Delete only installments with no payments (pending, overdue, cancelled)
+            $plan->installments()
+                ->whereNotIn('status', ['paid', 'partial'])
+                ->delete();
 
             $remaining = $totalAmount - $downpayment;
 
@@ -80,10 +85,10 @@ class AccountingService
                 'notes' => $notes,
             ]);
 
-            // Generate new unpaid installments
-            $newInstallmentsCount = $installmentsCount - $paidInstallments->count();
-            $newRemaining = $remaining - $paidInstallmentsTotal;
-            $nextNumber = $paidInstallments->count() + 1;
+            // Generate new unpaid installments for the remaining balance
+            $newInstallmentsCount = $installmentsCount - $preservedInstallments->count();
+            $newRemaining = $remaining - $preservedPaidTotal;
+            $nextNumber = $preservedInstallments->count() + 1;
 
             if ($newInstallmentsCount > 0 && $newRemaining > 0) {
                 $startDate = now()->startOfMonth()->addMonth();
@@ -244,6 +249,80 @@ class AccountingService
 
             $this->checkIfCompleted($plan);
         });
+    }
+
+    /**
+     * Reverse a payment allocation from installments.
+     * Used when a PaymentRecord is updated or deleted.
+     */
+    public function reversePaymentAllocation(int $designerId, int $eventId, float $amount): void
+    {
+        $plan = DesignerPaymentPlan::where('designer_id', $designerId)
+            ->where('event_id', $eventId)
+            ->first();
+
+        if (!$plan || $amount <= 0) return;
+
+        DB::transaction(function () use ($plan, $amount) {
+            $remaining = $amount;
+
+            // Get paid/partial installments in reverse order (most recent first)
+            $installments = $plan->installments()
+                ->whereIn('status', ['paid', 'partial'])
+                ->where('paid_amount', '>', 0)
+                ->orderByDesc('installment_number')
+                ->get();
+
+            foreach ($installments as $installment) {
+                if ($remaining <= 0) break;
+
+                $toReverse = min($remaining, (float) $installment->paid_amount);
+                $newPaidAmount = round((float) $installment->paid_amount - $toReverse, 2);
+
+                $updateData = ['paid_amount' => $newPaidAmount];
+
+                if ($newPaidAmount <= 0) {
+                    $updateData['status'] = $installment->due_date->isPast() ? 'overdue' : 'pending';
+                    $updateData['paid_at'] = null;
+                    $updateData['marked_by'] = null;
+                    $updateData['payment_method'] = null;
+                    $updateData['payment_reference'] = null;
+                } else {
+                    $updateData['status'] = 'partial';
+                }
+
+                $installment->update($updateData);
+                $remaining = round($remaining - $toReverse, 2);
+            }
+
+            // Re-check plan status (might go from completed back to active)
+            $plan->refresh();
+            if (!$plan->isFullyPaid() && $plan->status === 'completed') {
+                $plan->update(['status' => 'active']);
+            }
+        });
+    }
+
+    /**
+     * Reverse a downpayment allocation.
+     */
+    public function reverseDownpayment(int $designerId, int $eventId): void
+    {
+        $plan = DesignerPaymentPlan::where('designer_id', $designerId)
+            ->where('event_id', $eventId)
+            ->first();
+
+        if (!$plan || $plan->downpayment_status !== 'paid') return;
+
+        $plan->update([
+            'downpayment_status' => 'pending',
+            'downpayment_paid_at' => null,
+            'downpayment_receipt' => null,
+        ]);
+
+        if ($plan->status === 'completed') {
+            $plan->update(['status' => 'active']);
+        }
     }
 
     public function allocateDownpayment(int $designerId, int $eventId): void

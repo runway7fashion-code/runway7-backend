@@ -6,8 +6,14 @@ use App\Enums\ActivityAction;
 use App\Exports\ModelsExport;
 use App\Http\Controllers\Controller;
 use App\Imports\ModelsImport;
+use App\Jobs\SendModelOnboardingJob;
+use App\Jobs\SendModelOnboardingSmsJob;
+use App\Jobs\SendModelRejectionJob;
+use App\Jobs\SendModelRejectionSmsJob;
 use App\Jobs\SendWelcomeEmailJob;
+use App\Models\CommunicationLog;
 use App\Models\Event;
+use App\Models\EventPass;
 use App\Models\FittingAssignment;
 use App\Models\User;
 use App\Services\ActivityLogService;
@@ -24,6 +30,7 @@ class ModelController extends Controller
     public function __construct(
         protected ModelService $modelService,
         protected ActivityLogService $activityLog,
+        protected \App\Services\TwilioService $twilioService,
     ) {}
 
     public function index(Request $request): Response
@@ -31,6 +38,7 @@ class ModelController extends Controller
         $query = User::models()->with([
             'modelProfile',
             'eventsAsModelWithCasting',
+            'communicationLogs' => fn($q) => $q->whereIn('channel', ['welcome_email', 'registration_email', 'model_onboarding', 'model_rejection'])->with('sender')->orderByDesc('created_at'),
         ]);
 
         if ($request->filled('event')) {
@@ -49,6 +57,18 @@ class ModelController extends Controller
 
         if ($request->filled('gender')) {
             $query->whereHas('modelProfile', fn($q) => $q->where('gender', $request->gender));
+        }
+
+        if ($request->filled('ethnicity')) {
+            $query->whereHas('modelProfile', fn($q) => $q->where('ethnicity', $request->ethnicity));
+        }
+
+        if ($request->filled('is_agency')) {
+            $query->whereHas('modelProfile', fn($q) => $q->where('is_agency', $request->is_agency === 'yes'));
+        }
+
+        if ($request->filled('is_top')) {
+            $query->whereHas('modelProfile', fn($q) => $q->where('is_top', $request->is_top === 'yes'));
         }
 
         if ($request->filled('search')) {
@@ -101,6 +121,24 @@ class ModelController extends Controller
             $query->where('status', $request->status);
         }
 
+        if ($request->filled('registered_from')) {
+            $query->whereDate('users.created_at', '>=', $request->registered_from);
+        }
+        if ($request->filled('registered_to')) {
+            $query->whereDate('users.created_at', '<=', $request->registered_to);
+        }
+
+        if ($request->filled('checkin_from')) {
+            $query->whereHas('eventsAsModelWithCasting', fn($q) =>
+                $q->whereDate('event_model.casting_checked_in_at', '>=', $request->checkin_from)
+            );
+        }
+        if ($request->filled('checkin_to')) {
+            $query->whereHas('eventsAsModelWithCasting', fn($q) =>
+                $q->whereDate('event_model.casting_checked_in_at', '<=', $request->checkin_to)
+            );
+        }
+
         if ($request->filled('designer')) {
             $designerFilter = (int) $request->designer;
             $query->whereIn('users.id', function ($sub) use ($designerFilter) {
@@ -111,7 +149,37 @@ class ModelController extends Controller
             });
         }
 
-        $models = $query->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
+        if ($request->filled('merch')) {
+            if ($request->merch === 'with') {
+                $query->whereHas('eventsAsModelWithCasting', fn($q) =>
+                    $q->whereNotNull('event_model.shopify_order_number')
+                );
+            } elseif ($request->merch === 'without') {
+                $query->whereDoesntHave('eventsAsModelWithCasting', fn($q) =>
+                    $q->whereNotNull('event_model.shopify_order_number')
+                );
+            }
+        }
+
+        if ($request->filled('model_kit')) {
+            $query->whereHas('modelProfile', function ($q) use ($request) {
+                match ($request->model_kit) {
+                    'paid'     => $q->whereNotNull('model_kit_paid_at'),
+                    'not_paid' => $q->whereNull('model_kit_paid_at'),
+                    default    => null,
+                };
+            });
+        }
+
+        if ($request->filled('sort_name')) {
+            $dir = $request->sort_name === 'asc' ? 'asc' : 'desc';
+            $query->orderBy('first_name', $dir)->orderBy('last_name', $dir);
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        $perPage = in_array((int) $request->input('per_page'), [20, 50, 100, 200, 500]) ? (int) $request->input('per_page') : 20;
+        $models = $query->paginate($perPage)->withQueryString();
 
         // Batch-load fitting data for models on this page
         $modelIds = $models->pluck('id');
@@ -158,17 +226,154 @@ class ModelController extends Controller
             }
         }
 
-        // Inject fittings_by_event into each model
-        $models->through(function ($model) use ($modelFittingsMap) {
+        // Batch-load shows data for models on this page
+        $modelShowsMap = [];
+        if ($modelIds->isNotEmpty()) {
+            $showRows = DB::table('show_model')
+                ->join('shows', 'shows.id', '=', 'show_model.show_id')
+                ->join('event_days', 'event_days.id', '=', 'shows.event_day_id')
+                ->leftJoin('users as designer_user', 'designer_user.id', '=', 'show_model.designer_id')
+                ->leftJoin('designer_profiles', 'designer_profiles.user_id', '=', 'show_model.designer_id')
+                ->whereIn('show_model.model_id', $modelIds)
+                ->whereIn('show_model.status', ['confirmed', 'reserved', 'requested'])
+                ->select(
+                    'show_model.model_id',
+                    'show_model.show_id',
+                    'show_model.designer_id',
+                    'show_model.status as model_status',
+                    'shows.name as show_name',
+                    'shows.scheduled_time',
+                    'event_days.event_id',
+                    'event_days.label as day_label',
+                    'designer_user.first_name as designer_first_name',
+                    'designer_user.last_name as designer_last_name',
+                    'designer_profiles.brand_name',
+                )
+                ->orderBy('event_days.date')
+                ->orderBy('shows.scheduled_time')
+                ->get();
+
+            foreach ($showRows as $row) {
+                $time = $row->scheduled_time;
+                try {
+                    $time = \Illuminate\Support\Carbon::createFromFormat('H:i:s', $time)->format('g:i A');
+                } catch (\Exception $e) {
+                    try { $time = \Illuminate\Support\Carbon::createFromFormat('H:i', $time)->format('g:i A'); } catch (\Exception $e2) {}
+                }
+
+                $modelShowsMap[$row->model_id][$row->event_id][] = [
+                    'show_id'        => $row->show_id,
+                    'show_name'      => $row->show_name,
+                    'day_label'      => $row->day_label,
+                    'formatted_time' => $time,
+                    'status'         => $row->model_status,
+                    'designer_name'  => trim(($row->designer_first_name ?? '') . ' ' . ($row->designer_last_name ?? '')) ?: null,
+                    'brand_name'     => $row->brand_name,
+                ];
+            }
+        }
+
+        // Inject fittings_by_event and shows_by_event into each model
+        $models->through(function ($model) use ($modelFittingsMap, $modelShowsMap) {
             $model->fittings_by_event = $modelFittingsMap[$model->id] ?? [];
+            $model->shows_by_event = $modelShowsMap[$model->id] ?? [];
             return $model;
         });
+
+        // --- Stats cards ---
+        $statsBaseQuery = User::models();
+        if ($request->filled('event')) {
+            $statsBaseQuery->whereHas('eventsAsModelWithCasting', fn($q) => $q->where('events.id', $request->event));
+        }
+        $statsBaseIds = (clone $statsBaseQuery)->pluck('users.id');
+
+        $totalModels = $statsBaseIds->count();
+
+        // Merch: tienen shopify_order_number en event_model
+        $merchQuery = DB::table('event_model')->whereIn('model_id', $statsBaseIds)->whereNotNull('shopify_order_number');
+        if ($request->filled('event')) {
+            $merchQuery->where('event_id', $request->event);
+        }
+        $merchCount = $merchQuery->distinct('model_id')->count('model_id');
+
+        // Agencia, Top, Model Kit via model_profiles
+        $profileStats = DB::table('model_profiles')
+            ->whereIn('user_id', $statsBaseIds)
+            ->selectRaw("COUNT(*) FILTER (WHERE is_agency = true) as agency_count")
+            ->selectRaw("COUNT(*) FILTER (WHERE is_top = true) as top_count")
+            ->selectRaw("COUNT(*) FILTER (WHERE gender = 'male') as male_count")
+            ->selectRaw("COUNT(*) FILTER (WHERE gender = 'female') as female_count")
+            ->selectRaw("COUNT(*) FILTER (WHERE model_kit_paid_at IS NOT NULL) as kit_paid_count")
+            ->first();
+
+        $agencyCount  = (int) ($profileStats->agency_count ?? 0);
+        $topCount     = (int) ($profileStats->top_count ?? 0);
+        $maleCount    = (int) ($profileStats->male_count ?? 0);
+        $femaleCount  = (int) ($profileStats->female_count ?? 0);
+        $normalCount  = $totalModels - $merchCount - $agencyCount;
+        if ($normalCount < 0) $normalCount = 0;
+
+        // Checkin: modelos que hicieron check-in en casting
+        $checkinQuery = DB::table('event_model')->whereIn('model_id', $statsBaseIds)->whereNotNull('casting_checked_in_at');
+        if ($request->filled('event')) {
+            $checkinQuery->where('event_id', $request->event);
+        }
+        $checkinCount = $checkinQuery->distinct('model_id')->count('model_id');
+
+        // Conteo por user.status
+        $statusCounts = DB::table('users')
+            ->whereIn('id', $statsBaseIds)
+            ->selectRaw("COUNT(*) FILTER (WHERE status = 'active') as active_count")
+            ->selectRaw("COUNT(*) FILTER (WHERE status = 'pending') as pending_count")
+            ->selectRaw("COUNT(*) FILTER (WHERE status = 'applicant') as applicant_count")
+            ->selectRaw("COUNT(*) FILTER (WHERE status = 'rejected') as rejected_count")
+            ->selectRaw("COUNT(*) FILTER (WHERE status = 'inactive') as inactive_count")
+            ->first();
+
+        $stats = [
+            'total'     => $totalModels,
+            'merch'     => $merchCount,
+            'agency'    => $agencyCount,
+            'top'       => $topCount,
+            'normal'    => $normalCount,
+            'male'      => $maleCount,
+            'female'    => $femaleCount,
+            'checkin'   => $checkinCount,
+            'active'    => (int) ($statusCounts->active_count ?? 0),
+            'pending'   => (int) ($statusCounts->pending_count ?? 0),
+            'applicant' => (int) ($statusCounts->applicant_count ?? 0),
+            'rejected'  => (int) ($statusCounts->rejected_count ?? 0),
+            'inactive'  => (int) ($statusCounts->inactive_count ?? 0),
+            'kit_paid'      => (int) ($profileStats->kit_paid_count ?? 0),
+        ];
 
         $events = Event::orderBy('start_date', 'desc')
             ->get(['id', 'name']);
 
         $pendingEmailCount = User::models()
+            ->where('status', 'pending')
             ->whereNull('welcome_email_sent_at')
+            ->whereHas('eventsAsModelWithCasting', fn($q) => $q->whereNotNull('event_model.casting_time'))
+            ->count();
+
+        $pendingSmsCount = User::models()
+            ->where('status', 'pending')
+            ->whereNotNull('phone')
+            ->where('phone', 'like', '+%')
+            ->whereNull('sms_sent_at')
+            ->whereHas('eventsAsModelWithCasting', fn($q) => $q->whereNotNull('event_model.casting_time'))
+            ->count();
+
+        $rejectedEmailCount = User::models()
+            ->where('status', 'rejected')
+            ->whereDoesntHave('communicationLogs', fn($q) => $q->where('channel', 'model_rejection'))
+            ->count();
+
+        $rejectedSmsCount = User::models()
+            ->where('status', 'rejected')
+            ->whereNotNull('phone')
+            ->where('phone', 'like', '+%')
+            ->whereDoesntHave('communicationLogs', fn($q) => $q->where('channel', 'model_rejection_sms'))
             ->count();
 
         // Obtener horarios de casting desde casting_slots (solo cuando hay evento seleccionado)
@@ -205,9 +410,14 @@ class ModelController extends Controller
             'models'             => $models,
             'events'             => $events,
             'designers'          => $designers,
-            'filters'            => $request->only(['event', 'compcard', 'gender', 'search', 'email_sent', 'test_model', 'casting_time', 'casting_status', 'designer', 'status']),
+            'filters'            => $request->only(['event', 'compcard', 'gender', 'ethnicity', 'is_agency', 'is_top', 'search', 'email_sent', 'test_model', 'casting_time', 'casting_status', 'designer', 'status', 'merch', 'model_kit', 'per_page']),
             'castingTimes'       => $castingTimes,
-            'pendingEmailCount'  => $pendingEmailCount,
+            'pendingEmailCount'   => $pendingEmailCount,
+            'pendingSmsCount'     => $pendingSmsCount,
+            'rejectedEmailCount'  => $rejectedEmailCount,
+            'rejectedSmsCount'    => $rejectedSmsCount,
+            'twilioBalance'       => $this->twilioService->getBalance(),
+            'stats'              => $stats,
         ]);
     }
 
@@ -222,6 +432,8 @@ class ModelController extends Controller
 
     public function store(Request $request)
     {
+        $this->sanitizeInstagram($request);
+
         $request->validate([
             'first_name'  => 'required|string|max:255',
             'last_name'   => 'required|string|max:255',
@@ -245,9 +457,12 @@ class ModelController extends Controller
             'is_agency'   => 'boolean',
             'is_test_model' => 'boolean',
             'notes'       => 'nullable|string',
+            'referral_source'       => 'nullable|in:instagram,tiktok,facebook,friends_family,agency,other',
+            'referral_source_other' => 'nullable|string|max:255',
+            'walk_video_url'        => 'nullable|url|max:500',
+            'model_kit_paid_at'     => 'nullable|date',
             'event_id'    => 'nullable|exists:events,id',
             'casting_time'=> 'nullable|string',
-            'send_welcome_email' => 'boolean',
         ]);
 
         $userData = $request->only(['first_name', 'last_name', 'email', 'phone']);
@@ -255,6 +470,7 @@ class ModelController extends Controller
             'instagram', 'age', 'gender', 'location', 'ethnicity', 'hair', 'body_type',
             'height', 'bust', 'chest', 'waist', 'hips', 'shoe_size', 'dress_size',
             'agency', 'is_agency', 'is_test_model', 'notes',
+            'referral_source', 'referral_source_other', 'walk_video_url', 'model_kit_paid_at',
         ]);
 
         $model = $this->modelService->createModel(
@@ -268,9 +484,6 @@ class ModelController extends Controller
             $this->modelService->syncModelPass($model, $request->event_id, $request->user()->id);
         }
 
-        if ($request->boolean('send_welcome_email')) {
-            $this->modelService->sendWelcomeEmail($model);
-        }
 
         $this->activityLog->log(
             ActivityAction::Registered, $model, $request->user(),
@@ -326,13 +539,14 @@ class ModelController extends Controller
     public function update(Request $request, User $model)
     {
         $this->authorizeModel($model);
+        $this->sanitizeInstagram($request);
 
         $request->validate([
             'first_name'  => 'required|string|max:255',
-            'last_name'   => 'required|string|max:255',
+            'last_name'   => 'nullable|string|max:255',
             'email'       => "required|email|unique:users,email,{$model->id}",
             'phone'       => "nullable|string|unique:users,phone,{$model->id}",
-            'status'      => 'nullable|in:inactive,pending,applicant',
+            'status'      => 'nullable|in:active,inactive,pending,applicant',
             'instagram'   => 'nullable|string|max:255',
             'age'         => 'nullable|integer|min:16|max:80',
             'gender'      => 'nullable|in:female,male,non_binary',
@@ -351,31 +565,84 @@ class ModelController extends Controller
             'is_agency'   => 'boolean',
             'is_test_model' => 'boolean',
             'notes'       => 'nullable|string',
+            'referral_source'       => 'nullable|in:instagram,tiktok,facebook,friends_family,agency,other',
+            'referral_source_other' => 'nullable|string|max:255',
+            'walk_video_url'        => 'nullable|url|max:500',
+            'model_kit_paid_at'     => 'nullable|date',
         ]);
 
         $userData = $request->only(['first_name', 'last_name', 'email', 'phone']);
+        $userData['last_name'] = $userData['last_name'] ?? '';
         $profileData = $request->only([
             'instagram', 'age', 'gender', 'location', 'ethnicity', 'hair', 'body_type',
             'height', 'bust', 'chest', 'waist', 'hips', 'shoe_size', 'dress_size',
             'agency', 'is_agency', 'is_test_model', 'notes',
+            'referral_source', 'referral_source_other', 'walk_video_url', 'model_kit_paid_at',
         ]);
 
         $oldStatus = $model->status;
-        $userData['status'] = $request->input('status', $model->status);
+        $newStatus = $request->input('status', $model->status);
+        $userData['status'] = $newStatus;
         $this->modelService->updateModel($model, $userData, $profileData);
+
+        // Manejar cambios de estado en eventos/pases
+        if ($oldStatus !== $newStatus) {
+            $model->load('eventsAsModelWithCasting');
+
+            // Liberar slots, cancelar pases y marcar rejected cuando se inactiva
+            if ($newStatus === 'inactive') {
+                foreach ($model->eventsAsModelWithCasting as $event) {
+                    if ($event->pivot->casting_time) {
+                        $this->modelService->removeCastingSlot($model, $event->id);
+                    }
+                    $event->models()->updateExistingPivot($model->id, [
+                        'status' => 'rejected',
+                        'casting_status' => 'rejected',
+                    ]);
+                    EventPass::where('user_id', $model->id)
+                        ->where('event_id', $event->id)
+                        ->where('status', 'active')
+                        ->update(['status' => 'cancelled']);
+                }
+            }
+
+            // Reactivar pases, estado en evento y casting cuando vuelve de inactivo
+            if ($oldStatus === 'inactive' && in_array($newStatus, ['pending', 'applicant'])) {
+                $profile = $model->modelProfile;
+                $isPriorityAgency = $profile?->agency
+                    && preg_match('/\b(fanny|cg|fma|fanny\'s|cgmodels)\b/i', $profile->agency);
+                $isTop = $profile?->is_top ?? false;
+                $startSlot = $isPriorityAgency ? 1 : ($isTop ? 2 : 3);
+
+                foreach ($model->eventsAsModelWithCasting as $event) {
+                    if ($event->pivot->status === 'rejected') {
+                        $event->models()->updateExistingPivot($model->id, [
+                            'status' => 'invited',
+                            'casting_status' => 'scheduled',
+                        ]);
+
+                        // Reasignar casting slot según tag
+                        $slotType = $event->pivot->model_tag === 'runway_merch' ? 'merch' : 'normal';
+                        $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot, slotType: $slotType);
+                    }
+                    EventPass::where('user_id', $model->id)
+                        ->where('event_id', $event->id)
+                        ->where('status', 'cancelled')
+                        ->update(['status' => 'active']);
+                }
+            }
+
+            $this->activityLog->log(
+                ActivityAction::StatusChanged, $model, $request->user(),
+                "Estado cambiado de {$oldStatus} a {$newStatus}",
+                ['old_status' => $oldStatus, 'new_status' => $newStatus]
+            );
+        }
 
         $this->activityLog->log(
             ActivityAction::ProfileUpdated, $model, $request->user(),
             "Perfil actualizado: {$model->first_name} {$model->last_name}"
         );
-
-        if ($oldStatus !== $userData['status']) {
-            $this->activityLog->log(
-                ActivityAction::StatusChanged, $model, $request->user(),
-                "Estado cambiado de {$oldStatus} a {$userData['status']}",
-                ['old_status' => $oldStatus, 'new_status' => $userData['status']]
-            );
-        }
 
         return redirect()->route('admin.models.show', $model)
             ->with('success', 'Modelo actualizada exitosamente.');
@@ -531,28 +798,52 @@ class ModelController extends Controller
         }
     }
 
+    public function sendOnboardingSms(Request $request, User $model)
+    {
+        $this->authorizeModel($model);
+
+        $log = CommunicationLog::create([
+            'user_id' => $model->id,
+            'sent_by' => $request->user()->id,
+            'type'    => 'sms',
+            'channel' => 'model_onboarding_sms',
+            'status'  => 'queued',
+        ]);
+
+        SendModelOnboardingSmsJob::dispatch(
+            userId: $model->id,
+            sentBy: $request->user()->id,
+            logId:  $log->id,
+        );
+
+        return back()->with('success', 'SMS de onboarding enviado.');
+    }
+
     public function sendWelcomeEmail(Request $request, User $model)
     {
         $this->authorizeModel($model);
 
-        // Obtener primer evento asignado para incluir datos en el email
-        $model->load(['eventsAsModelWithCasting.eventDays' => fn($q) => $q->where('type', 'casting')]);
-        $firstEvent  = $model->eventsAsModelWithCasting?->first();
-        $castingDay  = $firstEvent?->eventDays?->first();
+        $log = CommunicationLog::create([
+            'user_id'  => $model->id,
+            'sent_by'  => $request->user()->id,
+            'type'     => 'email',
+            'channel'  => 'model_onboarding',
+            'status'   => 'queued',
+        ]);
 
-        SendWelcomeEmailJob::dispatch(
-            userId:      $model->id,
-            eventName:   $firstEvent?->name,
-            castingTime: $firstEvent?->pivot?->casting_time,
-            castingDate: $castingDay?->date?->format('Y-m-d'),
+        SendModelOnboardingJob::dispatch(
+            userId: $model->id,
+            logId:  $log->id,
         );
+
+        $model->update(['welcome_email_sent_at' => now()]);
 
         $this->activityLog->log(
             ActivityAction::EmailSent, $model, $request->user(),
-            "Email de bienvenida enviado a {$model->email}"
+            "Email de onboarding enviado a {$model->email}"
         );
 
-        return back()->with('success', 'Email de bienvenida encolado para envío.');
+        return back()->with('success', 'Email de onboarding encolado para envío.');
     }
 
     public function exportModels(Request $request)
@@ -567,6 +858,11 @@ class ModelController extends Controller
             emailSent: $request->input('email_sent'),
             testModel: $request->input('test_model'),
         ), $filename);
+    }
+
+    public function downloadImportTemplate()
+    {
+        return Excel::download(new \App\Exports\ModelsTemplateExport(), 'models_import_template.xlsx');
     }
 
     public function importModels(Request $request)
@@ -594,8 +890,9 @@ class ModelController extends Controller
     public function sendPendingWelcomeEmails()
     {
         $pending = User::models()
+            ->where('status', 'pending')
             ->whereNull('welcome_email_sent_at')
-            ->with(['eventsAsModelWithCasting.eventDays' => fn($q) => $q->where('type', 'casting')])
+            ->whereHas('eventsAsModelWithCasting', fn($q) => $q->whereNotNull('event_model.casting_time'))
             ->get();
 
         if ($pending->isEmpty()) {
@@ -604,19 +901,54 @@ class ModelController extends Controller
 
         $count = 0;
         foreach ($pending as $model) {
-            $firstEvent = $model->eventsAsModelWithCasting?->first();
-            $castingDay = $firstEvent?->eventDays?->first();
+            $log = CommunicationLog::create([
+                'user_id'  => $model->id,
+                'sent_by'  => request()->user()->id,
+                'type'     => 'email',
+                'channel'  => 'model_onboarding',
+                'status'   => 'queued',
+            ]);
 
-            SendWelcomeEmailJob::dispatch(
-                userId:      $model->id,
-                eventName:   $firstEvent?->name,
-                castingTime: $firstEvent?->pivot?->casting_time,
-                castingDate: $castingDay?->date?->format('Y-m-d'),
+            SendModelOnboardingJob::dispatch(
+                userId: $model->id,
+                logId:  $log->id,
             );
             $count++;
+
+            $model->update(['welcome_email_sent_at' => now()]);
         }
 
-        return back()->with('success', "{$count} emails encolados para envío. Se procesarán en los próximos minutos.");
+        return back()->with('success', "{$count} emails de onboarding encolados para envío.");
+    }
+
+    public function toggleTop(User $model)
+    {
+        $this->authorizeModel($model);
+
+        $profile = $model->modelProfile;
+        $wasTop = $profile->is_top;
+        $profile->update(['is_top' => !$wasTop]);
+
+        // Reasignar slot si la modelo tiene casting_time en algún evento
+        if (in_array($model->status, ['pending', 'applicant'])) {
+            $isPriorityAgency = $profile->agency
+                && preg_match('/\b(fanny|cg|fma|fanny\'s|cgmodels)\b/i', $profile->agency);
+
+            if ($isPriorityAgency) {
+                $targetSlot = 1; // Agencias prioritarias siempre en slot 1
+            } else {
+                $targetSlot = $wasTop ? 3 : 2; // quitó top → slot 3+, puso top → slot 2
+            }
+
+            foreach ($model->eventsAsModelWithCasting as $event) {
+                if ($event->pivot->casting_time) {
+                    $slotType = $event->pivot->model_tag === 'runway_merch' ? 'merch' : 'normal';
+                    $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $targetSlot, slotType: $slotType);
+                }
+            }
+        }
+
+        return back()->with('success', $profile->is_top ? 'Modelo marcada como Top.' : 'Top removido.');
     }
 
     public function updateStatus(Request $request, User $model)
@@ -628,6 +960,73 @@ class ModelController extends Controller
         $oldStatus = $model->status;
         $model->update(['status' => $request->status]);
 
+        // Auto-assign casting slot cuando cambia de applicant → pending
+        if ($oldStatus === 'applicant' && $request->status === 'pending') {
+            $profile = $model->modelProfile;
+            $isTop = $profile?->is_top ?? false;
+            $isPriorityAgency = $profile?->agency
+                && preg_match('/\b(fanny|cg|fma|fanny\'s|cgmodels)\b/i', $profile->agency);
+
+            $startSlot = $isPriorityAgency ? 1 : ($isTop ? 2 : 3);
+
+            foreach ($model->eventsAsModelWithCasting as $event) {
+                if ($isPriorityAgency || $isTop || !$event->pivot->casting_time) {
+                    $slotType = $event->pivot->model_tag === 'runway_merch' ? 'merch' : 'normal';
+                    $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot, slotType: $slotType);
+                }
+            }
+        }
+
+        // Liberar slots, cancelar pases y marcar rejected cuando se inactiva
+        if ($request->status === 'inactive') {
+            foreach ($model->eventsAsModelWithCasting as $event) {
+                if ($event->pivot->casting_time) {
+                    $this->modelService->removeCastingSlot($model, $event->id);
+                }
+
+                // Marcar como rejected en el evento y en casting
+                $event->models()->updateExistingPivot($model->id, [
+                    'status' => 'rejected',
+                    'casting_status' => 'rejected',
+                ]);
+
+                // Cancelar pases activos
+                EventPass::where('user_id', $model->id)
+                    ->where('event_id', $event->id)
+                    ->where('status', 'active')
+                    ->update(['status' => 'cancelled']);
+            }
+        }
+
+        // Reactivar pases, estado en evento y casting cuando vuelve de inactivo
+        if ($oldStatus === 'inactive' && in_array($request->status, ['pending', 'applicant'])) {
+            $profile = $model->modelProfile;
+            $isPriorityAgency = $profile?->agency
+                && preg_match('/\b(fanny|cg|fma|fanny\'s|cgmodels)\b/i', $profile->agency);
+            $isTop = $profile?->is_top ?? false;
+            $startSlot = $isPriorityAgency ? 1 : ($isTop ? 2 : 3);
+
+            foreach ($model->eventsAsModelWithCasting as $event) {
+                // Restaurar como invited en el evento y scheduled en casting
+                if ($event->pivot->status === 'rejected') {
+                    $event->models()->updateExistingPivot($model->id, [
+                        'status' => 'invited',
+                        'casting_status' => 'scheduled',
+                    ]);
+
+                    // Reasignar casting slot según tag
+                    $slotType = $event->pivot->model_tag === 'runway_merch' ? 'merch' : 'normal';
+                    $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot, slotType: $slotType);
+                }
+
+                // Reactivar pases cancelados
+                EventPass::where('user_id', $model->id)
+                    ->where('event_id', $event->id)
+                    ->where('status', 'cancelled')
+                    ->update(['status' => 'active']);
+            }
+        }
+
         $this->activityLog->log(
             ActivityAction::StatusChanged, $model, $request->user(),
             "Estado cambiado de {$oldStatus} a {$request->status}",
@@ -637,7 +1036,353 @@ class ModelController extends Controller
         return back()->with('success', 'Estado actualizado.');
     }
 
+    public function updateEventCastingStatus(Request $request, User $model, Event $event)
+    {
+        $this->authorizeModel($model);
+
+        $request->validate([
+            'casting_status' => 'required|in:scheduled,checked_in,selected,no_show,rejected',
+        ]);
+
+        $pivot = DB::table('event_model')
+            ->where('model_id', $model->id)
+            ->where('event_id', $event->id)
+            ->first();
+
+        abort_unless($pivot, 404, 'La modelo no está asignada a este evento.');
+
+        $previousStatus  = $pivot->casting_status;
+        $newStatus       = $request->casting_status;
+        $castingTime     = $pivot->casting_time;
+
+        DB::table('event_model')
+            ->where('model_id', $model->id)
+            ->where('event_id', $event->id)
+            ->update(['casting_status' => $newStatus]);
+
+        if ($newStatus === 'rejected' && $previousStatus !== 'rejected') {
+            // Liberar el casting slot si tenía horario asignado
+            if ($castingTime) {
+                $castingDayId = DB::table('event_days')
+                    ->where('event_id', $event->id)
+                    ->where('type', 'casting')
+                    ->value('id');
+
+                if ($castingDayId) {
+                    DB::table('casting_slots')
+                        ->where('event_day_id', $castingDayId)
+                        ->where('time', $castingTime)
+                        ->where('booked', '>', 0)
+                        ->decrement('booked');
+                }
+
+                DB::table('event_model')
+                    ->where('model_id', $model->id)
+                    ->where('event_id', $event->id)
+                    ->update(['casting_time' => null]);
+            }
+
+            // Marcar como rejected en el evento
+            DB::table('event_model')
+                ->where('model_id', $model->id)
+                ->where('event_id', $event->id)
+                ->update(['status' => 'rejected']);
+
+            // Cancelar pass solo si está activo (no tocar los ya usados)
+            DB::table('event_passes')
+                ->where('user_id', $model->id)
+                ->where('event_id', $event->id)
+                ->where('status', 'active')
+                ->update(['status' => 'cancelled']);
+
+            // Si TODOS los eventos de la modelo están rejected → user.status = rejected
+            $totalEvents = DB::table('event_model')->where('model_id', $model->id)->count();
+            $rejectedEvents = DB::table('event_model')->where('model_id', $model->id)->where('status', 'rejected')->count();
+
+            if ($totalEvents > 0 && $totalEvents === $rejectedEvents && $model->status !== 'inactive') {
+                $model->update(['status' => 'rejected']);
+            }
+
+        } elseif ($previousStatus === 'rejected' && $newStatus !== 'rejected') {
+            // Restaurar estado en evento a invited
+            DB::table('event_model')
+                ->where('model_id', $model->id)
+                ->where('event_id', $event->id)
+                ->update(['status' => 'invited']);
+
+            // Reasignar casting slot según tag
+            $profile = $model->modelProfile;
+            $isPriorityAgency = $profile?->agency
+                && preg_match('/\b(fanny|cg|fma|fanny\'s|cgmodels)\b/i', $profile->agency);
+            $isTop = $profile?->is_top ?? false;
+            $startSlot = $isPriorityAgency ? 1 : ($isTop ? 2 : 3);
+            $pivotTag = DB::table('event_model')->where('model_id', $model->id)->where('event_id', $event->id)->value('model_tag');
+            $slotType = $pivotTag === 'runway_merch' ? 'merch' : 'normal';
+            $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot, slotType: $slotType);
+
+            // Reactivar pass solo si fue cancelado (no tocar los usados)
+            DB::table('event_passes')
+                ->where('user_id', $model->id)
+                ->where('event_id', $event->id)
+                ->where('status', 'cancelled')
+                ->update(['status' => 'active']);
+
+            // Si user.status era rejected, restaurar a applicant (pending requiere casting asignado)
+            if ($model->status === 'rejected') {
+                $model->update(['status' => 'applicant']);
+            }
+        }
+
+        return back()->with('success', 'Estado de casting actualizado.');
+    }
+
+    public function updateModelTag(Request $request, User $model, Event $event)
+    {
+        $this->authorizeModel($model);
+
+        $request->validate([
+            'model_tag' => 'nullable|in:runway_merch,runway_brand',
+        ]);
+
+        $oldTag = DB::table('event_model')
+            ->where('model_id', $model->id)
+            ->where('event_id', $event->id)
+            ->value('model_tag');
+
+        $newTag = $request->model_tag ?: null;
+
+        DB::table('event_model')
+            ->where('model_id', $model->id)
+            ->where('event_id', $event->id)
+            ->update(['model_tag' => $newTag]);
+
+        // Si el tag cambió entre merch y normal, reasignar slot al tipo correcto
+        $oldSlotType = $oldTag === 'runway_merch' ? 'merch' : 'normal';
+        $newSlotType = $newTag === 'runway_merch' ? 'merch' : 'normal';
+
+        if ($newTag && $oldSlotType !== $newSlotType) {
+            // Liberar slot anterior
+            $this->modelService->removeCastingSlot($model, $event->id);
+
+            // Asignar nuevo slot del tipo correcto
+            $profile = $model->modelProfile;
+            $isPriorityAgency = $profile?->agency
+                && preg_match('/\b(fanny|cg|fma|fanny\'s|cgmodels)\b/i', $profile->agency);
+            $isTop = $profile?->is_top ?? false;
+            $startSlot = $newTag === 'runway_brand'
+                ? ($isPriorityAgency ? 1 : ($isTop ? 2 : 3))
+                : 1; // merch siempre desde slot 1
+            $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot, slotType: $newSlotType);
+        } elseif ($newTag && !$oldTag) {
+            // Tag nuevo asignado por primera vez — auto-assign slot
+            $pivot = DB::table('event_model')->where('model_id', $model->id)->where('event_id', $event->id)->first();
+            if (!$pivot->casting_time) {
+                $profile = $model->modelProfile;
+                $isPriorityAgency = $profile?->agency
+                    && preg_match('/\b(fanny|cg|fma|fanny\'s|cgmodels)\b/i', $profile->agency);
+                $isTop = $profile?->is_top ?? false;
+                $startSlot = $newTag === 'runway_brand'
+                    ? ($isPriorityAgency ? 1 : ($isTop ? 2 : 3))
+                    : 1;
+                $this->modelService->autoAssignCastingSlot($model, $event->id, startFromPosition: $startSlot, slotType: $newSlotType);
+            }
+        }
+
+        // runway_brand con merch → pass preferencial automático
+        if ($newTag === 'runway_brand') {
+            EventPass::where('user_id', $model->id)
+                ->where('event_id', $event->id)
+                ->where('status', 'active')
+                ->update(['is_preferential' => true]);
+        } elseif ($newTag === 'runway_merch' || !$newTag) {
+            // runway_merch o sin tag → quitar preferencial
+            EventPass::where('user_id', $model->id)
+                ->where('event_id', $event->id)
+                ->update(['is_preferential' => false]);
+        }
+
+        $tagLabel = match ($newTag) {
+            'runway_merch' => 'Runway Merch',
+            'runway_brand' => 'Runway Brand',
+            default => 'Sin tag',
+        };
+
+        return back()->with('success', "Tag actualizado a {$tagLabel}.");
+    }
+
+    public function sendModelOnboarding(Request $request, User $model, Event $event)
+    {
+        $this->authorizeModel($model);
+
+        $pivot = DB::table('event_model')
+            ->where('model_id', $model->id)
+            ->where('event_id', $event->id)
+            ->first();
+
+        abort_unless($pivot, 404, 'La modelo no está asignada a este evento.');
+        abort_unless($pivot->model_tag, 422, 'La modelo no tiene tag asignado para este evento.');
+        abort_unless($pivot->casting_time, 422, 'La modelo no tiene horario de casting asignado.');
+
+        $log = CommunicationLog::create([
+            'user_id'  => $model->id,
+            'sent_by'  => $request->user()->id,
+            'type'     => 'email',
+            'channel'  => 'model_onboarding',
+            'status'   => 'queued',
+        ]);
+
+        SendModelOnboardingJob::dispatch(
+            userId:  $model->id,
+            eventId: $event->id,
+            tag:     $pivot->model_tag,
+            logId:   $log->id,
+        );
+
+        $model->update(['welcome_email_sent_at' => now()]);
+
+        return back()->with('success', 'Email de onboarding enviado.');
+    }
+
+    public function sendRejectionEmail(Request $request, User $model)
+    {
+        $this->authorizeModel($model);
+
+        $firstEvent = $model->eventsAsModelWithCasting?->first();
+
+        $log = CommunicationLog::create([
+            'user_id'  => $model->id,
+            'sent_by'  => $request->user()->id,
+            'type'     => 'email',
+            'channel'  => 'model_rejection',
+            'status'   => 'queued',
+        ]);
+
+        SendModelRejectionJob::dispatch(
+            userId:    $model->id,
+            eventName: $firstEvent?->name,
+            logId:     $log->id,
+        );
+
+        return back()->with('success', 'Email de rechazo enviado.');
+    }
+
+    public function sendBulkRejectionEmails(Request $request)
+    {
+        $rejected = User::models()
+            ->where('status', 'rejected')
+            ->whereDoesntHave('communicationLogs', fn($q) => $q->where('channel', 'model_rejection'))
+            ->with('eventsAsModelWithCasting')
+            ->get();
+
+        if ($rejected->isEmpty()) {
+            return back()->with('info', 'No hay modelos rechazadas pendientes de recibir correo.');
+        }
+
+        $count = 0;
+        foreach ($rejected as $model) {
+            $firstEvent = $model->eventsAsModelWithCasting?->first();
+
+            $log = CommunicationLog::create([
+                'user_id'  => $model->id,
+                'sent_by'  => $request->user()->id,
+                'type'     => 'email',
+                'channel'  => 'model_rejection',
+                'status'   => 'queued',
+            ]);
+
+            SendModelRejectionJob::dispatch(
+                userId:    $model->id,
+                eventName: $firstEvent?->name,
+                logId:     $log->id,
+            );
+            $count++;
+        }
+
+        return back()->with('success', "{$count} emails de rechazo encolados para envío.");
+    }
+
+    public function sendBulkOnboardingSms(Request $request)
+    {
+        $pending = User::models()
+            ->where('status', 'pending')
+            ->whereNotNull('phone')
+            ->where('phone', 'like', '+%')
+            ->whereNull('sms_sent_at')
+            ->whereHas('eventsAsModelWithCasting', fn($q) => $q->whereNotNull('event_model.casting_time'))
+            ->get();
+
+        if ($pending->isEmpty()) {
+            return back()->with('info', 'No hay modelos pendientes de recibir SMS.');
+        }
+
+        $count = 0;
+        foreach ($pending as $model) {
+            $log = CommunicationLog::create([
+                'user_id' => $model->id,
+                'sent_by' => $request->user()->id,
+                'type'    => 'sms',
+                'channel' => 'model_onboarding_sms',
+                'status'  => 'queued',
+            ]);
+
+            SendModelOnboardingSmsJob::dispatch(
+                userId: $model->id,
+                sentBy: $request->user()->id,
+                logId:  $log->id,
+            );
+            $count++;
+        }
+
+        return back()->with('success', "{$count} SMS de onboarding encolados para envío.");
+    }
+
+    public function sendBulkRejectionSms(Request $request)
+    {
+        $rejected = User::models()
+            ->where('status', 'rejected')
+            ->whereNotNull('phone')
+            ->where('phone', 'like', '+%')
+            ->whereDoesntHave('communicationLogs', fn($q) => $q->where('channel', 'model_rejection_sms'))
+            ->get();
+
+        if ($rejected->isEmpty()) {
+            return back()->with('info', 'No hay modelos rechazadas pendientes de recibir SMS.');
+        }
+
+        $count = 0;
+        foreach ($rejected as $model) {
+            $log = CommunicationLog::create([
+                'user_id' => $model->id,
+                'sent_by' => $request->user()->id,
+                'type'    => 'sms',
+                'channel' => 'model_rejection_sms',
+                'status'  => 'queued',
+            ]);
+
+            SendModelRejectionSmsJob::dispatch(
+                userId: $model->id,
+                sentBy: $request->user()->id,
+                logId:  $log->id,
+            );
+            $count++;
+        }
+
+        return back()->with('success', "{$count} SMS de rechazo encolados para envío.");
+    }
+
     // --- Helpers ---
+
+    private function sanitizeInstagram(Request $request): void
+    {
+        if ($request->filled('instagram')) {
+            $ig = $request->input('instagram');
+            $ig = strtok($ig, '?');
+            $ig = preg_replace('#^https?://(www\.)?instagram\.com/#i', '', $ig);
+            $ig = rtrim($ig, '/');
+            $ig = ltrim($ig, '@');
+            $request->merge(['instagram' => $ig]);
+        }
+    }
 
     private function authorizeModel(User $model): void
     {
@@ -694,6 +1439,8 @@ class ModelController extends Controller
                 'casting_checked_in_at' => $event->pivot->casting_checked_in_at,
                 'participation_number'  => $event->pivot->participation_number,
                 'model_status'          => $event->pivot->status,
+                'shopify_order_number'  => $event->pivot->shopify_order_number,
+                'model_tag'             => $event->pivot->model_tag,
                 'pass'                  => $passMap->has($event->id) ? (function () use ($passMap, $event, $dayMap) {
                     $p = $passMap[$event->id];
                     return [
@@ -703,6 +1450,7 @@ class ModelController extends Controller
                         'pass_type_label'   => $p->passTypeLabel(),
                         'holder_name'       => $p->holder_name,
                         'holder_email'      => $p->holder_email,
+                        'is_preferential'   => (bool) $p->is_preferential,
                         'valid_days'        => $p->valid_days,
                         'valid_days_labels' => $p->valid_days
                             ? collect($p->valid_days)->map(fn($id) => $dayMap[$id] ?? null)->filter()->join(' · ')

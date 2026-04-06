@@ -66,7 +66,6 @@ Tabla central. Unifica todos los tipos de usuario.
 | role | string | Ver roles en documento 03 |
 | status | string | `active`, `inactive`, `pending` |
 | profile_picture | string nullable | Ruta al archivo |
-| login_code | string nullable | Código kiosko (ej: MOD001) |
 | email_verified_at | timestamp nullable | |
 | remember_token | string nullable | |
 | deleted_at | timestamp nullable | SoftDeletes |

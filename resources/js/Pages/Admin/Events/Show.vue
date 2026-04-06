@@ -66,7 +66,7 @@ const availableDesigners = computed(() => {
 
 function submitAssign() {
     if (!assignForm.value.designer_id) return;
-    router.post(`/admin/shows/${selectedShow.value.id}/assign-designer`, assignForm.value, {
+    router.post(`/admin/operations/shows/${selectedShow.value.id}/assign-designer`, assignForm.value, {
         onSuccess: () => { assignModal.value = false; },
         preserveScroll: true,
     });
@@ -74,7 +74,7 @@ function submitAssign() {
 
 function removeDesigner(show, designerId) {
     if (!confirm('¿Remover este diseñador del show?')) return;
-    router.post(`/admin/shows/${show.id}/remove-designer`, { designer_id: designerId }, { preserveScroll: true });
+    router.post(`/admin/operations/shows/${show.id}/remove-designer`, { designer_id: designerId }, { preserveScroll: true });
 }
 
 // ── Duplicate event modal ──
@@ -82,7 +82,7 @@ const dupModal = ref(false);
 const dupForm = useForm({ name: props.event.name + ' (Copia)', start_date: '', end_date: '' });
 
 function submitDuplicate() {
-    dupForm.post(`/admin/events/${props.event.id}/duplicate`, {
+    dupForm.post(`/admin/operations/events/${props.event.id}/duplicate`, {
         onSuccess: () => { dupModal.value = false; },
     });
 }
@@ -113,7 +113,7 @@ const availableFittingDesigners = computed(() => {
 
 function submitFittingAssign() {
     if (!fittingAssignForm.value.designer_id) return;
-    router.post(`/admin/fitting-slots/${selectedFittingSlot.value.id}/assign-designer`, fittingAssignForm.value, {
+    router.post(`/admin/operations/fitting-slots/${selectedFittingSlot.value.id}/assign-designer`, fittingAssignForm.value, {
         onSuccess: () => { fittingModal.value = false; },
         preserveScroll: true,
     });
@@ -121,7 +121,7 @@ function submitFittingAssign() {
 
 function removeFittingDesigner(slot, designerId) {
     if (!confirm('¿Remover este diseñador del fitting?')) return;
-    router.delete(`/admin/fitting-slots/${slot.id}/remove-designer/${designerId}`, { preserveScroll: true });
+    router.delete(`/admin/operations/fitting-slots/${slot.id}/remove-designer/${designerId}`, { preserveScroll: true });
 }
 
 // Check if a day has fitting (type fitting or show_day with fitting_slots)
@@ -154,7 +154,7 @@ function slotBadgeClass(show) {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link href="/admin/events" class="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-sm">
+                <Link href="/admin/operations/events" class="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-sm">
                     <ArrowLeftIcon class="w-4 h-4" /> Eventos
                 </Link>
                 <span class="text-gray-300">/</span>
@@ -177,9 +177,17 @@ function slotBadgeClass(show) {
                         <p class="text-gray-400 text-sm">{{ event.city }}<span v-if="event.venue"> · {{ event.venue }}</span></p>
                         <p class="text-yellow-400 text-sm mt-1 font-medium">{{ formatDateRange(event.start_date, event.end_date) }}</p>
                         <p v-if="event.description" class="text-gray-500 text-sm mt-2 max-w-xl">{{ event.description }}</p>
+                        <div v-if="event.call_time || event.hmua_address" class="flex flex-wrap gap-4 mt-3">
+                            <p v-if="event.call_time" class="text-gray-400 text-xs">
+                                <span class="text-gray-500 font-medium">Call Time:</span> {{ event.call_time }}
+                            </p>
+                            <p v-if="event.hmua_address" class="text-gray-400 text-xs">
+                                <span class="text-gray-500 font-medium">H&MUA:</span> {{ event.hmua_address }}
+                            </p>
+                        </div>
                     </div>
                     <div class="flex gap-2 flex-wrap">
-                        <Link :href="`/admin/events/${event.id}/edit`"
+                        <Link :href="`/admin/operations/events/${event.id}/edit`"
                             class="px-4 py-2 border border-white/20 text-white rounded-lg text-sm hover:bg-white/10 transition-colors">
                             Editar
                         </Link>

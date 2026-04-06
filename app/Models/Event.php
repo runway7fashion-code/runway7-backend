@@ -12,9 +12,9 @@ class Event extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'name', 'slug', 'city', 'venue', 'timezone',
-        'start_date', 'end_date', 'status', 'settings', 'description',
-        'model_number_start',
+        'name', 'slug', 'city', 'venue', 'venue_address', 'venue_latitude', 'venue_longitude',
+        'timezone', 'start_date', 'end_date', 'status', 'settings', 'description',
+        'model_number_start', 'call_time', 'hmua_address',
     ];
 
     protected function casts(): array
@@ -42,14 +42,28 @@ class Event extends Model
     public function designers()
     {
         return $this->belongsToMany(User::class, 'event_designer', 'event_id', 'designer_id')
-            ->withPivot(['status', 'package_id', 'looks', 'model_casting_enabled', 'package_price', 'notes'])
+            ->withPivot(['status', 'package_id', 'looks', 'model_casting_enabled', 'media_package', 'custom_background', 'courtesy_tickets', 'package_price', 'notes'])
             ->withTimestamps();
     }
 
     public function staff()
     {
         return $this->belongsToMany(User::class, 'event_staff', 'event_id', 'user_id')
-            ->withPivot(['assigned_role', 'status', 'checked_in_at', 'notes'])
+            ->withPivot(['assigned_role', 'status', 'checked_in_at', 'notes', 'area'])
+            ->withTimestamps();
+    }
+
+    public function volunteers()
+    {
+        return $this->belongsToMany(User::class, 'event_volunteer', 'event_id', 'volunteer_id')
+            ->withPivot(['assigned_role', 'status', 'checked_in_at', 'notes', 'area'])
+            ->withTimestamps();
+    }
+
+    public function mediaUsers()
+    {
+        return $this->belongsToMany(User::class, 'event_media', 'event_id', 'media_id')
+            ->withPivot(['status', 'checked_in_at', 'notes'])
             ->withTimestamps();
     }
 

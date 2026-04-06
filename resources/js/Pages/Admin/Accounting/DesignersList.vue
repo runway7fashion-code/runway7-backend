@@ -40,14 +40,15 @@ function fmt(n) {
 }
 
 function statusLabel(s) {
-    return { active: 'Activo', inactive: 'Inactivo', pending: 'Pendiente' }[s] ?? s;
+    return { active: 'Activo', inactive: 'Inactivo', pending: 'Pendiente', registered: 'Registrado' }[s] ?? s;
 }
 
 function statusClass(s) {
     return {
         active: 'bg-green-50 text-green-700',
-        inactive: 'bg-gray-100 text-gray-500',
+        inactive: 'bg-red-100 text-red-700',
         pending: 'bg-yellow-50 text-yellow-700',
+        registered: 'bg-blue-50 text-blue-700',
     }[s] ?? 'bg-gray-50 text-gray-600';
 }
 
@@ -171,6 +172,7 @@ function methodLabel(m) {
                         <select v-model="status"
                             class="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                             <option value="">Todos los estados</option>
+                            <option value="registered">Registrado</option>
                             <option value="active">Activo</option>
                             <option value="inactive">Inactivo</option>
                             <option value="pending">Pendiente</option>
@@ -188,6 +190,7 @@ function methodLabel(m) {
                             <th class="py-3 px-4">Estado</th>
                             <th class="py-3 px-4">Evento</th>
                             <th class="py-3 px-4">Rep. Ventas</th>
+                            <th class="py-3 px-4">F. Registro</th>
                             <th class="py-3 px-4">Paquete</th>
                             <th class="py-3 px-4 text-right">Monto Paquete</th>
                             <th class="py-3 px-4 text-right">Monto Pendiente</th>
@@ -206,6 +209,7 @@ function methodLabel(m) {
                             </td>
                             <td class="py-3 px-4 text-gray-500 text-xs">{{ d.event_name ?? '—' }}</td>
                             <td class="py-3 px-4 text-gray-500">{{ d.designer_profile?.sales_rep ? d.designer_profile.sales_rep.first_name + ' ' + d.designer_profile.sales_rep.last_name : '—' }}</td>
+                            <td class="py-3 px-4 text-gray-500 text-xs">{{ d.created_at ? new Date(d.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + new Date(d.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '—' }}</td>
                             <td class="py-3 px-4 text-gray-500">{{ d.current_package?.name ?? '—' }}</td>
                             <td class="py-3 px-4 text-right font-medium">{{ fmt(d.package_price) }}</td>
                             <td class="py-3 px-4 text-right font-medium" :class="d.amount_pending > 0 ? 'text-red-600' : 'text-green-600'">
@@ -325,6 +329,18 @@ function methodLabel(m) {
                             <div>
                                 <span class="text-gray-400 text-xs">Casting</span>
                                 <p class="text-gray-800">{{ infoData.event?.model_casting_enabled ? 'Si' : 'No' }}</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-400 text-xs">Media</span>
+                                <p class="text-gray-800">{{ infoData.event?.media_package ? 'Si' : 'No' }}</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-400 text-xs">Custom BG</span>
+                                <p class="text-gray-800">{{ infoData.event?.custom_background ? 'Si' : 'No' }}</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-400 text-xs">Tickets</span>
+                                <p class="text-gray-800">{{ infoData.event?.courtesy_tickets ? 'Si' : 'No' }}</p>
                             </div>
                         </div>
 

@@ -88,27 +88,31 @@
             line-height: 1.4;
         }
 
-        /* Code box */
-        .code-box {
-            background-color: #000000;
-            border-radius: 12px;
-            padding: 24px 20px;
-            text-align: center;
+        /* Credentials table */
+        .credentials-table {
+            width: 100%;
+            border-collapse: collapse;
             margin: 0 0 28px 0;
+            border-radius: 12px;
+            overflow: hidden;
         }
-        .code-label {
-            color: rgba(255,255,255,0.5);
+        .credentials-table td {
+            padding: 14px 20px;
+            font-size: 15px;
+        }
+        .credentials-label {
+            background-color: #000000;
+            color: rgba(255,255,255,0.6);
             font-size: 10px;
-            letter-spacing: 2px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
-            margin-bottom: 12px;
+            width: 110px;
         }
-        .code-value {
-            color: #D4AF37;
-            font-size: 34px;
-            font-weight: 800;
-            letter-spacing: 8px;
-            font-family: 'Courier New', Courier, monospace;
+        .credentials-value {
+            background-color: #f7f7f7;
+            font-weight: 700;
+            color: #111111;
         }
 
         /* App store badges */
@@ -117,16 +121,12 @@
             margin: 0 0 28px 0;
         }
         .stores-inner {
-            display: inline-flex;
-            gap: 16px;
-            align-items: center;
-            justify-content: center;
-            flex-wrap: wrap;
+            text-align: center;
         }
         .store-badge img {
             height: 44px;
             width: auto;
-            display: block;
+            display: inline-block;
         }
 
         /* Footer */
@@ -193,64 +193,72 @@
         <p class="greeting">Hi, {{ $model->first_name }}! 👋</p>
 
         <p class="text">
-            Welcome to the <strong>Runway7 Fashion</strong> team.
+            Welcome to the <strong>Runway 7 Fashion</strong> team.
             We are excited to have you as part of this event.
             Below you will find your access information and the details of the Model Casting.
         </p>
 
-        @if($eventName || $castingDate || $castingTime)
+        @foreach($events as $event)
         <div class="info-box">
-            @if($eventName)
             <div class="info-row">
-                <span class="info-label margin-right-10">Event:</span>
-                <span class="info-value">{{ $eventName }}</span>
+                <span class="info-label">Event</span>
+                <span class="info-value">{{ $event['name'] }}</span>
+            </div>
+            @if($event['casting_date'])
+            <div class="info-row">
+                <span class="info-label">Casting Date</span>
+                <span class="info-value">{{ \Carbon\Carbon::parse($event['casting_date'])->format('l, F j, Y') }}</span>
             </div>
             @endif
-            @if($castingDate)
+            @if($event['casting_time'])
             <div class="info-row">
-                <span class="info-label margin-right-10">Casting Date:</span>
-                <span class="info-value">{{ \Carbon\Carbon::parse($castingDate)->format('l, F j, Y') }}</span>
-            </div>
-            @endif
-            @if($castingTime)
-            <div class="info-row">
-                <span class="info-label margin-right-10">Casting Time:</span>
-                <span class="info-value">{{ $castingTime }}</span>
+                <span class="info-label">Casting Time</span>
+                <span class="info-value">{{ $event['casting_time'] }}</span>
             </div>
             @endif
         </div>
-        @endif
+        @endforeach
 
         <p class="text">
-            Use the following code to access the Runway 7 app and complete your profile before the casting day:
+            Use the following credentials to log in to the Runway 7 app:
         </p>
 
-        <div class="code-box">
-            <div class="code-label">Your access code</div>
-            <div class="code-value">{{ $model->login_code }}</div>
-        </div>
+        <table class="credentials-table" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+                <td class="credentials-label" style="background-color:#000000; color:rgba(255,255,255,0.6); font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; width:110px; padding:14px 20px;">Email</td>
+                <td class="credentials-value" style="background-color:#f7f7f7; font-weight:700; color:#111111; padding:14px 20px;">{{ $model->email }}</td>
+            </tr>
+            <tr>
+                <td class="credentials-label" style="background-color:#000000; color:rgba(255,255,255,0.6); font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; width:110px; padding:14px 20px;">Password</td>
+                <td class="credentials-value" style="background-color:#f7f7f7; font-weight:700; color:#111111; padding:14px 20px;">runway7</td>
+            </tr>
+        </table>
 
-        <p class="text" style="margin-top:16px;">Download the app, enter this code and complete your <strong>Comp Card</strong> with your photos before the casting day, so designers can view your profile. It's quick and easy!</p>
+        <p class="text">Download the app and complete your <strong>Comp Card</strong> with your photos before the casting day, so designers can view your profile. It's quick and easy!</p>
 
         <!-- App Store Badges -->
-        <div class="stores-wrapper">
-            <div class="stores-inner">
-                <a href="#" class="store-badge">
-                    <img src="{{ url('/images/app-store.png') }}"
-                         alt="Download on the App Store"
-                         height="44" />
-                </a>
-                <a href="#" class="store-badge">
-                    <img src="{{ url('/images/google-play.png') }}"
-                         alt="Get it on Google Play"
-                         height="44" />
-                </a>
-            </div>
-        </div>
+        <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 28px auto;">
+            <tr>
+                <td style="padding-right:16px;">
+                    <a href="{{ config('services.app_stores.apple') }}">
+                        <img src="{{ url('/images/app-store.png') }}"
+                             alt="Download on the App Store"
+                             height="44" style="display:block;" />
+                    </a>
+                </td>
+                <td>
+                    <a href="{{ config('services.app_stores.google') }}">
+                        <img src="{{ url('/images/google-play.png') }}"
+                             alt="Get it on Google Play"
+                             height="44" style="display:block;" />
+                    </a>
+                </td>
+            </tr>
+        </table>
 
         <p class="text" style="font-size:13px; color:#999999; margin-bottom:0;">
             If you have any questions, you can reply to this email or contact us at
-            <a href="mailto:tickets@runway7fashion.com" style="color:#D4AF37; font-weight:600;">tickets@runway7fashion.com</a>
+            <a href="mailto:operations@runway7fashion.com" style="color:#D4AF37; font-weight:600;">operations@runway7fashion.com</a>
         </p>
     </div>
 
@@ -259,7 +267,7 @@
         <div class="footer-brand">Runway 7</div>
         <div class="footer-text">
             This email was sent to {{ $model->email }}<br>
-            © {{ date('Y') }} Runway 7 Fashion Week. All rights reserved.
+            © {{ date('Y') }} Runway 7 Fashion. All rights reserved.
         </div>
     </div>
 

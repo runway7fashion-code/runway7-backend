@@ -4,9 +4,15 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\ActivityAction;
 use App\Http\Controllers\Controller;
+use App\Jobs\SendRegistrationEmailJob;
+use App\Jobs\SendWelcomeEmailJob;
+use App\Models\CommunicationLog;
 use App\Models\Event;
+use App\Models\User;
+use App\Notifications\NewModelRegistered;
 use App\Services\ActivityLogService;
 use App\Services\ModelService;
+use App\Services\ShopifyOrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +22,7 @@ class ModelRegistrationController extends Controller
     public function __construct(
         protected ModelService $modelService,
         protected ActivityLogService $activityLog,
+        protected ShopifyOrderService $shopifyService,
     ) {}
 
     /**
@@ -25,13 +32,22 @@ class ModelRegistrationController extends Controller
     {
         $events = Event::where('status', 'active')
             ->orderBy('start_date')
-            ->get(['id', 'name', 'city', 'start_date', 'end_date']);
+            ->get(['id', 'name', 'city', 'start_date', 'end_date'])
+            ->map(fn($e) => [
+                'id'         => $e->id,
+                'name'       => $e->name,
+                'city'       => $e->city,
+                'start_date' => $e->start_date?->format('Y-m-d'),
+                'end_date'   => $e->end_date?->format('Y-m-d'),
+            ]);
 
         return response()->json($events);
     }
 
     /**
      * Registrar una modelo desde el formulario público de WordPress.
+     * Si el email ya existe y la modelo NO está en el evento solicitado, se actualiza y asigna.
+     * Si ya está en el mismo evento, se rechaza.
      */
     public function store(Request $request): JsonResponse
     {
@@ -42,11 +58,33 @@ class ModelRegistrationController extends Controller
             ], 201);
         }
 
+        // Sanitizar Instagram: extraer solo el username sin URL, @, ni query params
+        if ($request->filled('instagram')) {
+            $ig = $request->input('instagram');
+            $ig = strtok($ig, '?'); // Quitar query params (?igsh=...)
+            $ig = preg_replace('#^https?://(www\.)?instagram\.com/#i', '', $ig);
+            $ig = rtrim($ig, '/');
+            $ig = ltrim($ig, '@');
+            $request->merge(['instagram' => $ig]);
+        }
+
+        // Determinar si es re-registro (email ya existe, incluir soft-deleted)
+        $existingUser = User::withTrashed()->where('email', $request->input('email'))->first();
+
+        // Si está soft-deleted, restaurar
+        if ($existingUser && $existingUser->trashed()) {
+            $existingUser->restore();
+        }
+
+        // Fotos: profile_picture y photo_1 obligatorias para nuevos registros, el resto siempre opcional
+        $requiredPhotoRule = $existingUser ? 'nullable|image|max:1536' : 'required|image|max:1536';
+        $optionalPhotoRule = 'nullable|image|max:1536';
+
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name'  => 'required|string|max:255',
-            'email'      => 'required|email|unique:users,email',
-            'phone'      => 'required|string|unique:users,phone',
+            'email'      => 'required|email',
+            'phone'      => 'required|string',
             'instagram'  => 'required|string|max:255',
             'age'        => 'required|integer|min:18|max:80',
             'gender'     => 'required|in:female,male,non_binary',
@@ -59,22 +97,24 @@ class ModelRegistrationController extends Controller
             'waist'      => 'required|numeric',
             'hips'       => 'required|numeric',
             'shoe_size'  => 'required|string|max:20',
-            'dress_size' => 'required|string|max:20',
+            'dress_size' => 'required|in:XXS,XS,S,M,L,XL,XXL',
             'event_id'   => 'required|exists:events,id',
-
-            'profile_picture' => 'required|image|max:1536',
-            'photo_1'         => 'required|image|max:1536',
-            'photo_2'         => 'required|image|max:1536',
-            'photo_3'         => 'required|image|max:1536',
-            'photo_4'         => 'required|image|max:1536',
+            'agency_name'           => 'nullable|string|max:255',
+            'order_number'          => 'nullable|string|max:50',
+            'referral_source'       => 'nullable|in:instagram,tiktok,facebook,friends_family,agency,other',
+            'referral_source_other' => 'nullable|string|max:255',
+            'walk_video_url'        => 'required|url|max:500',
+            'profile_picture' => $requiredPhotoRule,
+            'photo_1'         => $requiredPhotoRule,
+            'photo_2'         => $optionalPhotoRule,
+            'photo_3'         => $optionalPhotoRule,
+            'photo_4'         => $optionalPhotoRule,
         ], [
             'first_name.required'      => 'First name is required.',
             'last_name.required'       => 'Last name is required.',
             'email.required'           => 'Email is required.',
             'email.email'              => 'Please enter a valid email.',
-            'email.unique'             => 'This email is already registered in our system.',
             'phone.required'           => 'Phone is required.',
-            'phone.unique'             => 'This phone is already registered in our system.',
             'instagram.required'       => 'Instagram is required.',
             'age.required'             => 'Age is required.',
             'age.min'                  => 'You must be at least 18 years old.',
@@ -98,19 +138,84 @@ class ModelRegistrationController extends Controller
             'photo_1.required'         => 'Headshot photo is required.',
             'photo_1.image'            => 'Headshot must be an image.',
             'photo_1.max'              => 'Headshot must not exceed 1.5MB.',
-            'photo_2.required'         => 'Full body front photo is required.',
             'photo_2.image'            => 'Full body front must be an image.',
             'photo_2.max'              => 'Full body front must not exceed 1.5MB.',
-            'photo_3.required'         => 'Full body side photo is required.',
             'photo_3.image'            => 'Full body side must be an image.',
             'photo_3.max'              => 'Full body side must not exceed 1.5MB.',
-            'photo_4.required'         => 'Creative/Editorial photo is required.',
             'photo_4.image'            => 'Creative/Editorial must be an image.',
             'photo_4.max'              => 'Creative/Editorial must not exceed 1.5MB.',
         ]);
 
+        $eventId = (int) $validated['event_id'];
+
+        // Bloquear si la modelo está inactiva (bloqueada por admin de todo registro)
+        if ($existingUser && $existingUser->status === 'inactive') {
+            return response()->json([
+                'message' => 'Your account has been deactivated. Please contact us for assistance.',
+                'errors' => ['email' => ['Your account has been deactivated. Please contact us at models@runway7fashion.com']],
+            ], 422);
+        }
+
+        // Rechazar si el email ya existe con otro rol
+        if ($existingUser && $existingUser->role !== 'model') {
+            return response()->json([
+                'message' => 'This email is already registered with a different role.',
+                'errors' => ['email' => ['This email is already registered as ' . $existingUser->role . '. Please use a different email or contact us at operations@runway7fashion.com']],
+            ], 422);
+        }
+
+        $orderNumber = $validated['order_number'] ?? null;
+        $hasValidOrder = false;
+
+        // Validar order number ANTES de verificar duplicados (merch permite re-registro)
+        if ($orderNumber) {
+            // Verificar que no haya sido usado previamente
+            $alreadyUsed = DB::table('event_model')
+                ->where('shopify_order_number', ltrim(trim($orderNumber), '#'))
+                ->exists();
+
+            if ($alreadyUsed) {
+                return response()->json([
+                    'message' => 'This order number has already been used for a registration.',
+                    'errors' => ['order_number' => ['This order number has already been used for a registration.']],
+                ], 422);
+            }
+
+            $result = $this->shopifyService->validatePaidOrder($orderNumber);
+
+            if (!$result['valid']) {
+                return response()->json([
+                    'message' => $result['reason'],
+                    'errors' => ['order_number' => [$result['reason']]],
+                ], 422);
+            }
+
+            $hasValidOrder = true;
+            $orderNumber = ltrim(trim($orderNumber), '#');
+        }
+
+        // Si la modelo ya existe, verificar si ya está asignada al mismo evento
+        if ($existingUser) {
+            $alreadyInEvent = DB::table('event_model')
+                ->where('model_id', $existingUser->id)
+                ->where('event_id', $eventId)
+                ->exists();
+
+            // Bloquear solo si ya está en el evento Y no tiene código de merch válido
+            // Con merch válido se permite re-registro (acceso garantizado al casting)
+            if ($alreadyInEvent && !$hasValidOrder) {
+                return response()->json([
+                    'message' => 'You are already registered for this event.',
+                    'errors' => ['email' => ['You are already registered for this event. Please select a different event or contact us at models@runway7fashion.com']],
+                ], 422);
+            }
+        }
+
         try {
-            $model = DB::transaction(function () use ($request, $validated) {
+            $status = $hasValidOrder ? 'pending' : 'applicant';
+            $isReRegistration = (bool) $existingUser;
+
+            $model = DB::transaction(function () use ($request, $validated, $status, $orderNumber, $existingUser, $eventId) {
                 $userData = collect($validated)->only(['first_name', 'last_name', 'email', 'phone'])->toArray();
 
                 $profileData = collect($validated)->only([
@@ -119,35 +224,118 @@ class ModelRegistrationController extends Controller
                     'shoe_size', 'dress_size',
                 ])->toArray();
 
+                if (!empty($validated['agency_name'])) {
+                    $profileData['agency'] = $validated['agency_name'];
+                    $profileData['is_agency'] = true;
+                }
+
+                if (!empty($validated['walk_video_url'])) {
+                    $profileData['walk_video_url'] = $validated['walk_video_url'];
+                }
+
+                if (!empty($validated['referral_source'])) {
+                    $profileData['referral_source'] = $validated['referral_source'];
+                    if ($validated['referral_source'] === 'other' && !empty($validated['referral_source_other'])) {
+                        $profileData['referral_source_other'] = $validated['referral_source_other'];
+                    }
+                }
+
+                if ($existingUser) {
+                    // Re-registro: actualizar datos y asignar al nuevo evento
+                    $user = $this->modelService->updateModel($existingUser, $userData, $profileData);
+                    $this->modelService->assignToEvent($user, $eventId, shopifyOrderNumber: $orderNumber);
+
+                    // Actualizar fotos solo si se proporcionaron nuevas
+                    if ($request->hasFile('profile_picture')) {
+                        $this->modelService->uploadProfilePicture($user, $request->file('profile_picture'));
+                    }
+                    foreach (range(1, 4) as $position) {
+                        if ($request->hasFile("photo_{$position}")) {
+                            $this->modelService->uploadCompCardPhoto($user, $position, $request->file("photo_{$position}"));
+                        }
+                    }
+
+                    return $user;
+                }
+
+                // Nuevo registro
                 $user = $this->modelService->createModel(
                     $userData, $profileData,
-                    eventId: (int) $validated['event_id'],
-                    status: 'applicant'
+                    eventId: $eventId,
+                    status: $status,
+                    shopifyOrderNumber: $orderNumber,
                 );
 
                 // Subir foto de perfil
                 $this->modelService->uploadProfilePicture($user, $request->file('profile_picture'));
 
-                // Subir comp card photos
+                // Subir comp card photos (solo las que se enviaron)
                 foreach (range(1, 4) as $position) {
-                    $this->modelService->uploadCompCardPhoto($user, $position, $request->file("photo_{$position}"));
+                    if ($request->hasFile("photo_{$position}")) {
+                        $this->modelService->uploadCompCardPhoto($user, $position, $request->file("photo_{$position}"));
+                    }
                 }
 
                 return $user;
             });
 
-            $event = Event::find($validated['event_id']);
+            // Si la modelo estaba inactive o rejected, reactivar a pending (tiene un registro activo nuevamente)
+            // Nota: inactive NO debería llegar aquí (se bloquea arriba), pero rejected sí puede re-registrarse
+            if ($isReRegistration && in_array($model->status, ['inactive', 'rejected'])) {
+                $model->update(['status' => 'pending']);
+            }
+
+            // Auto-assign casting slot según prioridad:
+            // Merch NO se auto-asigna (operation asigna manualmente después de revisar)
+            // Slot 1: agencia prioritaria (Fanny/CG/FMA)
+            // Slot 3+: agencia no prioritaria o sin agencia
+            if (!$hasValidOrder) {
+                $hasAgency = !empty($validated['agency_name']);
+                if ($hasAgency) {
+                    $isPriorityAgency = (bool) preg_match('/\b(fanny|cg|fma|fanny\'s|cgmodels)\b/i', $validated['agency_name']);
+                    $slotPosition = $isPriorityAgency ? 1 : 3;
+                    $this->modelService->autoAssignCastingSlot($model, $eventId, startFromPosition: $slotPosition);
+                } else {
+                    $this->modelService->autoAssignCastingSlot($model, $eventId, startFromPosition: 3);
+                }
+            }
+
+            $event = Event::find($eventId);
             $this->activityLog->log(
                 ActivityAction::Registered,
                 $model,
                 null,
-                "Registro público: {$model->first_name} {$model->last_name} para {$event->name}",
-                ['source' => 'wordpress', 'event_id' => $event->id]
+                ($isReRegistration ? 'Re-registro público: ' : 'Registro público: ')
+                    . "{$model->first_name} {$model->last_name} para {$event->name}"
+                    . ($hasValidOrder ? " (Shopify order #{$orderNumber})" : ''),
+                ['source' => 'wordpress', 'event_id' => $event->id, 'shopify_order' => $orderNumber, 're_registration' => $isReRegistration]
             );
 
-            return response()->json([
-                'message' => 'Your application has been received successfully. We will contact you soon!',
-            ], 201);
+            $notifyUsers = User::whereIn('role', ['admin', 'operation'])->get();
+            foreach ($notifyUsers as $notifyUser) {
+                $notifyUser->notify(new NewModelRegistered($model, $event->name, $hasValidOrder));
+            }
+
+            // Enviar email de registro (Under Review) a todas las modelos nuevas y re-registros
+            if (!$isReRegistration || $hasValidOrder) {
+                $log = CommunicationLog::create([
+                    'user_id'  => $model->id,
+                    'sent_by'  => null,
+                    'type'     => 'email',
+                    'channel'  => 'registration_email',
+                    'status'   => 'queued',
+                ]);
+
+                SendRegistrationEmailJob::dispatch($model->id, $event->name, logId: $log->id);
+            }
+
+            $message = $isReRegistration
+                ? 'You have been successfully registered for this new event!'
+                : ($hasValidOrder
+                    ? 'Your registration is confirmed! Check your email for login details.'
+                    : 'Your application has been received successfully. We will contact you soon!');
+
+            return response()->json(['message' => $message], 201);
         } catch (\Exception $e) {
             report($e);
             return response()->json([

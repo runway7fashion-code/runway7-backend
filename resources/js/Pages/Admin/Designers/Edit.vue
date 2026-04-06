@@ -16,6 +16,40 @@ const props = defineProps({
 const activeTab = ref(1);
 const profile   = props.designer.designer_profile;
 
+const countryCodes = [
+    { code: '+1',   label: 'US/CA +1' },
+    { code: '+44',  label: 'UK +44' },
+    { code: '+33',  label: 'FR +33' },
+    { code: '+39',  label: 'IT +39' },
+    { code: '+34',  label: 'ES +34' },
+    { code: '+49',  label: 'DE +49' },
+    { code: '+55',  label: 'BR +55' },
+    { code: '+52',  label: 'MX +52' },
+    { code: '+57',  label: 'CO +57' },
+    { code: '+51',  label: 'PE +51' },
+    { code: '+54',  label: 'AR +54' },
+    { code: '+56',  label: 'CL +56' },
+    { code: '+91',  label: 'IN +91' },
+    { code: '+86',  label: 'CN +86' },
+    { code: '+81',  label: 'JP +81' },
+    { code: '+82',  label: 'KR +82' },
+    { code: '+61',  label: 'AU +61' },
+    { code: '+971', label: 'AE +971' },
+    { code: '+234', label: 'NG +234' },
+    { code: '+27',  label: 'ZA +27' },
+];
+
+function parsePhone(full) {
+    if (!full || !full.startsWith('+')) return { code: '+1', number: full ?? '' };
+    const match = countryCodes.find(c => full.startsWith(c.code));
+    if (match) return { code: match.code, number: full.slice(match.code.length) };
+    return { code: '+1', number: full.replace(/^\+/, '') };
+}
+
+const parsed = parsePhone(props.designer.phone);
+const phoneCode = ref(parsed.code);
+const phoneNumber = ref(parsed.number);
+
 const form = useForm({
     first_name:      props.designer.first_name  ?? '',
     last_name:       props.designer.last_name   ?? '',
@@ -50,6 +84,9 @@ const selectedPackageId = ref('');
 const assignLooks = ref('');
 const assignPrice = ref('');
 const assignCasting = ref(true);
+const assignMedia = ref(false);
+const assignBackground = ref(false);
+const assignTickets = ref(false);
 const assignNotes = ref('');
 
 const selectedEventData = computed(() => props.events?.find(e => e.id == selectedEventId.value) ?? null);
@@ -93,11 +130,14 @@ function toggleShow(showId) {
 
 function assignEvent() {
     if (!selectedEventId.value) return;
-    router.post(`/admin/designers/${props.designer.id}/assign-event`, {
+    router.post(`/admin/operations/designers/${props.designer.id}/assign-event`, {
         event_id:              selectedEventId.value,
         package_id:            selectedPackageId.value || null,
         looks:                 assignLooks.value || null,
         model_casting_enabled: assignCasting.value,
+        media_package:         assignMedia.value,
+        custom_background:     assignBackground.value,
+        courtesy_tickets:      assignTickets.value,
         package_price:         assignPrice.value || null,
         notes:                 assignNotes.value || null,
         shows:                 assignShows.value.length ? assignShows.value : null,
@@ -110,6 +150,9 @@ function assignEvent() {
             assignLooks.value = '';
             assignPrice.value = '';
             assignCasting.value = true;
+            assignMedia.value = false;
+            assignBackground.value = false;
+            assignTickets.value = false;
             assignNotes.value = '';
             assignShows.value = [];
             assignFittingSlotId.value = '';
@@ -119,42 +162,53 @@ function assignEvent() {
 
 function cancelFromEvent(eventId, eventName) {
     if (!confirm(`¿Cancelar participación en "${eventName}"? Se cancelarán todos sus shows y pases, pero se conservarán materiales y asistentes.`)) return;
-    router.patch(`/admin/designers/${props.designer.id}/cancel-event/${eventId}`, {}, { preserveScroll: true });
+    router.patch(`/admin/operations/designers/${props.designer.id}/cancel-event/${eventId}`, {}, { preserveScroll: true });
 }
 
 function removeFromEvent(eventId, eventName) {
     if (!confirm(`¿Quitar completamente del evento "${eventName}"? Se eliminarán todos los datos asociados.`)) return;
-    router.delete(`/admin/designers/${props.designer.id}/remove-event/${eventId}`, { preserveScroll: true });
+    router.delete(`/admin/operations/designers/${props.designer.id}/remove-event/${eventId}`, { preserveScroll: true });
 }
 
 // Asistentes
 const assistants = computed(() => props.designer.assistants ?? []);
-const newAssistant = ref({ full_name: '', document_id: '', phone: '', email: '' });
+const newAssistant = ref({ first_name: '', last_name: '', document_id: '', phone: '', email: '' });
 const assistantEventId = ref(designerEvents.value[0]?.id ?? '');
 
+const assistantEventLimit = computed(() => {
+    const evt = designerEvents.value.find(e => e.id == assistantEventId.value);
+    return evt?.assistants ?? null;
+});
+const assistantEventCount = computed(() =>
+    assistants.value.filter(a => a.event_id == assistantEventId.value).length
+);
+const assistantLimitReached = computed(() =>
+    assistantEventLimit.value !== null && assistantEventCount.value >= assistantEventLimit.value
+);
+
 function addAssistant() {
-    if (!newAssistant.value.full_name || !assistantEventId.value) return;
-    router.post(`/admin/designers/${props.designer.id}/assistants`, {
+    if (!newAssistant.value.first_name || !assistantEventId.value) return;
+    router.post(`/admin/operations/designers/${props.designer.id}/assistants`, {
         event_id:    assistantEventId.value,
         ...newAssistant.value,
     }, {
         preserveScroll: true,
         onSuccess: () => {
-            newAssistant.value = { full_name: '', document_id: '', phone: '', email: '' };
+            newAssistant.value = { first_name: '', last_name: '', document_id: '', phone: '', email: '' };
         },
     });
 }
 
 function removeAssistant(assistantId) {
     if (!confirm('Eliminar asistente?')) return;
-    router.delete(`/admin/designers/assistants/${assistantId}`, { preserveScroll: true });
+    router.delete(`/admin/operations/designers/assistants/${assistantId}`, { preserveScroll: true });
 }
 
 // Materiales
 const materials = computed(() => props.designer.materials ?? []);
 
 function updateMaterial(material, field, value) {
-    router.put(`/admin/designer-materials/${material.id}`, {
+    router.put(`/admin/operations/designer-materials/${material.id}`, {
         [field]: value,
     }, { preserveScroll: true });
 }
@@ -163,7 +217,7 @@ function updateMaterial(material, field, value) {
 const displays = computed(() => props.designer.displays ?? []);
 
 function updateDisplay(display, data) {
-    router.put(`/admin/designer-displays/${display.id}`, data, { preserveScroll: true });
+    router.put(`/admin/operations/designer-displays/${display.id}`, data, { preserveScroll: true });
 }
 
 function uploadDisplayFile(displayId, type) {
@@ -176,7 +230,7 @@ function uploadDisplayFile(displayId, type) {
         const formData = new FormData();
         formData.append('file', file);
         const endpoint = type === 'video' ? 'upload-video' : 'upload-audio';
-        router.post(`/admin/designer-displays/${displayId}/${endpoint}`, formData, { preserveScroll: true });
+        router.post(`/admin/operations/designer-displays/${displayId}/${endpoint}`, formData, { preserveScroll: true });
     };
     input.click();
 }
@@ -222,13 +276,13 @@ function showStatusLabel(s) {
 // Cancelar participación en un show (mantiene historial, status=cancelled)
 function cancelShow(showId, showName) {
     if (!confirm(`¿Cancelar participación en "${showName}"? El show quedará marcado como cancelado.`)) return;
-    router.patch(`/admin/designers/${props.designer.id}/shows/${showId}/cancel`, {}, { preserveScroll: true });
+    router.patch(`/admin/operations/designers/${props.designer.id}/shows/${showId}/cancel`, {}, { preserveScroll: true });
 }
 
 // Quitar show completamente (elimina el registro)
 function removeShow(showId, showName) {
     if (!confirm(`¿Quitar completamente el show "${showName}"? Esta acción no se puede deshacer.`)) return;
-    router.delete(`/admin/designers/${props.designer.id}/shows/${showId}`, { preserveScroll: true });
+    router.delete(`/admin/operations/designers/${props.designer.id}/shows/${showId}`, { preserveScroll: true });
 }
 
 // Shows agrupados por evento
@@ -279,7 +333,7 @@ function fittingSlotsForEvent(eventId) {
 }
 
 function updateFitting(eventId, fittingSlotId) {
-    router.put(`/admin/designers/${props.designer.id}/fitting`, {
+    router.put(`/admin/operations/designers/${props.designer.id}/fitting`, {
         event_id: eventId,
         fitting_slot_id: fittingSlotId || null,
     }, { preserveScroll: true });
@@ -288,7 +342,7 @@ function updateFitting(eventId, fittingSlotId) {
 function addShowToEvent(eventId) {
     const state = addShowState.value[eventId];
     if (!state?.showId) return;
-    router.post(`/admin/designers/${props.designer.id}/shows`, {
+    router.post(`/admin/operations/designers/${props.designer.id}/shows`, {
         show_id: state.showId,
         collection_name: state.collection || null,
     }, {
@@ -300,7 +354,8 @@ function addShowToEvent(eventId) {
 }
 
 function submit() {
-    form.put(`/admin/designers/${props.designer.id}`);
+    form.phone = phoneNumber.value ? `${phoneCode.value}${phoneNumber.value.replace(/\D/g, '')}` : '';
+    form.put(`/admin/operations/designers/${props.designer.id}`);
 }
 </script>
 
@@ -308,7 +363,7 @@ function submit() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link :href="`/admin/designers/${designer.id}`" class="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
+                <Link :href="`/admin/operations/designers/${designer.id}`" class="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
                     <ArrowLeftIcon class="w-4 h-4" /> Ver diseñador
                 </Link>
                 <span class="text-gray-300">/</span>
@@ -361,8 +416,16 @@ function submit() {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
-                            <input v-model="form.phone" type="tel"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            <div class="flex gap-2">
+                                <select v-model="phoneCode"
+                                    class="w-28 border border-gray-300 rounded-lg px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
+                                    <option v-for="c in countryCodes" :key="c.code" :value="c.code">{{ c.label }}</option>
+                                </select>
+                                <input v-model="phoneNumber" type="tel" placeholder="3055550404"
+                                    :class="form.errors.phone ? 'border-red-400 ring-2 ring-red-100' : 'border-gray-300'"
+                                    class="flex-1 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
+                            <p v-if="form.errors.phone" class="mt-1 text-red-500 text-xs">{{ form.errors.phone }}</p>
                         </div>
                     </div>
 
@@ -508,13 +571,28 @@ function submit() {
                                     <input v-model="assignPrice" type="number" step="0.01" min="0"
                                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                                 </div>
-                                <div class="flex items-end pb-0.5">
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input v-model="assignCasting" type="checkbox"
-                                            class="rounded border-gray-300 text-black focus:ring-black/20" />
-                                        <span class="text-sm text-gray-700">Casting habilitado</span>
-                                    </label>
-                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-x-6 gap-y-2 bg-gray-50 rounded-xl p-3 col-span-full">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input v-model="assignCasting" type="checkbox"
+                                        class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                    <span class="text-sm text-gray-700">Model Casting</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input v-model="assignMedia" type="checkbox"
+                                        class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                    <span class="text-sm text-gray-700">Media Package</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input v-model="assignBackground" type="checkbox"
+                                        class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                    <span class="text-sm text-gray-700">Custom Background</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input v-model="assignTickets" type="checkbox"
+                                        class="rounded border-gray-300 text-black focus:ring-black/20 w-4 h-4" />
+                                    <span class="text-sm text-gray-700">Courtesy Tickets</span>
+                                </label>
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-500 mb-1">Notas</label>
@@ -576,7 +654,10 @@ function submit() {
                                     <span v-if="evt.package_price">${{ Number(evt.package_price).toLocaleString() }}</span>
                                     <span>{{ evt.looks }} looks</span>
                                     <span>{{ evt.models_count ?? 0 }} modelos</span>
-                                    <span>Casting: {{ evt.model_casting_enabled ? 'Si' : 'No' }}</span>
+                                    <span :class="evt.model_casting_enabled ? 'text-green-500' : ''">Casting: {{ evt.model_casting_enabled ? 'Si' : 'No' }}</span>
+                                    <span :class="evt.media_package ? 'text-green-500' : ''">Media: {{ evt.media_package ? 'Si' : 'No' }}</span>
+                                    <span :class="evt.custom_background ? 'text-green-500' : ''">BG: {{ evt.custom_background ? 'Si' : 'No' }}</span>
+                                    <span :class="evt.courtesy_tickets ? 'text-green-500' : ''">Tickets: {{ evt.courtesy_tickets ? 'Si' : 'No' }}</span>
                                     <span v-if="evt.designer_status === 'cancelled'"
                                         class="px-1.5 py-0.5 rounded bg-red-50 text-red-600 font-medium">
                                         Cancelado
@@ -664,14 +745,21 @@ function submit() {
 
                 <!-- Tab 3: Asistentes -->
                 <div v-show="activeTab === 3" class="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
-                    <h4 class="font-semibold text-gray-800">Asistentes</h4>
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-semibold text-gray-800">Asistentes</h4>
+                        <span v-if="assistantEventLimit !== null"
+                            :class="assistantLimitReached ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-gray-50 text-gray-500 border border-gray-200'"
+                            class="text-xs font-medium px-2.5 py-1 rounded-full">
+                            {{ assistantEventCount }} / {{ assistantEventLimit }} para este evento
+                        </span>
+                    </div>
 
                     <!-- Lista actual -->
                     <div v-if="assistants.length === 0" class="text-sm text-gray-400 italic">Sin asistentes registrados.</div>
                     <div v-for="a in assistants" :key="a.id"
                         class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                         <div>
-                            <p class="text-sm font-medium text-gray-800">{{ a.full_name }}</p>
+                            <p class="text-sm font-medium text-gray-800">{{ a.first_name }} {{ a.last_name }}</p>
                             <p class="text-xs text-gray-400">
                                 {{ eventName(a.event_id) }}
                                 <span v-if="a.document_id"> · ID: {{ a.document_id }}</span>
@@ -686,8 +774,18 @@ function submit() {
                     <!-- Agregar nuevo -->
                     <div class="border-t border-gray-100 pt-4 space-y-3">
                         <h5 class="text-sm font-medium text-gray-700">Agregar asistente</h5>
+
+                        <!-- Aviso límite alcanzado -->
+                        <div v-if="assistantLimitReached"
+                            class="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+                            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                            </svg>
+                            Límite alcanzado — este diseñador tiene <strong class="mx-1">{{ assistantEventLimit }}</strong> asistente(s) negociado(s) para este evento.
+                        </div>
+
                         <div class="grid grid-cols-2 gap-3">
-                            <div>
+                            <div class="col-span-2">
                                 <label class="block text-xs text-gray-500 mb-1">Evento *</label>
                                 <select v-model="assistantEventId"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
@@ -695,8 +793,18 @@ function submit() {
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500 mb-1">Nombre completo *</label>
-                                <input v-model="newAssistant.full_name" type="text"
+                                <label class="block text-xs text-gray-500 mb-1">First Name *</label>
+                                <input v-model="newAssistant.first_name" type="text"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Last Name</label>
+                                <input v-model="newAssistant.last_name" type="text"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Email *</label>
+                                <input v-model="newAssistant.email" type="email"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
                             <div>
@@ -709,14 +817,9 @@ function submit() {
                                 <input v-model="newAssistant.phone" type="tel"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
-                            <div>
-                                <label class="block text-xs text-gray-500 mb-1">Email</label>
-                                <input v-model="newAssistant.email" type="email"
-                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
-                            </div>
                         </div>
                         <button type="button" @click="addAssistant"
-                            :disabled="!newAssistant.full_name || !assistantEventId"
+                            :disabled="!newAssistant.first_name || !assistantEventId || !newAssistant.email || assistantLimitReached"
                             class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors">
                             + Agregar Asistente
                         </button>
@@ -829,7 +932,7 @@ function submit() {
 
                 <!-- Botones (solo en tab 1 se muestran guardar/cancelar) -->
                 <div v-if="activeTab === 1" class="flex justify-between">
-                    <Link :href="`/admin/designers/${designer.id}`"
+                    <Link :href="`/admin/operations/designers/${designer.id}`"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                         Cancelar
                     </Link>
@@ -840,7 +943,7 @@ function submit() {
                     </button>
                 </div>
                 <div v-else class="flex justify-end">
-                    <Link :href="`/admin/designers/${designer.id}`"
+                    <Link :href="`/admin/operations/designers/${designer.id}`"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                         Volver al perfil
                     </Link>

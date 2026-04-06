@@ -78,7 +78,11 @@ class DesignerService
             'status'                => 'confirmed',
             'package_id'            => $data['package_id'] ?? null,
             'looks'                 => $data['looks'] ?? 10,
+            'assistants'            => $data['assistants'] ?? 1,
             'model_casting_enabled' => $data['model_casting_enabled'] ?? true,
+            'media_package'         => $data['media_package'] ?? false,
+            'custom_background'     => $data['custom_background'] ?? false,
+            'courtesy_tickets'      => $data['courtesy_tickets'] ?? false,
             'package_price'         => $data['package_price'] ?? 0,
             'notes'                 => $data['notes'] ?? null,
         ]);
@@ -130,16 +134,36 @@ class DesignerService
      */
     public function addAssistant(User $designer, int $eventId, array $data, int $issuedById): DesignerAssistant
     {
+        // Validar límite de asistentes negociado en ventas
+        $eventDesigner = DB::table('event_designer')
+            ->where('event_id', $eventId)
+            ->where('designer_id', $designer->id)
+            ->first();
+
+        if ($eventDesigner) {
+            $current = DesignerAssistant::where('designer_id', $designer->id)
+                ->where('event_id', $eventId)
+                ->count();
+
+            if ($current >= $eventDesigner->assistants) {
+                throw new \Exception(
+                    "Este diseñador solo tiene {$eventDesigner->assistants} asistente(s) incluido(s) en su paquete."
+                );
+            }
+        }
+
         return DB::transaction(function () use ($designer, $eventId, $data, $issuedById) {
             $assistantUser = null;
 
             if (!empty($data['email'])) {
-                $nameParts = explode(' ', trim($data['full_name']), 2);
+                $firstName = $data['first_name'] ?? explode(' ', trim($data['full_name'] ?? ''), 2)[0] ?? '';
+                $lastName = $data['last_name'] ?? (explode(' ', trim($data['full_name'] ?? ''), 2)[1] ?? '');
+
                 $assistantUser = User::firstOrCreate(
                     ['email' => $data['email']],
                     [
-                        'first_name' => $nameParts[0],
-                        'last_name'  => $nameParts[1] ?? '',
+                        'first_name' => $firstName,
+                        'last_name'  => $lastName,
                         'phone'      => $data['phone'] ?? null,
                         'password'   => bcrypt('runway7'),
                         'role'       => 'assistant',
@@ -148,11 +172,15 @@ class DesignerService
                 );
             }
 
+            $firstName = $data['first_name'] ?? explode(' ', trim($data['full_name'] ?? ''), 2)[0] ?? '';
+            $lastName = $data['last_name'] ?? (explode(' ', trim($data['full_name'] ?? ''), 2)[1] ?? '');
+
             $assistant = DesignerAssistant::create([
                 'designer_id' => $designer->id,
                 'user_id'     => $assistantUser?->id,
                 'event_id'    => $eventId,
-                'full_name'   => $data['full_name'],
+                'first_name'  => $firstName,
+                'last_name'   => $lastName,
                 'document_id' => $data['document_id'] ?? null,
                 'phone'       => $data['phone'] ?? null,
                 'email'       => $data['email'] ?? null,

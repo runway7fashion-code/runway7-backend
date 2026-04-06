@@ -15,9 +15,9 @@ class ModelService
     /**
      * Crear una modelo completa: usuario + perfil + asignación opcional a evento.
      */
-    public function createModel(array $userData, array $profileData, ?int $eventId = null, ?string $castingTime = null, string $status = 'pending'): User
+    public function createModel(array $userData, array $profileData, ?int $eventId = null, ?string $castingTime = null, string $status = 'pending', ?string $shopifyOrderNumber = null): User
     {
-        return DB::transaction(function () use ($userData, $profileData, $eventId, $castingTime, $status) {
+        return DB::transaction(function () use ($userData, $profileData, $eventId, $castingTime, $status, $shopifyOrderNumber) {
             $user = User::create([
                 'first_name' => $userData['first_name'],
                 'last_name'  => $userData['last_name'],
@@ -31,7 +31,7 @@ class ModelService
             $user->modelProfile()->create($profileData);
 
             if ($eventId) {
-                $this->assignToEvent($user, $eventId, $castingTime);
+                $this->assignToEvent($user, $eventId, $castingTime, $shopifyOrderNumber);
             }
 
             return $user->load('modelProfile');
@@ -59,22 +59,62 @@ class ModelService
      * Asignar modelo a un evento con casting slot opcional.
      * Auto-asigna participation_number basado en model_number_start del evento.
      */
-    public function assignToEvent(User $user, int $eventId, ?string $castingTime = null): void
+    public function assignToEvent(User $user, int $eventId, ?string $castingTime = null, ?string $shopifyOrderNumber = null): void
     {
         $event = Event::findOrFail($eventId);
 
-        if ($event->models()->where('model_id', $user->id)->exists()) {
-            throw new \Exception('La modelo ya está asignada a este evento.');
+        $alreadyAssigned = $event->models()->where('model_id', $user->id)->exists();
+
+        if ($alreadyAssigned) {
+            $updateData = [];
+
+            // Re-registro con merch: resetear status y guardar order number
+            if ($shopifyOrderNumber) {
+                $updateData['shopify_order_number'] = $shopifyOrderNumber;
+                $updateData['status'] = 'invited';
+                $updateData['casting_status'] = 'scheduled';
+            }
+
+            if ($castingTime) {
+                // Decrementar slot anterior si tenía horario previo
+                $pivot = $event->models()->where('model_id', $user->id)->first()?->pivot;
+                if ($pivot?->casting_time) {
+                    $castingDay = $event->eventDays()->where('type', 'casting')->first();
+                    if ($castingDay) {
+                        $oldSlot = $castingDay->castingSlots()->where('time', $pivot->casting_time)->first();
+                        if ($oldSlot && $oldSlot->booked > 0) {
+                            $oldSlot->decrement('booked');
+                        }
+                    }
+                }
+
+                $updateData['casting_time'] = $castingTime;
+                $updateData['casting_status'] = 'scheduled';
+
+                // Incrementar nuevo slot
+                $castingDay = $event->eventDays()->where('type', 'casting')->first();
+                if ($castingDay) {
+                    $slot = $castingDay->castingSlots()->where('time', $castingTime)->first();
+                    if ($slot) {
+                        $slot->increment('booked');
+                    }
+                }
+            }
+
+            if (!empty($updateData)) {
+                $event->models()->updateExistingPivot($user->id, $updateData);
+            }
+
+            return;
         }
 
-        // Auto-asignar número de participación: base + cantidad de modelos ya asignadas
-        $currentCount = $event->models()->count();
-        $participationNumber = ($event->model_number_start ?? 1) + $currentCount;
-
         $pivotData = [
-            'status'               => 'invited',
-            'participation_number' => $participationNumber,
+            'status' => 'invited',
         ];
+
+        if ($shopifyOrderNumber) {
+            $pivotData['shopify_order_number'] = $shopifyOrderNumber;
+        }
 
         if ($castingTime) {
             $pivotData['casting_time']   = $castingTime;
@@ -90,6 +130,86 @@ class ModelService
         }
 
         $event->models()->attach($user->id, $pivotData);
+    }
+
+    /**
+     * Auto-asignar casting slot a una modelo según prioridad.
+     * $startFromPosition: 1 = primer slot, 2 = segundo, 3 = tercero...
+     * $slotType: 'normal' para modelos normales/brand, 'merch' para runway_merch.
+     * Busca desde esa posición; si no hay cupo avanza al siguiente.
+     */
+    public function autoAssignCastingSlot(User $user, int $eventId, int $startFromPosition = 1, string $slotType = 'normal'): ?string
+    {
+        $event = Event::findOrFail($eventId);
+        $castingDay = $event->eventDays()->where('type', 'casting')->first();
+        if (!$castingDay) return null;
+
+        $slots = $castingDay->castingSlots()->where('slot_type', $slotType)->orderBy('time')->get();
+        if ($slots->isEmpty()) return null;
+
+        // Decrementar slot anterior si la modelo ya tenía uno asignado
+        $pivot = $event->models()->where('model_id', $user->id)->first()?->pivot;
+        if ($pivot?->casting_time) {
+            $oldSlot = $castingDay->castingSlots()->where('time', $pivot->casting_time)->first();
+            if ($oldSlot && $oldSlot->booked > 0) {
+                $oldSlot->decrement('booked');
+            }
+        }
+
+        // Empezar desde la posición indicada (0-indexed)
+        $startIndex = max(0, $startFromPosition - 1);
+
+        for ($i = $startIndex; $i < $slots->count(); $i++) {
+            if ($slots[$i]->isAvailable()) {
+                $castingTime = $slots[$i]->time;
+
+                // Actualizar el pivot
+                if ($pivot) {
+                    $event->models()->updateExistingPivot($user->id, [
+                        'casting_time'   => $castingTime,
+                        'casting_status' => 'scheduled',
+                    ]);
+                }
+
+                $slots[$i]->increment('booked');
+
+                return $castingTime;
+            }
+        }
+
+        // No se encontró slot — restaurar el slot anterior si lo decrementamos
+        if ($pivot?->casting_time) {
+            $oldSlot = $castingDay->castingSlots()->where('time', $pivot->casting_time)->first();
+            if ($oldSlot) {
+                $oldSlot->increment('booked');
+            }
+        }
+
+        return null; // No hay cupo en ningún slot
+    }
+
+    /**
+     * Liberar el casting slot de una modelo (quitar horario y decrementar booked).
+     */
+    public function removeCastingSlot(User $user, int $eventId): void
+    {
+        $event = Event::findOrFail($eventId);
+        $pivot = $event->models()->where('model_id', $user->id)->first()?->pivot;
+
+        if (!$pivot?->casting_time) return;
+
+        $castingDay = $event->eventDays()->where('type', 'casting')->first();
+        if ($castingDay) {
+            $slot = $castingDay->castingSlots()->where('time', $pivot->casting_time)->first();
+            if ($slot && $slot->booked > 0) {
+                $slot->decrement('booked');
+            }
+        }
+
+        $event->models()->updateExistingPivot($user->id, [
+            'casting_time'   => null,
+            'casting_status' => 'scheduled',
+        ]);
     }
 
     /**
@@ -260,21 +380,36 @@ class ModelService
     public function deleteModel(User $user): void
     {
         DB::transaction(function () use ($user) {
+            // Decrementar booked en casting_slots por cada evento con horario asignado
+            $eventRows = DB::table('event_model')
+                ->where('model_id', $user->id)
+                ->whereNotNull('casting_time')
+                ->get(['event_id', 'casting_time']);
+
+            foreach ($eventRows as $row) {
+                $castingDayId = DB::table('event_days')
+                    ->where('event_id', $row->event_id)
+                    ->where('type', 'casting')
+                    ->value('id');
+
+                if ($castingDayId) {
+                    DB::table('casting_slots')
+                        ->where('event_day_id', $castingDayId)
+                        ->where('time', $row->casting_time)
+                        ->where('booked', '>', 0)
+                        ->decrement('booked');
+                }
+            }
+
+            // Eliminar passes de la modelo (nullOnDelete los dejaría huérfanos)
+            DB::table('event_passes')->where('user_id', $user->id)->delete();
+
             // Eliminar toda la carpeta del storage (foto de perfil + comp card)
             Storage::disk('public')->deleteDirectory("models/{$user->id}");
 
-            // Hard delete: elimina definitivamente de la BD (cascade borra model_profile,
-            // event_model, show_model, event_passes, device_tokens automáticamente)
+            // Hard delete: cascade borra model_profile, event_model, show_model, device_tokens
             $user->forceDelete();
         });
     }
 
-    /**
-     * Enviar email de bienvenida a la modelo.
-     * TODO: Implementar con Mailgun.
-     */
-    public function sendWelcomeEmail(User $user): void
-    {
-        // Mail::to($user->email)->send(new ModelWelcomeMail($user));
-    }
 }

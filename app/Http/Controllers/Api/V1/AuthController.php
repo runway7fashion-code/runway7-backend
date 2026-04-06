@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\ActivityAction;
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Services\ActivityLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,6 +34,11 @@ class AuthController extends Controller
             return response()->json(['message' => 'Tu cuenta ha sido desactivada. Contacta al administrador.'], 403);
         }
 
+        if ($user->status === 'rejected') {
+            Auth::logout();
+            return response()->json(['message' => 'Tu aplicación ha sido rechazada. Contacta al administrador para más información.'], 403);
+        }
+
         if ($user->status === 'applicant') {
             Auth::logout();
             return response()->json(['message' => 'Tu aplicación está siendo revisada. Te notificaremos cuando sea aprobada.'], 403);
@@ -42,6 +46,13 @@ class AuthController extends Controller
 
         if ($user->status === 'pending') {
             $user->update(['status' => 'active', 'last_login_at' => now()]);
+
+            // Auto-confirmed: actualizar sales_registration al primer login
+            if ($user->role === 'designer') {
+                \App\Models\SalesRegistration::where('designer_id', $user->id)
+                    ->where('status', 'onboarded')
+                    ->update(['status' => 'confirmed', 'confirmed_at' => now()]);
+            }
         } else {
             $user->update(['last_login_at' => now()]);
         }
@@ -52,32 +63,6 @@ class AuthController extends Controller
 
         return response()->json([
             'user' => $user->load(['modelProfile', 'designerProfile']),
-            'token' => $token,
-        ]);
-    }
-
-    public function loginWithCode(Request $request): JsonResponse
-    {
-        $request->validate([
-            'code' => 'required|string',
-        ]);
-
-        $user = User::where('login_code', $request->code)
-            ->where('status', 'active')
-            ->first();
-
-        if (!$user) {
-            return response()->json(['message' => 'Código inválido o usuario inactivo.'], 401);
-        }
-
-        $user->update(['last_login_at' => now()]);
-
-        $token = $user->createToken('kiosk-token')->plainTextToken;
-
-        $this->activityLog->log(ActivityAction::Login, $user, $user, "Login vía kiosk ({$user->role})");
-
-        return response()->json([
-            'user' => $user->load('modelProfile'),
             'token' => $token,
         ]);
     }

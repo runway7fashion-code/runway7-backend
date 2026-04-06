@@ -8,6 +8,42 @@ const props = defineProps({
 });
 
 const activeTab = ref(1);
+const phoneCode = ref('+1');
+const phoneNumber = ref('');
+
+const countryCodes = [
+    { code: '+1',   label: 'US/CA +1' },
+    { code: '+44',  label: 'UK +44' },
+    { code: '+33',  label: 'FR +33' },
+    { code: '+39',  label: 'IT +39' },
+    { code: '+34',  label: 'ES +34' },
+    { code: '+49',  label: 'DE +49' },
+    { code: '+55',  label: 'BR +55' },
+    { code: '+52',  label: 'MX +52' },
+    { code: '+57',  label: 'CO +57' },
+    { code: '+51',  label: 'PE +51' },
+    { code: '+54',  label: 'AR +54' },
+    { code: '+56',  label: 'CL +56' },
+    { code: '+91',  label: 'IN +91' },
+    { code: '+86',  label: 'CN +86' },
+    { code: '+81',  label: 'JP +81' },
+    { code: '+82',  label: 'KR +82' },
+    { code: '+61',  label: 'AU +61' },
+    { code: '+971', label: 'AE +971' },
+    { code: '+234', label: 'NG +234' },
+    { code: '+27',  label: 'ZA +27' },
+];
+
+const usStates = [
+    'Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware',
+    'Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky',
+    'Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota','Mississippi',
+    'Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey','New Mexico',
+    'New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania',
+    'Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont',
+    'Virginia','Washington','Washington D.C.','West Virginia','Wisconsin','Wyoming',
+    'Puerto Rico','Outside the U.S.',
+];
 
 const form = useForm({
     // Pestaña 1 - Datos personales
@@ -34,12 +70,16 @@ const form = useForm({
     agency:       '',
     is_agency:    false,
     is_test_model: false,
-    notes:        '',
+    notes:                 '',
+    referral_source:       '',
+    referral_source_other: '',
+    walk_video_url:        '',
     // Pestaña 3 - Evento
     event_id:     '',
     casting_time: '',
-    send_welcome_email: false,
 });
+
+const ageOptions = Array.from({ length: 63 }, (_, i) => i + 18); // 18-80
 
 const selectedEvent = computed(() => props.events.find(e => e.id == form.event_id) ?? null);
 const castingSlots  = computed(() => selectedEvent.value?.casting_day?.slots ?? []);
@@ -64,7 +104,8 @@ function formatSlotTime(t) {
 }
 
 function submit() {
-    form.post('/admin/models');
+    form.phone = phoneNumber.value ? `${phoneCode.value}${phoneNumber.value.replace(/\D/g, '')}` : '';
+    form.post('/admin/operations/models');
 }
 </script>
 
@@ -72,7 +113,7 @@ function submit() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link href="/admin/models" class="text-gray-400 hover:text-gray-600 text-sm">← Modelos</Link>
+                <Link href="/admin/operations/models" class="text-gray-400 hover:text-gray-600 text-sm">← Modelos</Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900">Crear Modelo</h2>
             </div>
@@ -94,7 +135,7 @@ function submit() {
                 </button>
             </div>
 
-            <form @submit.prevent="submit" class="space-y-5">
+            <form @submit.prevent="submit" novalidate class="space-y-5">
 
                 <!-- Pestaña 1: Datos Personales -->
                 <div v-show="activeTab === 1" class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
@@ -126,16 +167,25 @@ function submit() {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                            <input v-model="form.phone" type="tel"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            <div class="flex gap-2">
+                                <select v-model="phoneCode"
+                                    class="w-28 border border-gray-300 rounded-lg px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
+                                    <option v-for="c in countryCodes" :key="c.code" :value="c.code">{{ c.label }}</option>
+                                </select>
+                                <input v-model="phoneNumber" type="tel" placeholder="3055550404"
+                                    class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Edad</label>
-                            <input v-model="form.age" type="number" min="16" max="80"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            <select v-model="form.age"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                                <option value="">— Seleccionar —</option>
+                                <option v-for="a in ageOptions" :key="a" :value="a">{{ a }}</option>
+                            </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Género</label>
@@ -154,9 +204,12 @@ function submit() {
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Ciudad / Ubicación</label>
-                        <input v-model="form.location" type="text"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
+                        <select v-model="form.location"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                            <option value="">Seleccionar...</option>
+                            <option v-for="s in usStates" :key="s" :value="s">{{ s }}</option>
+                        </select>
                     </div>
 
                     <div class="grid grid-cols-3 gap-4">
@@ -216,17 +269,17 @@ function submit() {
 
                     <div class="grid grid-cols-3 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Altura (cm)</label>
-                            <input v-model="form.height" type="number" step="0.1" min="140" max="220"
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Height (in)</label>
+                            <input v-model="form.height" type="number" step="0.1" min="55" max="87"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Busto / Pecho (cm)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Bust / Chest (in)</label>
                             <input v-model="form.bust" type="number" step="0.1"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Cintura (cm)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Waist (in)</label>
                             <input v-model="form.waist" type="number" step="0.1"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
@@ -234,7 +287,7 @@ function submit() {
 
                     <div class="grid grid-cols-3 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Cadera (cm)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Hips (in)</label>
                             <input v-model="form.hips" type="number" step="0.1"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
@@ -267,6 +320,31 @@ function submit() {
                         <label class="block text-sm font-medium text-gray-700 mb-1">Notas internas</label>
                         <textarea v-model="form.notes" rows="3"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">¿Cómo se enteró?</label>
+                        <select v-model="form.referral_source"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                            <option value="">— Sin especificar —</option>
+                            <option value="instagram">Instagram</option>
+                            <option value="tiktok">TikTok</option>
+                            <option value="facebook">Facebook</option>
+                            <option value="friends_family">Amigos o Familia</option>
+                            <option value="agency">Agencia</option>
+                            <option value="other">Otro</option>
+                        </select>
+                    </div>
+                    <div v-if="form.referral_source === 'other'">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Especificar</label>
+                        <input v-model="form.referral_source_other" type="text"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Walk Video URL</label>
+                        <input v-model="form.walk_video_url" type="url" placeholder="https://..."
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                        <p class="text-xs text-gray-400 mt-1">Link público donde se pueda ver su pasarela</p>
                     </div>
                 </div>
 
@@ -315,18 +393,11 @@ function submit() {
                         Este evento no tiene día de casting configurado.
                     </div>
 
-                    <div class="border-t border-gray-100 pt-4">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input v-model="form.send_welcome_email" type="checkbox"
-                                class="rounded border-gray-300 text-black focus:ring-black/20" />
-                            <span class="text-sm text-gray-700">Enviar email de bienvenida al crear</span>
-                        </label>
-                    </div>
                 </div>
 
                 <!-- Botones -->
                 <div class="flex justify-between">
-                    <Link href="/admin/models"
+                    <Link href="/admin/operations/models"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                         Cancelar
                     </Link>

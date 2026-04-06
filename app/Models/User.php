@@ -19,10 +19,10 @@ class User extends Authenticatable
 
     protected $fillable = [
         'first_name', 'last_name', 'email', 'phone', 'password',
-        'role', 'status', 'last_login_at', 'welcome_email_sent_at', 'profile_picture', 'login_code',
+        'role', 'status', 'sales_type', 'is_available', 'last_login_at', 'welcome_email_sent_at', 'sms_sent_at', 'profile_picture',
     ];
 
-    protected $hidden = ['password', 'remember_token', 'login_code'];
+    protected $hidden = ['password', 'remember_token'];
 
     protected function casts(): array
     {
@@ -30,6 +30,7 @@ class User extends Authenticatable
             'email_verified_at'       => 'datetime',
             'last_login_at'           => 'datetime',
             'welcome_email_sent_at'   => 'datetime',
+            'sms_sent_at'             => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -87,6 +88,7 @@ class User extends Authenticatable
     public function scopeActive($query) { return $query->where('status', 'active'); }
     public function scopeModels($query) { return $query->where('role', 'model'); }
     public function scopeDesigners($query) { return $query->where('role', 'designer'); }
+    public function scopeMedia($query) { return $query->where('role', 'media'); }
     public function scopeAdmins($query) { return $query->where('role', 'admin'); }
     public function scopeInternalTeam($query) { return $query->whereIn('role', self::ROLES_INTERNAL); }
     public function scopeParticipants($query) { return $query->whereIn('role', self::ROLES_PARTICIPANT); }
@@ -107,8 +109,15 @@ class User extends Authenticatable
     // --- Profiles ---
     public function modelProfile() { return $this->hasOne(ModelProfile::class); }
     public function designerProfile() { return $this->hasOne(DesignerProfile::class); }
+    public function volunteerProfile() { return $this->hasOne(VolunteerProfile::class); }
+    public function volunteerSchedules() { return $this->hasMany(VolunteerSchedule::class); }
+    public function mediaProfile() { return $this->hasOne(MediaProfile::class); }
+    public function mediaAssistants() { return $this->hasMany(MediaAssistant::class, 'media_id'); }
     public function pressProfile() { return $this->hasOne(PressProfile::class); }
     public function sponsorProfile() { return $this->hasOne(SponsorProfile::class); }
+
+    // --- Communication Logs ---
+    public function communicationLogs() { return $this->hasMany(CommunicationLog::class); }
 
     // --- Payment Plans ---
     public function paymentPlans() { return $this->hasMany(DesignerPaymentPlan::class, 'designer_id'); }
@@ -133,20 +142,36 @@ class User extends Authenticatable
     public function eventsAsDesigner()
     {
         return $this->belongsToMany(Event::class, 'event_designer', 'designer_id', 'event_id')
-            ->withPivot(['status', 'package_id', 'looks', 'model_casting_enabled', 'package_price', 'notes'])
+            ->withPivot(['status', 'package_id', 'looks', 'assistants', 'model_casting_enabled', 'media_package', 'custom_background', 'courtesy_tickets', 'package_price', 'notes'])
             ->withTimestamps();
     }
 
+    public function salesRegistrations() { return $this->hasMany(SalesRegistration::class, 'designer_id'); }
     public function designerAssistants() { return $this->hasMany(DesignerAssistant::class, 'designer_id'); }
     public function designerMaterials() { return $this->hasMany(DesignerMaterial::class, 'designer_id'); }
     public function designerDisplays() { return $this->hasMany(DesignerDisplay::class, 'designer_id'); }
     public function fittingAssignments() { return $this->hasMany(FittingAssignment::class, 'designer_id'); }
     public function eventPasses() { return $this->hasMany(EventPass::class, 'user_id'); }
+    public function checkins()    { return $this->hasMany(Checkin::class); }
 
     public function eventsAsStaff()
     {
         return $this->belongsToMany(Event::class, 'event_staff', 'user_id', 'event_id')
-            ->withPivot(['assigned_role', 'status', 'checked_in_at', 'notes'])
+            ->withPivot(['assigned_role', 'status', 'checked_in_at', 'notes', 'area'])
+            ->withTimestamps();
+    }
+
+    public function eventsAsVolunteer()
+    {
+        return $this->belongsToMany(Event::class, 'event_volunteer', 'volunteer_id', 'event_id')
+            ->withPivot(['assigned_role', 'status', 'checked_in_at', 'notes', 'area'])
+            ->withTimestamps();
+    }
+
+    public function eventsAsMedia()
+    {
+        return $this->belongsToMany(Event::class, 'event_media', 'media_id', 'event_id')
+            ->withPivot(['status', 'checked_in_at', 'notes'])
             ->withTimestamps();
     }
 
@@ -167,7 +192,7 @@ class User extends Authenticatable
     public function eventsAsModelWithCasting()
     {
         return $this->belongsToMany(Event::class, 'event_model', 'model_id', 'event_id')
-            ->withPivot(['participation_number', 'casting_time', 'casting_checked_in_at', 'casting_status', 'status', 'checked_in_at'])
+            ->withPivot(['participation_number', 'casting_time', 'casting_checked_in_at', 'casting_status', 'status', 'checked_in_at', 'shopify_order_number', 'model_tag'])
             ->withTimestamps();
     }
 

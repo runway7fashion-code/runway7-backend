@@ -309,10 +309,10 @@ function typeBadge(type) {
                                 </td>
                                 <td class="py-3 px-4">
                                     <div class="flex items-center gap-1">
-                                        <button @click="openEditModal(r)" class="p-1.5 text-gray-400 hover:text-gray-700 rounded hover:bg-gray-100 transition" title="Editar">
+                                        <button @click="openEditModal(r)" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors" title="Editar">
                                             <PencilSquareIcon class="w-4 h-4" />
                                         </button>
-                                        <button @click="openDeleteModal(r)" class="p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-red-50 transition" title="Eliminar">
+                                        <button @click="openDeleteModal(r)" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors" title="Eliminar">
                                             <TrashIcon class="w-4 h-4" />
                                         </button>
                                     </div>

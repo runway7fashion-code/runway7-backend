@@ -199,12 +199,12 @@ function doDelete() {
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center gap-2">
                                     <Link :href="`/admin/accounting/cases/${c.id}`"
-                                        class="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                                        class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
                                         title="Ver caso">
                                         <EyeIcon class="w-4 h-4" />
                                     </Link>
                                     <button @click="confirmDelete(c)"
-                                        class="p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                                        class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"
                                         title="Eliminar">
                                         <TrashIcon class="w-4 h-4" />
                                     </button>

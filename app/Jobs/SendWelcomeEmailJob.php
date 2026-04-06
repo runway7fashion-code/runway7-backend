@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Mail\WelcomeModelMail;
+use App\Models\CommunicationLog;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -23,9 +24,7 @@ class SendWelcomeEmailJob implements ShouldQueue
 
     public function __construct(
         public int $userId,
-        public ?string $eventName = null,
-        public ?string $castingTime = null,
-        public ?string $castingDate = null,
+        public ?int $logId = null,
     ) {}
 
     public function handle(): void
@@ -34,22 +33,41 @@ class SendWelcomeEmailJob implements ShouldQueue
 
         if (!$user) return;
 
-        // Doble chequeo: si ya se envió en otro job, saltar
-        if ($user->welcome_email_sent_at) return;
+        $user->load(['eventsAsModelWithCasting.eventDays' => fn($q) => $q->where('type', 'casting')]);
+
+        // Incluir todos los eventos no rechazados (para merch sin casting asignado aún)
+        $events = $user->eventsAsModelWithCasting
+            ->filter(fn($event) => $event->pivot->status !== 'rejected')
+            ->map(function ($event) {
+                $castingDay = $event->eventDays->first();
+                return [
+                    'name'         => $event->name,
+                    'casting_date' => $castingDay?->date?->format('Y-m-d'),
+                    'casting_time' => $event->pivot->casting_time,
+                ];
+            })->values()->toArray();
 
         Mail::to($user->email, "{$user->first_name} {$user->last_name}")
             ->send(new WelcomeModelMail(
-                model:       $user,
-                eventName:   $this->eventName,
-                castingTime: $this->castingTime,
-                castingDate: $this->castingDate,
+                model:  $user,
+                events: $events,
             ));
 
         $user->update(['welcome_email_sent_at' => now()]);
+
+        if ($this->logId) {
+            CommunicationLog::where('id', $this->logId)
+                ->update(['status' => 'sent', 'sent_at' => now()]);
+        }
     }
 
     public function failed(\Throwable $exception): void
     {
         \Illuminate\Support\Facades\Log::error("SendWelcomeEmailJob failed for user {$this->userId}: " . $exception->getMessage());
+
+        if ($this->logId) {
+            CommunicationLog::where('id', $this->logId)
+                ->update(['status' => 'failed', 'error_message' => $exception->getMessage()]);
+        }
     }
 }

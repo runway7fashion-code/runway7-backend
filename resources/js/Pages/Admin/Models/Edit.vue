@@ -12,6 +12,51 @@ const props = defineProps({
 const activeTab = ref(1);
 const profile   = props.model.model_profile;
 
+const countryCodes = [
+    { code: '+1',   label: 'US/CA +1' },
+    { code: '+44',  label: 'UK +44' },
+    { code: '+33',  label: 'FR +33' },
+    { code: '+39',  label: 'IT +39' },
+    { code: '+34',  label: 'ES +34' },
+    { code: '+49',  label: 'DE +49' },
+    { code: '+55',  label: 'BR +55' },
+    { code: '+52',  label: 'MX +52' },
+    { code: '+57',  label: 'CO +57' },
+    { code: '+51',  label: 'PE +51' },
+    { code: '+54',  label: 'AR +54' },
+    { code: '+56',  label: 'CL +56' },
+    { code: '+91',  label: 'IN +91' },
+    { code: '+86',  label: 'CN +86' },
+    { code: '+81',  label: 'JP +81' },
+    { code: '+82',  label: 'KR +82' },
+    { code: '+61',  label: 'AU +61' },
+    { code: '+971', label: 'AE +971' },
+    { code: '+234', label: 'NG +234' },
+    { code: '+27',  label: 'ZA +27' },
+];
+
+function parsePhone(full) {
+    if (!full || !full.startsWith('+')) return { code: '+1', number: full ?? '' };
+    const match = countryCodes.find(c => full.startsWith(c.code));
+    if (match) return { code: match.code, number: full.slice(match.code.length) };
+    return { code: '+1', number: full.replace(/^\+/, '') };
+}
+
+const usStates = [
+    'Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware',
+    'Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky',
+    'Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota','Mississippi',
+    'Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey','New Mexico',
+    'New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania',
+    'Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont',
+    'Virginia','Washington','Washington D.C.','West Virginia','Wisconsin','Wyoming',
+    'Puerto Rico','Outside the U.S.',
+];
+
+const parsed = parsePhone(props.model.phone);
+const phoneCode = ref(parsed.code);
+const phoneNumber = ref(parsed.number);
+
 const form = useForm({
     // Datos personales
     first_name:    props.model.first_name  ?? '',
@@ -37,7 +82,11 @@ const form = useForm({
     agency:        profile?.agency         ?? '',
     is_agency:     profile?.is_agency      ?? false,
     is_test_model: profile?.is_test_model  ?? false,
-    notes:         profile?.notes          ?? '',
+    notes:              profile?.notes                   ?? '',
+    referral_source:       profile?.referral_source        ?? '',
+    referral_source_other: profile?.referral_source_other  ?? '',
+    walk_video_url:        profile?.walk_video_url         ?? '',
+    model_kit_paid_at:     profile?.model_kit_paid_at      ?? null,
     // Estado de cuenta
     status:        props.model.status      ?? 'pending',
 });
@@ -79,7 +128,7 @@ function uploadPhoto(position) {
         formData.append('photo', file);
         formData.append('_method', 'POST');
 
-        router.post(`/admin/models/${props.model.id}/upload-photo/${position}`, formData, {
+        router.post(`/admin/operations/models/${props.model.id}/upload-photo/${position}`, formData, {
             preserveScroll: true,
             onSuccess: () => {
                 uploading.value[position] = false;
@@ -94,7 +143,7 @@ function uploadPhoto(position) {
 
 function deletePhoto(position) {
     if (!confirm(`¿Eliminar foto ${position}?`)) return;
-    router.delete(`/admin/models/${props.model.id}/delete-photo/${position}`, {
+    router.delete(`/admin/operations/models/${props.model.id}/delete-photo/${position}`, {
         preserveScroll: true,
         onSuccess: () => { compCardPhotos.value[position - 1] = null; },
     });
@@ -115,7 +164,7 @@ function uploadProfilePicture() {
         const formData = new FormData();
         formData.append('photo', file);
 
-        router.post(`/admin/models/${props.model.id}/upload-profile-picture`, formData, {
+        router.post(`/admin/operations/models/${props.model.id}/upload-profile-picture`, formData, {
             preserveScroll: true,
             onSuccess: () => {
                 uploadingProfile.value = false;
@@ -129,7 +178,7 @@ function uploadProfilePicture() {
 
 function deleteProfilePicture() {
     if (!confirm('¿Eliminar la foto de perfil?')) return;
-    router.delete(`/admin/models/${props.model.id}/delete-profile-picture`, {
+    router.delete(`/admin/operations/models/${props.model.id}/delete-profile-picture`, {
         preserveScroll: true,
         onSuccess: () => { profilePicture.value = null; },
     });
@@ -144,6 +193,8 @@ watch(() => props.model.model_profile, (p) => {
 });
 
 // Evento / Casting
+const ageOptions = Array.from({ length: 63 }, (_, i) => i + 18); // 18-80
+
 const selectedEventId   = ref(props.model.events?.[0]?.id ?? '');
 const selectedSlotTime  = ref(props.model.events?.[0]?.casting_time ?? '');
 
@@ -171,7 +222,7 @@ function formatSlotTime(t) {
 
 function assignEvent() {
     if (!selectedEventId.value) return;
-    router.post(`/admin/models/${props.model.id}/assign-event`, {
+    router.post(`/admin/operations/models/${props.model.id}/assign-event`, {
         event_id:     selectedEventId.value,
         casting_time: selectedSlotTime.value || null,
     }, { preserveScroll: true });
@@ -179,11 +230,12 @@ function assignEvent() {
 
 function removeFromEvent(eventId, eventName) {
     if (!confirm(`¿Quitar del evento "${eventName}"?`)) return;
-    router.delete(`/admin/models/${props.model.id}/remove-event/${eventId}`, { preserveScroll: true });
+    router.delete(`/admin/operations/models/${props.model.id}/remove-event/${eventId}`, { preserveScroll: true });
 }
 
 function submit() {
-    form.put(`/admin/models/${props.model.id}`);
+    form.phone = phoneNumber.value ? `${phoneCode.value}${phoneNumber.value.replace(/\D/g, '')}` : '';
+    form.put(`/admin/operations/models/${props.model.id}`);
 }
 </script>
 
@@ -191,7 +243,7 @@ function submit() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link :href="`/admin/models/${model.id}`" class="text-gray-400 hover:text-gray-600 text-sm">← Ver modelo</Link>
+                <Link :href="`/admin/operations/models/${model.id}`" class="text-gray-400 hover:text-gray-600 text-sm">← Ver modelo</Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900">Editar: {{ model.first_name }} {{ model.last_name }}</h2>
             </div>
@@ -226,7 +278,7 @@ function submit() {
                             <p v-if="form.errors.first_name" class="mt-1 text-red-500 text-xs">{{ form.errors.first_name }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
                             <input v-model="form.last_name" type="text"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
@@ -241,16 +293,26 @@ function submit() {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                            <input v-model="form.phone" type="tel"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            <div class="flex gap-2">
+                                <select v-model="phoneCode"
+                                    class="w-28 border border-gray-300 rounded-lg px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
+                                    <option v-for="c in countryCodes" :key="c.code" :value="c.code">{{ c.label }}</option>
+                                </select>
+                                <input v-model="phoneNumber" type="tel" placeholder="3055550404"
+                                    class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
+                            <p v-if="form.errors.phone" class="mt-1 text-red-500 text-xs">{{ form.errors.phone }}</p>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Edad</label>
-                            <input v-model="form.age" type="number" min="16" max="80"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            <select v-model="form.age"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                                <option value="">— Seleccionar —</option>
+                                <option v-for="a in ageOptions" :key="a" :value="a">{{ a }}</option>
+                            </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Género</label>
@@ -269,9 +331,12 @@ function submit() {
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Ciudad / Ubicación</label>
-                        <input v-model="form.location" type="text"
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
+                        <select v-model="form.location"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                            <option value="">Seleccionar...</option>
+                            <option v-for="s in usStates" :key="s" :value="s">{{ s }}</option>
+                        </select>
                     </div>
 
                     <div class="grid grid-cols-3 gap-4">
@@ -320,6 +385,7 @@ function submit() {
                         <label class="block text-sm font-medium text-gray-700 mb-1">Estado de cuenta</label>
                         <select v-model="form.status"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                            <option value="active" disabled>Activo (activado por la modelo)</option>
                             <option value="pending">Pendiente</option>
                             <option value="inactive">Inactivo</option>
                             <option value="applicant">Aplicante</option>
@@ -339,17 +405,17 @@ function submit() {
                 <div v-show="activeTab === 2" class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
                     <div class="grid grid-cols-3 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Altura (cm)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Height (in)</label>
                             <input v-model="form.height" type="number" step="0.1"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Busto/Pecho (cm)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Bust/Chest (in)</label>
                             <input v-model="form.bust" type="number" step="0.1"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Cintura (cm)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Waist (in)</label>
                             <input v-model="form.waist" type="number" step="0.1"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
@@ -357,7 +423,7 @@ function submit() {
 
                     <div class="grid grid-cols-3 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Cadera (cm)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Hips (in)</label>
                             <input v-model="form.hips" type="number" step="0.1"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
@@ -391,6 +457,42 @@ function submit() {
                         <textarea v-model="form.notes" rows="3"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"></textarea>
                     </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">¿Cómo se enteró?</label>
+                        <select v-model="form.referral_source"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
+                            <option value="">— Sin especificar —</option>
+                            <option value="instagram">Instagram</option>
+                            <option value="tiktok">TikTok</option>
+                            <option value="facebook">Facebook</option>
+                            <option value="friends_family">Amigos o Familia</option>
+                            <option value="agency">Agencia</option>
+                            <option value="other">Otro</option>
+                        </select>
+                    </div>
+                    <div v-if="form.referral_source === 'other'">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Especificar</label>
+                        <input v-model="form.referral_source_other" type="text"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Walk Video URL</label>
+                        <input v-model="form.walk_video_url" type="url" placeholder="https://..."
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                        <p class="text-xs text-gray-400 mt-1">Link público donde se pueda ver su pasarela</p>
+                    </div>
+                    <div>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" :checked="!!form.model_kit_paid_at"
+                                @change="form.model_kit_paid_at = $event.target.checked ? new Date().toISOString() : null"
+                                class="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500/20" />
+                            <span class="text-sm font-medium text-gray-700">Model Kit pagado ($9.99 — R7 T-Shirt + R7 Tote Bag)</span>
+                            <span v-if="form.model_kit_paid_at" class="text-xs text-gray-400">
+                                ({{ new Date(form.model_kit_paid_at).toLocaleDateString('es-US', { month: 'short', day: 'numeric', year: 'numeric' }) }})
+                            </span>
+                        </label>
+                    </div>
                 </div>
 
                 <!-- Pestaña 3: Evento y Casting -->
@@ -408,10 +510,15 @@ function submit() {
                                         class="text-xs font-bold bg-black text-white px-2 py-0.5 rounded-full">
                                         #{{ evt.participation_number }}
                                     </span>
-                                    <span class="text-xs text-gray-400">
-                                        Casting: {{ evt.casting_time ?? '—' }}
+                                    <span v-if="evt.casting_time" class="text-xs text-gray-400">
+                                        Casting: {{ evt.casting_time }}
                                         <span v-if="evt.casting_status"> · {{ evt.casting_status }}</span>
                                     </span>
+                                    <button v-else type="button"
+                                        @click="selectedEventId = evt.id; selectedSlotTime = ''"
+                                        class="text-xs text-amber-600 hover:text-amber-800 font-medium">
+                                        Asignar horario de casting
+                                    </button>
                                 </div>
                             </div>
                             <button type="button" @click="removeFromEvent(evt.id, evt.name)"
@@ -450,7 +557,7 @@ function submit() {
                         <button type="button" @click="assignEvent"
                             :disabled="!selectedEventId"
                             class="w-full py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors">
-                            Asignar al evento
+                            {{ model.events?.some(e => e.id == selectedEventId) ? 'Actualizar horario de casting' : 'Asignar al evento' }}
                         </button>
                     </div>
                 </div>
@@ -525,7 +632,7 @@ function submit() {
 
                 <!-- Botones (no en pestaña 3 ni 4 que tienen sus propias acciones) -->
                 <div v-if="activeTab <= 2" class="flex justify-between">
-                    <Link :href="`/admin/models/${model.id}`"
+                    <Link :href="`/admin/operations/models/${model.id}`"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                         Cancelar
                     </Link>
@@ -546,7 +653,7 @@ function submit() {
                     </div>
                 </div>
                 <div v-else class="flex justify-end">
-                    <Link :href="`/admin/models/${model.id}`"
+                    <Link :href="`/admin/operations/models/${model.id}`"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                         Volver al perfil
                     </Link>

@@ -58,7 +58,7 @@ function onImageChange(e) {
 }
 
 function submit() {
-    form.post('/admin/banners', {
+    form.post('/admin/operations/banners', {
         forceFormData: true,
     });
 }
@@ -68,7 +68,7 @@ function submit() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link href="/admin/banners" class="text-gray-400 hover:text-gray-600 text-sm">Banners</Link>
+                <Link href="/admin/operations/banners" class="text-gray-400 hover:text-gray-600 text-sm">Banners</Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900">Crear Banner</h2>
             </div>
@@ -176,7 +176,7 @@ function submit() {
 
                 <!-- Botones -->
                 <div class="flex justify-between">
-                    <Link href="/admin/banners"
+                    <Link href="/admin/operations/banners"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
                         Cancelar
                     </Link>
