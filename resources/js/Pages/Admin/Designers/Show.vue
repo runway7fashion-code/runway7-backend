@@ -11,10 +11,10 @@ const props = defineProps({
 });
 
 const docTypeLabel = (type) => ({
-    contract:    'Contrato',
-    invoice:     'Factura',
+    contract:    'Contract',
+    invoice:     'Invoice',
     id_document: 'ID',
-    other:       'Otro',
+    other:       'Other',
 })[type] ?? type;
 
 const profile    = computed(() => props.designer.designer_profile);
@@ -66,7 +66,7 @@ function storageUrl(path) {
 }
 
 function removeFromEvent(eventId, eventName) {
-    if (!confirm(`Quitar a ${props.designer.first_name} del evento "${eventName}"?`)) return;
+    if (!confirm(`Remove ${props.designer.first_name} from event "${eventName}"?`)) return;
     router.delete(`/admin/operations/designers/${props.designer.id}/remove-event/${eventId}`, { preserveScroll: true });
 }
 
@@ -77,7 +77,7 @@ function toggleFeature(eventId, field) {
 // Onboarding email
 const sendingOnboarding = ref(false);
 function sendOnboardingEmail() {
-    if (!confirm(`Enviar email de onboarding a ${props.designer.first_name} ${props.designer.last_name}?`)) return;
+    if (!confirm(`Send onboarding email to ${props.designer.first_name} ${props.designer.last_name}?`)) return;
     sendingOnboarding.value = true;
     router.post(`/admin/operations/designers/${props.designer.id}/send-onboarding`, {}, {
         preserveScroll: true,
@@ -90,14 +90,14 @@ function statusBadgeClass() {
     return { active: 'bg-green-50 text-green-700 border-green-200', pending: 'bg-yellow-50 text-yellow-700 border-yellow-200', inactive: 'bg-red-50 text-red-600 border-red-200', registered: 'bg-blue-50 text-blue-700 border-blue-200' }[props.designer.status] ?? 'bg-gray-50 text-gray-600 border-gray-200';
 }
 function statusBadgeLabel() {
-    return { active: 'Activo', pending: 'Pendiente', inactive: 'Inactivo', registered: 'Registrado' }[props.designer.status] ?? props.designer.status;
+    return { active: 'Active', pending: 'Pending', inactive: 'Inactive', registered: 'Registered' }[props.designer.status] ?? props.designer.status;
 }
 
 // Onboarding SMS
 const sendingSms = ref(false);
 function sendOnboardingSms() {
-    if (!props.designer.phone) return alert('Este diseñador no tiene teléfono registrado.');
-    if (!confirm(`Enviar SMS de onboarding a ${props.designer.first_name} ${props.designer.last_name}?`)) return;
+    if (!props.designer.phone) return alert('This designer has no registered phone number.');
+    if (!confirm(`Send onboarding SMS to ${props.designer.first_name} ${props.designer.last_name}?`)) return;
     sendingSms.value = true;
     router.post(`/admin/operations/designers/${props.designer.id}/send-onboarding-sms`, {}, {
         preserveScroll: true,
@@ -137,7 +137,7 @@ function materialStatusClass(status) {
     }[status] ?? 'text-gray-600 bg-gray-50';
 }
 function materialStatusLabel(status) {
-    return { pending: 'Pendiente', submitted: 'Enviado', confirmed: 'Confirmado', rejected: 'Rechazado' }[status] ?? status;
+    return { pending: 'Pending', submitted: 'Submitted', confirmed: 'Confirmed', rejected: 'Rejected' }[status] ?? status;
 }
 
 function displayStatusClass(status) {
@@ -148,14 +148,14 @@ function displayStatusClass(status) {
     }[status] ?? 'text-gray-600 bg-gray-50';
 }
 function displayStatusLabel(status) {
-    return { pending: 'Pendiente', ready: 'Listo', confirmed: 'Confirmado' }[status] ?? status;
+    return { pending: 'Pending', ready: 'Ready', confirmed: 'Confirmed' }[status] ?? status;
 }
 
 function showStatusClass(s) {
     return { confirmed: 'text-green-700 bg-green-50', cancelled: 'text-red-600 bg-red-50' }[s] ?? 'text-gray-600 bg-gray-50';
 }
 function showStatusLabel(s) {
-    return { confirmed: 'Confirmado', cancelled: 'Cancelado' }[s] ?? s;
+    return { confirmed: 'Confirmed', cancelled: 'Cancelled' }[s] ?? s;
 }
 
 function passStatusClass(s) {
@@ -166,7 +166,7 @@ function passStatusClass(s) {
     }[s] ?? 'bg-gray-100 text-gray-500';
 }
 function passStatusLabel(s) {
-    return { active: 'Activo', cancelled: 'Cancelado', used: 'Usado' }[s] ?? s;
+    return { active: 'Active', cancelled: 'Cancelled', used: 'Used' }[s] ?? s;
 }
 
 function designerStatusClass(s) {
@@ -191,7 +191,7 @@ const socialLinks = computed(() => {
         <template #header>
             <div class="flex items-center gap-3">
                 <Link href="/admin/operations/designers" class="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
-                    <ArrowLeftIcon class="w-4 h-4" /> Diseñadores
+                    <ArrowLeftIcon class="w-4 h-4" /> Designers
                 </Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900">{{ designer.first_name }} {{ designer.last_name }}</h2>
@@ -229,12 +229,12 @@ const socialLinks = computed(() => {
                                 </span>
                                 <Link :href="`/admin/operations/designers/${designer.id}/edit`"
                                     class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
-                                    Editar
+                                    Edit
                                 </Link>
                                 <button @click="showDeleteModal = true"
                                     class="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors flex items-center gap-1.5">
                                     <TrashIcon class="w-3.5 h-3.5" />
-                                    Eliminar
+                                    Delete
                                 </button>
                             </div>
                         </div>
@@ -256,7 +256,7 @@ const socialLinks = computed(() => {
                                 <EnvelopeIcon class="w-4 h-4 text-gray-400" />
                                 {{ designer.email }}
                             </span>
-                            <span v-if="designer.phone" class="text-gray-600">Tel: {{ designer.phone }}</span>
+                            <span v-if="designer.phone" class="text-gray-600">Phone: {{ designer.phone }}</span>
                             <a v-for="link in socialLinks" :key="link.label"
                                 :href="link.url" target="_blank" :class="link.color" class="text-sm">
                                 {{ link.label }}
@@ -319,7 +319,7 @@ const socialLinks = computed(() => {
                                 {{ evt.name }}
                             </span>
                             <span v-if="evt.designer_status === 'cancelled'"
-                                class="text-[10px] font-normal opacity-70">(Cancelado)</span>
+                                class="text-[10px] font-normal opacity-70">(Cancelled)</span>
                         </button>
                     </div>
                 </div>
@@ -332,7 +332,7 @@ const socialLinks = computed(() => {
                 </button>
             </div>
             <div v-else class="bg-white rounded-2xl border border-gray-200 p-6 text-center text-sm text-gray-400 italic">
-                Sin eventos asignados.
+                No events assigned.
             </div>
 
             <!-- Contenido del evento seleccionado -->
@@ -351,7 +351,7 @@ const socialLinks = computed(() => {
                                 <span class="text-xs font-medium text-orange-700">{{ tabFitting.day_label }} · {{ tabFitting.time }}</span>
                             </div>
                         </div>
-                        <div v-if="tabShows.length === 0" class="text-sm text-gray-400 italic">Sin shows asignados en este evento.</div>
+                        <div v-if="tabShows.length === 0" class="text-sm text-gray-400 italic">No shows assigned to this event.</div>
                         <div class="space-y-2">
                             <div v-for="s in tabShows" :key="s.id"
                                 class="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2.5 text-sm">
@@ -369,7 +369,7 @@ const socialLinks = computed(() => {
                     <!-- Materiales del evento -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-6">
                         <div class="flex items-center justify-between mb-4">
-                            <h4 class="font-bold text-gray-900">Materiales</h4>
+                            <h4 class="font-bold text-gray-900">Materials</h4>
                             <div class="flex items-center gap-2">
                                 <div class="w-28 h-2 bg-gray-200 rounded-full overflow-hidden">
                                     <div :class="progressColor(tabProgress)"
@@ -391,7 +391,7 @@ const socialLinks = computed(() => {
                                 </span>
                             </div>
                         </div>
-                        <p v-else class="text-sm text-gray-400 italic">Sin materiales.</p>
+                        <p v-else class="text-sm text-gray-400 italic">No materials.</p>
                     </div>
 
                     <!-- Display del evento -->
@@ -401,15 +401,15 @@ const socialLinks = computed(() => {
                             <div class="flex items-center gap-3 text-sm">
                                 <span class="text-gray-500 w-12">Video:</span>
                                 <span v-if="d.background_video_url" class="text-blue-600 text-xs truncate max-w-xs">{{ d.background_video_url }}</span>
-                                <span v-else class="text-gray-400 text-xs italic">Sin video</span>
+                                <span v-else class="text-gray-400 text-xs italic">No video</span>
                             </div>
                             <div class="flex items-center gap-3 text-sm">
                                 <span class="text-gray-500 w-12">Audio:</span>
                                 <span v-if="d.music_audio_url" class="text-blue-600 text-xs truncate max-w-xs">{{ d.music_audio_url }}</span>
-                                <span v-else class="text-gray-400 text-xs italic">Sin audio</span>
+                                <span v-else class="text-gray-400 text-xs italic">No audio</span>
                             </div>
                             <div class="flex items-center gap-3 text-sm">
-                                <span class="text-gray-500 w-12">Estado:</span>
+                                <span class="text-gray-500 w-12">Status:</span>
                                 <span :class="displayStatusClass(d.status)" class="px-2 py-0.5 rounded text-xs font-medium">
                                     {{ displayStatusLabel(d.status) }}
                                 </span>
@@ -439,21 +439,21 @@ const socialLinks = computed(() => {
                         <div class="space-y-1">
                             <p class="text-xs">
                                 <span :class="designerStatusClass(selectedEvent.designer_status)" class="font-medium capitalize">
-                                    {{ selectedEvent.designer_status === 'confirmed' ? 'Confirmado' : 'Cancelado' }}
+                                    {{ selectedEvent.designer_status === 'confirmed' ? 'Confirmed' : 'Cancelled' }}
                                 </span>
                             </p>
                             <p v-if="selectedEvent.package_id" class="text-xs text-gray-500">
-                                Paquete: <span class="font-medium text-gray-700">${{ Number(selectedEvent.package_price).toLocaleString() }}</span>
+                                Package: <span class="font-medium text-gray-700">${{ Number(selectedEvent.package_price).toLocaleString() }}</span>
                             </p>
                             <p class="text-xs text-gray-500">
                                 Looks: <span class="font-medium text-gray-700">{{ selectedEvent.looks }}</span>
                             </p>
                             <p class="text-xs text-gray-500 flex items-center gap-1">
-                                Modelos: <span class="font-medium text-gray-700">{{ selectedEvent.models_count ?? 0 }}</span>
+                                Models: <span class="font-medium text-gray-700">{{ selectedEvent.models_count ?? 0 }}</span>
                                 <button v-if="(selectedEvent.models_count ?? 0) > 0"
                                     @click="modelsModal = selectedEvent"
                                     class="text-indigo-500 hover:text-indigo-700 font-medium ml-1">
-                                    Ver
+                                    View
                                 </button>
                             </p>
                             <div class="flex flex-wrap gap-1.5 mt-1">
@@ -485,7 +485,7 @@ const socialLinks = computed(() => {
                             </span>
                             <button @click="openPassModal(selectedEvent)"
                                 class="text-[11px] text-indigo-500 hover:text-indigo-700 font-medium ml-auto flex items-center gap-0.5">
-                                Ver QR <ArrowRightIcon class="w-3 h-3" />
+                                View QR <ArrowRightIcon class="w-3 h-3" />
                             </button>
                         </div>
                     </div>
@@ -493,14 +493,14 @@ const socialLinks = computed(() => {
                     <!-- Asistentes del evento -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-5">
                         <div class="flex items-center justify-between mb-3">
-                            <h4 class="font-bold text-gray-900">Asistentes</h4>
+                            <h4 class="font-bold text-gray-900">Assistants</h4>
                             <span v-if="selectedEvent?.assistants != null"
                                 :class="tabAssistants.length >= selectedEvent.assistants ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-500'"
                                 class="text-xs font-medium px-2 py-0.5 rounded-full">
                                 {{ tabAssistants.length }} / {{ selectedEvent.assistants }}
                             </span>
                         </div>
-                        <div v-if="tabAssistants.length === 0" class="text-sm text-gray-400 italic">Sin asistentes.</div>
+                        <div v-if="tabAssistants.length === 0" class="text-sm text-gray-400 italic">No assistants.</div>
                         <div v-for="a in tabAssistants" :key="a.id"
                             class="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
                             <div>
@@ -511,7 +511,7 @@ const socialLinks = computed(() => {
                             </div>
                             <span class="text-xs px-1.5 py-0.5 rounded"
                                 :class="a.status === 'checked_in' ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-500'">
-                                {{ a.status === 'checked_in' ? 'Check-in' : 'Registrado' }}
+                                {{ a.status === 'checked_in' ? 'Check-in' : 'Registered' }}
                             </span>
                         </div>
                     </div>
@@ -519,7 +519,7 @@ const socialLinks = computed(() => {
                     <!-- Redes y enlaces (global) -->
                     <div v-if="socialLinks.length || profile?.skype || profile?.tracking_link"
                         class="bg-white rounded-2xl border border-gray-200 p-5">
-                        <h4 class="font-bold text-gray-900 mb-3">Redes y Enlaces</h4>
+                        <h4 class="font-bold text-gray-900 mb-3">Social & Links</h4>
                         <div class="space-y-2 text-sm">
                             <a v-for="link in socialLinks" :key="link.label"
                                 :href="link.url" target="_blank"
@@ -558,9 +558,9 @@ const socialLinks = computed(() => {
                     {{ passStatusLabel(passModal.status) }}
                 </span>
                 <div class="text-center">
-                    <p v-if="passModal.valid_days_labels" class="text-xs text-gray-500 font-medium">Días válidos</p>
+                    <p v-if="passModal.valid_days_labels" class="text-xs text-gray-500 font-medium">Valid days</p>
                     <p v-if="passModal.valid_days_labels" class="text-xs text-gray-400 mt-0.5">{{ passModal.valid_days_labels }}</p>
-                    <p v-else class="text-xs text-gray-400">Válido todos los días</p>
+                    <p v-else class="text-xs text-gray-400">Valid all days</p>
                 </div>
             </div>
         </div>
@@ -582,7 +582,7 @@ const socialLinks = computed(() => {
                         <a :href="previewDoc.url" download
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
                             <ArrowDownTrayIcon class="w-3.5 h-3.5" />
-                            Descargar
+                            Download
                         </a>
                         <button @click="previewDoc = null" class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                             <XMarkIcon class="w-5 h-5" />
@@ -610,26 +610,26 @@ const socialLinks = computed(() => {
                         <TrashIcon class="w-6 h-6 text-red-500" />
                     </div>
                 </div>
-                <h3 class="text-lg font-bold text-gray-900 mb-1 text-center">¿Eliminar a {{ designer.first_name }} {{ designer.last_name }}?</h3>
-                <p class="text-sm text-gray-500 mb-4 text-center">Esta acción es permanente y no se puede deshacer.</p>
+                <h3 class="text-lg font-bold text-gray-900 mb-1 text-center">Delete {{ designer.first_name }} {{ designer.last_name }}?</h3>
+                <p class="text-sm text-gray-500 mb-4 text-center">This action is permanent and cannot be undone.</p>
                 <div class="bg-red-50 border border-red-100 rounded-xl p-4 mb-5">
-                    <p class="text-sm font-medium text-red-700 mb-2">Se eliminará de forma definitiva:</p>
+                    <p class="text-sm font-medium text-red-700 mb-2">The following will be permanently deleted:</p>
                     <ul class="text-sm text-red-600 space-y-1 list-disc list-inside">
-                        <li>Cuenta de usuario y datos personales</li>
-                        <li>Perfil de diseñador y marca</li>
-                        <li>Asignaciones a eventos y shows</li>
-                        <li>Materiales y displays enviados</li>
-                        <li>Pases de acceso generados</li>
+                        <li>User account and personal data</li>
+                        <li>Designer profile and brand</li>
+                        <li>Event and show assignments</li>
+                        <li>Submitted materials and displays</li>
+                        <li>Generated access passes</li>
                     </ul>
                 </div>
                 <div class="flex gap-3">
                     <button @click="showDeleteModal = false"
                         class="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
-                        Cancelar
+                        Cancel
                     </button>
                     <button @click="deleteDesigner"
                         class="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors">
-                        Eliminar definitivamente
+                        Delete permanently
                     </button>
                 </div>
             </div>
@@ -644,12 +644,12 @@ const socialLinks = computed(() => {
                 <button @click="modelsModal = null" class="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600">
                     <XMarkIcon class="h-5 w-5" />
                 </button>
-                <h3 class="text-lg font-bold text-gray-900 mb-1">Modelos Asignadas</h3>
+                <h3 class="text-lg font-bold text-gray-900 mb-1">Assigned Models</h3>
                 <p class="text-sm text-gray-500 mb-4">{{ modelsModal.name }}</p>
 
                 <div class="overflow-y-auto space-y-2">
                     <div v-if="!modelsModal.assigned_models?.length" class="text-sm text-gray-400 italic text-center py-4">
-                        Sin modelos asignadas.
+                        No models assigned.
                     </div>
                     <Link v-for="m in modelsModal.assigned_models" :key="m.id"
                         :href="`/admin/models/${m.id}`"
@@ -672,7 +672,7 @@ const socialLinks = computed(() => {
                             </span>
                             <span class="text-xs px-1.5 py-0.5 rounded"
                                 :class="m.status === 'confirmed' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'">
-                                {{ m.status === 'confirmed' ? 'Confirmada' : m.status }}
+                                {{ m.status === 'confirmed' ? 'Confirmed' : m.status }}
                             </span>
                         </div>
                     </Link>

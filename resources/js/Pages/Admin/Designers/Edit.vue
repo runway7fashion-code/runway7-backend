@@ -161,12 +161,12 @@ function assignEvent() {
 }
 
 function cancelFromEvent(eventId, eventName) {
-    if (!confirm(`¿Cancelar participación en "${eventName}"? Se cancelarán todos sus shows y pases, pero se conservarán materiales y asistentes.`)) return;
+    if (!confirm(`Cancel participation in "${eventName}"? All shows and passes will be cancelled, but materials and assistants will be preserved.`)) return;
     router.patch(`/admin/operations/designers/${props.designer.id}/cancel-event/${eventId}`, {}, { preserveScroll: true });
 }
 
 function removeFromEvent(eventId, eventName) {
-    if (!confirm(`¿Quitar completamente del evento "${eventName}"? Se eliminarán todos los datos asociados.`)) return;
+    if (!confirm(`Completely remove from event "${eventName}"? All associated data will be deleted.`)) return;
     router.delete(`/admin/operations/designers/${props.designer.id}/remove-event/${eventId}`, { preserveScroll: true });
 }
 
@@ -200,7 +200,7 @@ function addAssistant() {
 }
 
 function removeAssistant(assistantId) {
-    if (!confirm('Eliminar asistente?')) return;
+    if (!confirm('Delete assistant?')) return;
     router.delete(`/admin/operations/designers/assistants/${assistantId}`, { preserveScroll: true });
 }
 
@@ -245,11 +245,11 @@ function materialStatusClass(status) {
 }
 
 function materialStatusLabel(status) {
-    return { pending: 'Pendiente', submitted: 'Enviado', confirmed: 'Confirmado', rejected: 'Rechazado' }[status] ?? status;
+    return { pending: 'Pending', submitted: 'Submitted', confirmed: 'Confirmed', rejected: 'Rejected' }[status] ?? status;
 }
 
 function displayStatusLabel(status) {
-    return { pending: 'Pendiente', ready: 'Listo', confirmed: 'Confirmado' }[status] ?? status;
+    return { pending: 'Pending', ready: 'Ready', confirmed: 'Confirmed' }[status] ?? status;
 }
 
 function materialsProgress(eventId) {
@@ -266,22 +266,22 @@ function progressColor(pct) {
 }
 
 function eventName(eventId) {
-    return designerEvents.value.find(e => e.id === eventId)?.name ?? `Evento #${eventId}`;
+    return designerEvents.value.find(e => e.id === eventId)?.name ?? `Event #${eventId}`;
 }
 
 function showStatusLabel(s) {
-    return { confirmed: 'Confirmado', cancelled: 'Cancelado' }[s] ?? s;
+    return { confirmed: 'Confirmed', cancelled: 'Cancelled' }[s] ?? s;
 }
 
 // Cancelar participación en un show (mantiene historial, status=cancelled)
 function cancelShow(showId, showName) {
-    if (!confirm(`¿Cancelar participación en "${showName}"? El show quedará marcado como cancelado.`)) return;
+    if (!confirm(`Cancel participation in "${showName}"? The show will be marked as cancelled.`)) return;
     router.patch(`/admin/operations/designers/${props.designer.id}/shows/${showId}/cancel`, {}, { preserveScroll: true });
 }
 
 // Quitar show completamente (elimina el registro)
 function removeShow(showId, showName) {
-    if (!confirm(`¿Quitar completamente el show "${showName}"? Esta acción no se puede deshacer.`)) return;
+    if (!confirm(`Completely remove show "${showName}"? This action cannot be undone.`)) return;
     router.delete(`/admin/operations/designers/${props.designer.id}/shows/${showId}`, { preserveScroll: true });
 }
 
@@ -364,10 +364,10 @@ function submit() {
         <template #header>
             <div class="flex items-center gap-3">
                 <Link :href="`/admin/operations/designers/${designer.id}`" class="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
-                    <ArrowLeftIcon class="w-4 h-4" /> Ver diseñador
+                    <ArrowLeftIcon class="w-4 h-4" /> View designer
                 </Link>
                 <span class="text-gray-300">/</span>
-                <h2 class="text-lg font-semibold text-gray-900">Editar: {{ designer.first_name }} {{ designer.last_name }}</h2>
+                <h2 class="text-lg font-semibold text-gray-900">Edit: {{ designer.first_name }} {{ designer.last_name }}</h2>
             </div>
         </template>
 
@@ -375,10 +375,10 @@ function submit() {
             <!-- Tabs -->
             <div class="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6">
                 <button v-for="tab in [
-                    { n: 1, label: 'Datos Personales' },
-                    { n: 2, label: 'Evento y Show' },
-                    { n: 3, label: 'Asistentes' },
-                    { n: 4, label: 'Materiales' },
+                    { n: 1, label: 'Personal Info' },
+                    { n: 2, label: 'Events & Shows' },
+                    { n: 3, label: 'Assistants' },
+                    { n: 4, label: 'Materials' },
                     { n: 5, label: 'Displays' },
                 ]" :key="tab.n"
                     type="button"
@@ -395,13 +395,13 @@ function submit() {
                 <div v-show="activeTab === 1" class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
                             <input v-model="form.first_name" type="text"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             <p v-if="form.errors.first_name" class="mt-1 text-red-500 text-xs">{{ form.errors.first_name }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
                             <input v-model="form.last_name" type="text"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
@@ -415,7 +415,7 @@ function submit() {
                             <p v-if="form.errors.email" class="mt-1 text-red-500 text-xs">{{ form.errors.email }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                             <div class="flex gap-2">
                                 <select v-model="phoneCode"
                                     class="w-28 border border-gray-300 rounded-lg px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
@@ -430,24 +430,24 @@ function submit() {
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                         <select v-model="form.status"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                            <option v-if="form.status === 'active'" value="active">Activo</option>
-                            <option value="inactive">Inactivo</option>
-                            <option value="pending">Pendiente</option>
+                            <option v-if="form.status === 'active'" value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="pending">Pending</option>
                         </select>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Marca / Brand *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Brand Name *</label>
                             <input v-model="form.brand_name" type="text"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             <p v-if="form.errors.brand_name" class="mt-1 text-red-500 text-xs">{{ form.errors.brand_name }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre de Coleccion</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Collection Name</label>
                             <input v-model="form.collection_name" type="text"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
@@ -455,18 +455,18 @@ function submit() {
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
                             <select v-model="form.category_id"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="">— Sin categoria —</option>
+                                <option value="">— No category —</option>
                                 <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Pais</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Country</label>
                             <select v-model="form.country"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
-                                <option value="">— Seleccionar pais —</option>
+                                <option value="">— Select country —</option>
                                 <option v-for="(name, code) in countries" :key="code" :value="name">{{ name }}</option>
                             </select>
                         </div>
@@ -474,10 +474,10 @@ function submit() {
 
                     <div v-if="salesReps?.length" class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Representante de Ventas</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Sales Rep</label>
                             <select v-model="form.sales_rep_id"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="">— Sin asignar —</option>
+                                <option value="">— Unassigned —</option>
                                 <option v-for="rep in salesReps" :key="rep.id" :value="rep.id">{{ rep.first_name }} {{ rep.last_name }}</option>
                             </select>
                         </div>
@@ -504,11 +504,11 @@ function submit() {
 
                     <!-- Redes sociales -->
                     <div class="border-t border-gray-100 pt-4">
-                        <h4 class="text-sm font-semibold text-gray-800 mb-3">Redes Sociales</h4>
+                        <h4 class="text-sm font-semibold text-gray-800 mb-3">Social Media</h4>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs text-gray-500 mb-1">Instagram</label>
-                                <input v-model="form.social_media.instagram" type="text" placeholder="@usuario"
+                                <input v-model="form.social_media.instagram" type="text" placeholder="@username"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
                             <div>
@@ -518,7 +518,7 @@ function submit() {
                             </div>
                             <div>
                                 <label class="block text-xs text-gray-500 mb-1">TikTok</label>
-                                <input v-model="form.social_media.tiktok" type="text" placeholder="@usuario"
+                                <input v-model="form.social_media.tiktok" type="text" placeholder="@username"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
                             <div>
@@ -527,7 +527,7 @@ function submit() {
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
                             <div class="col-span-2">
-                                <label class="block text-xs text-gray-500 mb-1">Otro</label>
+                                <label class="block text-xs text-gray-500 mb-1">Other</label>
                                 <input v-model="form.social_media.other" type="text"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
@@ -539,21 +539,21 @@ function submit() {
                 <div v-show="activeTab === 2" class="space-y-5">
                     <!-- Asignar a nuevo evento (primero) -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-                        <h4 class="font-semibold text-gray-800">Asignar a evento</h4>
+                        <h4 class="font-semibold text-gray-800">Assign to event</h4>
 
                         <select v-model="selectedEventId"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                            <option value="">— Seleccionar evento —</option>
+                            <option value="">— Select event —</option>
                             <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
                         </select>
 
                         <div v-if="selectedEventId" class="space-y-3">
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block text-xs text-gray-500 mb-1">Paquete</label>
+                                    <label class="block text-xs text-gray-500 mb-1">Package</label>
                                     <select v-model="selectedPackageId"
                                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                        <option value="">— Sin paquete —</option>
+                                        <option value="">— No package —</option>
                                         <option v-for="p in packages" :key="p.id" :value="p.id">
                                             {{ p.name }} — ${{ Number(p.price).toLocaleString() }}
                                         </option>
@@ -567,7 +567,7 @@ function submit() {
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block text-xs text-gray-500 mb-1">Precio ($)</label>
+                                    <label class="block text-xs text-gray-500 mb-1">Price ($)</label>
                                     <input v-model="assignPrice" type="number" step="0.01" min="0"
                                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                                 </div>
@@ -595,14 +595,14 @@ function submit() {
                                 </label>
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500 mb-1">Notas</label>
+                                <label class="block text-xs text-gray-500 mb-1">Notes</label>
                                 <textarea v-model="assignNotes" rows="2"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"></textarea>
                             </div>
 
                             <!-- Shows del evento seleccionado -->
                             <div v-if="eventDays.length" class="border-t border-gray-100 pt-3">
-                                <p class="text-xs font-semibold text-gray-700 mb-2">Asignar a Shows</p>
+                                <p class="text-xs font-semibold text-gray-700 mb-2">Assign to Shows</p>
                                 <div v-for="day in eventDays" :key="day.id" class="mb-3 last:mb-0">
                                     <p class="text-xs text-gray-500 mb-1.5">{{ day.label }} — {{ day.date }}</p>
                                     <div class="flex flex-wrap gap-2">
@@ -621,10 +621,10 @@ function submit() {
 
                             <!-- Fitting slot selector -->
                             <div v-if="eventFittingSlots.length" class="border-t border-gray-100 pt-3">
-                                <label class="block text-xs font-semibold text-orange-600 mb-2">Horario de Fitting (opcional)</label>
+                                <label class="block text-xs font-semibold text-orange-600 mb-2">Fitting Slot (optional)</label>
                                 <select v-model="assignFittingSlotId"
                                     class="w-full border border-orange-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30">
-                                    <option value="">— Sin fitting —</option>
+                                    <option value="">— No fitting —</option>
                                     <option v-for="slot in eventFittingSlots" :key="slot.id" :value="slot.id">
                                         {{ slot.day_label }} · {{ slot.time }}
                                     </option>
@@ -635,13 +635,13 @@ function submit() {
                         <button type="button" @click="assignEvent"
                             :disabled="!selectedEventId"
                             class="w-full py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors">
-                            Asignar al evento
+                            Assign to event
                         </button>
                     </div>
 
                     <!-- Eventos asignados (un card por evento con sus shows) -->
                     <div v-if="designerEvents.length === 0" class="bg-white rounded-2xl border border-gray-200 p-5">
-                        <p class="text-sm text-gray-400 italic text-center">No hay eventos asignados.</p>
+                        <p class="text-sm text-gray-400 italic text-center">No events assigned.</p>
                     </div>
 
                     <div v-for="evt in designerEvents" :key="evt.id"
@@ -653,31 +653,31 @@ function submit() {
                                 <div class="flex items-center gap-3 mt-1 text-xs text-gray-400">
                                     <span v-if="evt.package_price">${{ Number(evt.package_price).toLocaleString() }}</span>
                                     <span>{{ evt.looks }} looks</span>
-                                    <span>{{ evt.models_count ?? 0 }} modelos</span>
-                                    <span :class="evt.model_casting_enabled ? 'text-green-500' : ''">Casting: {{ evt.model_casting_enabled ? 'Si' : 'No' }}</span>
-                                    <span :class="evt.media_package ? 'text-green-500' : ''">Media: {{ evt.media_package ? 'Si' : 'No' }}</span>
-                                    <span :class="evt.custom_background ? 'text-green-500' : ''">BG: {{ evt.custom_background ? 'Si' : 'No' }}</span>
-                                    <span :class="evt.courtesy_tickets ? 'text-green-500' : ''">Tickets: {{ evt.courtesy_tickets ? 'Si' : 'No' }}</span>
+                                    <span>{{ evt.models_count ?? 0 }} models</span>
+                                    <span :class="evt.model_casting_enabled ? 'text-green-500' : ''">Casting: {{ evt.model_casting_enabled ? 'Yes' : 'No' }}</span>
+                                    <span :class="evt.media_package ? 'text-green-500' : ''">Media: {{ evt.media_package ? 'Yes' : 'No' }}</span>
+                                    <span :class="evt.custom_background ? 'text-green-500' : ''">BG: {{ evt.custom_background ? 'Yes' : 'No' }}</span>
+                                    <span :class="evt.courtesy_tickets ? 'text-green-500' : ''">Tickets: {{ evt.courtesy_tickets ? 'Yes' : 'No' }}</span>
                                     <span v-if="evt.designer_status === 'cancelled'"
                                         class="px-1.5 py-0.5 rounded bg-red-50 text-red-600 font-medium">
-                                        Cancelado
+                                        Cancelled
                                     </span>
                                 </div>
                             </div>
                             <div class="flex items-center gap-3">
                                 <button v-if="evt.designer_status === 'confirmed'" type="button"
                                     @click="cancelFromEvent(evt.id, evt.name)"
-                                    class="text-yellow-500 hover:text-yellow-700 text-xs">Cancelar</button>
+                                    class="text-yellow-500 hover:text-yellow-700 text-xs">Cancel</button>
                                 <button type="button" @click="removeFromEvent(evt.id, evt.name)"
-                                    class="text-red-400 hover:text-red-600 text-xs">Quitar</button>
+                                    class="text-red-400 hover:text-red-600 text-xs">Remove</button>
                             </div>
                         </div>
 
                         <!-- Shows de este evento -->
                         <div class="border-t border-gray-100 pt-3">
-                            <p class="text-xs font-semibold text-gray-600 mb-2">Shows asignados</p>
+                            <p class="text-xs font-semibold text-gray-600 mb-2">Assigned shows</p>
 
-                            <div v-if="showsForEvent(evt.id).length === 0" class="text-xs text-gray-400 italic mb-2">Sin shows en este evento.</div>
+                            <div v-if="showsForEvent(evt.id).length === 0" class="text-xs text-gray-400 italic mb-2">No shows in this event.</div>
                             <div v-for="s in showsForEvent(evt.id)" :key="s.id"
                                 class="flex items-center gap-3 py-1.5 border-b border-gray-50 last:border-0 text-sm">
                                 <span class="text-gray-400 text-xs w-20 flex-shrink-0">{{ s.event_day?.label }}</span>
@@ -689,20 +689,20 @@ function submit() {
                                 </span>
                                 <button v-if="s.status === 'confirmed'" type="button"
                                     @click="cancelShow(s.id, s.name)"
-                                    class="text-yellow-500 hover:text-yellow-700 text-xs">Cancelar</button>
+                                    class="text-yellow-500 hover:text-yellow-700 text-xs">Cancel</button>
                                 <button type="button" @click="removeShow(s.id, s.name)"
-                                    class="text-red-400 hover:text-red-600 text-xs">Quitar</button>
+                                    class="text-red-400 hover:text-red-600 text-xs">Remove</button>
                             </div>
 
                             <!-- Agregar show a este evento -->
                             <div v-if="availableShowsForEvent(evt.id).length" class="mt-3 pt-3 border-t border-gray-100 space-y-2">
-                                <p class="text-xs font-medium text-gray-600">Agregar show</p>
+                                <p class="text-xs font-medium text-gray-600">Add show</p>
                                 <div class="flex items-end gap-2">
                                     <div class="flex-1">
                                         <select :value="getAddShowState(evt.id).showId"
                                             @change="getAddShowState(evt.id).showId = $event.target.value"
                                             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                            <option value="">— Seleccionar show —</option>
+                                            <option value="">— Select show —</option>
                                             <option v-for="show in availableShowsForEvent(evt.id)" :key="show.id" :value="show.id">
                                                 {{ show.dayLabel }} — {{ show.name }}
                                             </option>
@@ -711,7 +711,7 @@ function submit() {
                                     <div class="flex-1">
                                         <input :value="getAddShowState(evt.id).collection"
                                             @input="getAddShowState(evt.id).collection = $event.target.value"
-                                            type="text" placeholder="Coleccion (opcional) Ej: Dark Elegance SS26"
+                                            type="text" placeholder="Collection (optional) e.g.: Dark Elegance SS26"
                                             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                                     </div>
                                     <button type="button" @click="addShowToEvent(evt.id)"
@@ -734,7 +734,7 @@ function submit() {
                             <select @change="updateFitting(evt.id, $event.target.value)"
                                 :value="fittingForEvent(evt.id)?.fitting_slot_id ?? ''"
                                 class="w-full border border-orange-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30">
-                                <option value="">— Sin fitting —</option>
+                                <option value="">— No fitting —</option>
                                 <option v-for="slot in fittingSlotsForEvent(evt.id)" :key="slot.id" :value="slot.id">
                                     {{ slot.day_label }} · {{ slot.time }}
                                 </option>
@@ -746,16 +746,16 @@ function submit() {
                 <!-- Tab 3: Asistentes -->
                 <div v-show="activeTab === 3" class="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
                     <div class="flex items-center justify-between">
-                        <h4 class="font-semibold text-gray-800">Asistentes</h4>
+                        <h4 class="font-semibold text-gray-800">Assistants</h4>
                         <span v-if="assistantEventLimit !== null"
                             :class="assistantLimitReached ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-gray-50 text-gray-500 border border-gray-200'"
                             class="text-xs font-medium px-2.5 py-1 rounded-full">
-                            {{ assistantEventCount }} / {{ assistantEventLimit }} para este evento
+                            {{ assistantEventCount }} / {{ assistantEventLimit }} for this event
                         </span>
                     </div>
 
                     <!-- Lista actual -->
-                    <div v-if="assistants.length === 0" class="text-sm text-gray-400 italic">Sin asistentes registrados.</div>
+                    <div v-if="assistants.length === 0" class="text-sm text-gray-400 italic">No assistants registered.</div>
                     <div v-for="a in assistants" :key="a.id"
                         class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                         <div>
@@ -768,12 +768,12 @@ function submit() {
                             </p>
                         </div>
                         <button type="button" @click="removeAssistant(a.id)"
-                            class="text-red-400 hover:text-red-600 text-xs">Eliminar</button>
+                            class="text-red-400 hover:text-red-600 text-xs">Delete</button>
                     </div>
 
                     <!-- Agregar nuevo -->
                     <div class="border-t border-gray-100 pt-4 space-y-3">
-                        <h5 class="text-sm font-medium text-gray-700">Agregar asistente</h5>
+                        <h5 class="text-sm font-medium text-gray-700">Add assistant</h5>
 
                         <!-- Aviso límite alcanzado -->
                         <div v-if="assistantLimitReached"
@@ -781,12 +781,12 @@ function submit() {
                             <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                             </svg>
-                            Límite alcanzado — este diseñador tiene <strong class="mx-1">{{ assistantEventLimit }}</strong> asistente(s) negociado(s) para este evento.
+                            Limit reached — this designer has <strong class="mx-1">{{ assistantEventLimit }}</strong> assistant(s) negotiated for this event.
                         </div>
 
                         <div class="grid grid-cols-2 gap-3">
                             <div class="col-span-2">
-                                <label class="block text-xs text-gray-500 mb-1">Evento *</label>
+                                <label class="block text-xs text-gray-500 mb-1">Event *</label>
                                 <select v-model="assistantEventId"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                                     <option v-for="evt in designerEvents" :key="evt.id" :value="evt.id">{{ evt.name }}</option>
@@ -808,12 +808,12 @@ function submit() {
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500 mb-1">Documento ID</label>
+                                <label class="block text-xs text-gray-500 mb-1">Document ID</label>
                                 <input v-model="newAssistant.document_id" type="text"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500 mb-1">Telefono</label>
+                                <label class="block text-xs text-gray-500 mb-1">Phone</label>
                                 <input v-model="newAssistant.phone" type="tel"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
@@ -821,7 +821,7 @@ function submit() {
                         <button type="button" @click="addAssistant"
                             :disabled="!newAssistant.first_name || !assistantEventId || !newAssistant.email || assistantLimitReached"
                             class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors">
-                            + Agregar Asistente
+                            + Add Assistant
                         </button>
                     </div>
                 </div>
@@ -852,21 +852,21 @@ function submit() {
                                 <select :value="m.status"
                                     @change="updateMaterial(m, 'status', $event.target.value)"
                                     class="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
-                                    <option value="pending">Pendiente</option>
-                                    <option value="submitted">Enviado</option>
-                                    <option value="confirmed">Confirmado</option>
-                                    <option value="rejected">Rechazado</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="submitted">Submitted</option>
+                                    <option value="confirmed">Confirmed</option>
+                                    <option value="rejected">Rejected</option>
                                 </select>
                             </div>
                         </div>
 
                         <p v-if="materials.filter(mat => mat.event_id === evt.id).length === 0"
-                            class="text-sm text-gray-400 italic">Sin materiales para este evento.</p>
+                            class="text-sm text-gray-400 italic">No materials for this event.</p>
                     </div>
 
                     <div v-if="designerEvents.length === 0"
                         class="bg-white rounded-2xl border border-gray-200 p-6 text-sm text-gray-400 italic text-center">
-                        Asigna el diseñador a un evento para ver sus materiales.
+                        Assign the designer to an event to view their materials.
                     </div>
                 </div>
 
@@ -881,52 +881,52 @@ function submit() {
                             <!-- Video -->
                             <div class="flex items-center gap-3">
                                 <span class="text-sm text-gray-500 w-16">Video:</span>
-                                <input :value="d.background_video_url" type="text" placeholder="URL del video..."
+                                <input :value="d.background_video_url" type="text" placeholder="Video URL..."
                                     @change="updateDisplay(d, { background_video_url: $event.target.value })"
                                     class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-black/10" />
                                 <button type="button" @click="uploadDisplayFile(d.id, 'video')"
                                     class="px-3 py-1.5 text-xs border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                                    Subir
+                                    Upload
                                 </button>
                             </div>
                             <!-- Audio -->
                             <div class="flex items-center gap-3">
                                 <span class="text-sm text-gray-500 w-16">Audio:</span>
-                                <input :value="d.music_audio_url" type="text" placeholder="URL del audio..."
+                                <input :value="d.music_audio_url" type="text" placeholder="Audio URL..."
                                     @change="updateDisplay(d, { music_audio_url: $event.target.value })"
                                     class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-black/10" />
                                 <button type="button" @click="uploadDisplayFile(d.id, 'audio')"
                                     class="px-3 py-1.5 text-xs border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                                    Subir
+                                    Upload
                                 </button>
                             </div>
                             <!-- Estado -->
                             <div class="flex items-center gap-3">
-                                <span class="text-sm text-gray-500 w-16">Estado:</span>
+                                <span class="text-sm text-gray-500 w-16">Status:</span>
                                 <select :value="d.status"
                                     @change="updateDisplay(d, { status: $event.target.value })"
                                     class="border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
-                                    <option value="pending">Pendiente</option>
-                                    <option value="ready">Listo</option>
-                                    <option value="confirmed">Confirmado</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="ready">Ready</option>
+                                    <option value="confirmed">Confirmed</option>
                                 </select>
                             </div>
                             <!-- Notas -->
                             <div class="flex items-start gap-3">
-                                <span class="text-sm text-gray-500 w-16 pt-2">Notas:</span>
-                                <textarea :value="d.notes" rows="2" placeholder="Notas del display..."
+                                <span class="text-sm text-gray-500 w-16 pt-2">Notes:</span>
+                                <textarea :value="d.notes" rows="2" placeholder="Display notes..."
                                     @change="updateDisplay(d, { notes: $event.target.value })"
                                     class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"></textarea>
                             </div>
                         </div>
 
                         <p v-if="displays.filter(dd => dd.event_id === evt.id).length === 0"
-                            class="text-sm text-gray-400 italic">Sin display para este evento.</p>
+                            class="text-sm text-gray-400 italic">No display for this event.</p>
                     </div>
 
                     <div v-if="designerEvents.length === 0"
                         class="bg-white rounded-2xl border border-gray-200 p-6 text-sm text-gray-400 italic text-center">
-                        Asigna el diseñador a un evento para ver sus displays.
+                        Assign the designer to an event to view their displays.
                     </div>
                 </div>
 
@@ -934,18 +934,18 @@ function submit() {
                 <div v-if="activeTab === 1" class="flex justify-between">
                     <Link :href="`/admin/operations/designers/${designer.id}`"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-                        Cancelar
+                        Cancel
                     </Link>
                     <button type="submit" :disabled="form.processing"
                         class="px-8 py-2.5 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800 disabled:opacity-60 transition-colors">
-                        <span v-if="form.processing">Guardando...</span>
-                        <span v-else>Guardar Cambios</span>
+                        <span v-if="form.processing">Saving...</span>
+                        <span v-else>Save Changes</span>
                     </button>
                 </div>
                 <div v-else class="flex justify-end">
                     <Link :href="`/admin/operations/designers/${designer.id}`"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-                        Volver al perfil
+                        Back to profile
                     </Link>
                 </div>
             </form>

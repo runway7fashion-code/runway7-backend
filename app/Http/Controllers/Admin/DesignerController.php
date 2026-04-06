@@ -402,6 +402,15 @@ class DesignerController extends Controller
             'bio', 'country', 'category_id', 'sales_rep_id', 'tracking_link', 'skype', 'social_media',
         ]);
 
+        // Extract website/instagram from social_media if sent nested
+        $socialMedia = $request->input('social_media', []);
+        if (!$request->filled('website') && !empty($socialMedia['website'] ?? '')) {
+            $profileData['website'] = $socialMedia['website'];
+        }
+        if (!$request->filled('instagram') && !empty($socialMedia['instagram'] ?? '')) {
+            $profileData['instagram'] = $socialMedia['instagram'];
+        }
+
         $this->designerService->updateDesigner($designer, $userData, $profileData);
 
         return redirect()->route('admin.designers.show', $designer)
