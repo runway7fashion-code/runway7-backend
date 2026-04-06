@@ -424,7 +424,7 @@ class AccountingController extends Controller
             'event_id' => 'required|exists:events,id',
             'total_amount' => 'required|numeric|min:0',
             'downpayment' => 'required|numeric|min:0',
-            'installments_count' => 'required|integer|min:1|max:12',
+            'installments_count' => 'required|integer|min:1',
             'notes' => 'nullable|string',
             'custom_amounts' => 'nullable|array',
             'custom_amounts.*' => 'numeric|min:0.01',
@@ -462,7 +462,7 @@ class AccountingController extends Controller
         $request->validate([
             'total_amount' => 'required|numeric|min:0',
             'downpayment' => 'required|numeric|min:0',
-            'installments_count' => 'required|integer|min:1|max:12',
+            'installments_count' => 'required|integer|min:1',
             'notes' => 'nullable|string',
             'custom_amounts' => 'nullable|array',
             'custom_amounts.*' => 'numeric|min:0.01',

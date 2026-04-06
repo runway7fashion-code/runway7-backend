@@ -318,7 +318,7 @@ class SalesController extends Controller
             'package_id'  => 'required|exists:designer_packages,id',
             'agreed_price'=> 'required|numeric|min:0',
             'downpayment' => 'required|numeric|min:0',
-            'installments_count' => 'required|integer|min:1|max:12',
+            'installments_count' => 'required|integer|min:1',
             'looks'           => 'nullable|integer|min:1|max:100',
             'assistants'      => 'nullable|integer|min:0|max:20',
             'model_casting_enabled' => 'boolean',

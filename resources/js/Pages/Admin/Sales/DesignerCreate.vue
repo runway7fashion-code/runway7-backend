@@ -352,7 +352,7 @@ const selectedRep = computed(() => props.salesReps?.find(r => r.id == form.sales
                                 </div>
                                 <div class="col-span-2">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Number of Installments *</label>
-                                    <input v-model="form.installments_count" type="number" min="1" max="12" class="input" />
+                                    <input v-model="form.installments_count" type="number" min="1" class="input" />
                                     <p v-if="form.errors.installments_count" class="err">{{ form.errors.installments_count }}</p>
                                 </div>
                                 <div v-if="salesReps?.length" class="col-span-2">
