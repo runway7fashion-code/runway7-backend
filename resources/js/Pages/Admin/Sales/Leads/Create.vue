@@ -12,13 +12,69 @@ const props = defineProps({
 });
 
 const phoneCodes = [
-    { code: '+1', flag: '🇺🇸' }, { code: '+52', flag: '🇲🇽' }, { code: '+44', flag: '🇬🇧' },
-    { code: '+33', flag: '🇫🇷' }, { code: '+39', flag: '🇮🇹' }, { code: '+34', flag: '🇪🇸' },
-    { code: '+49', flag: '🇩🇪' }, { code: '+55', flag: '🇧🇷' }, { code: '+57', flag: '🇨🇴' },
-    { code: '+51', flag: '🇵🇪' }, { code: '+54', flag: '🇦🇷' }, { code: '+56', flag: '🇨🇱' },
-    { code: '+58', flag: '🇻🇪' }, { code: '+593', flag: '🇪🇨' }, { code: '+91', flag: '🇮🇳' },
-    { code: '+86', flag: '🇨🇳' }, { code: '+81', flag: '🇯🇵' }, { code: '+82', flag: '🇰🇷' },
-    { code: '+234', flag: '🇳🇬' }, { code: '+27', flag: '🇿🇦' }, { code: '+971', flag: '🇦🇪' },
+    { code: '+1', flag: '🇺🇸', label: 'US/CA' }, { code: '+52', flag: '🇲🇽', label: 'MX' },
+    { code: '+44', flag: '🇬🇧', label: 'GB' }, { code: '+33', flag: '🇫🇷', label: 'FR' },
+    { code: '+39', flag: '🇮🇹', label: 'IT' }, { code: '+34', flag: '🇪🇸', label: 'ES' },
+    { code: '+49', flag: '🇩🇪', label: 'DE' }, { code: '+55', flag: '🇧🇷', label: 'BR' },
+    { code: '+57', flag: '🇨🇴', label: 'CO' }, { code: '+51', flag: '🇵🇪', label: 'PE' },
+    { code: '+54', flag: '🇦🇷', label: 'AR' }, { code: '+56', flag: '🇨🇱', label: 'CL' },
+    { code: '+58', flag: '🇻🇪', label: 'VE' }, { code: '+593', flag: '🇪🇨', label: 'EC' },
+    { code: '+503', flag: '🇸🇻', label: 'SV' }, { code: '+502', flag: '🇬🇹', label: 'GT' },
+    { code: '+504', flag: '🇭🇳', label: 'HN' }, { code: '+505', flag: '🇳🇮', label: 'NI' },
+    { code: '+506', flag: '🇨🇷', label: 'CR' }, { code: '+507', flag: '🇵🇦', label: 'PA' },
+    { code: '+509', flag: '🇭🇹', label: 'HT' }, { code: '+53', flag: '🇨🇺', label: 'CU' },
+    { code: '+1-809', flag: '🇩🇴', label: 'DO' }, { code: '+1-787', flag: '🇵🇷', label: 'PR' },
+    { code: '+591', flag: '🇧🇴', label: 'BO' }, { code: '+595', flag: '🇵🇾', label: 'PY' },
+    { code: '+598', flag: '🇺🇾', label: 'UY' }, { code: '+592', flag: '🇬🇾', label: 'GY' },
+    { code: '+597', flag: '🇸🇷', label: 'SR' }, { code: '+501', flag: '🇧🇿', label: 'BZ' },
+    { code: '+91', flag: '🇮🇳', label: 'IN' }, { code: '+86', flag: '🇨🇳', label: 'CN' },
+    { code: '+81', flag: '🇯🇵', label: 'JP' }, { code: '+82', flag: '🇰🇷', label: 'KR' },
+    { code: '+62', flag: '🇮🇩', label: 'ID' }, { code: '+63', flag: '🇵🇭', label: 'PH' },
+    { code: '+66', flag: '🇹🇭', label: 'TH' }, { code: '+84', flag: '🇻🇳', label: 'VN' },
+    { code: '+60', flag: '🇲🇾', label: 'MY' }, { code: '+65', flag: '🇸🇬', label: 'SG' },
+    { code: '+880', flag: '🇧🇩', label: 'BD' }, { code: '+92', flag: '🇵🇰', label: 'PK' },
+    { code: '+94', flag: '🇱🇰', label: 'LK' }, { code: '+95', flag: '🇲🇲', label: 'MM' },
+    { code: '+977', flag: '🇳🇵', label: 'NP' }, { code: '+855', flag: '🇰🇭', label: 'KH' },
+    { code: '+856', flag: '🇱🇦', label: 'LA' }, { code: '+852', flag: '🇭🇰', label: 'HK' },
+    { code: '+886', flag: '🇹🇼', label: 'TW' }, { code: '+971', flag: '🇦🇪', label: 'AE' },
+    { code: '+966', flag: '🇸🇦', label: 'SA' }, { code: '+972', flag: '🇮🇱', label: 'IL' },
+    { code: '+961', flag: '🇱🇧', label: 'LB' }, { code: '+962', flag: '🇯🇴', label: 'JO' },
+    { code: '+964', flag: '🇮🇶', label: 'IQ' }, { code: '+965', flag: '🇰🇼', label: 'KW' },
+    { code: '+968', flag: '🇴🇲', label: 'OM' }, { code: '+973', flag: '🇧🇭', label: 'BH' },
+    { code: '+974', flag: '🇶🇦', label: 'QA' }, { code: '+90', flag: '🇹🇷', label: 'TR' },
+    { code: '+98', flag: '🇮🇷', label: 'IR' }, { code: '+993', flag: '🇹🇲', label: 'TM' },
+    { code: '+994', flag: '🇦🇿', label: 'AZ' }, { code: '+995', flag: '🇬🇪', label: 'GE' },
+    { code: '+996', flag: '🇰🇬', label: 'KG' }, { code: '+998', flag: '🇺🇿', label: 'UZ' },
+    { code: '+234', flag: '🇳🇬', label: 'NG' }, { code: '+27', flag: '🇿🇦', label: 'ZA' },
+    { code: '+254', flag: '🇰🇪', label: 'KE' }, { code: '+233', flag: '🇬🇭', label: 'GH' },
+    { code: '+20', flag: '🇪🇬', label: 'EG' }, { code: '+212', flag: '🇲🇦', label: 'MA' },
+    { code: '+213', flag: '🇩🇿', label: 'DZ' }, { code: '+216', flag: '🇹🇳', label: 'TN' },
+    { code: '+218', flag: '🇱🇾', label: 'LY' }, { code: '+221', flag: '🇸🇳', label: 'SN' },
+    { code: '+225', flag: '🇨🇮', label: 'CI' }, { code: '+237', flag: '🇨🇲', label: 'CM' },
+    { code: '+243', flag: '🇨🇩', label: 'CD' }, { code: '+244', flag: '🇦🇴', label: 'AO' },
+    { code: '+249', flag: '🇸🇩', label: 'SD' }, { code: '+251', flag: '🇪🇹', label: 'ET' },
+    { code: '+255', flag: '🇹🇿', label: 'TZ' }, { code: '+256', flag: '🇺🇬', label: 'UG' },
+    { code: '+258', flag: '🇲🇿', label: 'MZ' }, { code: '+260', flag: '🇿🇲', label: 'ZM' },
+    { code: '+263', flag: '🇿🇼', label: 'ZW' },
+    { code: '+61', flag: '🇦🇺', label: 'AU' }, { code: '+64', flag: '🇳🇿', label: 'NZ' },
+    { code: '+679', flag: '🇫🇯', label: 'FJ' }, { code: '+675', flag: '🇵🇬', label: 'PG' },
+    { code: '+7', flag: '🇷🇺', label: 'RU' }, { code: '+380', flag: '🇺🇦', label: 'UA' },
+    { code: '+48', flag: '🇵🇱', label: 'PL' }, { code: '+31', flag: '🇳🇱', label: 'NL' },
+    { code: '+32', flag: '🇧🇪', label: 'BE' }, { code: '+41', flag: '🇨🇭', label: 'CH' },
+    { code: '+43', flag: '🇦🇹', label: 'AT' }, { code: '+45', flag: '🇩🇰', label: 'DK' },
+    { code: '+46', flag: '🇸🇪', label: 'SE' }, { code: '+47', flag: '🇳🇴', label: 'NO' },
+    { code: '+358', flag: '🇫🇮', label: 'FI' }, { code: '+353', flag: '🇮🇪', label: 'IE' },
+    { code: '+351', flag: '🇵🇹', label: 'PT' }, { code: '+30', flag: '🇬🇷', label: 'GR' },
+    { code: '+36', flag: '🇭🇺', label: 'HU' }, { code: '+40', flag: '🇷🇴', label: 'RO' },
+    { code: '+420', flag: '🇨🇿', label: 'CZ' }, { code: '+421', flag: '🇸🇰', label: 'SK' },
+    { code: '+385', flag: '🇭🇷', label: 'HR' }, { code: '+381', flag: '🇷🇸', label: 'RS' },
+    { code: '+359', flag: '🇧🇬', label: 'BG' }, { code: '+370', flag: '🇱🇹', label: 'LT' },
+    { code: '+371', flag: '🇱🇻', label: 'LV' }, { code: '+372', flag: '🇪🇪', label: 'EE' },
+    { code: '+354', flag: '🇮🇸', label: 'IS' }, { code: '+352', flag: '🇱🇺', label: 'LU' },
+    { code: '+356', flag: '🇲🇹', label: 'MT' }, { code: '+357', flag: '🇨🇾', label: 'CY' },
+    { code: '+355', flag: '🇦🇱', label: 'AL' }, { code: '+382', flag: '🇲🇪', label: 'ME' },
+    { code: '+389', flag: '🇲🇰', label: 'MK' }, { code: '+387', flag: '🇧🇦', label: 'BA' },
+    { code: '+386', flag: '🇸🇮', label: 'SI' },
 ];
 const phoneCode = ref('+1');
 const phoneNumber = ref('');
@@ -60,8 +116,8 @@ function removeNoteFile(index) {
     noteFiles.value.splice(index, 1);
 }
 
-const countryOptions = ['United States','Canada','Mexico','United Kingdom','France','Germany','Italy','Spain','Portugal','Netherlands','Belgium','Switzerland','Sweden','Norway','Denmark','Finland','Ireland','Austria','Poland','Greece','Turkey','Brazil','Argentina','Colombia','Chile','Peru','Venezuela','Ecuador','Dominican Republic','Puerto Rico','Costa Rica','Panama','Guatemala','Cuba','Japan','South Korea','China','India','Indonesia','Philippines','Thailand','Vietnam','Malaysia','Singapore','United Arab Emirates','Saudi Arabia','Israel','Lebanon','Egypt','Morocco','Nigeria','South Africa','Kenya','Ghana','Australia','New Zealand','Russia','Ukraine','Other'];
-const retailCategoryOptions = ['Athleisure','Accessories','Activewear/Sportswear','Bridal','Eveningwear/Gowns','Indigenous','Kids/Youth','Lingerie','Resort/Swimwear','Streetwear','Suits','Upcycle/Organic','Other'];
+const countryOptions = ['Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia','Australia','Austria','Azerbaijan','Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi','Cabo Verde','Cambodia','Cameroon','Canada','Central African Republic','Chad','Chile','China','Colombia','Comoros','Congo','Costa Rica','Croatia','Cuba','Cyprus','Czech Republic','Denmark','Djibouti','Dominica','Dominican Republic','East Timor','Ecuador','Egypt','El Salvador','Equatorial Guinea','Eritrea','Estonia','Eswatini','Ethiopia','Fiji','Finland','France','Gabon','Gambia','Georgia','Germany','Ghana','Greece','Grenada','Guatemala','Guinea','Guinea-Bissau','Guyana','Haiti','Honduras','Hungary','Iceland','India','Indonesia','Iran','Iraq','Ireland','Israel','Italy','Ivory Coast','Jamaica','Japan','Jordan','Kazakhstan','Kenya','Kiribati','Kosovo','Kuwait','Kyrgyzstan','Laos','Latvia','Lebanon','Lesotho','Liberia','Libya','Liechtenstein','Lithuania','Luxembourg','Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Marshall Islands','Mauritania','Mauritius','Mexico','Micronesia','Moldova','Monaco','Mongolia','Montenegro','Morocco','Mozambique','Myanmar','Namibia','Nauru','Nepal','Netherlands','New Zealand','Nicaragua','Niger','Nigeria','North Korea','North Macedonia','Norway','Oman','Pakistan','Palau','Palestine','Panama','Papua New Guinea','Paraguay','Peru','Philippines','Poland','Portugal','Puerto Rico','Qatar','Romania','Russia','Rwanda','Saint Kitts and Nevis','Saint Lucia','Saint Vincent and the Grenadines','Samoa','San Marino','Sao Tome and Principe','Saudi Arabia','Senegal','Serbia','Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia','Solomon Islands','Somalia','South Africa','South Korea','South Sudan','Spain','Sri Lanka','Sudan','Suriname','Sweden','Switzerland','Syria','Taiwan','Tajikistan','Tanzania','Thailand','Togo','Tonga','Trinidad and Tobago','Tunisia','Turkey','Turkmenistan','Tuvalu','Uganda','Ukraine','United Arab Emirates','United Kingdom','United States','Uruguay','Uzbekistan','Vanuatu','Vatican City','Venezuela','Vietnam','Yemen','Zambia','Zimbabwe','Other'];
+const retailCategoryOptions = ['Athleisure','Accessories','Activewear/Sportswear','Bridal','Eveningwear/Gowns','Indigenous','Kids/Youth','Lingerie','Ready to Wear','Resort/Swimwear','Streetwear','Suits','Upcycle/Organic','Other'];
 const designsReadyOptions = ['Under 10', 'Under 25', 'Over 25'];
 const budgetOptions = ['$5,000 to $10,000', '$10,000 to $25,000', '$25,000 to $75,000', '$75,000+'];
 const pastShowsOptions = ['0', '1', '2', '3', '4', '5+'];

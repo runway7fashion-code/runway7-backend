@@ -68,6 +68,7 @@ class DesignerLead extends Model
         'event'             => 'In-person Event',
         'email_campaign'    => 'Email Campaign',
         'whatsapp'          => 'WhatsApp',
+        'des_team'          => 'Des Team',
         'manual'            => 'Manual',
         'other'             => 'Other',
     ];
