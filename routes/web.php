@@ -289,6 +289,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::middleware('section:sales_leads')->group(function () {
                 Route::get('leads', [LeadController::class, 'index'])->name('leads.index');
                 Route::get('leads/export', [LeadController::class, 'export'])->name('leads.export');
+                Route::get('leads/import-template', [LeadController::class, 'downloadImportTemplate'])->name('leads.import-template');
+                Route::post('leads/import', [LeadController::class, 'importLeads'])->name('leads.import');
                 Route::get('leads/create', [LeadController::class, 'create'])->name('leads.create');
                 Route::post('leads', [LeadController::class, 'store'])->name('leads.store');
                 Route::get('leads/search', [LeadController::class, 'search'])->name('leads.search');

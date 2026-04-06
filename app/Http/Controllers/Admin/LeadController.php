@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Imports\LeadsImport;
 use App\Models\DesignerLead;
 use App\Models\Event;
 use App\Models\LeadActivity;
@@ -12,6 +13,7 @@ use App\Models\User;
 use App\Services\LeadAssignmentService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Facades\Excel;
 
 class LeadController extends Controller
 {
@@ -841,6 +843,42 @@ class LeadController extends Controller
             ->update(['is_read' => true]);
 
         return response()->json(['ok' => true]);
+    }
+
+    public function downloadImportTemplate()
+    {
+        return Excel::download(new \App\Exports\LeadsTemplateExport(), 'leads_import_template.xlsx');
+    }
+
+    public function importLeads(Request $request)
+    {
+        $request->validate([
+            'file'        => 'required|file|mimes:xlsx,xls,csv|max:10240',
+            'event_id'    => 'nullable|exists:events,id',
+            'assigned_to' => 'nullable|exists:users,id',
+            'source'      => 'nullable|string|max:50',
+        ]);
+
+        $eventId    = $request->filled('event_id') ? (int) $request->event_id : null;
+        $assignedTo = $request->filled('assigned_to') ? (int) $request->assigned_to : null;
+        $source     = $request->filled('source') ? $request->source : null;
+
+        $import = new LeadsImport(
+            globalEventId: $eventId,
+            assignedTo: $assignedTo,
+            source: $source,
+        );
+        Excel::import($import, $request->file('file'));
+
+        $s = $import->summary;
+        $msg = "Import completed: {$s['created']} created, {$s['updated']} updated, {$s['assigned']} assigned to events.";
+
+        if (!empty($s['errors'])) {
+            $msg .= ' ' . count($s['errors']) . ' errors (see log).';
+            \Illuminate\Support\Facades\Log::warning('LeadsImport errors', $s['errors']);
+        }
+
+        return back()->with('success', $msg)->with('importSummary', $s);
     }
 
     public function botMarkAllRead()

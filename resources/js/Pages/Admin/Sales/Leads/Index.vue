@@ -1,8 +1,8 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
-import { EyeIcon, PencilSquareIcon, ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+import { EyeIcon, PencilSquareIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, XMarkIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     leads: Object,
@@ -60,6 +60,23 @@ function exportCsv() {
     if (source.value) params.set('source', source.value);
     if (assignedTo.value) params.set('assigned_to', assignedTo.value);
     window.location.href = `/admin/sales/leads/export?${params.toString()}`;
+}
+
+// Import modal
+const showImportModal = ref(false);
+const importForm = useForm({ file: null, event_id: '', assigned_to: '', source: '' });
+
+function handleImportFileChange(e) {
+    importForm.file = e.target.files[0] ?? null;
+}
+
+function submitImport() {
+    importForm.post('/admin/sales/leads/import', {
+        onSuccess: () => {
+            showImportModal.value = false;
+            importForm.reset();
+        },
+    });
 }
 
 // Inline status change
@@ -205,6 +222,9 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
 
                     <button @click.stop="exportCsv" class="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                         <ArrowDownTrayIcon class="h-4 w-4" /> Export
+                    </button>
+                    <button @click.stop="showImportModal = true" class="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                        <ArrowUpTrayIcon class="h-4 w-4" /> Import
                     </button>
                     <Link href="/admin/sales/leads/create"
                         class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
@@ -603,5 +623,103 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 </div>
             </div>
         </Teleport>
+    <!-- Modal: Import Leads -->
+    <Teleport to="body">
+        <div v-if="showImportModal" class="fixed inset-0 z-50 flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/50" @click="showImportModal = false"></div>
+            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+                <!-- Header -->
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="text-lg font-bold text-gray-900">Import Leads from Excel</h3>
+                    <button @click="showImportModal = false" class="text-gray-400 hover:text-gray-600">
+                        <XMarkIcon class="w-5 h-5" />
+                    </button>
+                </div>
+
+                <!-- Download template -->
+                <div class="mb-4">
+                    <a href="/admin/sales/leads/import-template"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-xl transition-colors">
+                        <ArrowDownTrayIcon class="w-4 h-4" />
+                        Download Template (.xlsx)
+                    </a>
+                    <p class="mt-2 text-xs text-gray-500">The template includes all accepted columns with example data.</p>
+                </div>
+
+                <!-- Accepted columns -->
+                <div class="bg-gray-50 rounded-xl p-4 mb-5 text-xs text-gray-600">
+                    <p class="font-semibold text-gray-800 mb-2">Accepted columns:</p>
+                    <div class="grid grid-cols-2 gap-1">
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">email</span> <span class="text-red-500">*required</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">first_name</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">last_name</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">phone</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">country</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">company_name</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">retail_category</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">website_url</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">instagram</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">budget</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">past_shows</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">notes</span></span>
+                    </div>
+                    <p class="mt-2 text-gray-500">Formats: <strong>.xlsx, .xls, .csv</strong></p>
+                </div>
+
+                <!-- Event selector -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Assign to event <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <select v-model="importForm.event_id"
+                        class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                        <option value="">— No event —</option>
+                        <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
+                    </select>
+                </div>
+
+                <!-- Advisor selector (leader only) -->
+                <div v-if="isLeader && advisors.length" class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Assign to advisor <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <select v-model="importForm.assigned_to"
+                        class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                        <option value="">— No advisor —</option>
+                        <option v-for="a in advisors" :key="a.id" :value="a.id">{{ a.first_name }} {{ a.last_name }}</option>
+                    </select>
+                </div>
+
+                <!-- Source selector -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Source <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <select v-model="importForm.source"
+                        class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                        <option value="">— Default (Manual) —</option>
+                        <option v-for="(label, key) in sources" :key="key" :value="key">{{ label }}</option>
+                    </select>
+                </div>
+
+                <!-- File input -->
+                <div class="mb-5">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select file</label>
+                    <input type="file" accept=".xlsx,.xls,.csv"
+                        @change="handleImportFileChange"
+                        class="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800 cursor-pointer" />
+                    <p v-if="importForm.errors.file" class="mt-1 text-xs text-red-500">{{ importForm.errors.file }}</p>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex gap-3">
+                    <button @click="showImportModal = false"
+                        class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button @click="submitImport"
+                        :disabled="!importForm.file || importForm.processing"
+                        class="flex-1 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                        {{ importForm.processing ? 'Importing...' : 'Import' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
     </AdminLayout>
 </template>
