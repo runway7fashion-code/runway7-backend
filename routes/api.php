@@ -48,6 +48,12 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         // Banners
         Route::get('banners', [App\Http\Controllers\Api\V1\BannerController::class, 'index'])->name('banners');
 
+        // Home Cards
+        Route::get('home-cards', [App\Http\Controllers\Api\V1\HomeCardController::class, 'index'])->name('home-cards');
+
+        // Payment Methods
+        Route::get('payment-methods', [App\Http\Controllers\Api\V1\PaymentMethodController::class, 'index'])->name('payment-methods');
+
         // Events / Fittings
         Route::get('events', [App\Http\Controllers\Api\V1\EventController::class, 'index'])->name('events.index');
         Route::get('events/{event}', [App\Http\Controllers\Api\V1\EventController::class, 'show'])->name('events.show');
@@ -79,10 +85,27 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('device-tokens', [App\Http\Controllers\Api\V1\NotificationController::class, 'registerToken'])->name('device-tokens.register');
         Route::delete('device-tokens', [App\Http\Controllers\Api\V1\NotificationController::class, 'removeToken'])->name('device-tokens.remove');
 
-        // Casting
+        // Casting (model side)
         Route::get('my-casting', [App\Http\Controllers\Api\V1\CastingController::class, 'myCasting'])->name('my-casting');
         Route::post('events/{event}/casting/confirm', [App\Http\Controllers\Api\V1\CastingController::class, 'confirm'])->name('casting.confirm');
         Route::post('events/{event}/casting/reject', [App\Http\Controllers\Api\V1\CastingController::class, 'reject'])->name('casting.reject');
+
+        // Model Casting (designer side)
+        Route::prefix('events/{event}')->name('model-casting.')->group(function () {
+            Route::get('models', [App\Http\Controllers\Api\V1\ModelCastingController::class, 'availableModels'])->name('models');
+            Route::post('models/{model}/favorite', [App\Http\Controllers\Api\V1\ModelCastingController::class, 'toggleFavorite'])->name('toggle-favorite');
+            Route::get('favorites', [App\Http\Controllers\Api\V1\ModelCastingController::class, 'myFavorites'])->name('favorites');
+            Route::get('my-requests', [App\Http\Controllers\Api\V1\ModelCastingController::class, 'myRequests'])->name('requests');
+            Route::get('my-models', [App\Http\Controllers\Api\V1\ModelCastingController::class, 'myModels'])->name('my-models');
+            Route::get('my-designer-shows', [App\Http\Controllers\Api\V1\ModelCastingController::class, 'myShows'])->name('designer-shows');
+        });
+        Route::post('shows/{show}/request-model', [App\Http\Controllers\Api\V1\ModelCastingController::class, 'requestModel'])->name('model-casting.request');
+
+        // Designer Assistants
+        Route::get('events/{event}/assistants', [App\Http\Controllers\Api\V1\DesignerAssistantController::class, 'index'])->name('assistants.index');
+        Route::post('events/{event}/assistants', [App\Http\Controllers\Api\V1\DesignerAssistantController::class, 'store'])->name('assistants.store');
+        Route::put('events/{event}/assistants/{assistant}', [App\Http\Controllers\Api\V1\DesignerAssistantController::class, 'update'])->name('assistants.update');
+        Route::delete('events/{event}/assistants/{assistant}', [App\Http\Controllers\Api\V1\DesignerAssistantController::class, 'destroy'])->name('assistants.destroy');
 
         // Volunteer certificates
         Route::get('my-certificates', [App\Http\Controllers\Api\V1\VolunteerCertificateController::class, 'index'])->name('certificates.index');

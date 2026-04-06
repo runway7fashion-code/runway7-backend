@@ -172,7 +172,7 @@ function removeFromEvent(eventId, eventName) {
 
 // Asistentes
 const assistants = computed(() => props.designer.assistants ?? []);
-const newAssistant = ref({ full_name: '', document_id: '', phone: '', email: '' });
+const newAssistant = ref({ first_name: '', last_name: '', document_id: '', phone: '', email: '' });
 const assistantEventId = ref(designerEvents.value[0]?.id ?? '');
 
 const assistantEventLimit = computed(() => {
@@ -187,14 +187,14 @@ const assistantLimitReached = computed(() =>
 );
 
 function addAssistant() {
-    if (!newAssistant.value.full_name || !assistantEventId.value) return;
+    if (!newAssistant.value.first_name || !assistantEventId.value) return;
     router.post(`/admin/operations/designers/${props.designer.id}/assistants`, {
         event_id:    assistantEventId.value,
         ...newAssistant.value,
     }, {
         preserveScroll: true,
         onSuccess: () => {
-            newAssistant.value = { full_name: '', document_id: '', phone: '', email: '' };
+            newAssistant.value = { first_name: '', last_name: '', document_id: '', phone: '', email: '' };
         },
     });
 }
@@ -759,7 +759,7 @@ function submit() {
                     <div v-for="a in assistants" :key="a.id"
                         class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                         <div>
-                            <p class="text-sm font-medium text-gray-800">{{ a.full_name }}</p>
+                            <p class="text-sm font-medium text-gray-800">{{ a.first_name }} {{ a.last_name }}</p>
                             <p class="text-xs text-gray-400">
                                 {{ eventName(a.event_id) }}
                                 <span v-if="a.document_id"> · ID: {{ a.document_id }}</span>
@@ -793,8 +793,13 @@ function submit() {
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500 mb-1">Nombre completo *</label>
-                                <input v-model="newAssistant.full_name" type="text"
+                                <label class="block text-xs text-gray-500 mb-1">First Name *</label>
+                                <input v-model="newAssistant.first_name" type="text"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Last Name</label>
+                                <input v-model="newAssistant.last_name" type="text"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
                             <div>
@@ -814,7 +819,7 @@ function submit() {
                             </div>
                         </div>
                         <button type="button" @click="addAssistant"
-                            :disabled="!newAssistant.full_name || !assistantEventId || !newAssistant.email || assistantLimitReached"
+                            :disabled="!newAssistant.first_name || !assistantEventId || !newAssistant.email || assistantLimitReached"
                             class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors">
                             + Agregar Asistente
                         </button>

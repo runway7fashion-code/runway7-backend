@@ -156,12 +156,14 @@ class DesignerService
             $assistantUser = null;
 
             if (!empty($data['email'])) {
-                $nameParts = explode(' ', trim($data['full_name']), 2);
+                $firstName = $data['first_name'] ?? explode(' ', trim($data['full_name'] ?? ''), 2)[0] ?? '';
+                $lastName = $data['last_name'] ?? (explode(' ', trim($data['full_name'] ?? ''), 2)[1] ?? '');
+
                 $assistantUser = User::firstOrCreate(
                     ['email' => $data['email']],
                     [
-                        'first_name' => $nameParts[0],
-                        'last_name'  => $nameParts[1] ?? '',
+                        'first_name' => $firstName,
+                        'last_name'  => $lastName,
                         'phone'      => $data['phone'] ?? null,
                         'password'   => bcrypt('runway7'),
                         'role'       => 'assistant',
@@ -170,11 +172,15 @@ class DesignerService
                 );
             }
 
+            $firstName = $data['first_name'] ?? explode(' ', trim($data['full_name'] ?? ''), 2)[0] ?? '';
+            $lastName = $data['last_name'] ?? (explode(' ', trim($data['full_name'] ?? ''), 2)[1] ?? '');
+
             $assistant = DesignerAssistant::create([
                 'designer_id' => $designer->id,
                 'user_id'     => $assistantUser?->id,
                 'event_id'    => $eventId,
-                'full_name'   => $data['full_name'],
+                'first_name'  => $firstName,
+                'last_name'   => $lastName,
                 'document_id' => $data['document_id'] ?? null,
                 'phone'       => $data['phone'] ?? null,
                 'email'       => $data['email'] ?? null,

@@ -46,6 +46,8 @@ class ShowController extends Controller
                     'status' => $pivot->status,
                     'walk_order' => $pivot->walk_order,
                     'confirmed_at' => $pivot->confirmed_at,
+                    'message' => $pivot->notes,
+                    'requested_at' => $pivot->requested_at,
                     'designer' => $designer ? [
                         'id' => $designer->id,
                         'name' => $designer->first_name . ' ' . $designer->last_name,

@@ -546,7 +546,7 @@ class ModelController extends Controller
             'last_name'   => 'nullable|string|max:255',
             'email'       => "required|email|unique:users,email,{$model->id}",
             'phone'       => "nullable|string|unique:users,phone,{$model->id}",
-            'status'      => 'nullable|in:inactive,pending,applicant',
+            'status'      => 'nullable|in:active,inactive,pending,applicant',
             'instagram'   => 'nullable|string|max:255',
             'age'         => 'nullable|integer|min:16|max:80',
             'gender'      => 'nullable|in:female,male,non_binary',

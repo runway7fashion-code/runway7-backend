@@ -34,6 +34,62 @@ class EventController extends Controller
 
         $events = $query->get(['id', 'name', 'slug', 'city', 'venue', 'start_date', 'end_date', 'status', 'description']);
 
+        // For designers, include pivot data from event_designer + casting day info
+        if ($role === 'designer') {
+            $pivotData = \DB::table('event_designer')
+                ->where('designer_id', $user->id)
+                ->whereIn('event_id', $events->pluck('id'))
+                ->get()
+                ->keyBy('event_id');
+
+            $castingDays = \DB::table('event_days')
+                ->whereIn('event_id', $events->pluck('id'))
+                ->where('type', 'casting')
+                ->orderBy('date')
+                ->get()
+                ->groupBy('event_id');
+
+            $eventIds = $events->pluck('id');
+
+            $checkedInCounts = \DB::table('event_model')
+                ->join('users', 'users.id', '=', 'event_model.model_id')
+                ->whereIn('event_model.event_id', $eventIds)
+                ->whereIn('event_model.casting_status', ['checked_in', 'selected'])
+                ->whereIn('users.status', ['pending', 'active'])
+                ->groupBy('event_model.event_id')
+                ->select('event_model.event_id', \DB::raw('count(*) as total'))
+                ->pluck('total', 'event_model.event_id');
+
+            $registeredCounts = \DB::table('event_model')
+                ->join('users', 'users.id', '=', 'event_model.model_id')
+                ->whereIn('event_model.event_id', $eventIds)
+                ->whereIn('users.status', ['pending', 'active'])
+                ->groupBy('event_model.event_id')
+                ->select('event_model.event_id', \DB::raw('count(*) as total'))
+                ->pluck('total', 'event_model.event_id');
+
+            $events->each(function ($event) use ($pivotData, $castingDays, $checkedInCounts, $registeredCounts) {
+                $pivot = $pivotData->get($event->id);
+                $days = $castingDays->get($event->id, collect());
+
+                $event->designer_info = $pivot ? [
+                    'model_casting_enabled' => (bool) $pivot->model_casting_enabled,
+                    'looks' => $pivot->looks,
+                    'assistants' => $pivot->assistants,
+                    'package_price' => $pivot->package_price,
+                    'status' => $pivot->status,
+                    'registered_models_count' => $registeredCounts->get($event->id, 0),
+                    'available_models_count' => $checkedInCounts->get($event->id, 0),
+                    'casting_days' => $days->map(fn($d) => [
+                        'date' => $d->date,
+                        'label' => $d->label,
+                        'start_time' => $d->start_time,
+                        'end_time' => $d->end_time,
+                    ])->values(),
+                ] : null;
+            });
+        }
+
         return response()->json(['events' => $events]);
     }
 
@@ -76,6 +132,33 @@ class EventController extends Controller
             ];
         });
 
+        // Include designer_info if user is a designer assigned to this event
+        $designerInfo = null;
+        if ($user->role === 'designer') {
+            $pivot = \DB::table('event_designer')
+                ->where('event_id', $event->id)
+                ->where('designer_id', $user->id)
+                ->first();
+
+            if ($pivot) {
+                $castingDays = $event->eventDays->where('type', 'casting')->values();
+
+                $designerInfo = [
+                    'model_casting_enabled' => (bool) $pivot->model_casting_enabled,
+                    'looks' => $pivot->looks,
+                    'assistants' => $pivot->assistants,
+                    'package_price' => $pivot->package_price,
+                    'status' => $pivot->status,
+                    'casting_days' => $castingDays->map(fn($d) => [
+                        'date' => $d->date->format('Y-m-d'),
+                        'label' => $d->label,
+                        'start_time' => $d->start_time,
+                        'end_time' => $d->end_time,
+                    ])->values(),
+                ];
+            }
+        }
+
         return response()->json([
             'event' => [
                 'id' => $event->id,
@@ -83,10 +166,16 @@ class EventController extends Controller
                 'slug' => $event->slug,
                 'city' => $event->city,
                 'venue' => $event->venue,
+                'venue_address' => $event->venue_address,
+                'venue_latitude' => $event->venue_latitude ? (float) $event->venue_latitude : null,
+                'venue_longitude' => $event->venue_longitude ? (float) $event->venue_longitude : null,
                 'start_date' => $event->start_date->format('Y-m-d'),
                 'end_date' => $event->end_date->format('Y-m-d'),
                 'status' => $event->status,
                 'description' => $event->description,
+                'call_time' => $event->call_time,
+                'hmua_address' => $event->hmua_address,
+                'designer_info' => $designerInfo,
                 'days' => $days,
             ],
         ]);

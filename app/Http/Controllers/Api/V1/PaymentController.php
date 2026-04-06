@@ -75,7 +75,6 @@ class PaymentController extends Controller
                 'total_pending' => $plan->totalPending(),
                 'progress' => $plan->progressPercentage(),
                 'status' => $plan->status,
-                'notes' => $plan->notes,
                 'installments' => $plan->installments->map(function ($inst) {
                     return [
                         'id' => $inst->id,

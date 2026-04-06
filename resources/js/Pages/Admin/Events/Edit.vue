@@ -1,5 +1,6 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import GoogleMapPicker from '@/Components/GoogleMapPicker.vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
 import { computed, reactive, watch } from 'vue';
 import { formatDayLabel } from '@/utils/dates.js';
@@ -13,12 +14,17 @@ const form = useForm({
     name: props.event.name,
     city: props.event.city,
     venue: props.event.venue ?? '',
+    venue_address: props.event.venue_address ?? '',
+    venue_latitude: props.event.venue_latitude ?? '',
+    venue_longitude: props.event.venue_longitude ?? '',
     timezone: props.event.timezone,
     start_date: props.event.start_date?.split('T')[0] ?? '',
     end_date: props.event.end_date?.split('T')[0] ?? '',
     description: props.event.description ?? '',
     status: props.event.status,
     model_number_start: props.event.model_number_start ?? 1,
+    call_time: props.event.call_time ?? '',
+    hmua_address: props.event.hmua_address ?? '',
     days: [...props.event.event_days].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '')).map(d => {
         const allSlots = d.casting_slots ?? [];
         const slots = allSlots.filter(s => (s.slot_type ?? 'normal') === 'normal');
@@ -270,6 +276,17 @@ function submit() {
                             </div>
                         </div>
 
+                        <GoogleMapPicker
+                            :latitude="form.venue_latitude"
+                            :longitude="form.venue_longitude"
+                            :address="form.venue_address"
+                            :venue-name="form.venue"
+                            @update:latitude="form.venue_latitude = $event"
+                            @update:longitude="form.venue_longitude = $event"
+                            @update:address="form.venue_address = $event"
+                            @update:venue-name="form.venue = $event"
+                        />
+
                         <div class="grid grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
@@ -299,6 +316,22 @@ function submit() {
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                                 <p class="mt-1 text-xs text-gray-400">Primera modelo asignada recibirá este número.</p>
                                 <p v-if="form.errors.model_number_start" class="mt-1 text-red-500 text-xs">{{ form.errors.model_number_start }}</p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 mt-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Call Time</label>
+                                    <input v-model="form.call_time" type="text"
+                                        placeholder="e.g. 3 hours before showtime"
+                                        class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                                    <p class="mt-1 text-xs text-gray-400">When models should arrive for hair & makeup.</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Hair & Makeup Address</label>
+                                    <input v-model="form.hmua_address" type="text"
+                                        placeholder="e.g. 713 8th Ave, New York, NY 10036"
+                                        class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                                    <p class="mt-1 text-xs text-gray-400">Location for hair & makeup preparation.</p>
+                                </div>
                             </div>
                         </div>
                     </div>

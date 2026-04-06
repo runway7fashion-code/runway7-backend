@@ -12,9 +12,9 @@ class Event extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'name', 'slug', 'city', 'venue', 'timezone',
-        'start_date', 'end_date', 'status', 'settings', 'description',
-        'model_number_start',
+        'name', 'slug', 'city', 'venue', 'venue_address', 'venue_latitude', 'venue_longitude',
+        'timezone', 'start_date', 'end_date', 'status', 'settings', 'description',
+        'model_number_start', 'call_time', 'hmua_address',
     ];
 
     protected function casts(): array

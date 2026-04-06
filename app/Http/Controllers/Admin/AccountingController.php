@@ -34,6 +34,9 @@ class AccountingController extends Controller
 
     public function dashboard(Request $request): Response
     {
+        // Update overdue statuses before showing dashboard
+        $this->accountingService->updateOverdueInstallments();
+
         $eventId = $request->filled('event') ? (int) $request->event : null;
 
         $stats = $this->accountingService->getDashboardStats($eventId);
@@ -521,6 +524,21 @@ class AccountingController extends Controller
             $request->notes,
         );
 
+        // Create PaymentRecord for audit trail
+        $plan = $installment->paymentPlan;
+        PaymentRecord::create([
+            'designer_id' => $plan->designer_id,
+            'event_id' => $plan->event_id,
+            'amount' => $installment->amount,
+            'payment_type' => 'installment',
+            'payment_method' => $request->payment_method,
+            'reference' => $request->payment_reference,
+            'receipt_url' => $receiptPath,
+            'notes' => $request->notes,
+            'registered_by' => $request->user()->id,
+            'payment_date' => now(),
+        ]);
+
         return back()->with('success', 'Cuota marcada como pagada.');
     }
 
@@ -577,13 +595,21 @@ class AccountingController extends Controller
             }
         }
 
-        // Si cambió el paquete y existe un plan, recalcular automáticamente
+        // Si cambió el paquete y existe un plan, validar y recalcular
         if ($newPackagePrice !== null) {
             $plan = DesignerPaymentPlan::where('designer_id', $designer->id)
                 ->where('event_id', $event->id)
                 ->first();
 
             if ($plan && (float) $plan->total_amount !== $newPackagePrice) {
+                // Block downgrade if total paid exceeds new package price
+                $totalPaid = $plan->totalPaid();
+                if ($totalPaid > $newPackagePrice) {
+                    return back()->withErrors([
+                        'package_id' => "Cannot change to this package. The designer has already paid \${$totalPaid} which exceeds the new package price of \${$newPackagePrice}. Contact accounting to process a refund first.",
+                    ]);
+                }
+
                 $this->accountingService->updatePaymentPlan(
                     $plan,
                     $newPackagePrice,
@@ -751,6 +777,12 @@ class AccountingController extends Controller
             'payment_date' => 'required|date',
         ]);
 
+        // Save old values before update for reversal
+        $oldAmount = (float) $record->amount;
+        $oldType = $record->payment_type;
+        $designerId = $record->designer_id;
+        $eventId = $record->event_id;
+
         $data = $request->only(['amount', 'payment_type', 'payment_method', 'reference', 'notes', 'payment_date']);
 
         if ($request->hasFile('receipt')) {
@@ -760,13 +792,48 @@ class AccountingController extends Controller
             $data['receipt_url'] = $request->file('receipt')->store('accounting/payment-records', 'public');
         }
 
+        // Reverse old allocation
+        if ($oldType === 'installment') {
+            $this->accountingService->reversePaymentAllocation($designerId, $eventId, $oldAmount);
+        } elseif ($oldType === 'downpayment') {
+            $this->accountingService->reverseDownpayment($designerId, $eventId);
+        }
+
         $record->update($data);
+
+        // Re-allocate with new values
+        if ($data['payment_type'] === 'installment') {
+            $this->accountingService->allocatePaymentToInstallments(
+                $designerId,
+                $eventId,
+                (float) $data['amount'],
+                $request->user()->id,
+                $data['payment_method'],
+                $data['reference'] ?? null,
+            );
+        } elseif ($data['payment_type'] === 'downpayment') {
+            $this->accountingService->allocateDownpayment($designerId, $eventId);
+        }
 
         return back()->with('success', 'Registro actualizado.');
     }
 
     public function destroyPaymentRecord(PaymentRecord $record)
     {
+        // Reverse allocation before deleting
+        if ($record->payment_type === 'installment') {
+            $this->accountingService->reversePaymentAllocation(
+                $record->designer_id,
+                $record->event_id,
+                (float) $record->amount,
+            );
+        } elseif ($record->payment_type === 'downpayment') {
+            $this->accountingService->reverseDownpayment(
+                $record->designer_id,
+                $record->event_id,
+            );
+        }
+
         if ($record->receipt_url) {
             Storage::disk('public')->delete($record->receipt_url);
         }
@@ -1053,6 +1120,9 @@ class AccountingController extends Controller
 
     public function overdueList(Request $request): Response
     {
+        // Update overdue statuses before showing the list
+        $this->accountingService->updateOverdueInstallments();
+
         // Query plans that have overdue installments (active designers only)
         $query = DesignerPaymentPlan::whereHas('installments', function ($q) {
                 $q->whereIn('status', ['overdue', 'partial'])->where('due_date', '<', now());

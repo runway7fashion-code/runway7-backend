@@ -24,6 +24,8 @@ use App\Http\Controllers\Admin\LeadTagController;
 use App\Http\Controllers\Admin\AttendanceController;
 use App\Http\Controllers\Admin\LeadAnalyticsController;
 use App\Http\Controllers\Admin\SalesAuditController;
+use App\Http\Controllers\Admin\HomeCardController;
+use App\Http\Controllers\Admin\PaymentMethodConfigController;
 
 Route::get('/', function () {
     return redirect()->route('admin.login');
@@ -193,6 +195,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::resource('banners', BannerController::class);
                 Route::post('banners/{banner}/upload-image', [BannerController::class, 'uploadImage'])->name('banners.upload-image');
                 Route::post('banners/reorder', [BannerController::class, 'reorder'])->name('banners.reorder');
+
+                // Home Cards (same access as banners)
+                Route::resource('home-cards', HomeCardController::class);
+                Route::post('home-cards/{home_card}/upload-image', [HomeCardController::class, 'uploadImage'])->name('home-cards.upload-image');
+                Route::post('home-cards/reorder', [HomeCardController::class, 'reorder'])->name('home-cards.reorder');
             });
 
         }); // end operations
@@ -240,6 +247,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 // Reporte de Liquidez
                 Route::get('liquidity', [AccountingController::class, 'liquidityReport'])->name('liquidity');
                 Route::get('liquidity/export', [AccountingController::class, 'exportLiquidityReport'])->name('liquidity.export');
+
+                // Payment Methods Config
+                Route::get('payment-methods', [PaymentMethodConfigController::class, 'index'])->name('payment-methods.index');
+                Route::post('payment-methods', [PaymentMethodConfigController::class, 'store'])->name('payment-methods.store');
+                Route::put('payment-methods/{paymentMethodConfig}', [PaymentMethodConfigController::class, 'update'])->name('payment-methods.update');
+                Route::delete('payment-methods/{paymentMethodConfig}', [PaymentMethodConfigController::class, 'destroy'])->name('payment-methods.destroy');
+                Route::post('payment-methods/reorder', [PaymentMethodConfigController::class, 'reorder'])->name('payment-methods.reorder');
             });
         });
 

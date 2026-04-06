@@ -198,7 +198,8 @@ class DesignerController extends Controller
             'package_price'   => 'nullable|numeric|min:0',
             'notes'           => 'nullable|string',
             'assistants'              => 'nullable|array',
-            'assistants.*.full_name'  => 'required|string|max:255',
+            'assistants.*.first_name' => 'required|string|max:255',
+            'assistants.*.last_name'  => 'nullable|string|max:255',
             'assistants.*.document_id'=> 'nullable|string|max:255',
             'assistants.*.phone'      => 'nullable|string|max:255',
             'assistants.*.email'      => 'nullable|email|max:255',
@@ -651,7 +652,8 @@ class DesignerController extends Controller
 
         $request->validate([
             'event_id'    => 'required|exists:events,id',
-            'full_name'   => 'required|string|max:255',
+            'first_name'  => 'required|string|max:255',
+            'last_name'   => 'nullable|string|max:255',
             'document_id' => 'nullable|string|max:255',
             'phone'       => 'nullable|string|max:255',
             'email'       => 'required|email|max:255',
@@ -659,7 +661,7 @@ class DesignerController extends Controller
 
         try {
             $this->designerService->addAssistant($designer, $request->event_id, $request->only([
-                'full_name', 'document_id', 'phone', 'email',
+                'first_name', 'last_name', 'document_id', 'phone', 'email',
             ]), $request->user()->id);
             return back()->with('success', 'Asistente agregado.');
         } catch (\Exception $e) {
@@ -1074,6 +1076,8 @@ class DesignerController extends Controller
             'assistants' => $designer->designerAssistants?->map(fn($a) => [
                 'id'          => $a->id,
                 'event_id'    => $a->event_id,
+                'first_name'  => $a->first_name,
+                'last_name'   => $a->last_name,
                 'full_name'   => $a->full_name,
                 'document_id' => $a->document_id,
                 'phone'       => $a->phone,

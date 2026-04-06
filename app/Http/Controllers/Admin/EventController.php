@@ -55,12 +55,17 @@ class EventController extends Controller
             'name'       => 'required|string|max:255',
             'city'       => 'required|string|max:255',
             'venue'      => 'nullable|string|max:255',
+            'venue_address'   => 'nullable|string|max:500',
+            'venue_latitude'  => 'nullable|numeric|between:-90,90',
+            'venue_longitude' => 'nullable|numeric|between:-180,180',
             'timezone'   => 'required|string',
             'start_date' => 'required|date',
             'end_date'   => 'required|date|after_or_equal:start_date',
             'description'        => 'nullable|string',
             'status'             => 'required|in:draft,published',
             'model_number_start' => 'required|integer|min:1',
+            'call_time'          => 'nullable|string|max:255',
+            'hmua_address'       => 'nullable|string|max:500',
             'days'               => 'required|array|min:1',
             'days.*.date'  => 'required|date',
             'days.*.label' => 'required|string',
@@ -76,7 +81,7 @@ class EventController extends Controller
         ]);
 
         $event = $this->eventService->createEvent(
-            $request->only(['name', 'city', 'venue', 'timezone', 'start_date', 'end_date', 'description', 'status', 'model_number_start']),
+            $request->only(['name', 'city', 'venue', 'venue_address', 'venue_latitude', 'venue_longitude', 'timezone', 'start_date', 'end_date', 'description', 'status', 'model_number_start', 'call_time', 'hmua_address']),
             $request->input('days', []),
             $request->input('time_slots', []),
             $request->boolean('apply_same_schedule', true)
@@ -111,10 +116,10 @@ class EventController extends Controller
                 'assigned_show_slots'   => $event->totalAssignedShowSlots(),
                 'shows_with_designers'  => $event->showsWithDesignersCount(),
                 'unique_designers'      => $event->assignedDesignersCount(),
-                'total_models'          => $event->models()->count(),
+                'total_models'          => $event->models()->whereIn('users.status', ['pending', 'active'])->count(),
                 'casting_slots'          => $event->castingDay()?->castingSlots()->count() ?? 0,
-                'casting_checked_in'     => $event->models()->wherePivot('casting_status', 'checked_in')->count(),
-                'casting_models'         => $event->models()->whereNotNull('event_model.casting_time')->count(),
+                'casting_checked_in'     => $event->models()->whereIn('users.status', ['pending', 'active'])->wherePivot('casting_status', 'checked_in')->count(),
+                'casting_models'         => $event->models()->whereIn('users.status', ['pending', 'active'])->whereNotNull('event_model.casting_time')->count(),
             ],
         ]);
     }
@@ -138,12 +143,17 @@ class EventController extends Controller
             'name'       => 'required|string|max:255',
             'city'       => 'required|string|max:255',
             'venue'      => 'nullable|string|max:255',
+            'venue_address'   => 'nullable|string|max:500',
+            'venue_latitude'  => 'nullable|numeric|between:-90,90',
+            'venue_longitude' => 'nullable|numeric|between:-180,180',
             'timezone'   => 'required|string',
             'start_date' => 'required|date',
             'end_date'   => 'required|date|after_or_equal:start_date',
             'description'        => 'nullable|string',
             'status'             => 'required|in:draft,published,active,completed,cancelled',
             'model_number_start' => 'required|integer|min:1',
+            'call_time'          => 'nullable|string|max:255',
+            'hmua_address'       => 'nullable|string|max:500',
             'days'               => 'required|array|min:1',
             'days.*.casting_slots'          => 'nullable|array',
             'days.*.casting_slots.*.time'     => 'required|string',
@@ -155,7 +165,7 @@ class EventController extends Controller
 
         $this->eventService->updateEvent(
             $event,
-            $request->only(['name', 'city', 'venue', 'timezone', 'start_date', 'end_date', 'description', 'status', 'model_number_start']),
+            $request->only(['name', 'city', 'venue', 'venue_address', 'venue_latitude', 'venue_longitude', 'timezone', 'start_date', 'end_date', 'description', 'status', 'model_number_start', 'call_time', 'hmua_address']),
             $request->input('days', [])
         );
 

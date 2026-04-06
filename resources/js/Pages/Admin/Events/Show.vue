@@ -177,6 +177,14 @@ function slotBadgeClass(show) {
                         <p class="text-gray-400 text-sm">{{ event.city }}<span v-if="event.venue"> · {{ event.venue }}</span></p>
                         <p class="text-yellow-400 text-sm mt-1 font-medium">{{ formatDateRange(event.start_date, event.end_date) }}</p>
                         <p v-if="event.description" class="text-gray-500 text-sm mt-2 max-w-xl">{{ event.description }}</p>
+                        <div v-if="event.call_time || event.hmua_address" class="flex flex-wrap gap-4 mt-3">
+                            <p v-if="event.call_time" class="text-gray-400 text-xs">
+                                <span class="text-gray-500 font-medium">Call Time:</span> {{ event.call_time }}
+                            </p>
+                            <p v-if="event.hmua_address" class="text-gray-400 text-xs">
+                                <span class="text-gray-500 font-medium">H&MUA:</span> {{ event.hmua_address }}
+                            </p>
+                        </div>
                     </div>
                     <div class="flex gap-2 flex-wrap">
                         <Link :href="`/admin/operations/events/${event.id}/edit`"

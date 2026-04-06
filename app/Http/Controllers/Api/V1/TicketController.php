@@ -18,12 +18,53 @@ class TicketController extends Controller
         $user = $request->user();
 
         $passes = EventPass::where('user_id', $user->id)
-            ->with('event:id,name,city,venue,start_date,end_date')
+            ->with('event:id,name,city,venue,venue_address,start_date,end_date')
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $data = $passes->map(function ($pass) {
-            return [
+        // Get designer info if user is a designer
+        $designerInfo = [];
+        if ($user->role === 'designer') {
+            $eventIds = $passes->pluck('event_id')->unique();
+
+            $pivots = \DB::table('event_designer')
+                ->where('designer_id', $user->id)
+                ->whereIn('event_id', $eventIds)
+                ->get()
+                ->keyBy('event_id');
+
+            $brandName = $user->designerProfile?->brand_name;
+
+            // Get shows for each event
+            $shows = \DB::table('show_designer')
+                ->join('shows', 'shows.id', '=', 'show_designer.show_id')
+                ->join('event_days', 'event_days.id', '=', 'shows.event_day_id')
+                ->where('show_designer.designer_id', $user->id)
+                ->whereIn('event_days.event_id', $eventIds)
+                ->whereIn('show_designer.status', ['assigned', 'confirmed'])
+                ->select('event_days.event_id', 'shows.name as show_name', 'shows.scheduled_time', 'event_days.date', 'event_days.label as day_label')
+                ->orderBy('event_days.date')
+                ->orderBy('shows.scheduled_time')
+                ->get()
+                ->groupBy('event_id');
+
+            foreach ($eventIds as $eventId) {
+                $pivot = $pivots->get($eventId);
+                $designerInfo[$eventId] = [
+                    'brand_name' => $brandName,
+                    'assistants_count' => $pivot ? $pivot->assistants : 0,
+                    'shows' => ($shows->get($eventId) ?? collect())->map(fn($s) => [
+                        'name' => $s->show_name,
+                        'scheduled_time' => $s->scheduled_time,
+                        'date' => $s->date,
+                        'day_label' => $s->day_label,
+                    ])->values(),
+                ];
+            }
+        }
+
+        $data = $passes->map(function ($pass) use ($designerInfo) {
+            $result = [
                 'id' => $pass->id,
                 'qr_code' => $pass->qr_code,
                 'pass_type' => $pass->pass_type,
@@ -37,8 +78,15 @@ class TicketController extends Controller
                     'name' => $pass->event->name,
                     'city' => $pass->event->city,
                     'venue' => $pass->event->venue,
+                    'venue_address' => $pass->event->venue_address,
                 ] : null,
             ];
+
+            if (isset($designerInfo[$pass->event_id])) {
+                $result['designer_info'] = $designerInfo[$pass->event_id];
+            }
+
+            return $result;
         });
 
         return response()->json(['passes' => $data]);

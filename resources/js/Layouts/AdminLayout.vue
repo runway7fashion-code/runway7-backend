@@ -31,6 +31,7 @@ import {
     TagIcon,
     QuestionMarkCircleIcon,
     ChartBarSquareIcon,
+    DevicePhoneMobileIcon,
 } from '@heroicons/vue/24/outline';
 
 const page = usePage();
@@ -68,6 +69,7 @@ const operationsItems = computed(() => {
     if (hasSection('attendance'))           items.push({ name: 'Attendance',  href: '/admin/operations/attendance',  icon: ClipboardDocumentCheckIcon });
     if (hasSection('chats'))               items.push({ name: 'Chats',       href: '/admin/operations/chats',       icon: ChatBubbleLeftRightIcon });
     if (hasSection('banners'))             items.push({ name: 'Banners',     href: '/admin/operations/banners',     icon: PhotoIcon });
+    if (hasSection('banners'))             items.push({ name: 'Home Cards',  href: '/admin/operations/home-cards', icon: DevicePhoneMobileIcon });
     if (hasSection('designer_categories')) items.push({ name: 'Categories',  href: '/admin/operations/categories',  icon: Cog6ToothIcon });
     return items;
 });
@@ -83,6 +85,7 @@ const accountingItems = computed(() => {
         items.push({ name: 'Liquidez',             href: '/admin/accounting/liquidity',       icon: ArrowTrendingUpIcon });
         items.push({ name: 'Pagos Diseñadores',    href: '/admin/accounting/payments',        icon: BanknotesIcon });
         items.push({ name: 'Registro de Pagos',    href: '/admin/accounting/payment-records', icon: DocumentTextIcon });
+        items.push({ name: 'Payment Methods',     href: '/admin/accounting/payment-methods', icon: CurrencyDollarIcon });
     }
     return items;
 });

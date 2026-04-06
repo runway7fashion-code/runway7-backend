@@ -88,7 +88,7 @@ class CastingService
         ]);
     }
 
-    public function requestModelForShow(Show $show, User $model, User $designer): array
+    public function requestModelForShow(Show $show, User $model, User $designer, ?string $message = null): array
     {
         // Verify designer is assigned to this show
         if (!$show->designers()->where('designer_id', $designer->id)->exists()) {
@@ -117,6 +117,7 @@ class CastingService
             'status'       => 'requested',
             'requested_by' => $designer->id,
             'requested_at' => now(),
+            'notes'        => $message,
         ]);
 
         return ['message' => 'Solicitud enviada correctamente.'];

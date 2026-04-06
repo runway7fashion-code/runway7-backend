@@ -119,7 +119,7 @@ function toggleShow(showId) {
 
 // Asistentes
 function addAssistant() {
-    form.assistants.push({ full_name: '', document_id: '', phone: '', email: '' });
+    form.assistants.push({ first_name: '', last_name: '', document_id: '', phone: '', email: '' });
 }
 
 function removeAssistant(index) {
@@ -425,8 +425,13 @@ function submit() {
 
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-xs text-gray-500 mb-1">Nombre completo *</label>
-                                <input v-model="assistant.full_name" type="text"
+                                <label class="block text-xs text-gray-500 mb-1">First Name *</label>
+                                <input v-model="assistant.first_name" type="text"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1">Last Name</label>
+                                <input v-model="assistant.last_name" type="text"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
                             <div>

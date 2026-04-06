@@ -1,5 +1,6 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import GoogleMapPicker from '@/Components/GoogleMapPicker.vue';
 import { useForm } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
 import { formatDayLabel } from '@/utils/dates.js';
@@ -12,12 +13,17 @@ const form = useForm({
     city: '',
     city_custom: '',
     venue: '',
+    venue_address: '',
+    venue_latitude: '',
+    venue_longitude: '',
     timezone: 'America/New_York',
     start_date: '',
     end_date: '',
     description: '',
     status: 'draft',
     model_number_start: 1,
+    call_time: '',
+    hmua_address: '',
     days: [],
     time_slots: ['11:00', '13:00', '15:00', '17:00', '19:00', '21:00'],
     apply_same_schedule: true,
@@ -310,6 +316,17 @@ function submit() {
                         </div>
                     </div>
 
+                    <GoogleMapPicker
+                        :latitude="form.venue_latitude"
+                        :longitude="form.venue_longitude"
+                        :address="form.venue_address"
+                        :venue-name="form.venue"
+                        @update:latitude="form.venue_latitude = $event"
+                        @update:longitude="form.venue_longitude = $event"
+                        @update:address="form.venue_address = $event"
+                        @update:venue-name="form.venue = $event"
+                    />
+
                     <div class="grid grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5">Fecha Inicio *</label>
@@ -353,6 +370,23 @@ function submit() {
                                 placeholder="ej. 4058"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             <p class="mt-1 text-xs text-gray-400">Primera modelo de este evento recibirá este número.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Call Time</label>
+                            <input v-model="form.call_time" type="text"
+                                placeholder="e.g. 3 hours before showtime"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            <p class="mt-1 text-xs text-gray-400">When models should arrive for hair & makeup.</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Hair & Makeup Address</label>
+                            <input v-model="form.hmua_address" type="text"
+                                placeholder="e.g. 713 8th Ave, New York, NY 10036"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            <p class="mt-1 text-xs text-gray-400">Location for hair & makeup preparation.</p>
                         </div>
                     </div>
                 </div>
