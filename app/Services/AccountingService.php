@@ -64,17 +64,6 @@ class AccountingService
         ?array $customDates = null
     ): DesignerPaymentPlan {
         return DB::transaction(function () use ($plan, $totalAmount, $downpayment, $installmentsCount, $notes, $customAmounts, $customDates) {
-            // Preserve paid AND partial installments (they have money allocated)
-            $preservedInstallments = $plan->installments()
-                ->whereIn('status', ['paid', 'partial'])
-                ->get();
-            $preservedPaidTotal = (float) $preservedInstallments->sum('paid_amount');
-
-            // Delete only installments with no payments (pending, overdue, cancelled)
-            $plan->installments()
-                ->whereNotIn('status', ['paid', 'partial'])
-                ->delete();
-
             $remaining = $totalAmount - $downpayment;
 
             $plan->update([
@@ -85,18 +74,70 @@ class AccountingService
                 'notes' => $notes,
             ]);
 
-            // Generate new unpaid installments for the remaining balance
-            $newInstallmentsCount = $installmentsCount - $preservedInstallments->count();
-            $newRemaining = $remaining - $preservedPaidTotal;
-            $nextNumber = $preservedInstallments->count() + 1;
+            // Separate paid/partial (untouchable) from editable installments
+            $allInstallments = $plan->installments()->orderBy('installment_number')->get();
+            $locked = $allInstallments->filter(fn($i) => in_array($i->status, ['paid', 'partial']));
+            $editable = $allInstallments->filter(fn($i) => !in_array($i->status, ['paid', 'partial']))->values();
 
-            if ($newInstallmentsCount > 0 && $newRemaining > 0) {
-                $startDate = now()->startOfMonth()->addMonth();
+            $lockedPaidTotal = (float) $locked->sum('paid_amount');
+            $newRemaining = $remaining - $lockedPaidTotal;
+            $newCount = $installmentsCount - $locked->count();
 
-                $this->generateInstallments($plan, $newInstallmentsCount, $newRemaining, $startDate, $nextNumber, $customAmounts, $customDates);
+            if ($newCount < 0) $newCount = 0;
+
+            // Calculate amounts for editable slots
+            $amounts = [];
+            if ($customAmounts) {
+                $amounts = array_map(fn($a) => round((float) $a, 2), $customAmounts);
+            } elseif ($newCount > 0 && $newRemaining > 0) {
+                $perInstallment = round($newRemaining / $newCount, 2);
+                for ($i = 0; $i < $newCount; $i++) {
+                    $amounts[] = ($i === $newCount - 1)
+                        ? round($newRemaining - $perInstallment * ($newCount - 1), 2)
+                        : $perInstallment;
+                }
             }
 
-            // Re-check if completed
+            $startDate = now()->startOfMonth()->addMonth();
+            $nextNumber = $locked->count() + 1;
+
+            // Update existing editable installments (preserve their IDs and history)
+            for ($i = 0; $i < min(count($amounts), $editable->count()); $i++) {
+                $dueDate = isset($customDates[$i])
+                    ? \Carbon\Carbon::parse($customDates[$i])
+                    : $startDate->copy()->addMonths($i);
+
+                $editable[$i]->update([
+                    'installment_number' => $nextNumber + $i,
+                    'amount' => $amounts[$i],
+                    'due_date' => $dueDate,
+                    'status' => $dueDate->isPast() ? 'overdue' : 'pending',
+                ]);
+            }
+
+            // Create additional installments if needed
+            for ($i = $editable->count(); $i < count($amounts); $i++) {
+                $dueDate = isset($customDates[$i])
+                    ? \Carbon\Carbon::parse($customDates[$i])
+                    : $startDate->copy()->addMonths($i);
+
+                $plan->installments()->create([
+                    'installment_number' => $nextNumber + $i,
+                    'amount' => $amounts[$i],
+                    'due_date' => $dueDate,
+                    'status' => 'pending',
+                ]);
+            }
+
+            // Remove excess editable installments (only those beyond the new count, and only if no payments)
+            if ($editable->count() > count($amounts)) {
+                $toRemove = $editable->slice(count($amounts));
+                foreach ($toRemove as $inst) {
+                    if ((float) $inst->paid_amount > 0) continue;
+                    $inst->delete();
+                }
+            }
+
             $this->checkIfCompleted($plan);
 
             return $plan->fresh(['installments']);
