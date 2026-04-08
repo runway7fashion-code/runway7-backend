@@ -321,7 +321,7 @@ function submitDesignerEdit() {
                                 'bg-green-50 text-green-700': designer.status === 'active',
                                 'bg-gray-100 text-gray-500': designer.status === 'inactive',
                                 'bg-yellow-50 text-yellow-700': designer.status === 'pending',
-                            }" class="px-2 py-0.5 rounded font-medium">{{ { active: 'Activo', inactive: 'Inactivo', pending: 'Pendiente' }[designer.status] ?? designer.status }}</span>
+                            }" class="px-2 py-0.5 rounded font-medium">{{ { active: 'Activo', inactive: 'Inactivo', pending: 'Pendiente', registered: 'Registrado' }[designer.status] ?? designer.status }}</span>
                         </div>
                     </div>
                     <div class="text-right flex-shrink-0">
@@ -377,7 +377,8 @@ function submitDesignerEdit() {
                             <label class="block text-xs font-medium text-gray-500 mb-1">Estado</label>
                             <select v-model="designerForm.status"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="active">Activo</option>
+                                <option v-if="designerForm.status === 'active'" value="active">Activo</option>
+                                <option value="registered">Registrado</option>
                                 <option value="inactive">Inactivo</option>
                                 <option value="pending">Pendiente</option>
                             </select>
