@@ -69,7 +69,7 @@ class UserController extends Controller
             'phone' => 'nullable|string|unique:users',
             'password' => 'required|string|min:8|confirmed',
             'role' => "required|in:{$allRoles}",
-            'status' => 'required|in:active,inactive,pending',
+            'status' => 'required|in:active,inactive,pending,registered',
             'profile' => 'nullable|array',
         ]);
 
@@ -139,7 +139,7 @@ class UserController extends Controller
             'email' => "required|email|unique:users,email,{$user->id}",
             'phone' => "nullable|string|unique:users,phone,{$user->id}",
             'role' => "required|in:{$allRoles}",
-            'status' => 'required|in:active,inactive,pending',
+            'status' => 'required|in:active,inactive,pending,registered',
             'profile' => 'nullable|array',
         ]);
 

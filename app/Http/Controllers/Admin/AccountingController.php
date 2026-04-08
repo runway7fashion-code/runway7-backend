@@ -551,7 +551,7 @@ class AccountingController extends Controller
             'last_name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,' . $designer->id,
             'phone' => 'nullable|string|max:50',
-            'status' => 'nullable|in:active,inactive,pending',
+            'status' => 'nullable|in:active,inactive,pending,registered',
             'brand_name' => 'nullable|string|max:255',
             'category_id' => 'nullable|exists:designer_categories,id',
             'sales_rep_id' => 'nullable|exists:users,id',
