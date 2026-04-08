@@ -175,13 +175,15 @@ function designerStatusClass(s) {
 
 // Social media links
 const socialLinks = computed(() => {
-    const sm = profile?.social_media;
-    if (!sm) return [];
+    const p = profile.value;
+    const sm = p?.social_media ?? {};
     const links = [];
-    if (sm.instagram) links.push({ label: sm.instagram, url: `https://instagram.com/${sm.instagram.replace('@', '')}`, color: 'text-pink-600 hover:text-pink-700' });
+    const ig = p?.instagram || sm.instagram;
+    const web = p?.website || sm.website;
+    if (ig) links.push({ label: ig, url: `https://instagram.com/${ig.replace('@', '')}`, color: 'text-pink-600 hover:text-pink-700' });
     if (sm.facebook)  links.push({ label: 'Facebook', url: sm.facebook.startsWith('http') ? sm.facebook : `https://facebook.com/${sm.facebook}`, color: 'text-blue-600 hover:text-blue-700' });
     if (sm.tiktok)    links.push({ label: sm.tiktok, url: `https://tiktok.com/${sm.tiktok.replace('@', '')}`, color: 'text-gray-800 hover:text-black' });
-    if (sm.website)   links.push({ label: 'Website', url: sm.website.startsWith('http') ? sm.website : `https://${sm.website}`, color: 'text-indigo-600 hover:text-indigo-700' });
+    if (web)   links.push({ label: 'Website', url: web.startsWith('http') ? web : `https://${web}`, color: 'text-indigo-600 hover:text-indigo-700' });
     return links;
 });
 </script>

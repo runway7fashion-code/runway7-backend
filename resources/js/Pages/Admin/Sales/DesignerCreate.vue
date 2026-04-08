@@ -9,6 +9,7 @@ const props = defineProps({
     events: Array,
     packages: Array,
     countries: Array,
+    categories: Array,
     salesReps: Array,
 });
 
@@ -43,6 +44,11 @@ function selectLead(lead) {
     form.last_name = lead.last_name || '';
     form.email = lead.email || '';
     form.brand_name = lead.company_name || '';
+    form.instagram = lead.instagram || '';
+    if (lead.retail_category) {
+        const cat = props.categories.find(c => c.name === lead.retail_category);
+        if (cat) form.category_id = cat.id;
+    }
     if (lead.country) form.country = lead.country;
     if (lead.phone) {
         const match = lead.phone.match(/^(\+\d+)\s*(.*)$/);
@@ -65,7 +71,7 @@ function selectLead(lead) {
 function clearLead() {
     selectedLead.value = null;
     form.lead_id = ''; form.first_name = ''; form.last_name = ''; form.email = ''; form.brand_name = '';
-    form.country = ''; form.event_id = ''; form.sales_rep_id = '';
+    form.country = ''; form.instagram = ''; form.category_id = ''; form.event_id = ''; form.sales_rep_id = '';
     phoneNumber.value = ''; phoneCode.value = '+1';
 }
 
@@ -88,6 +94,8 @@ const form = useForm({
     phone: '',
     brand_name: '',
     country: '',
+    instagram: '',
+    category_id: '',
     event_id: '',
     package_id: '',
     agreed_price: '',
@@ -233,6 +241,17 @@ const selectedRep = computed(() => props.salesReps?.find(r => r.id == form.sales
                                     <option v-for="c in countries" :key="c.code" :value="c.name">{{ c.flag }} {{ c.name }}</option>
                                 </select>
                                 <p v-if="form.errors.country" class="err">{{ form.errors.country }}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Instagram</label>
+                                <input v-model="form.instagram" type="text" placeholder="@username" :disabled="!!selectedLead" :class="selectedLead ? 'input bg-gray-100 cursor-not-allowed' : 'input'" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                                <select v-model="form.category_id" :disabled="!!selectedLead" :class="selectedLead ? 'input bg-gray-100 cursor-not-allowed' : 'input bg-white'">
+                                    <option value="">— No category —</option>
+                                    <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
+                                </select>
                             </div>
                         </div>
                     </div>

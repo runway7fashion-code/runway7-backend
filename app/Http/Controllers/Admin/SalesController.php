@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Country;
+use App\Models\DesignerCategory;
 use App\Models\DesignerLead;
 use App\Models\DesignerPackage;
 use App\Models\Event;
@@ -301,8 +302,9 @@ class SalesController extends Controller
         return Inertia::render('Admin/Sales/DesignerCreate', [
             'events'    => $events,
             'packages'  => $packages,
-            'countries' => Country::active()->ordered()->get(['name', 'code', 'phone', 'flag']),
-            'salesReps' => $salesReps,
+            'countries'  => Country::active()->ordered()->get(['name', 'code', 'phone', 'flag']),
+            'categories' => DesignerCategory::where('is_active', true)->ordered()->get(['id', 'name']),
+            'salesReps'  => $salesReps,
         ]);
     }
 
@@ -326,6 +328,8 @@ class SalesController extends Controller
             'media_package'         => 'boolean',
             'custom_background'     => 'boolean',
             'courtesy_tickets'      => 'boolean',
+            'instagram'       => 'nullable|string|max:100',
+            'category_id'     => 'nullable|exists:designer_categories,id',
             'notes'           => 'nullable|string',
             'sales_rep_id'    => 'nullable|exists:users,id',
             'documents'           => 'nullable|array',
@@ -357,6 +361,8 @@ class SalesController extends Controller
             $user->designerProfile()->create([
                 'brand_name'   => $request->brand_name,
                 'country'      => $request->country,
+                'instagram'    => $request->instagram,
+                'category_id'  => $request->category_id,
                 'sales_rep_id' => $assignedRepId,
             ]);
 

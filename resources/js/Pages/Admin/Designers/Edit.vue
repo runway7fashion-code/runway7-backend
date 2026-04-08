@@ -42,10 +42,10 @@ const form = useForm({
     tracking_link:   profile?.tracking_link     ?? '',
     skype:           profile?.skype             ?? '',
     social_media: {
-        instagram: profile?.social_media?.instagram ?? '',
+        instagram: profile?.instagram ?? profile?.social_media?.instagram ?? '',
         facebook:  profile?.social_media?.facebook  ?? '',
         tiktok:    profile?.social_media?.tiktok    ?? '',
-        website:   profile?.social_media?.website   ?? '',
+        website:   profile?.website ?? profile?.social_media?.website   ?? '',
         other:     profile?.social_media?.other     ?? '',
     },
 });
@@ -410,7 +410,8 @@ function submit() {
                         <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                         <select v-model="form.status"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                            <option value="active">Active</option>
+                            <option v-if="form.status === 'active'" value="active">Active</option>
+                            <option value="registered">Registered</option>
                             <option value="inactive">Inactive</option>
                             <option value="pending">Pending</option>
                         </select>

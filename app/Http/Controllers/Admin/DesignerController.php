@@ -380,7 +380,7 @@ class DesignerController extends Controller
             'last_name'       => 'required|string|max:255',
             'email'           => "required|email|unique:users,email,{$designer->id}",
             'phone'           => "nullable|string|unique:users,phone,{$designer->id}",
-            'status'          => 'nullable|in:active,inactive,pending',
+            'status'          => 'nullable|in:active,inactive,pending,registered',
             'brand_name'      => 'required|string|max:255',
             'collection_name' => 'nullable|string|max:255',
             'website'         => 'nullable|string|max:255',
