@@ -183,7 +183,7 @@ function advisorName(lead) {
 // Auto-refresh when new lead notification arrives
 function onNotification(e) {
     if (e.detail?.data?.type === 'new_designer_lead') {
-        router.reload({ only: ['leads', 'stats'], preserveScroll: true });
+        router.reload({ only: ['leads', 'stats', 'opportunityStats'], preserveScroll: true });
     }
 }
 onMounted(() => window.addEventListener('notification:received', onNotification));

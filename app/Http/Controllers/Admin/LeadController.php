@@ -45,7 +45,11 @@ class LeadController extends Controller
         }
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            if ($request->status === 'unassigned') {
+                $query->whereNull('assigned_to');
+            } else {
+                $query->where('status', $request->status);
+            }
         }
 
         if ($request->filled('event')) {
@@ -69,7 +73,11 @@ class LeadController extends Controller
         }
 
         if ($request->filled('opp_status')) {
-            $query->whereHas('leadEvents', fn($q) => $q->where('status', $request->opp_status));
+            if ($request->opp_status === 'total') {
+                $query->whereHas('leadEvents');
+            } else {
+                $query->whereHas('leadEvents', fn($q) => $q->where('status', $request->opp_status));
+            }
         }
 
         if ($request->filled('source')) {
@@ -93,15 +101,21 @@ class LeadController extends Controller
             'unassigned'=> (clone $baseQuery)->whereNull('assigned_to')->count(),
         ];
 
-        // Opportunity stats (ventas)
+        // Opportunity stats (ventas) — respect user role
+        $oppBase = \DB::table('lead_events')
+            ->join('designer_leads', 'designer_leads.id', '=', 'lead_events.lead_id')
+            ->whereNull('designer_leads.deleted_at');
+        if (!$isLeader) {
+            $oppBase->where('designer_leads.assigned_to', $user->id);
+        }
         $opportunityStats = [
-            'opp_total'      => \DB::table('lead_events')->count(),
-            'opp_new'        => \DB::table('lead_events')->where('status', 'new')->count(),
-            'opp_contacted'  => \DB::table('lead_events')->where('status', 'contacted')->count(),
-            'opp_follow_up'  => \DB::table('lead_events')->where('status', 'follow_up')->count(),
-            'opp_negotiating'=> \DB::table('lead_events')->where('status', 'negotiating')->count(),
-            'opp_converted'  => \DB::table('lead_events')->where('status', 'converted')->count(),
-            'opp_lost'       => \DB::table('lead_events')->where('status', 'lost')->count(),
+            'opp_total'      => (clone $oppBase)->count(),
+            'opp_new'        => (clone $oppBase)->where('lead_events.status', 'new')->count(),
+            'opp_contacted'  => (clone $oppBase)->where('lead_events.status', 'contacted')->count(),
+            'opp_follow_up'  => (clone $oppBase)->where('lead_events.status', 'follow_up')->count(),
+            'opp_negotiating'=> (clone $oppBase)->where('lead_events.status', 'negotiating')->count(),
+            'opp_converted'  => (clone $oppBase)->where('lead_events.status', 'converted')->count(),
+            'opp_lost'       => (clone $oppBase)->where('lead_events.status', 'lost')->count(),
         ];
 
         $perPage = in_array($request->per_page, [20, 50, 100, 200]) ? $request->per_page : 20;
