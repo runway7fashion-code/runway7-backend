@@ -500,6 +500,11 @@ class LeadController extends Controller
 
     public function assign(Request $request, DesignerLead $lead)
     {
+        $user = auth()->user();
+        if ($user->role !== 'admin' && $user->sales_type !== 'lider') {
+            abort(403, 'Only leaders can reassign advisors.');
+        }
+
         $request->validate(['assigned_to' => 'required|exists:users,id']);
 
         $advisor = User::find($request->assigned_to);

@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -17,9 +17,17 @@ const props = defineProps({
 // Parse existing phone into code + number
 function parsePhone(phone) {
     if (!phone) return { code: '+1', number: '' };
-    const match = phone.match(/^(\+\d+)\s*(.*)$/);
-    if (match) return { code: match[1], number: match[2] };
-    return { code: '+1', number: phone };
+    // Try matching with space first
+    const spaceMatch = phone.match(/^(\+\d+)\s+(.+)$/);
+    if (spaceMatch) return { code: spaceMatch[1], number: spaceMatch[2] };
+    // Match against known phone codes (longest first to match +852 before +8)
+    const codes = props.phoneCodes.map(c => c.phone).sort((a, b) => b.length - a.length);
+    for (const code of codes) {
+        if (phone.startsWith(code)) {
+            return { code, number: phone.slice(code.length) };
+        }
+    }
+    return { code: '+1', number: phone.replace(/^\+\d+/, '') };
 }
 const parsed = parsePhone(props.lead.phone);
 const phoneCode = ref(parsed.code);
@@ -57,6 +65,15 @@ const contactTimeOptions = [
     '9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
     '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM',
 ];
+
+// Default event status to 'new' when a new event is checked
+watch(() => form.event_ids, (ids) => {
+    ids.forEach(id => {
+        if (!form.event_statuses[id]) {
+            form.event_statuses[id] = 'new';
+        }
+    });
+}, { deep: true });
 
 function submit() {
     form.phone = phoneNumber.value ? `${phoneCode.value} ${phoneNumber.value}` : '';

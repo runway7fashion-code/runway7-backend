@@ -319,16 +319,26 @@ const sortedActivities = computed(() => {
                             <h3 class="text-xl font-bold text-gray-900">{{ lead.first_name }} {{ lead.last_name }}</h3>
                             <p v-if="lead.company_name" class="text-gray-500 text-sm">{{ lead.company_name }}</p>
                         </div>
-                        <div class="flex flex-col ml-2">
-                            <span v-if="lead.assigned_to && typeof lead.assigned_to === 'object'" class="text-xs text-gray-400 mb-1">Advisor: <span class="font-medium text-gray-600">{{ lead.assigned_to.first_name }} {{ lead.assigned_to.last_name }}</span></span>
-                            <span :class="statusBadgeStyle(lead.status)" class="text-xs font-medium rounded-lg px-3 py-1 w-fit">
-                                Lead status: {{ statusLabel(lead.status) }}
-                            </span>
-                        </div>
                         <div class="flex flex-col text-xs text-gray-400 ml-2">
                             <span v-if="lead.source">Source: <span class="font-medium text-gray-600">{{ sources[lead.source] || lead.source }}</span></span>
                             <span>Registered: {{ formatDateTime(lead.created_at) }}</span>
                             <span v-if="lead.updated_at !== lead.created_at">Modified: {{ formatDateTime(lead.updated_at) }}</span>
+                        </div>
+                        <div class="flex flex-col ml-2">
+                            <span :class="statusBadgeStyle(lead.status)" class="text-xs font-medium rounded-lg px-3 py-1 w-fit mb-1">
+                                Lead status: {{ statusLabel(lead.status) }}
+                            </span>
+                            <div v-if="isLeader && advisors?.length" class="flex items-center gap-1 mb-1">
+                                <span class="text-xs text-gray-400">Advisor:</span>
+                                <select :value="lead.assigned_to?.id || ''" @change="reassignAdvisor($event.target.value)"
+                                    class="text-xs font-medium text-gray-600 border border-gray-200 rounded px-1.5 py-0.5 bg-white focus:outline-none focus:ring-1 focus:ring-black/10">
+                                    <option value="">— Unassigned —</option>
+                                    <option v-for="a in advisors" :key="a.id" :value="a.id">{{ a.first_name }} {{ a.last_name }}</option>
+                                </select>
+                            </div>
+                            
+                            <span v-else-if="lead.assigned_to && typeof lead.assigned_to === 'object'" class="text-xs text-gray-400">Advisor: <span class="font-medium text-gray-600">{{ lead.assigned_to.first_name }} {{ lead.assigned_to.last_name }}</span></span>
+                            
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
