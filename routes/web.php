@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\LeadAnalyticsController;
 use App\Http\Controllers\Admin\SalesAuditController;
 use App\Http\Controllers\Admin\HomeCardController;
 use App\Http\Controllers\Admin\PaymentMethodConfigController;
+use App\Http\Controllers\Admin\CountryController;
 
 Route::get('/', function () {
     return redirect()->route('admin.login');
@@ -188,6 +189,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('categories', [DesignerSettingsController::class, 'storeCategory'])->name('settings.designer-categories.store');
                 Route::put('categories/{category}', [DesignerSettingsController::class, 'updateCategory'])->name('settings.designer-categories.update');
                 Route::delete('categories/{category}', [DesignerSettingsController::class, 'destroyCategory'])->name('settings.designer-categories.destroy');
+            });
+
+            // Países y phone codes - admin, operation
+            Route::middleware('section:countries')->group(function () {
+                Route::get('countries', [CountryController::class, 'index'])->name('settings.countries');
+                Route::post('countries', [CountryController::class, 'store'])->name('settings.countries.store');
+                Route::put('countries/{country}', [CountryController::class, 'update'])->name('settings.countries.update');
+                Route::delete('countries/{country}', [CountryController::class, 'destroy'])->name('settings.countries.destroy');
             });
 
             // Banners - admin, marketing

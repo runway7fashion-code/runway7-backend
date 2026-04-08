@@ -10,6 +10,8 @@ use App\Models\LeadActivity;
 use App\Models\LeadTag;
 use App\Models\SalesBotMessage;
 use App\Models\User;
+use App\Models\Country;
+use App\Models\DesignerCategory;
 use App\Services\LeadAssignmentService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -224,10 +226,12 @@ class LeadController extends Controller
             : collect();
 
         return Inertia::render('Admin/Sales/Leads/Create', [
-            'events'   => $events,
-            'advisors' => $advisors,
-            'sources'  => DesignerLead::SOURCES,
-            'isLeader' => $isLeader,
+            'events'     => $events,
+            'advisors'   => $advisors,
+            'sources'    => DesignerLead::SOURCES,
+            'isLeader'   => $isLeader,
+            'categories' => DesignerCategory::ordered()->get(['id', 'name']),
+            'phoneCodes' => Country::active()->ordered()->get(['name', 'code', 'phone', 'flag']),
         ]);
     }
 
@@ -365,6 +369,8 @@ class LeadController extends Controller
             'opportunityStatuses' => DesignerLead::OPPORTUNITY_STATUSES,
             'advisors' => $advisors,
             'sources'  => DesignerLead::SOURCES,
+            'categories' => DesignerCategory::ordered()->get(['id', 'name']),
+            'phoneCodes' => Country::active()->ordered()->get(['name', 'code', 'phone', 'flag']),
         ]);
     }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CommunicationLog;
 use App\Models\DesignerAssistant;
+use App\Models\Country;
 use App\Models\DesignerCategory;
 use App\Models\DesignerDisplay;
 use App\Models\DesignerMaterial;
@@ -165,7 +166,7 @@ class DesignerController extends Controller
             'events'     => $events,
             'categories' => $categories,
             'packages'   => $packages,
-            'countries'  => config('countries'),
+            'countries'  => Country::active()->ordered()->get(['name', 'code', 'phone', 'flag']),
             'salesReps'  => $salesReps,
         ]);
     }
@@ -321,7 +322,7 @@ class DesignerController extends Controller
             'categories' => $categories,
             'packages'   => $packages,
             'salesReps'  => $salesReps,
-            'countries'  => config('countries'),
+            'countries'  => Country::active()->ordered()->get(['name', 'code', 'phone', 'flag']),
         ]);
     }
 

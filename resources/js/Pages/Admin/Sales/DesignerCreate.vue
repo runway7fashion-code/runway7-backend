@@ -12,72 +12,6 @@ const props = defineProps({
     salesReps: Array,
 });
 
-const phoneCodes = [
-    { code: '+1', flag: '🇺🇸' }, { code: '+52', flag: '🇲🇽' },
-    { code: '+44', flag: '🇬🇧' }, { code: '+33', flag: '🇫🇷' },
-    { code: '+39', flag: '🇮🇹' }, { code: '+34', flag: '🇪🇸' },
-    { code: '+49', flag: '🇩🇪' }, { code: '+55', flag: '🇧🇷' },
-    { code: '+57', flag: '🇨🇴' }, { code: '+51', flag: '🇵🇪' },
-    { code: '+54', flag: '🇦🇷' }, { code: '+56', flag: '🇨🇱' },
-    { code: '+58', flag: '🇻🇪' }, { code: '+593', flag: '🇪🇨' },
-    { code: '+503', flag: '🇸🇻' }, { code: '+502', flag: '🇬🇹' },
-    { code: '+504', flag: '🇭🇳' }, { code: '+505', flag: '🇳🇮' },
-    { code: '+506', flag: '🇨🇷' }, { code: '+507', flag: '🇵🇦' },
-    { code: '+509', flag: '🇭🇹' }, { code: '+53', flag: '🇨🇺' },
-    { code: '+1-809', flag: '🇩🇴' }, { code: '+1-787', flag: '🇵🇷' },
-    { code: '+591', flag: '🇧🇴' }, { code: '+595', flag: '🇵🇾' },
-    { code: '+598', flag: '🇺🇾' }, { code: '+592', flag: '🇬🇾' },
-    { code: '+597', flag: '🇸🇷' }, { code: '+501', flag: '🇧🇿' },
-    { code: '+91', flag: '🇮🇳' }, { code: '+86', flag: '🇨🇳' },
-    { code: '+81', flag: '🇯🇵' }, { code: '+82', flag: '🇰🇷' },
-    { code: '+62', flag: '🇮🇩' }, { code: '+63', flag: '🇵🇭' },
-    { code: '+66', flag: '🇹🇭' }, { code: '+84', flag: '🇻🇳' },
-    { code: '+60', flag: '🇲🇾' }, { code: '+65', flag: '🇸🇬' },
-    { code: '+880', flag: '🇧🇩' }, { code: '+92', flag: '🇵🇰' },
-    { code: '+94', flag: '🇱🇰' }, { code: '+95', flag: '🇲🇲' },
-    { code: '+977', flag: '🇳🇵' }, { code: '+855', flag: '🇰🇭' },
-    { code: '+856', flag: '🇱🇦' }, { code: '+852', flag: '🇭🇰' },
-    { code: '+886', flag: '🇹🇼' }, { code: '+971', flag: '🇦🇪' },
-    { code: '+966', flag: '🇸🇦' }, { code: '+972', flag: '🇮🇱' },
-    { code: '+961', flag: '🇱🇧' }, { code: '+962', flag: '🇯🇴' },
-    { code: '+964', flag: '🇮🇶' }, { code: '+965', flag: '🇰🇼' },
-    { code: '+968', flag: '🇴🇲' }, { code: '+973', flag: '🇧🇭' },
-    { code: '+974', flag: '🇶🇦' }, { code: '+90', flag: '🇹🇷' },
-    { code: '+98', flag: '🇮🇷' }, { code: '+993', flag: '🇹🇲' },
-    { code: '+994', flag: '🇦🇿' }, { code: '+995', flag: '🇬🇪' },
-    { code: '+996', flag: '🇰🇬' }, { code: '+998', flag: '🇺🇿' },
-    { code: '+234', flag: '🇳🇬' }, { code: '+27', flag: '🇿🇦' },
-    { code: '+254', flag: '🇰🇪' }, { code: '+233', flag: '🇬🇭' },
-    { code: '+20', flag: '🇪🇬' }, { code: '+212', flag: '🇲🇦' },
-    { code: '+213', flag: '🇩🇿' }, { code: '+216', flag: '🇹🇳' },
-    { code: '+218', flag: '🇱🇾' }, { code: '+221', flag: '🇸🇳' },
-    { code: '+225', flag: '🇨🇮' }, { code: '+237', flag: '🇨🇲' },
-    { code: '+243', flag: '🇨🇩' }, { code: '+244', flag: '🇦🇴' },
-    { code: '+249', flag: '🇸🇩' }, { code: '+251', flag: '🇪🇹' },
-    { code: '+255', flag: '🇹🇿' }, { code: '+256', flag: '🇺🇬' },
-    { code: '+258', flag: '🇲🇿' }, { code: '+260', flag: '🇿🇲' },
-    { code: '+263', flag: '🇿🇼' },
-    { code: '+61', flag: '🇦🇺' }, { code: '+64', flag: '🇳🇿' },
-    { code: '+679', flag: '🇫🇯' }, { code: '+675', flag: '🇵🇬' },
-    { code: '+7', flag: '🇷🇺' }, { code: '+380', flag: '🇺🇦' },
-    { code: '+48', flag: '🇵🇱' }, { code: '+31', flag: '🇳🇱' },
-    { code: '+32', flag: '🇧🇪' }, { code: '+41', flag: '🇨🇭' },
-    { code: '+43', flag: '🇦🇹' }, { code: '+45', flag: '🇩🇰' },
-    { code: '+46', flag: '🇸🇪' }, { code: '+47', flag: '🇳🇴' },
-    { code: '+358', flag: '🇫🇮' }, { code: '+353', flag: '🇮🇪' },
-    { code: '+351', flag: '🇵🇹' }, { code: '+30', flag: '🇬🇷' },
-    { code: '+36', flag: '🇭🇺' }, { code: '+40', flag: '🇷🇴' },
-    { code: '+420', flag: '🇨🇿' }, { code: '+421', flag: '🇸🇰' },
-    { code: '+385', flag: '🇭🇷' }, { code: '+381', flag: '🇷🇸' },
-    { code: '+359', flag: '🇧🇬' }, { code: '+370', flag: '🇱🇹' },
-    { code: '+371', flag: '🇱🇻' }, { code: '+372', flag: '🇪🇪' },
-    { code: '+354', flag: '🇮🇸' }, { code: '+352', flag: '🇱🇺' },
-    { code: '+356', flag: '🇲🇹' }, { code: '+357', flag: '🇨🇾' },
-    { code: '+355', flag: '🇦🇱' }, { code: '+382', flag: '🇲🇪' },
-    { code: '+389', flag: '🇲🇰' }, { code: '+387', flag: '🇧🇦' },
-    { code: '+386', flag: '🇸🇮' },
-];
-
 const phoneCode = ref('+1');
 const phoneNumber = ref('');
 
@@ -281,7 +215,7 @@ const selectedRep = computed(() => props.salesReps?.find(r => r.id == form.sales
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                                 <div class="flex gap-2">
                                     <select v-model="phoneCode" :disabled="!!selectedLead" :class="selectedLead ? 'w-28 border border-gray-300 rounded-lg px-2 py-2 text-sm bg-gray-100 cursor-not-allowed' : 'w-28 border border-gray-300 rounded-lg px-2 py-2 text-sm focus:ring-2 focus:ring-yellow-400'">
-                                        <option v-for="pc in phoneCodes" :key="pc.code" :value="pc.code">{{ pc.flag }} {{ pc.code }}</option>
+                                        <option v-for="pc in countries" :key="pc.code" :value="pc.phone">{{ pc.flag }} {{ pc.phone }}</option>
                                     </select>
                                     <input v-model="phoneNumber" type="text" placeholder="Number..." :disabled="!!selectedLead" :class="selectedLead ? 'input flex-1 bg-gray-100 cursor-not-allowed' : 'input flex-1'" />
                                 </div>
@@ -296,7 +230,7 @@ const selectedRep = computed(() => props.salesReps?.find(r => r.id == form.sales
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Country *</label>
                                 <select v-model="form.country" :disabled="!!selectedLead" :class="selectedLead ? 'input bg-gray-100 cursor-not-allowed' : 'input bg-white'">
                                     <option value="">Select...</option>
-                                    <option v-for="c in countries" :key="c" :value="c">{{ c }}</option>
+                                    <option v-for="c in countries" :key="c.code" :value="c.name">{{ c.flag }} {{ c.name }}</option>
                                 </select>
                                 <p v-if="form.errors.country" class="err">{{ form.errors.country }}</p>
                             </div>

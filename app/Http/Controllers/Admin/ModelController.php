@@ -12,6 +12,7 @@ use App\Jobs\SendModelRejectionJob;
 use App\Jobs\SendModelRejectionSmsJob;
 use App\Jobs\SendWelcomeEmailJob;
 use App\Models\CommunicationLog;
+use App\Models\Country;
 use App\Models\Event;
 use App\Models\EventPass;
 use App\Models\FittingAssignment;
@@ -426,7 +427,8 @@ class ModelController extends Controller
         $events = $this->getEventsWithCastingSlots();
 
         return Inertia::render('Admin/Models/Create', [
-            'events' => $events,
+            'events'    => $events,
+            'countries' => Country::active()->ordered()->get(['name', 'code', 'phone', 'flag']),
         ]);
     }
 
@@ -531,8 +533,9 @@ class ModelController extends Controller
         $events = $this->getEventsWithCastingSlots();
 
         return Inertia::render('Admin/Models/Edit', [
-            'model'  => $this->formatModelForView($model),
-            'events' => $events,
+            'model'     => $this->formatModelForView($model),
+            'events'    => $events,
+            'countries' => Country::active()->ordered()->get(['name', 'code', 'phone', 'flag']),
         ]);
     }
 

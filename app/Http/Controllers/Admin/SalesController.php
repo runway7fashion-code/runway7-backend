@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Country;
 use App\Models\DesignerLead;
 use App\Models\DesignerPackage;
 use App\Models\Event;
@@ -300,7 +301,7 @@ class SalesController extends Controller
         return Inertia::render('Admin/Sales/DesignerCreate', [
             'events'    => $events,
             'packages'  => $packages,
-            'countries' => config('countries'),
+            'countries' => Country::active()->ordered()->get(['name', 'code', 'phone', 'flag']),
             'salesReps' => $salesReps,
         ]);
     }

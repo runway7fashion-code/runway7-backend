@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Exports\VolunteersExport;
 use App\Http\Controllers\Controller;
 use App\Models\Checkin;
+use App\Models\Country;
 use App\Models\CommunicationLog;
 use App\Models\Event;
 use App\Models\EventPass;
@@ -145,7 +146,8 @@ class VolunteerController extends Controller
             ->get();
 
         return Inertia::render('Admin/Volunteers/Create', [
-            'events' => $events,
+            'events'    => $events,
+            'countries' => Country::active()->ordered()->get(['name', 'code', 'phone', 'flag']),
         ]);
     }
 
@@ -274,6 +276,7 @@ class VolunteerController extends Controller
         return Inertia::render('Admin/Volunteers/Edit', [
             'volunteer' => $volunteer,
             'events'    => $events,
+            'countries' => Country::active()->ordered()->get(['name', 'code', 'phone', 'flag']),
         ]);
     }
 

@@ -10,39 +10,16 @@ const props = defineProps({
     categories: Array,
     packages:   Array,
     salesReps:  Array,
-    countries:  Object,
+    countries:  Array,
 });
 
 const activeTab = ref(1);
 const profile   = props.designer.designer_profile;
 
-const countryCodes = [
-    { code: '+1',   label: 'US/CA +1' },
-    { code: '+44',  label: 'UK +44' },
-    { code: '+33',  label: 'FR +33' },
-    { code: '+39',  label: 'IT +39' },
-    { code: '+34',  label: 'ES +34' },
-    { code: '+49',  label: 'DE +49' },
-    { code: '+55',  label: 'BR +55' },
-    { code: '+52',  label: 'MX +52' },
-    { code: '+57',  label: 'CO +57' },
-    { code: '+51',  label: 'PE +51' },
-    { code: '+54',  label: 'AR +54' },
-    { code: '+56',  label: 'CL +56' },
-    { code: '+91',  label: 'IN +91' },
-    { code: '+86',  label: 'CN +86' },
-    { code: '+81',  label: 'JP +81' },
-    { code: '+82',  label: 'KR +82' },
-    { code: '+61',  label: 'AU +61' },
-    { code: '+971', label: 'AE +971' },
-    { code: '+234', label: 'NG +234' },
-    { code: '+27',  label: 'ZA +27' },
-];
-
 function parsePhone(full) {
     if (!full || !full.startsWith('+')) return { code: '+1', number: full ?? '' };
-    const match = countryCodes.find(c => full.startsWith(c.code));
-    if (match) return { code: match.code, number: full.slice(match.code.length) };
+    const match = props.countries.find(c => full.startsWith(c.phone));
+    if (match) return { code: match.phone, number: full.slice(match.phone.length) };
     return { code: '+1', number: full.replace(/^\+/, '') };
 }
 
@@ -419,7 +396,7 @@ function submit() {
                             <div class="flex gap-2">
                                 <select v-model="phoneCode"
                                     class="w-28 border border-gray-300 rounded-lg px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
-                                    <option v-for="c in countryCodes" :key="c.code" :value="c.code">{{ c.label }}</option>
+                                    <option v-for="c in countries" :key="c.code" :value="c.phone">{{ c.flag }} {{ c.phone }}</option>
                                 </select>
                                 <input v-model="phoneNumber" type="tel" placeholder="3055550404"
                                     :class="form.errors.phone ? 'border-red-400 ring-2 ring-red-100' : 'border-gray-300'"
@@ -433,7 +410,7 @@ function submit() {
                         <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                         <select v-model="form.status"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                            <option v-if="form.status === 'active'" value="active">Active</option>
+                            <option value="active">Active</option>
                             <option value="inactive">Inactive</option>
                             <option value="pending">Pending</option>
                         </select>
@@ -467,7 +444,7 @@ function submit() {
                             <select v-model="form.country"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
                                 <option value="">— Select country —</option>
-                                <option v-for="(name, code) in countries" :key="code" :value="name">{{ name }}</option>
+                                <option v-for="c in countries" :key="c.code" :value="c.name">{{ c.flag }} {{ c.name }}</option>
                             </select>
                         </div>
                     </div>

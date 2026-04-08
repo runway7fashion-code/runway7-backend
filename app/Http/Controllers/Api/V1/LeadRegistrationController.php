@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Mail\LeadConfirmationMail;
+use App\Models\Country;
+use App\Models\DesignerCategory;
 use App\Models\DesignerLead;
 use App\Models\Event;
 use App\Models\LeadActivity;
@@ -24,6 +26,20 @@ class LeadRegistrationController extends Controller
             ->get();
 
         return response()->json($events);
+    }
+
+    public function categories()
+    {
+        return response()->json(
+            DesignerCategory::where('is_active', true)->ordered()->pluck('name')
+        );
+    }
+
+    public function countries()
+    {
+        return response()->json(
+            Country::active()->ordered()->get(['name', 'code', 'phone', 'flag'])
+        );
     }
 
     public function register(Request $request)
