@@ -1127,7 +1127,7 @@ class AccountingController extends Controller
         $query = DesignerPaymentPlan::whereHas('installments', function ($q) {
                 $q->whereIn('status', ['overdue', 'partial'])->where('due_date', '<', now());
             })
-            ->whereHas('designer', fn($q) => $q->where('status', 'active'))
+            ->whereHas('designer', fn($q) => $q->whereIn('status', ['active', 'registered']))
             ->with(['designer.designerProfile.salesRep', 'event', 'package', 'installments']);
 
         if ($request->filled('event_id')) {
@@ -1137,7 +1137,7 @@ class AccountingController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->whereHas('designer', function ($q) use ($search) {
-                $q->where('status', 'active')
+                $q->whereIn('status', ['active', 'registered'])
                     ->where(function ($q) use ($search) {
                         $q->where('first_name', 'ilike', "%{$search}%")
                             ->orWhere('last_name', 'ilike', "%{$search}%")
@@ -1212,7 +1212,7 @@ class AccountingController extends Controller
         $query = DesignerPaymentPlan::whereHas('installments', function ($q) {
                 $q->whereIn('status', ['overdue', 'partial'])->where('due_date', '<', now());
             })
-            ->whereHas('designer', fn($q) => $q->where('status', 'active'))
+            ->whereHas('designer', fn($q) => $q->whereIn('status', ['active', 'registered']))
             ->with(['designer.designerProfile.salesRep', 'event', 'package', 'installments']);
 
         if ($request->filled('event_id')) {
@@ -1222,7 +1222,7 @@ class AccountingController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->whereHas('designer', function ($q) use ($search) {
-                $q->where('status', 'active')
+                $q->whereIn('status', ['active', 'registered'])
                     ->where(function ($q) use ($search) {
                         $q->where('first_name', 'ilike', "%{$search}%")
                             ->orWhere('last_name', 'ilike', "%{$search}%")
