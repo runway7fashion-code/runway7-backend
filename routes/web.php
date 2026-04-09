@@ -27,6 +27,7 @@ use App\Http\Controllers\Admin\SalesAuditController;
 use App\Http\Controllers\Admin\HomeCardController;
 use App\Http\Controllers\Admin\PaymentMethodConfigController;
 use App\Http\Controllers\Admin\CountryController;
+use App\Http\Controllers\Admin\IncomingLeadController;
 
 Route::get('/', function () {
     return redirect()->route('admin.login');
@@ -199,6 +200,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::delete('countries/{country}', [CountryController::class, 'destroy'])->name('settings.countries.destroy');
             });
 
+            // Incoming leads from sales - admin, operation
+            Route::middleware('section:incoming_leads')->group(function () {
+                Route::get('incoming-leads', [IncomingLeadController::class, 'index'])->name('incoming-leads.index');
+                Route::post('incoming-leads/{lead}/convert', [IncomingLeadController::class, 'convert'])->name('incoming-leads.convert');
+                Route::patch('incoming-leads/{lead}/reject', [IncomingLeadController::class, 'reject'])->name('incoming-leads.reject');
+            });
+
             // Banners - admin, marketing
             Route::middleware('section:banners')->group(function () {
                 Route::resource('banners', BannerController::class);
@@ -309,6 +317,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::patch('leads/{lead}/status', [LeadController::class, 'updateStatus'])->name('leads.update-status');
                 Route::patch('leads/{lead}/event-status', [LeadController::class, 'updateEventStatus'])->name('leads.update-event-status');
                 Route::patch('leads/{lead}/assign', [LeadController::class, 'assign'])->name('leads.assign');
+                Route::patch('leads/{lead}/redirect', [LeadController::class, 'redirectToOperations'])->name('leads.redirect');
                 Route::post('leads/{lead}/activity', [LeadController::class, 'addActivity'])->name('leads.add-activity');
                 Route::patch('activities/{activity}/complete', [LeadController::class, 'completeActivity'])->name('leads.complete-activity');
                 Route::patch('activities/{activity}/cancel', [LeadController::class, 'cancelActivity'])->name('leads.cancel-activity');

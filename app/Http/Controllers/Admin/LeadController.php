@@ -98,7 +98,8 @@ class LeadController extends Controller
             'client'    => (clone $baseQuery)->where('status', 'client')->count(),
             'lost'      => (clone $baseQuery)->where('status', 'lost')->count(),
             'spam'      => (clone $baseQuery)->where('status', 'spam')->count(),
-            'unassigned'=> (clone $baseQuery)->whereNull('assigned_to')->count(),
+            'unassigned' => (clone $baseQuery)->whereNull('assigned_to')->count(),
+            'redirected' => (clone $baseQuery)->where('status', 'redirected')->count(),
         ];
 
         // Opportunity stats (ventas) — respect user role
@@ -534,6 +535,37 @@ class LeadController extends Controller
         ]);
 
         return back()->with('success', "Prospect assigned to {$advisor->first_name}.");
+    }
+
+    public function redirectToOperations(Request $request, DesignerLead $lead)
+    {
+        $request->validate([
+            'redirect_type' => 'required|in:model,media,volunteer',
+            'redirect_note' => 'nullable|string|max:500',
+        ]);
+
+        $lead->update([
+            'status'          => 'redirected',
+            'redirect_type'   => $request->redirect_type,
+            'redirect_status' => 'new',
+            'redirect_note'   => $request->redirect_note,
+            'redirected_by'   => auth()->id(),
+            'redirected_at'   => now(),
+        ]);
+
+        $typeLabels = ['model' => 'Model', 'media' => 'Media', 'volunteer' => 'Volunteer'];
+
+        LeadActivity::create([
+            'lead_id'      => $lead->id,
+            'user_id'      => auth()->id(),
+            'type'         => 'system',
+            'title'        => 'Sent to Operations as ' . ($typeLabels[$request->redirect_type] ?? $request->redirect_type),
+            'description'  => $request->redirect_note,
+            'status'       => 'completed',
+            'completed_at' => now(),
+        ]);
+
+        return back()->with('success', 'Lead sent to Operations.');
     }
 
     public function addEvent(Request $request, DesignerLead $lead)

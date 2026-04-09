@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
-import { EyeIcon, PencilSquareIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, XMarkIcon } from '@heroicons/vue/24/outline';
+import { EyeIcon, PencilSquareIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, XMarkIcon, ArrowTopRightOnSquareIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     leads: Object,
@@ -60,6 +60,25 @@ function exportCsv() {
     if (source.value) params.set('source', source.value);
     if (assignedTo.value) params.set('assigned_to', assignedTo.value);
     window.location.href = `/admin/sales/leads/export?${params.toString()}`;
+}
+
+// Redirect to Operations modal
+const showRedirectModal = ref(false);
+const redirectLead = ref(null);
+const redirectForm = useForm({ redirect_type: 'model', redirect_note: '' });
+
+function openRedirectModal(lead) {
+    redirectLead.value = lead;
+    redirectForm.redirect_type = 'model';
+    redirectForm.redirect_note = '';
+    showRedirectModal.value = true;
+}
+
+function submitRedirect() {
+    redirectForm.patch(`/admin/sales/leads/${redirectLead.value.id}/redirect`, {
+        preserveScroll: true,
+        onSuccess: () => { showRedirectModal.value = false; redirectLead.value = null; },
+    });
 }
 
 // Import modal
@@ -162,6 +181,7 @@ const leadCards = computed(() => {
     if (props.isLeader) {
         cards.push({ key: 'unassigned', label: 'Unassigned', value: props.stats?.unassigned ?? 0, color: '#9CA3AF' });
     }
+    cards.push({ key: 'redirected', label: 'Redirected', value: props.stats?.redirected ?? 0, color: '#F59E0B' });
     return cards;
 });
 
@@ -236,10 +256,9 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
             <!-- Lead Stats (Marketing) -->
             <div class="mb-2">
                 <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Leads</p>
-                <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
                     <div v-for="card in leadCards" :key="card.key"
-                        class="bg-white rounded-lg border border-gray-200 px-4 py-3 cursor-pointer hover:shadow-sm transition-shadow"
-                        @click.stop="status = status === card.key ? '' : (card.key === 'total' ? '' : card.key)">
+                        class="bg-white rounded-lg border border-gray-200 px-4 py-3">
                         <div class="flex items-center justify-between">
                             <p class="text-[10px] font-medium text-gray-500 uppercase tracking-wide">{{ card.label }}</p>
                             <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: card.color }"></span>
@@ -254,8 +273,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Opportunities</p>
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                     <div v-for="card in oppCards" :key="card.key"
-                        class="bg-white rounded-lg border border-gray-200 px-4 py-3 cursor-pointer hover:shadow-sm transition-shadow"
-                        @click.stop="oppStatus = oppStatus === card.key.replace('opp_','') ? '' : card.key.replace('opp_','')">
+                        class="bg-white rounded-lg border border-gray-200 px-4 py-3">
                         <div class="flex items-center justify-between">
                             <p class="text-[10px] font-medium text-gray-500 uppercase tracking-wide">{{ card.label }}</p>
                             <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: card.color }"></span>
@@ -273,10 +291,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     placeholder="Search name, email, company, phone..."
                     class="flex-1 min-w-48 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400"
                 />
-                <select v-model="status" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">All statuses</option>
-                    <option v-for="(info, key) in statuses" :key="key" :value="key">{{ info.label }}</option>
-                </select>
+                
                 <select v-model="event" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
                     <option value="">All events</option>
                     <option v-for="ev in events" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
@@ -286,12 +301,13 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <option value="unassigned">Unassigned</option>
                     <option v-for="adv in advisors" :key="adv.id" :value="adv.id">{{ adv.first_name }} {{ adv.last_name }}</option>
                 </select>
-                <select v-model="budget" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Budget</option>
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="premium">Premium</option>
+                <select v-model="status" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">All statuses</option>
+                    <option v-for="(info, key) in statuses" :key="key" :value="key">{{ info.label }}</option>
+                </select>
+                <select v-model="oppStatus" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                    <option value="">All opportunities</option>
+                    <option v-for="(info, key) in opportunityStatuses" :key="key" :value="key">{{ info.label }}</option>
                 </select>
                 <select v-model="tag" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
                     <option value="">All tags</option>
@@ -466,6 +482,13 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                             title="View details">
                                             <EyeIcon class="w-4 h-4" />
                                         </Link>
+                                        <button v-if="lead.status !== 'redirected'"
+                                            @click="openRedirectModal(lead)"
+                                            class="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 hover:text-amber-700 transition-colors"
+                                            title="Send to Operations">
+                                            <ArrowTopRightOnSquareIcon class="w-4 h-4" />
+                                        </button>
+                                        <span v-else class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700">Redirected</span>
                                     </div>
                                 </td>
                             </tr>
@@ -715,6 +738,41 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         :disabled="!importForm.file || importForm.processing"
                         class="flex-1 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                         {{ importForm.processing ? 'Importing...' : 'Import' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- Redirect to Operations Modal -->
+    <Teleport to="body">
+        <div v-if="showRedirectModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showRedirectModal = false">
+            <div class="bg-white rounded-2xl w-full max-w-md shadow-xl">
+                <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-gray-900">Send to Operations</h3>
+                    <button @click="showRedirectModal = false" class="p-1 rounded-lg hover:bg-gray-100"><XMarkIcon class="w-5 h-5 text-gray-400" /></button>
+                </div>
+                <div class="px-6 py-5 space-y-4">
+                    <p class="text-sm text-gray-500">Send <strong>{{ redirectLead?.first_name }} {{ redirectLead?.last_name }}</strong> to Operations for registration.</p>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                        <select v-model="redirectForm.redirect_type" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
+                            <option value="model">Model</option>
+                            <option value="media">Media</option>
+                            <option value="volunteer">Volunteer</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Note (optional)</label>
+                        <textarea v-model="redirectForm.redirect_note" rows="2" placeholder="Additional info for Operations..."
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"></textarea>
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+                    <button @click="showRedirectModal = false" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg">Cancel</button>
+                    <button @click="submitRedirect" :disabled="redirectForm.processing"
+                        class="px-4 py-2 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-lg disabled:opacity-50">
+                        {{ redirectForm.processing ? 'Sending...' : 'Send to Operations' }}
                     </button>
                 </div>
             </div>

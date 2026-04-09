@@ -31,10 +31,17 @@ class DesignerLead extends Model
         'source',
         'notes',
         'last_contacted_at',
+        'redirect_type',
+        'redirect_status',
+        'redirect_note',
+        'redirected_by',
+        'redirected_at',
+        'converted_user_id',
     ];
 
     protected $casts = [
         'last_contacted_at' => 'datetime',
+        'redirected_at' => 'datetime',
     ];
 
     // Lead status (person/marketing)
@@ -44,6 +51,7 @@ class DesignerLead extends Model
         'client'    => ['label' => 'Client',    'color' => '#10B981'],
         'lost'      => ['label' => 'Lost',      'color' => '#EF4444'],
         'spam'      => ['label' => 'Spam',      'color' => '#1F2937'],
+        'redirected'=> ['label' => 'Redirected','color' => '#F59E0B'],
     ];
 
     // Opportunity status (sales/event)
@@ -98,6 +106,16 @@ class DesignerLead extends Model
     public function convertedDesigner()
     {
         return $this->belongsTo(User::class, 'converted_designer_id');
+    }
+
+    public function redirectedByUser()
+    {
+        return $this->belongsTo(User::class, 'redirected_by');
+    }
+
+    public function convertedUser()
+    {
+        return $this->belongsTo(User::class, 'converted_user_id');
     }
 
     public function tags()

@@ -33,6 +33,7 @@ import {
     ChartBarSquareIcon,
     DevicePhoneMobileIcon,
     GlobeAmericasIcon,
+    InboxArrowDownIcon,
 } from '@heroicons/vue/24/outline';
 
 const page = usePage();
@@ -73,6 +74,7 @@ const operationsItems = computed(() => {
     if (hasSection('banners'))             items.push({ name: 'Home Cards',  href: '/admin/operations/home-cards', icon: DevicePhoneMobileIcon });
     if (hasSection('designer_categories')) items.push({ name: 'Categories',  href: '/admin/operations/categories',  icon: Cog6ToothIcon });
     if (hasSection('countries'))           items.push({ name: 'Countries',   href: '/admin/operations/countries',   icon: GlobeAmericasIcon });
+    if (hasSection('incoming_leads'))      items.push({ name: 'Incoming Leads', href: '/admin/operations/incoming-leads', icon: InboxArrowDownIcon });
     return items;
 });
 

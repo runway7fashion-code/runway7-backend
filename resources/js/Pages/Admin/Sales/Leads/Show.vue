@@ -6,7 +6,7 @@ import {
     ArrowLeftIcon, EnvelopeIcon, PhoneIcon, GlobeAltIcon, TrashIcon,
     PencilSquareIcon, CheckCircleIcon, ClockIcon, UserIcon, PlusIcon,
     ChatBubbleLeftIcon, CalendarDaysIcon, PhoneArrowUpRightIcon,
-    DocumentTextIcon, ChevronDownIcon, ArrowPathIcon,
+    DocumentTextIcon, ChevronDownIcon, ArrowPathIcon, ArrowTopRightOnSquareIcon, XMarkIcon,
 } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -147,6 +147,17 @@ function changeEventStatus(eventId, newStatus) {
 }
 
 // Reassign advisor
+// Redirect to Operations
+const showRedirectModal = ref(false);
+const redirectForm = useForm({ redirect_type: 'model', redirect_note: '' });
+
+function submitRedirect() {
+    redirectForm.patch(`/admin/sales/leads/${props.lead.id}/redirect`, {
+        preserveScroll: true,
+        onSuccess: () => { showRedirectModal.value = false; },
+    });
+}
+
 function reassignAdvisor(advisorId) {
     router.patch(`/admin/sales/leads/${props.lead.id}/assign`, { assigned_to: advisorId || null }, { preserveScroll: true });
 }
@@ -336,9 +347,7 @@ const sortedActivities = computed(() => {
                                     <option v-for="a in advisors" :key="a.id" :value="a.id">{{ a.first_name }} {{ a.last_name }}</option>
                                 </select>
                             </div>
-                            
                             <span v-else-if="lead.assigned_to && typeof lead.assigned_to === 'object'" class="text-xs text-gray-400">Advisor: <span class="font-medium text-gray-600">{{ lead.assigned_to.first_name }} {{ lead.assigned_to.last_name }}</span></span>
-                            
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
@@ -350,6 +359,10 @@ const sortedActivities = computed(() => {
                             class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors flex items-center gap-1">
                             <PencilSquareIcon class="w-3.5 h-3.5" /> Edit
                         </Link>
+                        <button v-if="lead.status !== 'redirected'" @click="showRedirectModal = true"
+                            class="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600 transition-colors flex items-center gap-1">
+                            <ArrowTopRightOnSquareIcon class="w-3.5 h-3.5" /> Send to Ops
+                        </button>
                         <button @click="showDeleteModal = true"
                             class="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors flex items-center gap-1">
                             <TrashIcon class="w-3.5 h-3.5" /> Delete
@@ -865,5 +878,40 @@ const sortedActivities = computed(() => {
                 </div>
             </div>
         </Teleport>
+    <!-- Redirect to Operations Modal -->
+    <Teleport to="body">
+        <div v-if="showRedirectModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showRedirectModal = false">
+            <div class="bg-white rounded-2xl w-full max-w-md shadow-xl">
+                <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-gray-900">Send to Operations</h3>
+                    <button @click="showRedirectModal = false" class="p-1 rounded-lg hover:bg-gray-100"><XMarkIcon class="w-5 h-5 text-gray-400" /></button>
+                </div>
+                <div class="px-6 py-5 space-y-4">
+                    <p class="text-sm text-gray-500">Send <strong>{{ lead.first_name }} {{ lead.last_name }}</strong> to Operations for registration.</p>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                        <select v-model="redirectForm.redirect_type" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
+                            <option value="model">Model</option>
+                            <option value="media">Media</option>
+                            <option value="volunteer">Volunteer</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Note (optional)</label>
+                        <textarea v-model="redirectForm.redirect_note" rows="2" placeholder="Additional info for Operations..."
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"></textarea>
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
+                    <button @click="showRedirectModal = false" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg">Cancel</button>
+                    <button @click="submitRedirect" :disabled="redirectForm.processing"
+                        class="px-4 py-2 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-lg disabled:opacity-50">
+                        {{ redirectForm.processing ? 'Sending...' : 'Send to Operations' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
     </AdminLayout>
 </template>
