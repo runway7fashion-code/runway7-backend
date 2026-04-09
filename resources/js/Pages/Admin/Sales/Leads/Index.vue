@@ -1,8 +1,9 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import EmailComposer from '@/Components/EmailComposer.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
-import { EyeIcon, PencilSquareIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, XMarkIcon, ArrowTopRightOnSquareIcon } from '@heroicons/vue/24/outline';
+import { EyeIcon, PencilSquareIcon, ArrowDownTrayIcon, ArrowUpTrayIcon, XMarkIcon, ArrowTopRightOnSquareIcon, EnvelopeIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     leads: Object,
@@ -60,6 +61,38 @@ function exportCsv() {
     if (source.value) params.set('source', source.value);
     if (assignedTo.value) params.set('assigned_to', assignedTo.value);
     window.location.href = `/admin/sales/leads/export?${params.toString()}`;
+}
+
+// Email selection & modal
+const selectedLeads = ref([]);
+const showEmailModal = ref(false);
+const emailProcessing = ref(false);
+
+const allSelected = computed({
+    get: () => props.leads.data.length > 0 && selectedLeads.value.length === props.leads.data.length,
+    set: (val) => { selectedLeads.value = val ? props.leads.data.map(l => l.id) : []; },
+});
+
+function openBulkEmail() {
+    if (selectedLeads.value.length === 0) return;
+    showEmailModal.value = true;
+}
+
+function handleBulkEmailSend({ subject, body, attachments, scheduled_at }) {
+    const formData = new FormData();
+    formData.append('subject', subject);
+    formData.append('body', body);
+    if (scheduled_at) formData.append('scheduled_at', scheduled_at);
+    selectedLeads.value.forEach(id => formData.append('lead_ids[]', id));
+    attachments.forEach(file => formData.append('attachments[]', file));
+
+    emailProcessing.value = true;
+    router.post('/admin/sales/leads/send-bulk-email', formData, {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => { showEmailModal.value = false; selectedLeads.value = []; },
+        onFinish: () => { emailProcessing.value = false; },
+    });
 }
 
 // Redirect to Operations modal
@@ -319,12 +352,23 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 </select>
             </div>
 
+            <!-- Bulk actions bar -->
+            <div v-if="selectedLeads.length > 0" class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
+                <span class="text-sm font-medium text-amber-800">{{ selectedLeads.length }} selected</span>
+                <button @click="openBulkEmail"
+                    class="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors flex items-center gap-1">
+                    <EnvelopeIcon class="w-3.5 h-3.5" /> Send Email
+                </button>
+                <button @click="selectedLeads = []" class="text-xs text-gray-500 hover:text-gray-700">Clear</button>
+            </div>
+
             <!-- Table -->
             <div class="bg-white rounded-xl border border-gray-200">
                 <div>
                     <table class="w-full">
                         <thead class="bg-gray-50 border-b border-gray-200">
                             <tr>
+                                <th class="px-3 py-3 w-10"><input type="checkbox" v-model="allSelected" class="accent-black w-4 h-4 cursor-pointer" /></th>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Lead</th>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Company</th>
                                 <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Instagram</th>
@@ -340,6 +384,9 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             <tr v-for="lead in leads.data" :key="lead.id" class="hover:bg-gray-50 transition-colors cursor-pointer" @click="router.visit(`/admin/sales/leads/${lead.id}`)">
+                                <td class="px-3 py-4" @click.stop>
+                                    <input type="checkbox" :value="lead.id" v-model="selectedLeads" class="accent-black w-4 h-4 cursor-pointer" />
+                                </td>
                                 <!-- Lead info -->
                                 <td class="px-4 py-4">
                                     <div class="flex items-center space-x-3">
@@ -493,7 +540,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                 </td>
                             </tr>
                             <tr v-if="leads.data.length === 0">
-                                <td colspan="9" class="px-6 py-12 text-center text-gray-400 text-sm">
+                                <td colspan="12" class="px-6 py-12 text-center text-gray-400 text-sm">
                                     No prospects found with the applied filters.
                                 </td>
                             </tr>
@@ -741,6 +788,18 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     </button>
                 </div>
             </div>
+        </div>
+    </Teleport>
+
+    <!-- Send Email Modal -->
+    <Teleport to="body">
+        <div v-if="showEmailModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showEmailModal = false">
+            <EmailComposer
+                :recipient-label="`${selectedLeads.length} recipient${selectedLeads.length > 1 ? 's' : ''}`"
+                :processing="emailProcessing"
+                @send="handleBulkEmailSend"
+                @close="showEmailModal = false"
+            />
         </div>
     </Teleport>
 

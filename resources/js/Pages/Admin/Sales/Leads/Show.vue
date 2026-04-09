@@ -1,5 +1,6 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import EmailComposer from '@/Components/EmailComposer.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import {
@@ -147,6 +148,26 @@ function changeEventStatus(eventId, newStatus) {
 }
 
 // Reassign advisor
+// Send Email modal
+const showEmailModal = ref(false);
+const emailProcessing = ref(false);
+
+function handleSingleEmailSend({ subject, body, attachments, scheduled_at }) {
+    const formData = new FormData();
+    formData.append('subject', subject);
+    formData.append('body', body);
+    if (scheduled_at) formData.append('scheduled_at', scheduled_at);
+    attachments.forEach(file => formData.append('attachments[]', file));
+
+    emailProcessing.value = true;
+    router.post(`/admin/sales/leads/${props.lead.id}/send-email`, formData, {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => { showEmailModal.value = false; },
+        onFinish: () => { emailProcessing.value = false; },
+    });
+}
+
 // Redirect to Operations
 const showRedirectModal = ref(false);
 const redirectForm = useForm({ redirect_type: 'model', redirect_note: '' });
@@ -354,6 +375,10 @@ const sortedActivities = computed(() => {
                         <button @click="showActivityModal = true"
                             class="px-4 py-1.5 bg-[#D4AF37] text-white rounded-lg text-xs font-medium hover:bg-[#b8962f] transition-colors flex items-center gap-1">
                             <PlusIcon class="w-3.5 h-3.5" /> Activity
+                        </button>
+                        <button @click="showEmailModal = true"
+                            class="px-4 py-1.5 bg-gray-700 text-white rounded-lg text-xs font-medium hover:bg-gray-600 transition-colors flex items-center gap-1">
+                            <EnvelopeIcon class="w-3.5 h-3.5" /> Send Email
                         </button>
                         <Link :href="`/admin/sales/leads/${lead.id}/edit?from=show`"
                             class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors flex items-center gap-1">
@@ -878,6 +903,18 @@ const sortedActivities = computed(() => {
                 </div>
             </div>
         </Teleport>
+    <!-- Send Email Modal -->
+    <Teleport to="body">
+        <div v-if="showEmailModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showEmailModal = false">
+            <EmailComposer
+                :recipient-label="`${lead.first_name} ${lead.last_name} (${lead.email})`"
+                :processing="emailProcessing"
+                @send="handleSingleEmailSend"
+                @close="showEmailModal = false"
+            />
+        </div>
+    </Teleport>
+
     <!-- Redirect to Operations Modal -->
     <Teleport to="body">
         <div v-if="showRedirectModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showRedirectModal = false">

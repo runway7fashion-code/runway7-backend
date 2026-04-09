@@ -28,6 +28,7 @@ use App\Http\Controllers\Admin\HomeCardController;
 use App\Http\Controllers\Admin\PaymentMethodConfigController;
 use App\Http\Controllers\Admin\CountryController;
 use App\Http\Controllers\Admin\IncomingLeadController;
+use App\Http\Controllers\Admin\LeadEmailController;
 
 Route::get('/', function () {
     return redirect()->route('admin.login');
@@ -318,6 +319,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::patch('leads/{lead}/event-status', [LeadController::class, 'updateEventStatus'])->name('leads.update-event-status');
                 Route::patch('leads/{lead}/assign', [LeadController::class, 'assign'])->name('leads.assign');
                 Route::patch('leads/{lead}/redirect', [LeadController::class, 'redirectToOperations'])->name('leads.redirect');
+                Route::post('leads/{lead}/send-email', [LeadEmailController::class, 'send'])->name('leads.send-email');
+                Route::post('leads/send-bulk-email', [LeadEmailController::class, 'sendBulk'])->name('leads.send-bulk-email');
                 Route::post('leads/{lead}/activity', [LeadController::class, 'addActivity'])->name('leads.add-activity');
                 Route::patch('activities/{activity}/complete', [LeadController::class, 'completeActivity'])->name('leads.complete-activity');
                 Route::patch('activities/{activity}/cancel', [LeadController::class, 'cancelActivity'])->name('leads.cancel-activity');
