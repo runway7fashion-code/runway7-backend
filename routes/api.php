@@ -47,6 +47,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('conversations/{conversation}/read', [App\Http\Controllers\Api\V1\ChatController::class, 'markAsRead'])->name('mark-read');
         });
 
+        // Countries (for phone prefix picker)
+        Route::get('countries', [App\Http\Controllers\Api\V1\CountryController::class, 'index'])->name('countries');
+
         // Banners
         Route::get('banners', [App\Http\Controllers\Api\V1\BannerController::class, 'index'])->name('banners');
 

@@ -16,6 +16,26 @@ use Inertia\Inertia;
 class CommunicationController extends Controller
 {
     /**
+     * Statuses available per role (dynamic filter).
+     */
+    public static function statusesByRole(): array
+    {
+        return [
+            'model'       => ['active', 'applicant', 'pending', 'inactive'],
+            'designer'    => ['active', 'registered', 'pending', 'inactive'],
+            'media'       => ['active', 'applicant', 'pending', 'inactive'],
+            'volunteer'   => ['active', 'applicant', 'pending', 'inactive'],
+            'staff'       => ['active', 'inactive'],
+            'assistant'   => ['active', 'inactive'],
+            'attendee'    => ['active', 'inactive'],
+            'vip'         => ['active', 'inactive'],
+            'influencer'  => ['active', 'inactive'],
+            'press'       => ['active', 'inactive'],
+            'sponsor'     => ['active', 'inactive'],
+        ];
+    }
+
+    /**
      * Roles that each internal role is allowed to communicate with.
      */
     private function allowedTargetRoles(): array
@@ -99,17 +119,29 @@ class CommunicationController extends Controller
         if ($channel === 'email') {
             $query->whereNotNull('email');
         } elseif ($channel === 'sms') {
-            $query->whereNotNull('phone')->where('phone', 'like', '+%');
+            $query->whereNotNull('phone');
+
+            // Phone validity filter (E.164: +[1-9][6-14 digits])
+            $phoneValid = $request->phone_valid;
+            if ($phoneValid === 'valid') {
+                $query->where('phone', '~', '^\+[1-9][0-9]{6,14}$');
+            } elseif ($phoneValid === 'invalid') {
+                $query->where('phone', '!~', '^\+[1-9][0-9]{6,14}$');
+            }
         }
 
         $users = $query->orderBy('first_name')->paginate(50)->withQueryString();
 
+        $statusesByRole = self::statusesByRole();
+        $filteredStatuses = array_intersect_key($statusesByRole, array_flip($allowedRoles));
+
         $extraProps = [
-            'users'        => $users,
-            'channel'      => $channel,
-            'allowedRoles' => $allowedRoles,
-            'events'       => Event::whereNull('deleted_at')->where('status', '!=', 'cancelled')->select('id', 'name')->orderBy('start_date', 'desc')->get(),
-            'filters'      => $request->only(['search', 'role', 'status', 'event_id']),
+            'users'          => $users,
+            'channel'        => $channel,
+            'allowedRoles'   => $allowedRoles,
+            'statusesByRole' => $filteredStatuses,
+            'events'         => Event::whereNull('deleted_at')->where('status', '!=', 'cancelled')->select('id', 'name')->orderBy('start_date', 'desc')->get(),
+            'filters'        => $request->only(['search', 'role', 'status', 'event_id', 'phone_valid']),
         ];
 
         if ($channel === 'sms') {

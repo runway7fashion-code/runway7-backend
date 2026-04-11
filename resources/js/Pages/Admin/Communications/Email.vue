@@ -9,6 +9,7 @@ const props = defineProps({
     users: Object,
     channel: String,
     allowedRoles: Array,
+    statusesByRole: Object,
     events: Array,
     filters: Object,
 });
@@ -65,6 +66,30 @@ function handleEmailSend({ subject, body, attachments, scheduled_at }) {
     });
 }
 
+// Dynamic status options based on selected role
+const availableStatuses = computed(() => {
+    if (role.value && props.statusesByRole?.[role.value]) {
+        return props.statusesByRole[role.value];
+    }
+    const all = new Set();
+    Object.values(props.statusesByRole || {}).forEach(arr => arr.forEach(s => all.add(s)));
+    return Array.from(all);
+});
+
+watch(role, () => {
+    if (status.value && !availableStatuses.value.includes(status.value)) {
+        status.value = '';
+    }
+});
+
+const statusLabels = {
+    active: 'Active',
+    inactive: 'Inactive',
+    pending: 'Pending',
+    registered: 'Registered',
+    applicant: 'Applicant',
+};
+
 const roleLabels = {
     model: 'Model', designer: 'Designer', media: 'Media', volunteer: 'Volunteer',
     staff: 'Staff', assistant: 'Assistant', attendee: 'Attendee', vip: 'VIP',
@@ -117,11 +142,7 @@ const roleColors = {
                 </select>
                 <select v-model="status" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
                     <option value="">All statuses</option>
-                    <option value="active">Active</option>
-                    <option value="registered">Registered</option>
-                    <option value="applicant">Applicant</option>
-                    <option value="pending">Pending</option>
-                    <option value="inactive">Inactive</option>
+                    <option v-for="s in availableStatuses" :key="s" :value="s">{{ statusLabels[s] || s }}</option>
                 </select>
                 <select v-model="eventId" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
                     <option value="">All events</option>
