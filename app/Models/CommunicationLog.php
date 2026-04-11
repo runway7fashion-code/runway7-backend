@@ -12,13 +12,19 @@ class CommunicationLog extends Model
         'sent_by',
         'type',
         'channel',
+        'message',
+        'segments',
+        'cost',
         'status',
         'error_message',
         'sent_at',
+        'scheduled_at',
     ];
 
     protected $casts = [
         'sent_at' => 'datetime',
+        'scheduled_at' => 'datetime',
+        'cost' => 'decimal:4',
     ];
 
     public function user(): BelongsTo

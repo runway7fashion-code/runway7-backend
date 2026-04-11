@@ -34,6 +34,9 @@ import {
     DevicePhoneMobileIcon,
     GlobeAmericasIcon,
     InboxArrowDownIcon,
+    EnvelopeIcon,
+    ChatBubbleBottomCenterTextIcon,
+    BellAlertIcon,
 } from '@heroicons/vue/24/outline';
 
 const page = usePage();
@@ -76,6 +79,16 @@ const operationsItems = computed(() => {
     if (hasSection('countries'))           items.push({ name: 'Countries',   href: '/admin/operations/countries',   icon: GlobeAmericasIcon });
     if (hasSection('incoming_leads'))      items.push({ name: 'Incoming Leads', href: '/admin/operations/incoming-leads', icon: InboxArrowDownIcon });
     return items;
+});
+
+const showCommunications = computed(() => hasSection('communications'));
+const communicationsItems = computed(() => {
+    if (!hasSection('communications')) return [];
+    return [
+        { name: 'Email',         href: '/admin/communications/email',         icon: EnvelopeIcon },
+        { name: 'SMS',           href: '/admin/communications/sms',           icon: ChatBubbleBottomCenterTextIcon },
+        { name: 'Notifications', href: '/admin/communications/notifications', icon: BellAlertIcon },
+    ];
 });
 
 const showAccounting = computed(() => hasSection('accounting_dashboard') || hasSection('accounting_payments'));
@@ -432,6 +445,25 @@ function logout() {
                     <div class="pt-3 mt-3 border-t border-gray-800">
                         <p v-if="!sidebarCollapsed" class="px-3 mb-2 text-xs uppercase tracking-widest text-gray-600">Sales</p>
                         <Link v-for="sub in salesItems" :key="sub.name" :href="sub.href"
+                            :title="sidebarCollapsed ? sub.name : ''"
+                            class="flex items-center py-2.5 rounded-lg text-sm font-medium transition-all duration-150"
+                            :class="[
+                                $page.url.startsWith(sub.href)
+                                    ? 'bg-yellow-900/30 text-yellow-400'
+                                    : 'text-gray-400 hover:text-white hover:bg-gray-800',
+                                sidebarCollapsed ? 'justify-center px-0' : 'px-3'
+                            ]">
+                            <component :is="sub.icon" :class="['h-5 w-5 flex-shrink-0', sidebarCollapsed ? '' : 'mr-3']" />
+                            <span v-if="!sidebarCollapsed">{{ sub.name }}</span>
+                        </Link>
+                    </div>
+                </template>
+
+                <!-- Communications -->
+                <template v-if="showCommunications">
+                    <div class="pt-3 mt-3 border-t border-gray-800">
+                        <p v-if="!sidebarCollapsed" class="px-3 mb-2 text-xs uppercase tracking-widest text-gray-600">Communications</p>
+                        <Link v-for="sub in communicationsItems" :key="sub.name" :href="sub.href"
                             :title="sidebarCollapsed ? sub.name : ''"
                             class="flex items-center py-2.5 rounded-lg text-sm font-medium transition-all duration-150"
                             :class="[

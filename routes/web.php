@@ -29,6 +29,7 @@ use App\Http\Controllers\Admin\PaymentMethodConfigController;
 use App\Http\Controllers\Admin\CountryController;
 use App\Http\Controllers\Admin\IncomingLeadController;
 use App\Http\Controllers\Admin\LeadEmailController;
+use App\Http\Controllers\Admin\CommunicationController;
 
 Route::get('/', function () {
     return redirect()->route('admin.login');
@@ -221,6 +222,18 @@ Route::prefix('admin')->name('admin.')->group(function () {
             });
 
         }); // end operations
+
+        // Communications - admin, operation, sales, marketing, public_relations, tickets_manager, accounting
+        Route::prefix('communications')->name('communications.')->group(function () {
+            Route::middleware('section:communications')->group(function () {
+                Route::get('email', [CommunicationController::class, 'email'])->name('email');
+                Route::post('email/send', [CommunicationController::class, 'sendEmail'])->name('email.send');
+                Route::get('sms', [CommunicationController::class, 'sms'])->name('sms');
+                Route::post('sms/preview', [CommunicationController::class, 'previewSms'])->name('sms.preview');
+                Route::post('sms/send', [CommunicationController::class, 'sendSms'])->name('sms.send');
+                Route::get('notifications', [CommunicationController::class, 'notifications'])->name('notifications');
+            });
+        });
 
         // Contabilidad - admin, accounting
         Route::prefix('accounting')->name('accounting.')->group(function () {

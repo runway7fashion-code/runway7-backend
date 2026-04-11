@@ -868,6 +868,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                             </button>
                                         </div>
                                         <p class="text-gray-400 text-xs">{{ m.email }}</p>
+                                        <p v-if="m.phone" class="text-gray-400 text-xs">{{ m.phone }}</p>
                                     </div>
                                 </div>
                             </td>
@@ -955,10 +956,14 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                 <span v-else class="text-xs text-gray-400">—</span>
                             </td>
                             <td class="px-4 py-3">
-                                <p class="text-xs text-gray-700">{{ fmtLogin(m.created_at) }}</p>
+                                <p class="text-xs text-gray-700 leading-tight">{{ fmtCheckinDate(m.created_at) }}</p>
+                                <p class="text-[11px] text-gray-500 leading-tight">{{ fmtCheckinTime(m.created_at) }}</p>
                             </td>
                             <td class="px-4 py-3">
-                                <p v-if="m.last_login_at" class="text-xs text-gray-700">{{ fmtLogin(m.last_login_at) }}</p>
+                                <template v-if="m.last_login_at">
+                                    <p class="text-xs text-gray-700 leading-tight">{{ fmtCheckinDate(m.last_login_at) }}</p>
+                                    <p class="text-[11px] text-gray-500 leading-tight">{{ fmtCheckinTime(m.last_login_at) }}</p>
+                                </template>
                                 <span v-else class="text-xs text-gray-400">—</span>
                             </td>
                             <td class="px-4 py-3" @click.stop>
