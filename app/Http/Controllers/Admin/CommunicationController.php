@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\SendBulkUserEmailJob;
+use App\Jobs\SendBulkUserNotificationJob;
 use App\Jobs\SendBulkUserSmsJob;
 use App\Models\CommunicationLog;
+use App\Models\DeviceToken;
 use App\Models\Event;
 use App\Models\User;
 use App\Services\SmsService;
@@ -128,6 +130,16 @@ class CommunicationController extends Controller
             } elseif ($phoneValid === 'invalid') {
                 $query->where('phone', '!~', '^\+[1-9][0-9]{6,14}$');
             }
+        } elseif ($channel === 'notifications') {
+            // Add device count subquery
+            $query->withCount(['deviceTokens as device_count' => fn($q) => $q->where('is_active', true)]);
+
+            $hasDevice = $request->has_device;
+            if ($hasDevice === 'with') {
+                $query->whereHas('deviceTokens', fn($q) => $q->where('is_active', true));
+            } elseif ($hasDevice === 'without') {
+                $query->whereDoesntHave('deviceTokens', fn($q) => $q->where('is_active', true));
+            }
         }
 
         $users = $query->orderBy('first_name')->paginate(50)->withQueryString();
@@ -141,11 +153,24 @@ class CommunicationController extends Controller
             'allowedRoles'   => $allowedRoles,
             'statusesByRole' => $filteredStatuses,
             'events'         => Event::whereNull('deleted_at')->where('status', '!=', 'cancelled')->select('id', 'name')->orderBy('start_date', 'desc')->get(),
-            'filters'        => $request->only(['search', 'role', 'status', 'event_id', 'phone_valid']),
+            'filters'        => $request->only(['search', 'role', 'status', 'event_id', 'phone_valid', 'has_device']),
         ];
 
-        if ($channel === 'sms') {
+        if ($channel === 'sms' || $channel === 'notifications') {
             $extraProps['variables'] = SmsService::availableVariables();
+        }
+
+        if ($channel === 'notifications') {
+            $extraProps['deepLinks'] = [
+                ['key' => '',          'label' => 'None (no deep link)'],
+                ['key' => 'home',      'label' => 'Home'],
+                ['key' => 'profile',   'label' => 'Profile'],
+                ['key' => 'events',    'label' => 'Events'],
+                ['key' => 'tickets',   'label' => 'Tickets'],
+                ['key' => 'shows',     'label' => 'Shows'],
+                ['key' => 'payments',  'label' => 'Payments'],
+                ['key' => 'chat',      'label' => 'Chat'],
+            ];
         }
 
         return Inertia::render('Admin/Communications/' . ucfirst($channel), $extraProps);
@@ -246,6 +271,103 @@ class CommunicationController extends Controller
         }
 
         $msg = $delay ? "{$count} SMS scheduled." : "{$count} SMS queued for delivery.";
+        return back()->with('success', $msg);
+    }
+
+    public function previewNotifications(Request $request, SmsService $smsService)
+    {
+        $request->validate([
+            'user_ids'   => 'required|array|min:1',
+            'user_ids.*' => 'exists:users,id',
+            'title'      => 'required|string|max:100',
+            'body'       => 'required|string|max:500',
+        ]);
+
+        $allowedRoles = $this->allowedTargetRoles();
+        if (empty($allowedRoles)) abort(403);
+
+        $users = User::whereIn('id', $request->user_ids)
+            ->whereIn('role', $allowedRoles)
+            ->withCount(['deviceTokens as device_count' => fn($q) => $q->where('is_active', true)])
+            ->get(['id', 'first_name', 'last_name']);
+
+        $withDevices = 0;
+        $withoutDevices = 0;
+        $totalDevices = 0;
+        $withoutSamples = [];
+
+        foreach ($users as $user) {
+            if ($user->device_count > 0) {
+                $withDevices++;
+                $totalDevices += $user->device_count;
+            } else {
+                $withoutDevices++;
+                if (count($withoutSamples) < 5) {
+                    $withoutSamples[] = trim("{$user->first_name} {$user->last_name}");
+                }
+            }
+        }
+
+        $sampleUser = $users->first();
+        $sampleTitle = $sampleUser ? $smsService->replaceVariables($request->title, $sampleUser) : $request->title;
+        $sampleBody = $sampleUser ? $smsService->replaceVariables($request->body, $sampleUser) : $request->body;
+
+        return response()->json([
+            'total_selected'  => count($request->user_ids),
+            'with_devices'    => $withDevices,
+            'without_devices' => $withoutDevices,
+            'total_devices'   => $totalDevices,
+            'without_samples' => $withoutSamples,
+            'sample_title'    => $sampleTitle,
+            'sample_body'     => $sampleBody,
+        ]);
+    }
+
+    public function sendNotifications(Request $request)
+    {
+        $request->validate([
+            'user_ids'     => 'required|array|min:1',
+            'user_ids.*'   => 'exists:users,id',
+            'title'        => 'required|string|max:100',
+            'body'         => 'required|string|max:500',
+            'deep_link'    => 'nullable|string|max:100',
+            'scheduled_at' => 'nullable|date',
+        ]);
+
+        $allowedRoles = $this->allowedTargetRoles();
+        if (empty($allowedRoles)) abort(403);
+
+        $sender = auth()->user();
+
+        $delay = null;
+        if ($request->scheduled_at) {
+            $date = Carbon::parse($request->scheduled_at);
+            $delay = $date->isFuture() ? $date : null;
+        }
+
+        $data = $request->deep_link ? ['screen' => $request->deep_link] : [];
+
+        $count = 0;
+        foreach ($request->user_ids as $userId) {
+            $targetUser = User::where('id', $userId)
+                ->whereIn('role', $allowedRoles)
+                ->whereHas('deviceTokens', fn($q) => $q->where('is_active', true))
+                ->first();
+            if (!$targetUser) continue;
+
+            $job = new SendBulkUserNotificationJob(
+                userId: $targetUser->id,
+                titleTemplate: $request->title,
+                bodyTemplate: $request->body,
+                senderId: $sender->id,
+                data: $data,
+            );
+
+            $delay ? dispatch($job)->delay($delay) : dispatch($job);
+            $count++;
+        }
+
+        $msg = $delay ? "{$count} notification(s) scheduled." : "{$count} notification(s) queued for delivery.";
         return back()->with('success', $msg);
     }
 

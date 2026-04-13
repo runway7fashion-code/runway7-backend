@@ -86,7 +86,14 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('profile/photo', [App\Http\Controllers\Api\V1\ProfileController::class, 'uploadPhoto'])->name('profile.photo');
         Route::post('profile/picture', [App\Http\Controllers\Api\V1\ProfileController::class, 'uploadProfilePicture'])->name('profile.picture');
 
-        // Notifications / Device Tokens
+        // Notifications (in-app list)
+        Route::get('notifications', [App\Http\Controllers\Api\V1\NotificationController::class, 'index'])->name('notifications.index');
+        Route::get('notifications/unread-count', [App\Http\Controllers\Api\V1\NotificationController::class, 'unreadCount'])->name('notifications.unread-count');
+        Route::post('notifications/read-all', [App\Http\Controllers\Api\V1\NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+        Route::post('notifications/{id}/read', [App\Http\Controllers\Api\V1\NotificationController::class, 'markAsRead'])->name('notifications.read');
+        Route::delete('notifications/{id}', [App\Http\Controllers\Api\V1\NotificationController::class, 'destroy'])->name('notifications.destroy');
+
+        // Device Tokens (FCM)
         Route::post('device-tokens', [App\Http\Controllers\Api\V1\NotificationController::class, 'registerToken'])->name('device-tokens.register');
         Route::delete('device-tokens', [App\Http\Controllers\Api\V1\NotificationController::class, 'removeToken'])->name('device-tokens.remove');
 

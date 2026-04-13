@@ -105,6 +105,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::put('designer-displays/{display}', [DesignerController::class, 'updateDisplay'])->name('designers.update-display');
                 Route::post('designer-displays/{display}/upload-video', [DesignerController::class, 'uploadVideo'])->name('designers.upload-video');
                 Route::post('designer-displays/{display}/upload-audio', [DesignerController::class, 'uploadAudio'])->name('designers.upload-audio');
+                Route::post('designers/{designer}/upload-profile-picture', [DesignerController::class, 'uploadProfilePicture'])->name('designers.upload-profile-picture');
+                Route::delete('designers/{designer}/delete-profile-picture', [DesignerController::class, 'deleteProfilePicture'])->name('designers.delete-profile-picture');
                 Route::post('designers/{designer}/send-onboarding', [DesignerController::class, 'sendOnboardingEmail'])->name('designers.send-onboarding');
                 Route::post('designers/send-bulk-onboarding', [DesignerController::class, 'sendBulkOnboardingEmail'])->name('designers.send-bulk-onboarding');
                 Route::post('designers/{designer}/send-onboarding-sms', [DesignerController::class, 'sendOnboardingSms'])->name('designers.send-onboarding-sms');
@@ -232,6 +234,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('sms/preview', [CommunicationController::class, 'previewSms'])->name('sms.preview');
                 Route::post('sms/send', [CommunicationController::class, 'sendSms'])->name('sms.send');
                 Route::get('notifications', [CommunicationController::class, 'notifications'])->name('notifications');
+                Route::post('notifications/preview', [CommunicationController::class, 'previewNotifications'])->name('notifications.preview');
+                Route::post('notifications/send', [CommunicationController::class, 'sendNotifications'])->name('notifications.send');
             });
         });
 

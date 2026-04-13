@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\DeviceToken;
 use App\Models\User;
 use Kreait\Firebase\Factory;
+use Kreait\Firebase\Messaging\ApnsConfig;
 use Kreait\Firebase\Messaging\CloudMessage;
 use Kreait\Firebase\Messaging\Notification;
 use Illuminate\Support\Facades\Log;
@@ -85,7 +86,28 @@ class FirebaseNotificationService
         }
 
         $notification = Notification::create($title, $body);
-        $message = CloudMessage::new()->withNotification($notification);
+
+        // Configure APNs headers for iOS delivery
+        $apnsConfig = ApnsConfig::fromArray([
+            'headers' => [
+                'apns-priority' => '10',
+                'apns-push-type' => 'alert',
+            ],
+            'payload' => [
+                'aps' => [
+                    'alert' => [
+                        'title' => $title,
+                        'body' => $body,
+                    ],
+                    'sound' => 'default',
+                    'content-available' => 1,
+                ],
+            ],
+        ]);
+
+        $message = CloudMessage::new()
+            ->withNotification($notification)
+            ->withApnsConfig($apnsConfig);
 
         if (!empty($data)) {
             $message = $message->withData($data);

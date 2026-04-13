@@ -427,6 +427,36 @@ class DesignerController extends Controller
             ->with('success', 'Diseñador eliminado.');
     }
 
+    public function uploadProfilePicture(Request $request, User $designer)
+    {
+        $this->authorizeDesigner($designer);
+
+        $request->validate([
+            'photo' => 'required|image|max:5120',
+        ]);
+
+        if ($designer->profile_picture) {
+            Storage::disk('public')->delete($designer->profile_picture);
+        }
+
+        $path = $request->file('photo')->store("designers/{$designer->id}", 'public');
+        $designer->update(['profile_picture' => $path]);
+
+        return back()->with('success', 'Profile picture updated.');
+    }
+
+    public function deleteProfilePicture(User $designer)
+    {
+        $this->authorizeDesigner($designer);
+
+        if ($designer->profile_picture) {
+            Storage::disk('public')->delete($designer->profile_picture);
+            $designer->update(['profile_picture' => null]);
+        }
+
+        return back()->with('success', 'Profile picture deleted.');
+    }
+
     public function exportDesigners(Request $request)
     {
         $filename = 'disenadores_' . now()->format('Ymd_His') . '.xlsx';

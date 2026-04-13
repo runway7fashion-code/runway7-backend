@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
-import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
+import { ArrowLeftIcon, CameraIcon, TrashIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     designer:   Object,
@@ -334,6 +334,45 @@ function submit() {
     form.phone = phoneNumber.value ? `${phoneCode.value}${phoneNumber.value.replace(/\D/g, '')}` : '';
     form.put(`/admin/operations/designers/${props.designer.id}`);
 }
+
+// Profile picture
+const profilePicture = ref(props.designer.profile_picture ?? null);
+const uploadingPhoto = ref(false);
+
+function storageUrl(path) {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `/storage/${path}`;
+}
+
+function uploadProfilePicture() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        uploadingPhoto.value = true;
+        const formData = new FormData();
+        formData.append('photo', file);
+        router.post(`/admin/operations/designers/${props.designer.id}/upload-profile-picture`, formData, {
+            preserveScroll: true,
+            onSuccess: () => { uploadingPhoto.value = false; router.reload({ only: ['designer'] }); },
+            onError: () => { uploadingPhoto.value = false; },
+        });
+    };
+    input.click();
+}
+
+function deleteProfilePicture() {
+    if (!confirm('Delete profile picture?')) return;
+    router.delete(`/admin/operations/designers/${props.designer.id}/delete-profile-picture`, {
+        preserveScroll: true,
+        onSuccess: () => { profilePicture.value = null; },
+    });
+}
+
+watch(() => props.designer.profile_picture, (val) => { profilePicture.value = val ?? null; });
 </script>
 
 <template>
@@ -370,6 +409,35 @@ function submit() {
 
                 <!-- Tab 1: Datos Personales -->
                 <div v-show="activeTab === 1" class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
+                    <!-- Profile Picture -->
+                    <div class="flex items-center gap-4 pb-4 border-b border-gray-100">
+                        <div class="relative group">
+                            <div v-if="profilePicture" class="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-200">
+                                <img :src="storageUrl(profilePicture)" class="w-full h-full object-cover" alt="Profile" />
+                            </div>
+                            <div v-else class="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center border-2 border-gray-200">
+                                <span class="text-2xl font-bold text-gray-400">{{ designer.first_name?.[0] }}{{ designer.last_name?.[0] }}</span>
+                            </div>
+                            <button type="button" @click="uploadProfilePicture" :disabled="uploadingPhoto"
+                                class="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <CameraIcon class="w-6 h-6 text-white" />
+                            </button>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-700">Profile Picture</p>
+                            <div class="flex gap-2 mt-1">
+                                <button type="button" @click="uploadProfilePicture" :disabled="uploadingPhoto"
+                                    class="text-xs px-3 py-1 bg-gray-100 rounded-lg hover:bg-gray-200 text-gray-700">
+                                    {{ uploadingPhoto ? 'Uploading...' : (profilePicture ? 'Change' : 'Upload') }}
+                                </button>
+                                <button v-if="profilePicture" type="button" @click="deleteProfilePicture"
+                                    class="text-xs px-3 py-1 bg-red-50 rounded-lg hover:bg-red-100 text-red-600 flex items-center gap-1">
+                                    <TrashIcon class="w-3 h-3" /> Remove
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">First Name *</label>

@@ -95,7 +95,13 @@ class ProfileController extends Controller
             Storage::disk('public')->delete($user->profile_picture);
         }
 
-        $path = $request->file('photo')->store("models/{$user->id}", 'public');
+        $folder = match ($user->role) {
+            'model' => "models/{$user->id}",
+            'designer' => "designers/{$user->id}",
+            default => "users/{$user->id}",
+        };
+
+        $path = $request->file('photo')->store($folder, 'public');
         $user->update(['profile_picture' => $path]);
 
         return response()->json([
