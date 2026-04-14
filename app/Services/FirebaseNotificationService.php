@@ -100,7 +100,6 @@ class FirebaseNotificationService
                         'body' => $body,
                     ],
                     'sound' => 'default',
-                    'content-available' => 1,
                 ],
             ],
         ]);
