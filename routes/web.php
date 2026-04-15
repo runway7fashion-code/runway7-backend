@@ -30,6 +30,7 @@ use App\Http\Controllers\Admin\CountryController;
 use App\Http\Controllers\Admin\IncomingLeadController;
 use App\Http\Controllers\Admin\LeadEmailController;
 use App\Http\Controllers\Admin\CommunicationController;
+use App\Http\Controllers\Admin\MaterialController;
 
 Route::get('/', function () {
     return redirect()->route('admin.login');
@@ -106,6 +107,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('designer-displays/{display}/upload-video', [DesignerController::class, 'uploadVideo'])->name('designers.upload-video');
                 Route::post('designer-displays/{display}/upload-audio', [DesignerController::class, 'uploadAudio'])->name('designers.upload-audio');
                 Route::post('designers/{designer}/upload-profile-picture', [DesignerController::class, 'uploadProfilePicture'])->name('designers.upload-profile-picture');
+
+                // Materials
+                Route::get('designers/{designer}/materials/{eventId}', [MaterialController::class, 'show'])->name('designers.materials');
+                Route::patch('materials/{material}/status', [MaterialController::class, 'updateStatus'])->name('materials.update-status');
+                Route::post('materials/{material}/upload-url', [MaterialController::class, 'generateUploadUrl'])->name('materials.upload-url');
+                Route::post('materials/{material}/confirm-upload', [MaterialController::class, 'confirmUpload'])->name('materials.confirm-upload');
+                Route::delete('material-files/{file}', [MaterialController::class, 'deleteFile'])->name('materials.delete-file');
+                Route::put('materials/{material}/bio', [MaterialController::class, 'saveBio'])->name('materials.save-bio');
+                Route::post('materials/{material}/moodboard-image', [MaterialController::class, 'uploadMoodboardImage'])->name('materials.upload-moodboard');
+                Route::patch('moodboard-items/{item}/respond', [MaterialController::class, 'respondMoodboard'])->name('materials.respond-moodboard');
+                Route::post('materials/{material}/observe', [MaterialController::class, 'observe'])->name('materials.observe');
+                Route::patch('designers/{designer}/materials-deadline/{eventId}', [MaterialController::class, 'updateDeadline'])->name('materials.update-deadline');
+                Route::post('materials/runway-logo/{eventId}', [MaterialController::class, 'uploadRunwayLogo'])->name('materials.upload-runway-logo');
                 Route::delete('designers/{designer}/delete-profile-picture', [DesignerController::class, 'deleteProfilePicture'])->name('designers.delete-profile-picture');
                 Route::post('designers/{designer}/send-onboarding', [DesignerController::class, 'sendOnboardingEmail'])->name('designers.send-onboarding');
                 Route::post('designers/send-bulk-onboarding', [DesignerController::class, 'sendBulkOnboardingEmail'])->name('designers.send-bulk-onboarding');

@@ -368,25 +368,31 @@ const socialLinks = computed(() => {
                         </div>
                     </div>
 
-                    <!-- Materiales del evento -->
+                    <!-- Materials -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-6">
                         <div class="flex items-center justify-between mb-4">
                             <h4 class="font-bold text-gray-900">Materials</h4>
-                            <div class="flex items-center gap-2">
-                                <div class="w-28 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                    <div :class="progressColor(tabProgress)"
-                                        class="h-full rounded-full transition-all"
-                                        :style="`width: ${tabProgress}%`"></div>
+                            <div class="flex items-center gap-3">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-28 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                        <div :class="progressColor(tabProgress)"
+                                            class="h-full rounded-full transition-all"
+                                            :style="`width: ${tabProgress}%`"></div>
+                                    </div>
+                                    <span class="text-sm font-medium text-gray-600">{{ tabProgress }}%</span>
                                 </div>
-                                <span class="text-sm font-medium text-gray-600">{{ tabProgress }}%</span>
+                                <Link :href="`/admin/operations/designers/${designer.id}/materials/${selectedEventId}`"
+                                    class="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800">
+                                    Manage Materials
+                                </Link>
                             </div>
                         </div>
                         <div v-if="tabMaterials.length" class="space-y-1.5">
                             <div v-for="m in tabMaterials" :key="m.id"
                                 class="flex items-center gap-3 text-sm px-3 py-2 bg-gray-50 rounded-lg">
                                 <span class="text-gray-700 font-medium flex-1">{{ m.name }}</span>
-                                <a v-if="m.drive_link" :href="m.drive_link" target="_blank"
-                                    class="text-xs text-blue-600 hover:text-blue-700 underline">Link</a>
+                                <a v-if="m.drive_folder_url" :href="m.drive_folder_url" target="_blank"
+                                    class="text-xs text-blue-600 hover:text-blue-700 underline">Drive</a>
                                 <span :class="materialStatusClass(m.status)"
                                     class="px-2 py-0.5 rounded text-xs font-medium">
                                     {{ materialStatusLabel(m.status) }}
