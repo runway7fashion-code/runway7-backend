@@ -185,7 +185,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Chats - admin, operation
             Route::middleware('section:chats')->group(function () {
                 Route::get('chats', [ChatController::class, 'index'])->name('chats.index');
+                Route::post('chats', [ChatController::class, 'store'])->name('chats.store');
                 Route::get('chats/{conversation}', [ChatController::class, 'show'])->name('chats.show');
+                Route::post('chats/{conversation}/messages', [ChatController::class, 'sendMessage'])->name('chats.send-message');
             });
 
             // Categorías de diseñadores - admin, operation

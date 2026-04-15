@@ -14,7 +14,7 @@ return [
         'label' => 'Operaciones',
     ],
     'tickets_manager' => [
-        'sections' => ['tickets_dashboard', 'tickets_management', 'communications'],
+        'sections' => ['tickets_dashboard', 'tickets_management', 'communications', 'chats'],
         'label' => 'Tickets',
     ],
     'marketing' => [
