@@ -29,6 +29,10 @@ return [
         'sections' => ['sales_dashboard', 'sales_designers', 'sales_leads', 'sales_calendar', 'designer_packages', 'communications'],
         'label' => 'Ventas',
     ],
+    'creative' => [
+        'sections' => ['designers', 'chats', 'communications'],
+        'label' => 'Creative',
+    ],
     'assistant' => [
         'sections' => [],
         'label' => 'Asistente',

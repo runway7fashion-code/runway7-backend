@@ -13,7 +13,7 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     // Role constants grouped by category
-    const ROLES_INTERNAL = ['admin', 'accounting', 'operation', 'tickets_manager', 'marketing', 'public_relations', 'sales'];
+    const ROLES_INTERNAL = ['admin', 'accounting', 'operation', 'tickets_manager', 'marketing', 'public_relations', 'sales', 'creative'];
     const ROLES_PARTICIPANT = ['designer', 'model', 'media', 'volunteer', 'staff', 'assistant'];
     const ROLES_ATTENDEE = ['attendee', 'vip', 'influencer', 'press', 'sponsor', 'complementary'];
 
