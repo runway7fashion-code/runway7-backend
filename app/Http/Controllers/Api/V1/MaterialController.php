@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendMaterialNotificationJob;
 use App\Models\Conversation;
 use App\Models\DesignerMaterial;
 use App\Models\MaterialBioContent;
@@ -127,6 +128,19 @@ class MaterialController extends Controller
         if ($material->status === 'pending') {
             $newStatus = $material->isCollaborative() ? 'in_progress' : 'completed';
             $material->update(['status' => $newStatus]);
+        }
+
+        // Notify all operation users
+        $operationUsers = User::where('role', 'operation')->where('status', 'active')->get();
+        $designerName = $request->user()->first_name . ' ' . $request->user()->last_name;
+        foreach ($operationUsers as $opUser) {
+            SendMaterialNotificationJob::dispatch(
+                recipientId: $opUser->id,
+                title: 'Material Uploaded',
+                body: "{$designerName} uploaded a file to {$material->name}.",
+                materialId: $material->id,
+                senderId: $request->user()->id,
+            );
         }
 
         return response()->json([

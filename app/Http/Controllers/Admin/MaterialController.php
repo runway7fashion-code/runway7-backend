@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SendMaterialNotificationJob;
 use App\Models\Conversation;
 use App\Models\DesignerMaterial;
 use App\Models\MaterialBioContent;
@@ -70,6 +71,18 @@ class MaterialController extends Controller
         ]);
 
         $material->update(['status' => $request->status]);
+
+        // Notify designer when operation changes status
+        if (in_array($request->status, ['in_progress', 'completed'])) {
+            $statusLabel = $request->status === 'completed' ? 'completed and ready for review' : 'in progress';
+            SendMaterialNotificationJob::dispatch(
+                recipientId: $material->designer_id,
+                title: "{$material->name} Updated",
+                body: "Your {$material->name} is now {$statusLabel}.",
+                materialId: $material->id,
+                senderId: auth()->id(),
+            );
+        }
 
         return back()->with('success', 'Status updated.');
     }
@@ -201,6 +214,15 @@ class MaterialController extends Controller
             'image_name'    => $request->image_name,
             'order'         => $material->moodboardItems()->max('order') + 1,
         ]);
+
+        // Notify designer
+        SendMaterialNotificationJob::dispatch(
+            recipientId: $material->designer_id,
+            title: "{$material->name} Updated",
+            body: "A new image has been added to your {$material->name}. Please review and respond.",
+            materialId: $material->id,
+            senderId: auth()->id(),
+        );
 
         return back()->with('success', 'Moodboard image added.');
     }

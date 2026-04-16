@@ -31,6 +31,7 @@ use App\Http\Controllers\Admin\IncomingLeadController;
 use App\Http\Controllers\Admin\LeadEmailController;
 use App\Http\Controllers\Admin\CommunicationController;
 use App\Http\Controllers\Admin\MaterialController;
+use App\Http\Controllers\Admin\ArtworkController;
 
 Route::get('/', function () {
     return redirect()->route('admin.login');
@@ -317,6 +318,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('passes/{pass}/check-in', [PassController::class, 'checkIn'])->name('passes.check-in');
             Route::post('passes/{pass}/reactivate', [PassController::class, 'reactivate'])->name('passes.reactivate');
             Route::get('api/passes/search-users', [PassController::class, 'searchUsers'])->name('passes.search-users');
+        });
+
+        // Tickets - Artworks management
+        Route::prefix('tickets')->name('tickets.')->group(function () {
+            Route::middleware('section:tickets_management')->group(function () {
+                Route::get('artworks', [ArtworkController::class, 'index'])->name('artworks.index');
+                Route::get('artworks/{designer}/{eventId}', [ArtworkController::class, 'show'])->name('artworks.show');
+                Route::post('artworks/{material}/upload-url', [ArtworkController::class, 'generateUploadUrl'])->name('artworks.upload-url');
+                Route::post('artworks/{material}/confirm-upload', [ArtworkController::class, 'confirmUpload'])->name('artworks.confirm-upload');
+                Route::delete('artwork-files/{file}', [ArtworkController::class, 'deleteFile'])->name('artworks.delete-file');
+            });
         });
 
         // Ventas - admin, sales
