@@ -81,6 +81,15 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         // Kiosk attendance check-in
         Route::post('kiosk/checkin', [App\Http\Controllers\Api\V1\KioskCheckinController::class, 'checkin'])->name('kiosk.checkin');
 
+        // Materials (designers)
+        Route::get('my-materials', [App\Http\Controllers\Api\V1\MaterialController::class, 'index'])->name('materials.index');
+        Route::post('materials/{material}/upload-url', [App\Http\Controllers\Api\V1\MaterialController::class, 'uploadUrl'])->name('materials.upload-url');
+        Route::post('materials/{material}/upload-complete', [App\Http\Controllers\Api\V1\MaterialController::class, 'uploadComplete'])->name('materials.upload-complete');
+        Route::post('materials/{material}/confirm', [App\Http\Controllers\Api\V1\MaterialController::class, 'confirm'])->name('materials.confirm');
+        Route::post('materials/{material}/observe', [App\Http\Controllers\Api\V1\MaterialController::class, 'observe'])->name('materials.observe');
+        Route::put('materials/{material}/bio', [App\Http\Controllers\Api\V1\MaterialController::class, 'saveBio'])->name('materials.save-bio');
+        Route::post('materials/{material}/moodboard-respond', [App\Http\Controllers\Api\V1\MaterialController::class, 'moodboardRespond'])->name('materials.moodboard-respond');
+
         // Profile
         Route::put('profile', [App\Http\Controllers\Api\V1\ProfileController::class, 'update'])->name('profile.update');
         Route::post('profile/photo', [App\Http\Controllers\Api\V1\ProfileController::class, 'uploadPhoto'])->name('profile.photo');
