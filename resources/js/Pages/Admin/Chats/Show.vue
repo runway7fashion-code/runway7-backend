@@ -1,8 +1,9 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { ref, nextTick, onMounted } from 'vue';
+import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { ChatBubbleLeftRightIcon, PaperAirplaneIcon } from '@heroicons/vue/24/outline';
+import { initEcho } from '@/echo.js';
 
 const props = defineProps({
     conversation: Object,
@@ -19,6 +20,13 @@ const show  = props.conversation.show;
 const messageForm = useForm({ body: '' });
 const chatContainer = ref(null);
 
+// Typing indicator state
+const typingUserId = ref(null);
+let typingTimeout = null;
+let lastTypingSentAt = 0;
+let echo = null;
+let channel = null;
+
 function sendMessage() {
     if (!messageForm.body.trim()) return;
     messageForm.post(`/admin/operations/chats/${props.conversation.id}/messages`, {
@@ -26,6 +34,7 @@ function sendMessage() {
         onSuccess: () => {
             messageForm.reset();
             nextTick(() => scrollToBottom());
+            emitTyping(false);
         },
     });
 }
@@ -36,7 +45,51 @@ function scrollToBottom() {
     }
 }
 
-onMounted(() => scrollToBottom());
+function emitTyping(isTyping) {
+    const now = Date.now();
+    // Throttle "typing=true" to once every 3s; always send "typing=false" immediately.
+    if (isTyping && now - lastTypingSentAt < 3000) return;
+    lastTypingSentAt = now;
+    window.axios.post(`/api/v1/chat/conversations/${props.conversation.id}/typing`, { is_typing: isTyping })
+        .catch(() => {});
+}
+
+function onInput() {
+    if (messageForm.body.trim().length > 0) emitTyping(true);
+}
+
+const typingUserName = () => {
+    if (!typingUserId.value) return '';
+    const u = typingUserId.value === userA?.id ? userA : userB;
+    return u?.first_name || 'Someone';
+};
+
+onMounted(() => {
+    scrollToBottom();
+
+    echo = initEcho(page.props.reverb);
+    if (!echo) return;
+
+    channel = echo.private(`conversation.${props.conversation.id}`);
+    channel.listen('.UserTyping', (e) => {
+        if (!e || e.user_id === currentUser?.id) return;
+        if (e.is_typing) {
+            typingUserId.value = e.user_id;
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => { typingUserId.value = null; }, 5000);
+        } else {
+            typingUserId.value = null;
+            clearTimeout(typingTimeout);
+        }
+    });
+});
+
+onBeforeUnmount(() => {
+    clearTimeout(typingTimeout);
+    if (channel) {
+        try { echo?.leave(`conversation.${props.conversation.id}`); } catch {}
+    }
+});
 
 function storageUrl(path) {
     if (!path) return null;
@@ -228,11 +281,22 @@ function presenceLabel(user) {
                     </template>
                 </div>
 
+                <!-- Typing indicator -->
+                <div v-if="typingUserId" class="px-5 py-1.5 border-t border-gray-100 bg-gray-50">
+                    <p class="text-[11px] text-gray-500 italic">
+                        <span class="inline-block w-1 h-1 rounded-full bg-gray-400 animate-pulse mr-0.5"></span>
+                        <span class="inline-block w-1 h-1 rounded-full bg-gray-400 animate-pulse mr-0.5" style="animation-delay: 150ms"></span>
+                        <span class="inline-block w-1 h-1 rounded-full bg-gray-400 animate-pulse mr-1" style="animation-delay: 300ms"></span>
+                        {{ typingUserName() }} is typing…
+                    </p>
+                </div>
+
                 <!-- Message input -->
                 <div class="border-t border-gray-200 px-5 py-3 bg-gray-50">
                     <form @submit.prevent="sendMessage" class="flex gap-2">
                         <input v-model="messageForm.body" type="text" placeholder="Type a message..."
                             class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10"
+                            @input="onInput"
                             @keyup.enter="sendMessage" />
                         <button type="submit" :disabled="!messageForm.body.trim() || messageForm.processing"
                             class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 flex items-center gap-1">

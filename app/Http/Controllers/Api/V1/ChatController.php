@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\UserTyping;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\User;
@@ -172,6 +173,28 @@ class ChatController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 403);
         }
+    }
+
+    /**
+     * Emit a "typing" realtime event to the other participant. No DB write.
+     */
+    public function typing(Request $request, Conversation $conversation): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$conversation->hasParticipant($user->id)) {
+            abort(403, 'You do not have access to this conversation.');
+        }
+
+        $isTyping = (bool) $request->input('is_typing', true);
+
+        try {
+            broadcast(new UserTyping($conversation, $user, $isTyping))->toOthers();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('UserTyping broadcast failed: ' . $e->getMessage());
+        }
+
+        return response()->json(['ok' => true]);
     }
 
     /**

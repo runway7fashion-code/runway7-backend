@@ -48,6 +48,12 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
             ],
+            'reverb' => [
+                'key'    => config('broadcasting.connections.reverb.key'),
+                'host'   => config('reverb.servers.reverb.options.host', env('REVERB_HOST', 'localhost')),
+                'port'   => (int) env('REVERB_PORT', 8080),
+                'scheme' => env('REVERB_SCHEME', 'http'),
+            ],
         ];
     }
 }

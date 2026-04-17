@@ -599,7 +599,37 @@ Listen on `private-conversation.{id}` channel for:
 - `MessagesDelivered` payload: `{conversation_id, recipient_id, delivered_at}` → update own messages in that conversation to `delivered_at`
 - `MessagesRead` payload: `{conversation_id, reader_id, read_at}` → update own messages to `is_read=true`
 
-### 3.9 Presence — online / last seen (Phase 2)
+### 3.9 Typing indicator (Phase 3 — realtime only)
+
+**Emit (when user is typing):**
+```
+POST /api/v1/chat/conversations/{conversation_id}/typing
+Body: { "is_typing": true }
+```
+
+- Call while user is typing. Throttle: send once every ~3s while input isn't empty, don't spam every keystroke.
+- Send `{"is_typing": false}` immediately when:
+  - User sends the message
+  - Input is cleared
+  - User leaves the chat screen
+
+No DB write — this is pure WS broadcast to the other participant.
+
+**Listen (show "X is typing…"):**
+
+On `private-conversation.{id}` channel, event name `.UserTyping` (note the leading dot — it's an app-level event name):
+
+```json
+{ "conversation_id": 1, "user_id": 42, "is_typing": true }
+```
+
+Rules:
+- Ignore events where `user_id == your own id` (Reverb's `toOthers()` handles this but double-check).
+- Show "X is typing…" pill just above the input.
+- Auto-hide after 5s if no new `is_typing:true` arrives (fallback for when the other side disconnects mid-type).
+- Hide immediately on `is_typing:false` or when a `NewMessage` from that user arrives.
+
+### 3.10 Presence — online / last seen (Phase 2)
 
 **No new endpoints needed.** The server updates `users.last_seen_at` automatically on every authenticated API request (throttled to once per 30s per user).
 
@@ -748,6 +778,8 @@ Existing push notification and in-app notification endpoints (covered in `10-mob
 - [ ] Render 3-state ticks on own messages (sent → delivered → read, gold on read)
 - [ ] Listen to `MessagesDelivered` realtime event
 - [ ] Show presence badges (Online / Last seen) in chat header using `other_participant.is_online` + `last_seen_at`
+- [ ] Emit typing events via `POST /conversations/{id}/typing` (throttled 3s)
+- [ ] Listen to `.UserTyping` event and show "X is typing…" with 5s auto-hide
 
 ### Profile changes
 

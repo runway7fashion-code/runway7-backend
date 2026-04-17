@@ -45,6 +45,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('conversations/support', [App\Http\Controllers\Api\V1\ChatController::class, 'startSupportChat'])->name('start-support');
             Route::get('conversations/{conversation}', [App\Http\Controllers\Api\V1\ChatController::class, 'messages'])->name('messages');
             Route::post('conversations/{conversation}/messages', [App\Http\Controllers\Api\V1\ChatController::class, 'sendMessage'])->name('send-message');
+            Route::post('conversations/{conversation}/typing', [App\Http\Controllers\Api\V1\ChatController::class, 'typing'])->name('typing');
             Route::post('conversations/{conversation}/delivered', [App\Http\Controllers\Api\V1\ChatController::class, 'markAsDelivered'])->name('mark-delivered');
             Route::post('conversations/{conversation}/read', [App\Http\Controllers\Api\V1\ChatController::class, 'markAsRead'])->name('mark-read');
         });

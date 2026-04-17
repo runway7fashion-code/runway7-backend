@@ -9,5 +9,12 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 
 Broadcast::channel('conversation.{conversationId}', function ($user, int $conversationId) {
     $conversation = Conversation::find($conversationId);
-    return $conversation && ($user->id === $conversation->model_id || $user->id === $conversation->designer_id);
+    if (!$conversation) return false;
+
+    // Both chat participants can subscribe. Admins get a moderation view.
+    if ((int) $user->id === (int) $conversation->user_a_id) return true;
+    if ((int) $user->id === (int) $conversation->user_b_id) return true;
+    if ($user->role === 'admin' || $user->role === 'operation') return true;
+
+    return false;
 });
