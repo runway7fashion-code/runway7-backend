@@ -42,6 +42,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         // Chat
         Route::prefix('chat')->name('chat.')->group(function () {
             Route::get('conversations', [App\Http\Controllers\Api\V1\ChatController::class, 'conversations'])->name('conversations');
+            Route::post('conversations/support', [App\Http\Controllers\Api\V1\ChatController::class, 'startSupportChat'])->name('start-support');
             Route::get('conversations/{conversation}', [App\Http\Controllers\Api\V1\ChatController::class, 'messages'])->name('messages');
             Route::post('conversations/{conversation}/messages', [App\Http\Controllers\Api\V1\ChatController::class, 'sendMessage'])->name('send-message');
             Route::post('conversations/{conversation}/read', [App\Http\Controllers\Api\V1\ChatController::class, 'markAsRead'])->name('mark-read');

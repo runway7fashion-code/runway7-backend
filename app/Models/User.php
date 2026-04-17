@@ -178,14 +178,14 @@ class User extends Authenticatable
     public function shows()
     {
         return $this->belongsToMany(Show::class, 'show_model', 'model_id', 'show_id')
-            ->withPivot(['status', 'walk_order', 'confirmed_at', 'notes', 'rejection_reason', 'requested_at', 'responded_at'])
+            ->withPivot(['status', 'walk_order', 'confirmed_at', 'notes', 'rejection_reason', 'requested_at', 'responded_at', 'designer_id'])
             ->withTimestamps();
     }
 
     public function showRequests()
     {
         return $this->belongsToMany(Show::class, 'show_model', 'model_id', 'show_id')
-            ->withPivot(['status', 'walk_order', 'confirmed_at', 'notes', 'rejection_reason', 'requested_at', 'responded_at'])
+            ->withPivot(['status', 'walk_order', 'confirmed_at', 'notes', 'rejection_reason', 'requested_at', 'responded_at', 'designer_id'])
             ->withTimestamps();
     }
 

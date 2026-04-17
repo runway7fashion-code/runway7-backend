@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
+use App\Models\User;
 use App\Services\ChatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -55,6 +56,58 @@ class ChatController extends Controller
         });
 
         return response()->json(['data' => $data]);
+    }
+
+    /**
+     * Start (or resume) a general conversation with Operations support.
+     * Only participants (model, designer, media, volunteer) can initiate.
+     * Reuses existing conversation if one already exists.
+     */
+    public function startSupportChat(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $allowedRoles = ['model', 'designer', 'media', 'volunteer'];
+        if (!in_array($user->role, $allowedRoles)) {
+            return response()->json(['message' => 'Only participants can start support chats.'], 403);
+        }
+
+        $request->validate([
+            'message' => 'nullable|string|max:2000',
+        ]);
+
+        // Find an Operation user (or admin as fallback)
+        $operationUser = User::where('role', 'operation')->where('status', 'active')->first()
+            ?? User::where('role', 'admin')->first();
+
+        if (!$operationUser) {
+            return response()->json(['message' => 'No support agents available.'], 503);
+        }
+
+        $conversation = Conversation::findOrCreateBetween($user->id, $operationUser->id);
+
+        // Send initial message if provided
+        if ($request->filled('message')) {
+            $this->chatService->sendMessage($conversation, $user, $request->message);
+            $conversation->refresh();
+        }
+
+        $other = $conversation->getOtherParticipant($user->id);
+
+        return response()->json([
+            'conversation' => [
+                'id'     => $conversation->id,
+                'status' => $conversation->status,
+                'context_type' => $conversation->context_type,
+                'other_participant' => [
+                    'id'              => $other->id,
+                    'name'            => $other->full_name,
+                    'profile_picture' => $other->profile_picture,
+                    'role'            => $other->role,
+                ],
+                'last_message_at' => $conversation->last_message_at?->toISOString(),
+            ],
+        ], 201);
     }
 
     /**

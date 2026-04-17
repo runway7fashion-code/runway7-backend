@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Events\MessagesRead;
 use App\Events\NewMessage;
+use App\Jobs\SendChatMessageNotificationJob;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Show;
@@ -60,7 +61,17 @@ class ChatService
 
         $conversation->update(['last_message_at' => now()]);
 
-        broadcast(new NewMessage($message->load('sender')))->toOthers();
+        // Broadcast realtime event — non-critical, don't fail the request if the WS server is unreachable
+        try {
+            broadcast(new NewMessage($message->load('sender')))->toOthers();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Chat broadcast failed: ' . $e->getMessage());
+        }
+
+        // Dispatch push + in-app notification to the recipient (system messages don't trigger notifications)
+        if ($type !== 'system') {
+            SendChatMessageNotificationJob::dispatch(messageId: $message->id);
+        }
 
         return $message;
     }
@@ -79,7 +90,11 @@ class ChatService
             ]);
 
         if ($count > 0) {
-            broadcast(new MessagesRead($conversation, $reader))->toOthers();
+            try {
+                broadcast(new MessagesRead($conversation, $reader))->toOthers();
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('MessagesRead broadcast failed: ' . $e->getMessage());
+            }
         }
 
         return $count;
