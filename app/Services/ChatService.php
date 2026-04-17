@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Events\MessagesRead;
 use App\Events\NewMessage;
+use App\Jobs\SendChatMessageNotificationJob;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Show;
@@ -12,15 +13,17 @@ use App\Models\User;
 class ChatService
 {
     /**
-     * Crear conversación cuando modelo acepta solicitud de diseñador.
+     * Create conversation when model accepts designer's show request.
+     * Uses the generic table with context_type='casting'.
      */
     public function createConversationFromShowAcceptance(Show $show, User $model, User $designer): Conversation
     {
         return Conversation::firstOrCreate(
             [
-                'model_id'    => $model->id,
-                'designer_id' => $designer->id,
-                'show_id'     => $show->id,
+                'user_a_id'    => $model->id,
+                'user_b_id'    => $designer->id,
+                'show_id'      => $show->id,
+                'context_type' => 'casting',
             ],
             [
                 'status' => 'active',
@@ -29,16 +32,24 @@ class ChatService
     }
 
     /**
-     * Enviar mensaje en una conversación.
+     * Find or create a general conversation between two users.
+     */
+    public function findOrCreateConversation(int $userAId, int $userBId): Conversation
+    {
+        return Conversation::findOrCreateBetween($userAId, $userBId);
+    }
+
+    /**
+     * Send a message in a conversation.
      */
     public function sendMessage(Conversation $conversation, User $sender, string $body, string $type = 'text', ?string $imageUrl = null): Message
     {
-        if ($sender->id !== $conversation->model_id && $sender->id !== $conversation->designer_id) {
-            throw new \Exception('No tienes permiso para enviar mensajes en esta conversación.');
+        if (!$conversation->hasParticipant($sender->id)) {
+            throw new \Exception('You are not a participant of this conversation.');
         }
 
         if ($conversation->status !== 'active') {
-            throw new \Exception('Esta conversación no está activa.');
+            throw new \Exception('This conversation is not active.');
         }
 
         $message = $conversation->messages()->create([
@@ -50,13 +61,23 @@ class ChatService
 
         $conversation->update(['last_message_at' => now()]);
 
-        broadcast(new NewMessage($message->load('sender')))->toOthers();
+        // Broadcast realtime event — non-critical, don't fail the request if the WS server is unreachable
+        try {
+            broadcast(new NewMessage($message->load('sender')))->toOthers();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Chat broadcast failed: ' . $e->getMessage());
+        }
+
+        // Dispatch push + in-app notification to the recipient (system messages don't trigger notifications)
+        if ($type !== 'system') {
+            SendChatMessageNotificationJob::dispatch(messageId: $message->id);
+        }
 
         return $message;
     }
 
     /**
-     * Marcar mensajes como leídos.
+     * Mark messages as read.
      */
     public function markAsRead(Conversation $conversation, User $reader): int
     {
@@ -69,26 +90,25 @@ class ChatService
             ]);
 
         if ($count > 0) {
-            broadcast(new MessagesRead($conversation, $reader))->toOthers();
+            try {
+                broadcast(new MessagesRead($conversation, $reader))->toOthers();
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('MessagesRead broadcast failed: ' . $e->getMessage());
+            }
         }
 
         return $count;
     }
 
     /**
-     * Obtener conversaciones de un usuario.
+     * Get conversations for a user (all types: casting, general, material).
      */
     public function getConversationsForUser(User $user): \Illuminate\Database\Eloquent\Collection
     {
-        $query = Conversation::with(['model', 'designer', 'show.eventDay', 'lastMessage'])
-            ->where('status', 'active');
-
-        if ($user->role === 'model') {
-            $query->where('model_id', $user->id);
-        } elseif ($user->role === 'designer') {
-            $query->where('designer_id', $user->id);
-        }
-
-        return $query->orderByDesc('last_message_at')->get();
+        return Conversation::with(['userA', 'userB', 'show.eventDay', 'lastMessage'])
+            ->forUser($user->id)
+            ->active()
+            ->orderByDesc('last_message_at')
+            ->get();
     }
 }

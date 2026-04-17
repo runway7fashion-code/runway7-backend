@@ -42,6 +42,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         // Chat
         Route::prefix('chat')->name('chat.')->group(function () {
             Route::get('conversations', [App\Http\Controllers\Api\V1\ChatController::class, 'conversations'])->name('conversations');
+            Route::post('conversations/support', [App\Http\Controllers\Api\V1\ChatController::class, 'startSupportChat'])->name('start-support');
             Route::get('conversations/{conversation}', [App\Http\Controllers\Api\V1\ChatController::class, 'messages'])->name('messages');
             Route::post('conversations/{conversation}/messages', [App\Http\Controllers\Api\V1\ChatController::class, 'sendMessage'])->name('send-message');
             Route::post('conversations/{conversation}/read', [App\Http\Controllers\Api\V1\ChatController::class, 'markAsRead'])->name('mark-read');
@@ -80,6 +81,15 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
         // Kiosk attendance check-in
         Route::post('kiosk/checkin', [App\Http\Controllers\Api\V1\KioskCheckinController::class, 'checkin'])->name('kiosk.checkin');
+
+        // Materials (designers)
+        Route::get('my-materials', [App\Http\Controllers\Api\V1\MaterialController::class, 'index'])->name('materials.index');
+        Route::post('materials/{material}/upload-url', [App\Http\Controllers\Api\V1\MaterialController::class, 'uploadUrl'])->name('materials.upload-url');
+        Route::post('materials/{material}/upload-complete', [App\Http\Controllers\Api\V1\MaterialController::class, 'uploadComplete'])->name('materials.upload-complete');
+        Route::post('materials/{material}/confirm', [App\Http\Controllers\Api\V1\MaterialController::class, 'confirm'])->name('materials.confirm');
+        Route::post('materials/{material}/observe', [App\Http\Controllers\Api\V1\MaterialController::class, 'observe'])->name('materials.observe');
+        Route::put('materials/{material}/bio', [App\Http\Controllers\Api\V1\MaterialController::class, 'saveBio'])->name('materials.save-bio');
+        Route::post('materials/{material}/moodboard-respond', [App\Http\Controllers\Api\V1\MaterialController::class, 'moodboardRespond'])->name('materials.moodboard-respond');
 
         // Profile
         Route::put('profile', [App\Http\Controllers\Api\V1\ProfileController::class, 'update'])->name('profile.update');

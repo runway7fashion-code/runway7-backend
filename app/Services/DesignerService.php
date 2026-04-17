@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\DesignerAssistant;
+use App\Services\GoogleDriveService;
 use App\Models\DesignerDisplay;
 use App\Models\DesignerMaterial;
 use App\Models\Event;
@@ -97,34 +98,66 @@ class DesignerService
     }
 
     /**
-     * Crear materiales por defecto para un diseñador en un evento.
+     * Create default materials for a designer in an event.
+     * Also creates Google Drive folders for each material.
      */
     public function createDefaultMaterials(User $user, Event $event): void
     {
-        $materials = [
-            ['name' => 'Background',       'description' => 'Background video or image for the runway display',       'order' => 1],
-            ['name' => 'Music',            'description' => 'Music track for the runway show',                         'order' => 2],
-            ['name' => 'Images',           'description' => 'Collection images for promotional materials',             'order' => 3],
-            ['name' => 'Runway Logo',      'description' => 'Logo to display on the runway screen',                    'order' => 4],
-            ['name' => 'Bio',              'description' => 'Designer biography for the event program',                'order' => 5],
-            ['name' => 'Hair Mood Board',  'description' => 'Hair styling mood board for models',                      'order' => 6],
-            ['name' => 'Makeup Mood Board','description' => 'Makeup mood board for models',                            'order' => 7],
-            ['name' => 'Brand Logo',       'description' => 'Official brand logo in high resolution',                  'order' => 8],
-            ['name' => 'Designer Photo',   'description' => 'Professional photo of the designer',                      'order' => 9],
-            ['name' => 'Artworks',         'description' => 'Artwork files for event graphics and displays',           'order' => 10],
-        ];
+        $brandName = $user->designerProfile?->brand_name ?? "{$user->first_name} {$user->last_name}";
+        $driveFolders = null;
 
-        foreach ($materials as $material) {
+        // Create Google Drive folders
+        try {
+            $driveService = app(GoogleDriveService::class);
+            $driveFolders = $driveService->createDesignerFolders($brandName);
+
+            // Save root folder to event_designer pivot
+            \DB::table('event_designer')
+                ->where('designer_id', $user->id)
+                ->where('event_id', $event->id)
+                ->update([
+                    'drive_root_folder_id'  => $driveFolders['root']['id'],
+                    'drive_root_folder_url' => $driveFolders['root']['url'],
+                ]);
+        } catch (\Throwable $e) {
+            \Log::warning("Failed to create Drive folders for designer {$user->id}: " . $e->getMessage());
+        }
+
+        foreach (DesignerMaterial::MATERIALS as $name => $config) {
+            $driveFolder = $driveFolders['materials'][$name] ?? null;
+
             DesignerMaterial::create([
-                'designer_id' => $user->id,
-                'event_id'    => $event->id,
-                'name'        => $material['name'],
-                'description' => $material['description'],
-                'type'        => 'production_element',
-                'order'       => $material['order'],
-                'status'      => 'pending',
+                'designer_id'      => $user->id,
+                'event_id'         => $event->id,
+                'name'             => $name,
+                'description'      => $this->getMaterialDescription($name),
+                'type'             => 'production_element',
+                'order'            => $config['order'],
+                'status'           => 'pending',
+                'status_flow'      => $config['flow'],
+                'upload_by'        => $config['upload_by'],
+                'is_readonly'      => $config['is_readonly'] ?? false,
+                'drive_folder_id'  => $driveFolder['id'] ?? null,
+                'drive_folder_url' => $driveFolder['url'] ?? null,
             ]);
         }
+    }
+
+    private function getMaterialDescription(string $name): string
+    {
+        return match ($name) {
+            'Background'        => 'Background video or image for the runway display',
+            'Music'             => 'Music track for the runway show',
+            'Images'            => 'Collection images for promotional materials',
+            'Runway Logo'       => 'Runway 7 logo variants for designer use',
+            'Bio'               => 'Designer biography, collection description, and contact info',
+            'Hair Mood Board'   => 'Hair styling mood board for models',
+            'Makeup Mood Board' => 'Makeup mood board for models',
+            'Brand Logo'        => 'Official brand logo in high resolution',
+            'Designer Photo'    => 'Professional photo of the designer',
+            'Artworks'          => 'Event artwork files for social media and promotions',
+            default             => '',
+        };
     }
 
     /**

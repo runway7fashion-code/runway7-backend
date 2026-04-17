@@ -30,6 +30,8 @@ use App\Http\Controllers\Admin\CountryController;
 use App\Http\Controllers\Admin\IncomingLeadController;
 use App\Http\Controllers\Admin\LeadEmailController;
 use App\Http\Controllers\Admin\CommunicationController;
+use App\Http\Controllers\Admin\MaterialController;
+use App\Http\Controllers\Admin\ArtworkController;
 
 Route::get('/', function () {
     return redirect()->route('admin.login');
@@ -106,6 +108,19 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('designer-displays/{display}/upload-video', [DesignerController::class, 'uploadVideo'])->name('designers.upload-video');
                 Route::post('designer-displays/{display}/upload-audio', [DesignerController::class, 'uploadAudio'])->name('designers.upload-audio');
                 Route::post('designers/{designer}/upload-profile-picture', [DesignerController::class, 'uploadProfilePicture'])->name('designers.upload-profile-picture');
+
+                // Materials
+                Route::get('designers/{designer}/materials/{eventId}', [MaterialController::class, 'show'])->name('designers.materials');
+                Route::patch('materials/{material}/status', [MaterialController::class, 'updateStatus'])->name('materials.update-status');
+                Route::post('materials/{material}/upload-url', [MaterialController::class, 'generateUploadUrl'])->name('materials.upload-url');
+                Route::post('materials/{material}/confirm-upload', [MaterialController::class, 'confirmUpload'])->name('materials.confirm-upload');
+                Route::delete('material-files/{file}', [MaterialController::class, 'deleteFile'])->name('materials.delete-file');
+                Route::put('materials/{material}/bio', [MaterialController::class, 'saveBio'])->name('materials.save-bio');
+                Route::post('materials/{material}/moodboard-image', [MaterialController::class, 'uploadMoodboardImage'])->name('materials.upload-moodboard');
+                Route::patch('moodboard-items/{item}/respond', [MaterialController::class, 'respondMoodboard'])->name('materials.respond-moodboard');
+                Route::post('materials/{material}/observe', [MaterialController::class, 'observe'])->name('materials.observe');
+                Route::patch('designers/{designer}/materials-deadline/{eventId}', [MaterialController::class, 'updateDeadline'])->name('materials.update-deadline');
+                Route::post('materials/runway-logo/{eventId}', [MaterialController::class, 'uploadRunwayLogo'])->name('materials.upload-runway-logo');
                 Route::delete('designers/{designer}/delete-profile-picture', [DesignerController::class, 'deleteProfilePicture'])->name('designers.delete-profile-picture');
                 Route::post('designers/{designer}/send-onboarding', [DesignerController::class, 'sendOnboardingEmail'])->name('designers.send-onboarding');
                 Route::post('designers/send-bulk-onboarding', [DesignerController::class, 'sendBulkOnboardingEmail'])->name('designers.send-bulk-onboarding');
@@ -185,7 +200,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Chats - admin, operation
             Route::middleware('section:chats')->group(function () {
                 Route::get('chats', [ChatController::class, 'index'])->name('chats.index');
+                Route::post('chats', [ChatController::class, 'store'])->name('chats.store');
                 Route::get('chats/{conversation}', [ChatController::class, 'show'])->name('chats.show');
+                Route::post('chats/{conversation}/messages', [ChatController::class, 'sendMessage'])->name('chats.send-message');
             });
 
             // Categorías de diseñadores - admin, operation
@@ -301,6 +318,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('passes/{pass}/check-in', [PassController::class, 'checkIn'])->name('passes.check-in');
             Route::post('passes/{pass}/reactivate', [PassController::class, 'reactivate'])->name('passes.reactivate');
             Route::get('api/passes/search-users', [PassController::class, 'searchUsers'])->name('passes.search-users');
+        });
+
+        // Tickets - Artworks management
+        Route::prefix('tickets')->name('tickets.')->group(function () {
+            Route::middleware('section:tickets_management')->group(function () {
+                Route::get('artworks', [ArtworkController::class, 'index'])->name('artworks.index');
+                Route::get('artworks/{designer}/{eventId}', [ArtworkController::class, 'show'])->name('artworks.show');
+                Route::post('artworks/{material}/upload-url', [ArtworkController::class, 'generateUploadUrl'])->name('artworks.upload-url');
+                Route::post('artworks/{material}/confirm-upload', [ArtworkController::class, 'confirmUpload'])->name('artworks.confirm-upload');
+                Route::delete('artwork-files/{file}', [ArtworkController::class, 'deleteFile'])->name('artworks.delete-file');
+            });
         });
 
         // Ventas - admin, sales

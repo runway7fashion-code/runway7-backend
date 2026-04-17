@@ -52,7 +52,8 @@ function hasSection(section) {
 const allNavItems = [
     { name: 'Dashboard',    href: '/admin',       exact: true,  section: 'dashboard',          icon: HomeIcon },
     { name: 'Usuarios',     href: '/admin/users',  exact: false, section: 'users',              icon: UsersIcon },
-    { name: 'Pases',        href: '/admin/passes', exact: false, section: 'tickets_management', icon: TicketIcon },
+    { name: 'Pases',        href: '/admin/passes',           exact: false, section: 'tickets_management', icon: TicketIcon },
+    { name: 'Artworks',     href: '/admin/tickets/artworks', exact: false, section: 'tickets_management', icon: PhotoIcon },
     { name: 'Logs',         href: '/admin/logs',   exact: false, section: 'activity_logs',      icon: DocumentTextIcon },
 ];
 

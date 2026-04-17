@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SendCastingNotificationJob;
 use App\Models\CastingSlot;
 use App\Models\Event;
 use App\Models\Show;
@@ -120,6 +121,18 @@ class CastingService
             'notes'        => $message,
         ]);
 
+        // Notify the model
+        $designerName = trim($designer->first_name . ' ' . $designer->last_name);
+        $brandName = $designer->designerProfile?->brand_name;
+        $displayName = $brandName ?: $designerName;
+        SendCastingNotificationJob::dispatch(
+            recipientId: $model->id,
+            title: "New show request from {$displayName}",
+            body: $message ?: "You have been requested for {$show->name}. Tap to review.",
+            showId: $show->id,
+            senderId: $designer->id,
+        );
+
         return ['message' => 'Solicitud enviada correctamente.'];
     }
 
@@ -159,6 +172,27 @@ class CastingService
                 ->where('model_id', $model->id)
                 ->where('casting_status', 'checked_in')
                 ->update(['casting_status' => 'selected']);
+        }
+
+        // Notify the designer of the response
+        $modelName = trim($model->first_name . ' ' . $model->last_name);
+        if ($accept) {
+            SendCastingNotificationJob::dispatch(
+                recipientId: $designer->id,
+                title: "{$modelName} accepted your request",
+                body: "for {$show->name}",
+                showId: $show->id,
+                senderId: $model->id,
+            );
+        } else {
+            $reasonText = $rejectionReason ? "Reason: {$rejectionReason}" : "No reason provided.";
+            SendCastingNotificationJob::dispatch(
+                recipientId: $designer->id,
+                title: "{$modelName} declined your request",
+                body: "for {$show->name}. {$reasonText}",
+                showId: $show->id,
+                senderId: $model->id,
+            );
         }
     }
 

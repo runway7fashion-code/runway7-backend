@@ -164,7 +164,6 @@ class ProfileController extends Controller
             'collection_name' => 'sometimes|nullable|string|max:200',
             'website' => 'sometimes|nullable|url|max:300',
             'instagram' => 'sometimes|nullable|string|max:100',
-            'bio' => 'sometimes|nullable|string|max:1000',
             'country' => 'sometimes|nullable|string|max:100',
         ]);
 

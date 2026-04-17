@@ -325,6 +325,19 @@ const sortedActivities = computed(() => {
     if (!props.lead.activities) return [];
     return [...props.lead.activities].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 });
+
+// Expand/collapse activity title (for long titles like "Asignado manualmente a ...")
+const expandedActivities = ref([]);
+function toggleActivityExpand(id) {
+    if (expandedActivities.value.includes(id)) {
+        expandedActivities.value = expandedActivities.value.filter(x => x !== id);
+    } else {
+        expandedActivities.value.push(id);
+    }
+}
+function isActivityExpanded(id) {
+    return expandedActivities.value.includes(id);
+}
 </script>
 
 <template>
@@ -688,25 +701,36 @@ const sortedActivities = computed(() => {
                                                 <span :class="activityTypeColor(activity.type)" class="text-[10px] font-medium px-1.5 py-0.5 rounded">
                                                     {{ activityTypeLabel(activity.type) }}
                                                 </span>
-                                                <span class="text-sm font-medium text-gray-900 truncate">{{ activity.title }}</span>
+                                                <span class="text-sm font-medium text-gray-900"
+                                                    :class="isActivityExpanded(activity.id) ? 'whitespace-normal break-words' : 'truncate'">
+                                                    {{ activity.title }}
+                                                </span>
                                             </div>
                                             <p v-if="activity.description" class="text-xs text-gray-500 mt-1 whitespace-pre-line">{{ activity.description }}</p>
                                         </div>
 
-                                        <select @change="changeActivityStatus(activity.id, $event.target.value)" :value="activity.status"
-                                            class="flex-shrink-0 text-[10px] font-medium rounded-lg px-2 py-1 border-0 cursor-pointer focus:ring-1 focus:ring-black"
-                                            :class="{
-                                                'bg-amber-50 text-amber-700': activity.status === 'pending' && !(activity.scheduled_at && new Date(new Date(activity.scheduled_at).getTime() + 30*60000) < new Date()),
-                                                'bg-red-50 text-red-700': activity.status === 'pending' && activity.scheduled_at && new Date(new Date(activity.scheduled_at).getTime() + 30*60000) < new Date(),
-                                                'bg-green-50 text-green-700': activity.status === 'completed',
-                                                'bg-gray-100 text-gray-500': activity.status === 'cancelled',
-                                                'bg-red-50 text-red-600': activity.status === 'not_completed',
-                                            }">
-                                            <option value="pending">Pending</option>
-                                            <option value="completed">Completed</option>
-                                            <option value="cancelled">Cancelled</option>
-                                            <option value="not_completed">Not completed</option>
-                                        </select>
+                                        <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                                            <select @change="changeActivityStatus(activity.id, $event.target.value)" :value="activity.status"
+                                                class="text-[10px] font-medium rounded-lg px-2 py-1 border-0 cursor-pointer focus:ring-1 focus:ring-black"
+                                                :class="{
+                                                    'bg-amber-50 text-amber-700': activity.status === 'pending' && !(activity.scheduled_at && new Date(new Date(activity.scheduled_at).getTime() + 30*60000) < new Date()),
+                                                    'bg-red-50 text-red-700': activity.status === 'pending' && activity.scheduled_at && new Date(new Date(activity.scheduled_at).getTime() + 30*60000) < new Date(),
+                                                    'bg-green-50 text-green-700': activity.status === 'completed',
+                                                    'bg-gray-100 text-gray-500': activity.status === 'cancelled',
+                                                    'bg-red-50 text-red-600': activity.status === 'not_completed',
+                                                }">
+                                                <option value="pending">Pending</option>
+                                                <option value="completed">Completed</option>
+                                                <option value="cancelled">Cancelled</option>
+                                                <option value="not_completed">Not completed</option>
+                                            </select>
+                                            <button v-if="activity.title && activity.title.length > 25"
+                                                @click="toggleActivityExpand(activity.id)"
+                                                class="inline-flex items-center gap-0.5 text-[10px] text-gray-400 hover:text-gray-700 transition-colors">
+                                                {{ isActivityExpanded(activity.id) ? 'Ver menos' : 'Ver más' }}
+                                                <ChevronDownIcon class="w-3 h-3 transition-transform" :class="{ 'rotate-180': isActivityExpanded(activity.id) }" />
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <!-- Meta -->

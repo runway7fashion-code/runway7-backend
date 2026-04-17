@@ -14,7 +14,7 @@ return [
         'label' => 'Operaciones',
     ],
     'tickets_manager' => [
-        'sections' => ['tickets_dashboard', 'tickets_management', 'communications'],
+        'sections' => ['tickets_dashboard', 'tickets_management', 'communications', 'chats'],
         'label' => 'Tickets',
     ],
     'marketing' => [
@@ -28,6 +28,10 @@ return [
     'sales' => [
         'sections' => ['sales_dashboard', 'sales_designers', 'sales_leads', 'sales_calendar', 'designer_packages', 'communications'],
         'label' => 'Ventas',
+    ],
+    'creative' => [
+        'sections' => ['designers', 'chats', 'communications'],
+        'label' => 'Creative',
     ],
     'assistant' => [
         'sections' => [],

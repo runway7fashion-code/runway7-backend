@@ -4,11 +4,15 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Show;
+use App\Models\User;
+use App\Services\ChatService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ShowController extends Controller
 {
+    public function __construct(protected ChatService $chatService) {}
+
     /**
      * Shows asignados al modelo autenticado.
      */
@@ -17,17 +21,21 @@ class ShowController extends Controller
         $user = $request->user();
 
         $shows = $user->shows()
-            ->with([
-                'eventDay.event:id,name,city,venue',
-                'designers:users.id,users.first_name,users.last_name',
-            ])
+            ->with(['eventDay.event:id,name,city,venue'])
             ->get();
 
-        $data = $shows->map(function ($show) use ($user) {
+        // Collect all designer IDs from pivots and load them in one query
+        $designerIds = $shows->pluck('pivot.designer_id')->filter()->unique()->values();
+        $designers = $designerIds->isNotEmpty()
+            ? User::whereIn('id', $designerIds)
+                ->with('designerProfile:id,user_id,brand_name,collection_name')
+                ->get(['id', 'first_name', 'last_name', 'profile_picture'])
+                ->keyBy('id')
+            : collect();
+
+        $data = $shows->map(function ($show) use ($designers) {
             $pivot = $show->pivot;
-            $designer = $pivot->designer_id
-                ? $show->designers->firstWhere('id', $pivot->designer_id)
-                : null;
+            $designer = $pivot->designer_id ? $designers->get($pivot->designer_id) : null;
 
             return [
                 'id' => $show->id,
@@ -50,8 +58,10 @@ class ShowController extends Controller
                     'requested_at' => $pivot->requested_at,
                     'designer' => $designer ? [
                         'id' => $designer->id,
-                        'name' => $designer->first_name . ' ' . $designer->last_name,
-                        'collection_name' => $designer->pivot->collection_name ?? null,
+                        'name' => trim($designer->first_name . ' ' . $designer->last_name),
+                        'brand_name' => $designer->designerProfile?->brand_name,
+                        'collection_name' => $designer->designerProfile?->collection_name,
+                        'profile_picture' => $designer->profile_picture,
                     ] : null,
                 ],
             ];
@@ -85,6 +95,14 @@ class ShowController extends Controller
                 'responded_at' => now(),
                 'updated_at' => now(),
             ]);
+
+        // Create chat conversation between model and designer
+        if ($assignment->designer_id) {
+            $designer = User::find($assignment->designer_id);
+            if ($designer) {
+                $this->chatService->createConversationFromShowAcceptance($show, $user, $designer);
+            }
+        }
 
         return response()->json(['message' => 'Show confirmado exitosamente.']);
     }
