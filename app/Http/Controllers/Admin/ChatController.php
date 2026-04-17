@@ -18,8 +18,8 @@ class ChatController extends Controller
     public function index(Request $request): Response
     {
         $query = Conversation::with([
-            'userA:id,first_name,last_name,email,profile_picture,role',
-            'userB:id,first_name,last_name,email,profile_picture,role',
+            'userA:id,first_name,last_name,email,profile_picture,role,last_seen_at',
+            'userB:id,first_name,last_name,email,profile_picture,role,last_seen_at',
             'show:id,name,event_day_id',
             'show.eventDay:id,event_id,label',
             'show.eventDay.event:id,name',
@@ -70,8 +70,8 @@ class ChatController extends Controller
     public function show(Conversation $conversation): Response
     {
         $conversation->load([
-            'userA:id,first_name,last_name,email,profile_picture,role',
-            'userB:id,first_name,last_name,email,profile_picture,role',
+            'userA:id,first_name,last_name,email,profile_picture,role,last_seen_at',
+            'userB:id,first_name,last_name,email,profile_picture,role,last_seen_at',
             'show:id,name,event_day_id',
             'show.eventDay:id,event_id,label,date',
             'show.eventDay.event:id,name',

@@ -72,6 +72,23 @@ function deliveryState(msg) {
     if (msg.delivered_at) return 'delivered';
     return 'sent';
 }
+
+function presenceLabel(user) {
+    if (!user) return '';
+    if (user.is_online) return 'Online';
+    if (!user.last_seen_at) return '';
+    const last = new Date(user.last_seen_at);
+    const now  = new Date();
+    const diffMin = Math.floor((now - last) / 60000);
+    if (diffMin < 60) return `Last seen ${diffMin} min ago`;
+    if (diffMin < 1440) {
+        return `Last seen today at ${last.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}`;
+    }
+    if (diffMin < 2880) {
+        return `Last seen yesterday at ${last.toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' })}`;
+    }
+    return `Last seen on ${last.toLocaleDateString('en', { day: 'numeric', month: 'short' })}`;
+}
 </script>
 
 <template>
@@ -98,8 +115,14 @@ function deliveryState(msg) {
                                 </div>
                             </div>
                             <div>
-                                <p class="text-sm font-semibold text-gray-900">{{ userA?.first_name }} {{ userA?.last_name }}</p>
-                                <p class="text-xs text-gray-400">{{ roleLabels[userA?.role] || userA?.role }}</p>
+                                <p class="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
+                                    {{ userA?.first_name }} {{ userA?.last_name }}
+                                    <span v-if="userA?.is_online" class="w-2 h-2 rounded-full bg-green-500" title="Online"></span>
+                                </p>
+                                <p class="text-xs text-gray-400">
+                                    {{ roleLabels[userA?.role] || userA?.role }}
+                                    <span v-if="presenceLabel(userA)" class="ml-1">· {{ presenceLabel(userA) }}</span>
+                                </p>
                             </div>
                         </div>
 
@@ -114,8 +137,14 @@ function deliveryState(msg) {
                                 </div>
                             </div>
                             <div>
-                                <p class="text-sm font-semibold text-gray-900">{{ userB?.first_name }} {{ userB?.last_name }}</p>
-                                <p class="text-xs text-gray-400">{{ roleLabels[userB?.role] || userB?.role }}</p>
+                                <p class="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
+                                    {{ userB?.first_name }} {{ userB?.last_name }}
+                                    <span v-if="userB?.is_online" class="w-2 h-2 rounded-full bg-green-500" title="Online"></span>
+                                </p>
+                                <p class="text-xs text-gray-400">
+                                    {{ roleLabels[userB?.role] || userB?.role }}
+                                    <span v-if="presenceLabel(userB)" class="ml-1">· {{ presenceLabel(userB) }}</span>
+                                </p>
                             </div>
                         </div>
                     </div>

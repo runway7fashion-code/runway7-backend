@@ -33,6 +33,8 @@ class ChatController extends Controller
                     'name'            => $other->full_name,
                     'profile_picture' => $other->profile_picture,
                     'role'            => $other->role,
+                    'is_online'       => $other->is_online,
+                    'last_seen_at'    => $other->last_seen_at?->toISOString(),
                 ],
                 'last_message' => $c->lastMessage ? [
                     'body'       => $c->lastMessage->body,
@@ -104,6 +106,8 @@ class ChatController extends Controller
                     'name'            => $other->full_name,
                     'profile_picture' => $other->profile_picture,
                     'role'            => $other->role,
+                    'is_online'       => $other->is_online,
+                    'last_seen_at'    => $other->last_seen_at?->toISOString(),
                 ],
                 'last_message_at' => $conversation->last_message_at?->toISOString(),
             ],

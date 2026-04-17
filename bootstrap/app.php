@@ -7,6 +7,7 @@ use App\Http\Middleware\CheckSectionAccess;
 use App\Http\Middleware\EnsureUserIsInternal;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\LogSalesAction;
+use App\Http\Middleware\TrackUserPresence;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -19,6 +20,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             HandleInertiaRequests::class,
+            TrackUserPresence::class,
+        ]);
+        $middleware->api(append: [
+            TrackUserPresence::class,
         ]);
         $middleware->redirectGuestsTo('/admin/login');
         $middleware->alias([

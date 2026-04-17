@@ -19,8 +19,10 @@ class User extends Authenticatable
 
     protected $fillable = [
         'first_name', 'last_name', 'email', 'phone', 'password',
-        'role', 'status', 'sales_type', 'is_available', 'last_login_at', 'welcome_email_sent_at', 'sms_sent_at', 'profile_picture',
+        'role', 'status', 'sales_type', 'is_available', 'last_login_at', 'welcome_email_sent_at', 'sms_sent_at', 'profile_picture', 'last_seen_at',
     ];
+
+    protected $appends = ['is_online'];
 
     protected $hidden = ['password', 'remember_token'];
 
@@ -31,6 +33,7 @@ class User extends Authenticatable
             'last_login_at'           => 'datetime',
             'welcome_email_sent_at'   => 'datetime',
             'sms_sent_at'             => 'datetime',
+            'last_seen_at'            => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -39,6 +42,12 @@ class User extends Authenticatable
     public function getFullNameAttribute(): string
     {
         return "{$this->first_name} {$this->last_name}";
+    }
+
+    public function getIsOnlineAttribute(): bool
+    {
+        if (!$this->last_seen_at) return false;
+        return $this->last_seen_at->gt(now()->subMinutes(2));
     }
 
     public function getRoleCategoryAttribute(): string

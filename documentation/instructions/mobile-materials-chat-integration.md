@@ -599,6 +599,32 @@ Listen on `private-conversation.{id}` channel for:
 - `MessagesDelivered` payload: `{conversation_id, recipient_id, delivered_at}` → update own messages in that conversation to `delivered_at`
 - `MessagesRead` payload: `{conversation_id, reader_id, read_at}` → update own messages to `is_read=true`
 
+### 3.9 Presence — online / last seen (Phase 2)
+
+**No new endpoints needed.** The server updates `users.last_seen_at` automatically on every authenticated API request (throttled to once per 30s per user).
+
+All chat payloads now include the counterpart's presence:
+
+```json
+"other_participant": {
+  "id": 42,
+  "name": "...",
+  "is_online": true,
+  "last_seen_at": "2026-04-17T21:01:27.000000Z"
+}
+```
+
+And `GET /api/v1/me` returns the authenticated user's own `last_seen_at` and `is_online` on `user`.
+
+**Rendering rules (WhatsApp style):**
+- `is_online == true` → green dot + "Online"
+- `is_online == false && last_seen_at within 60 min` → "Last seen X min ago"
+- same day → "Last seen today at 14:32"
+- yesterday → "Last seen yesterday at 14:32"
+- older → "Last seen Apr 10"
+
+**Keep it fresh:** when the conversation detail screen is visible, the app already hits `markAsRead` / `markAsDelivered` on events — that's enough to also refresh `last_seen_at` of both sides. If you want smoother updates while idle on the chat screen, poll `GET /api/v1/chat/conversations/{id}` every 30-60s, or subscribe to a presence channel on Reverb (future improvement).
+
 ### 3.6 How conversations get created
 
 **The app does NOT need to manually create conversations** except for the support endpoint. They get created automatically when:
@@ -721,6 +747,7 @@ Existing push notification and in-app notification endpoints (covered in `10-mob
 - [ ] Mark as delivered with `POST /conversations/{id}/delivered` on chat push receipt
 - [ ] Render 3-state ticks on own messages (sent → delivered → read, gold on read)
 - [ ] Listen to `MessagesDelivered` realtime event
+- [ ] Show presence badges (Online / Last seen) in chat header using `other_participant.is_online` + `last_seen_at`
 
 ### Profile changes
 
