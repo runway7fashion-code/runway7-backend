@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\MessagesDelivered;
 use App\Events\MessagesRead;
 use App\Events\NewMessage;
 use App\Jobs\SendChatMessageNotificationJob;
@@ -16,9 +17,9 @@ class ChatService
      * Create conversation when model accepts designer's show request.
      * Uses the generic table with context_type='casting'.
      */
-    public function createConversationFromShowAcceptance(Show $show, User $model, User $designer): Conversation
+    public function createConversationFromShowAcceptance(Show $show, User $model, User $designer, ?string $initialMessage = null): Conversation
     {
-        return Conversation::firstOrCreate(
+        $conversation = Conversation::firstOrCreate(
             [
                 'user_a_id'    => $model->id,
                 'user_b_id'    => $designer->id,
@@ -29,6 +30,12 @@ class ChatService
                 'status' => 'active',
             ]
         );
+
+        if ($conversation->wasRecentlyCreated && $initialMessage) {
+            $this->sendMessage($conversation, $designer, $initialMessage);
+        }
+
+        return $conversation;
     }
 
     /**
@@ -77,16 +84,50 @@ class ChatService
     }
 
     /**
-     * Mark messages as read.
+     * Mark messages as delivered (recipient's device received them, e.g. on push receipt).
+     */
+    public function markAsDelivered(Conversation $conversation, User $recipient): int
+    {
+        $now = now();
+
+        $count = $conversation->messages()
+            ->where('sender_id', '!=', $recipient->id)
+            ->whereNull('delivered_at')
+            ->update([
+                'delivered_at' => $now,
+                'updated_at'   => $now,
+            ]);
+
+        if ($count > 0) {
+            try {
+                broadcast(new MessagesDelivered($conversation, $recipient))->toOthers();
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('MessagesDelivered broadcast failed: ' . $e->getMessage());
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * Mark messages as read. Implies delivered.
      */
     public function markAsRead(Conversation $conversation, User $reader): int
     {
+        $now = now();
+
+        // If a message is read, it must have been delivered — backfill delivered_at for consistency.
+        $conversation->messages()
+            ->where('sender_id', '!=', $reader->id)
+            ->whereNull('delivered_at')
+            ->update(['delivered_at' => $now]);
+
         $count = $conversation->messages()
             ->where('sender_id', '!=', $reader->id)
             ->where('is_read', false)
             ->update([
                 'is_read' => true,
-                'read_at' => now(),
+                'read_at' => $now,
             ]);
 
         if ($count > 0) {

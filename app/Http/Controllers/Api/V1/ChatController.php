@@ -159,12 +159,31 @@ class ChatController extends Controller
                     'body'            => $message->body,
                     'type'            => $message->type,
                     'image_url'       => $message->image_url,
+                    'is_read'         => false,
+                    'read_at'         => null,
+                    'delivered_at'    => null,
                     'created_at'      => $message->created_at->toISOString(),
                 ],
             ], 201);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 403);
         }
+    }
+
+    /**
+     * Mark messages as delivered (called when device receives the push / WS event).
+     */
+    public function markAsDelivered(Request $request, Conversation $conversation): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$conversation->hasParticipant($user->id)) {
+            abort(403, 'You do not have access to this conversation.');
+        }
+
+        $count = $this->chatService->markAsDelivered($conversation, $user);
+
+        return response()->json(['delivered_count' => $count]);
     }
 
     /**

@@ -555,15 +555,49 @@ Note: image uploads for chat are not yet implemented on the backend. If you need
 
 **Response 201:** the message object.
 
-### 3.5 Mark as read
+### 3.5 Mark as delivered (NEW — Phase 1 ticks)
+
+```
+POST /api/v1/chat/conversations/{conversation_id}/delivered
+```
+
+No body. Marks messages from the other participant as delivered (sets `delivered_at`).
+
+**Response 200:** `{"delivered_count": 3}`
+
+**When to call:**
+- When a chat push notification arrives (even if app is in background), call this for the conversation.
+- When the user opens the conversations list screen, call it for conversations with unread messages (optional — but helps show the second tick before the user opens the chat).
+
+This drives the "double check" tick on the sender side.
+
+### 3.6 Mark as read
 
 ```
 POST /api/v1/chat/conversations/{conversation_id}/read
 ```
 
-No body. Marks all messages from the other participant as read.
+No body. Marks all messages from the other participant as read (sets `is_read=true`, `read_at`, and `delivered_at` if null).
 
 **Response 200:** `{"read_count": 5}`
+
+Call when the user opens/focuses the conversation detail screen.
+
+### 3.7 Tick rendering (WhatsApp style)
+
+Each message in the API response includes `delivered_at`, `read_at` and `is_read`. Render ticks on every own message:
+
+| State | Condition | Display |
+|---|---|---|
+| Sent | `delivered_at == null` | Single check, gray |
+| Delivered | `delivered_at != null && is_read == false` | Double check, gray |
+| Read | `is_read == true` | Double check, gold (`#D4AF37`) |
+
+### 3.8 Realtime delivery/read events (Reverb)
+
+Listen on `private-conversation.{id}` channel for:
+- `MessagesDelivered` payload: `{conversation_id, recipient_id, delivered_at}` → update own messages in that conversation to `delivered_at`
+- `MessagesRead` payload: `{conversation_id, reader_id, read_at}` → update own messages to `is_read=true`
 
 ### 3.6 How conversations get created
 
@@ -684,6 +718,9 @@ Existing push notification and in-app notification endpoints (covered in `10-mob
 - [ ] **Contact Support button:** calls `POST /chat/conversations/support` → navigates to the returned conversation
 - [ ] Send text messages with `POST /conversations/{id}/messages`
 - [ ] Mark as read with `POST /conversations/{id}/read` when entering
+- [ ] Mark as delivered with `POST /conversations/{id}/delivered` on chat push receipt
+- [ ] Render 3-state ticks on own messages (sent → delivered → read, gold on read)
+- [ ] Listen to `MessagesDelivered` realtime event
 
 ### Profile changes
 

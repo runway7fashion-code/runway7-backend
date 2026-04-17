@@ -62,14 +62,14 @@ class AuthController extends Controller
         $this->activityLog->log(ActivityAction::Login, $user, $user, "Login vía app ({$user->role})");
 
         return response()->json([
-            'user' => $user->load(['modelProfile', 'designerProfile']),
+            'user' => $user->load(['modelProfile', 'designerProfile.category']),
             'token' => $token,
         ]);
     }
 
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user()->load(['modelProfile', 'designerProfile']);
+        $user = $request->user()->load(['modelProfile', 'designerProfile.category']);
         return response()->json(['user' => $user]);
     }
 

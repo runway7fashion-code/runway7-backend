@@ -100,7 +100,7 @@ class ShowController extends Controller
         if ($assignment->designer_id) {
             $designer = User::find($assignment->designer_id);
             if ($designer) {
-                $this->chatService->createConversationFromShowAcceptance($show, $user, $designer);
+                $this->chatService->createConversationFromShowAcceptance($show, $user, $designer, $assignment->notes);
             }
         }
 

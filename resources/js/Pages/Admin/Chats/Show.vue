@@ -66,6 +66,12 @@ const roleLabels = {
     operation: 'Operation', sales: 'Sales', creative: 'Creative', tickets_manager: 'Tickets', admin: 'Admin',
 };
 const contextLabels = { casting: 'Casting Chat', material: 'Material Chat' };
+
+function deliveryState(msg) {
+    if (msg.is_read) return 'read';
+    if (msg.delivered_at) return 'delivered';
+    return 'sent';
+}
 </script>
 
 <template>
@@ -163,7 +169,24 @@ const contextLabels = { casting: 'Casting Chat', material: 'Material Chat' };
                                 <div class="flex items-center gap-1 mt-0.5 px-1" :class="msg.sender_id === userA?.id ? '' : 'justify-end'">
                                     <span class="text-[10px] text-gray-400">{{ formatTime(msg.created_at) }}</span>
                                     <span v-if="msg.sender?.first_name" class="text-[10px] text-gray-400">· {{ msg.sender.first_name }}</span>
-                                    <span v-if="msg.is_read" class="text-[10px] text-blue-400">read</span>
+
+                                    <!-- Ticks (sent / delivered / read) -->
+                                    <span class="inline-flex items-center ml-0.5" :title="deliveryState(msg)">
+                                        <!-- Sent: single check -->
+                                        <svg v-if="deliveryState(msg) === 'sent'" class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8.5l3 3 7-7" />
+                                        </svg>
+                                        <!-- Delivered: double check gray -->
+                                        <svg v-else-if="deliveryState(msg) === 'delivered'" class="w-4 h-3 text-gray-400" fill="none" viewBox="0 0 20 16" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2 8.5l3 3 7-7" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 11.5l1 1 7-7" />
+                                        </svg>
+                                        <!-- Read: double check gold -->
+                                        <svg v-else class="w-4 h-3" fill="none" viewBox="0 0 20 16" stroke="#D4AF37" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2 8.5l3 3 7-7" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M7 11.5l1 1 7-7" />
+                                        </svg>
+                                    </span>
                                 </div>
                             </div>
 
