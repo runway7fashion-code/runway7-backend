@@ -117,7 +117,9 @@ class ChatController extends Controller
     }
 
     /**
-     * Send a message from the panel (no longer read-only).
+     * Send a message. Only participants of the conversation can post — internal
+     * roles (admin, operation, …) cannot write in conversations that don't belong
+     * to them. If they need to reach a user, they should start their own chat.
      */
     public function sendMessage(Request $request, Conversation $conversation)
     {
@@ -127,30 +129,11 @@ class ChatController extends Controller
 
         $sender = auth()->user();
 
-        // Admin/internal users can send in any conversation
-        if (!$sender->isInternalTeam() && !$conversation->hasParticipant($sender->id)) {
-            abort(403);
-        }
-
-        // If admin is not a participant, they join as user_a or user_b
         if (!$conversation->hasParticipant($sender->id)) {
-            $message = $conversation->messages()->create([
-                'sender_id' => $sender->id,
-                'body'      => $request->body,
-                'type'      => 'text',
-            ]);
-            $conversation->update(['last_message_at' => now()]);
-
-            try {
-                broadcast(new \App\Events\NewMessage($message->load('sender')))->toOthers();
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('Admin chat broadcast failed: ' . $e->getMessage());
-            }
-
-            \App\Jobs\SendChatMessageNotificationJob::dispatch(messageId: $message->id);
-        } else {
-            $this->chatService->sendMessage($conversation, $sender, $request->body);
+            abort(403, 'You cannot write in a conversation you are not part of.');
         }
+
+        $this->chatService->sendMessage($conversation, $sender, $request->body);
 
         return back();
     }

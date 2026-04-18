@@ -362,8 +362,8 @@ function presenceLabel(user) {
                     </p>
                 </div>
 
-                <!-- Message input -->
-                <div class="border-t border-gray-200 px-5 py-3 bg-gray-50">
+                <!-- Message input (only for participants) -->
+                <div v-if="isParticipant" class="border-t border-gray-200 px-5 py-3 bg-gray-50">
                     <form @submit.prevent="sendMessage" class="flex gap-2">
                         <input v-model="messageForm.body" type="text" placeholder="Type a message..."
                             class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10"
@@ -373,6 +373,9 @@ function presenceLabel(user) {
                             <PaperAirplaneIcon class="w-4 h-4" />
                         </button>
                     </form>
+                </div>
+                <div v-else class="border-t border-gray-200 px-5 py-3 bg-gray-50 text-center">
+                    <p class="text-xs text-gray-400 italic">Read-only — you are not a participant of this conversation.</p>
                 </div>
             </div>
         </div>
