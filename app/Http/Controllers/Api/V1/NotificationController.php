@@ -28,13 +28,20 @@ class NotificationController extends Controller
         $notifications = $query->orderByDesc('created_at')->paginate($perPage);
 
         $items = $notifications->through(function ($n) {
+            $data = is_array($n->data) ? $n->data : (json_decode($n->data, true) ?: []);
+
             return [
-                'id'         => $n->id,
-                'title'      => $n->data['title'] ?? null,
-                'body'       => $n->data['body'] ?? null,
-                'screen'     => $n->data['screen'] ?? null,
-                'read_at'    => $n->read_at?->toIso8601String(),
-                'created_at' => $n->created_at->toIso8601String(),
+                'id'              => $n->id,
+                'title'           => $data['title'] ?? null,
+                'body'            => $data['body'] ?? null,
+                'screen'          => $data['screen'] ?? null,
+                'conversation_id' => $data['conversation_id'] ?? null,
+                'sender_id'       => $data['sender_id'] ?? null,
+                'message_id'      => $data['message_id'] ?? null,
+                'message_count'   => $data['message_count'] ?? null,
+                'data'            => $data,
+                'read_at'         => $n->read_at?->toIso8601String(),
+                'created_at'      => $n->created_at->toIso8601String(),
             ];
         });
 
