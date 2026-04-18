@@ -77,8 +77,18 @@ const typingUserName = () => {
     return u?.first_name || 'Someone';
 };
 
+const isParticipant = currentUser && (currentUser.id === userA?.id || currentUser.id === userB?.id);
+
+function markAsRead() {
+    if (!isParticipant) return;
+    window.axios.post(`/api/v1/chat/conversations/${props.conversation.id}/read`).catch(() => {});
+}
+
 onMounted(() => {
     scrollToBottom();
+
+    // Mark existing messages as read on open (only if current user is a participant)
+    markAsRead();
 
     echo = initEcho(page.props.reverb);
     if (!echo) return;
@@ -105,6 +115,8 @@ onMounted(() => {
             typingUserId.value = null;
             clearTimeout(typingTimeout);
         }
+        // Chat is open — mark as read immediately (also backfills delivered_at server-side)
+        markAsRead();
     });
 
     channel.listen('.MessagesRead', (e) => {
