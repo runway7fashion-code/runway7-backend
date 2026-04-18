@@ -3,6 +3,14 @@
 use App\Models\Conversation;
 use Illuminate\Support\Facades\Broadcast;
 
+// Register /broadcasting/auth with Sanctum-aware middleware so BOTH the admin
+// panel (session cookie on stateful domain) and the mobile app (Bearer token)
+// can authorize private channels.
+Broadcast::routes(['middleware' => [
+    \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+    'auth:sanctum',
+]]);
+
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
