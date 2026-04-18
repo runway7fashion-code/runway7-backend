@@ -7,14 +7,11 @@ let echoInstance = null;
 
 /**
  * Initialize Echo using Reverb config shared from the server via Inertia.
- * Call once from a component with access to `page.props.reverb` (e.g. chat pages).
+ * Call once from a component with access to `page.props.reverb`.
  */
 export function initEcho(config) {
     if (echoInstance) return echoInstance;
     if (!config?.key || !config?.host) return null;
-
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
-        || decodeURIComponent((document.cookie.match(/XSRF-TOKEN=([^;]+)/) || [])[1] || '');
 
     echoInstance = new Echo({
         broadcaster: 'reverb',
@@ -24,14 +21,20 @@ export function initEcho(config) {
         wssPort: config.port,
         forceTLS: config.scheme === 'https',
         enabledTransports: ['ws', 'wss'],
-        authEndpoint: '/broadcasting/auth',
-        auth: {
-            headers: {
-                'X-CSRF-TOKEN': csrfToken,
-                'X-XSRF-TOKEN': csrfToken,
-                'Accept': 'application/json',
+        // Use axios for auth — it already handles session cookie + XSRF token
+        authorizer: (channel) => ({
+            authorize: (socketId, callback) => {
+                window.axios.post('/broadcasting/auth', {
+                    socket_id: socketId,
+                    channel_name: channel.name,
+                })
+                .then(response => callback(null, response.data))
+                .catch(error => {
+                    console.error('[Echo] auth failed for', channel.name, error?.response?.status, error?.response?.data);
+                    callback(error);
+                });
             },
-        },
+        }),
     });
 
     return echoInstance;

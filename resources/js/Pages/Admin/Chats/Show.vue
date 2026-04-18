@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue';
+import { ref, nextTick, onMounted, onBeforeUnmount, watch } from 'vue';
 import { ChatBubbleLeftRightIcon, PaperAirplaneIcon } from '@heroicons/vue/24/outline';
 import { initEcho } from '@/echo.js';
 
@@ -45,6 +45,12 @@ function appendMessage(msg) {
     messages.value.push(msg);
     nextTick(() => scrollToBottom());
 }
+
+// Keep local `messages` ref in sync when Inertia delivers new props (e.g. after own send)
+watch(() => props.messages, (newList) => {
+    if (!Array.isArray(newList)) return;
+    for (const m of newList) appendMessage(m);
+}, { deep: false });
 
 function scrollToBottom() {
     if (chatContainer.value) {

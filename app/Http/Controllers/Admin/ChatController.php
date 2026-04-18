@@ -134,13 +134,20 @@ class ChatController extends Controller
 
         // If admin is not a participant, they join as user_a or user_b
         if (!$conversation->hasParticipant($sender->id)) {
-            // Admin is observing — send as system message instead
-            $conversation->messages()->create([
+            $message = $conversation->messages()->create([
                 'sender_id' => $sender->id,
                 'body'      => $request->body,
                 'type'      => 'text',
             ]);
             $conversation->update(['last_message_at' => now()]);
+
+            try {
+                broadcast(new \App\Events\NewMessage($message->load('sender')))->toOthers();
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Admin chat broadcast failed: ' . $e->getMessage());
+            }
+
+            \App\Jobs\SendChatMessageNotificationJob::dispatch(messageId: $message->id);
         } else {
             $this->chatService->sendMessage($conversation, $sender, $request->body);
         }
