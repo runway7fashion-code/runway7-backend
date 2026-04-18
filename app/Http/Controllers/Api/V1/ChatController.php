@@ -116,7 +116,11 @@ class ChatController extends Controller
     }
 
     /**
-     * Get messages for a conversation (paginated).
+     * Get messages for a conversation in chronological order (oldest → newest).
+     *
+     * Optional query params:
+     *   - limit=N (default: all messages)
+     *   - before=<message_id> to page backward for scroll-up history
      */
     public function messages(Request $request, Conversation $conversation): JsonResponse
     {
@@ -126,12 +130,23 @@ class ChatController extends Controller
             abort(403, 'You do not have access to this conversation.');
         }
 
-        $messages = $conversation->messages()
-            ->with('sender:id,first_name,last_name,profile_picture')
-            ->orderByDesc('created_at')
-            ->paginate(50);
+        $query = $conversation->messages()
+            ->with('sender:id,first_name,last_name,profile_picture');
 
-        return response()->json($messages);
+        if ($before = $request->input('before')) {
+            $query->where('id', '<', $before);
+        }
+
+        $limit = (int) $request->input('limit', 0);
+
+        // Take the most recent N (DESC) then reverse so the client gets oldest→newest
+        if ($limit > 0) {
+            $messages = $query->orderByDesc('created_at')->limit($limit)->get()->reverse()->values();
+        } else {
+            $messages = $query->orderBy('created_at')->get();
+        }
+
+        return response()->json(['data' => $messages]);
     }
 
     /**
