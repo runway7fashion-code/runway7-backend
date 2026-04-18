@@ -306,8 +306,8 @@ function presenceLabel(user) {
                                     <span class="text-[10px] text-gray-400">{{ formatTime(msg.created_at) }}</span>
                                     <span v-if="msg.sender?.first_name" class="text-[10px] text-gray-400">· {{ msg.sender.first_name }}</span>
 
-                                    <!-- Ticks (sent / delivered / read) -->
-                                    <span class="inline-flex items-center ml-0.5" :title="deliveryState(msg)">
+                                    <!-- Ticks (sent / delivered / read) — only for own messages -->
+                                    <span v-if="msg.sender_id === currentUser?.id" class="inline-flex items-center ml-0.5" :title="deliveryState(msg)">
                                         <!-- Sent: single check -->
                                         <svg v-if="deliveryState(msg) === 'sent'" class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 8.5l3 3 7-7" />
