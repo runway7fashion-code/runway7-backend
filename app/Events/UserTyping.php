@@ -25,6 +25,11 @@ class UserTyping implements ShouldBroadcastNow
         return [new PrivateChannel('conversation.' . $this->conversation->id)];
     }
 
+    public function broadcastAs(): string
+    {
+        return 'UserTyping';
+    }
+
     public function broadcastWith(): array
     {
         return [

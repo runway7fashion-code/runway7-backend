@@ -24,6 +24,11 @@ class MessagesDelivered implements ShouldBroadcast
         return [new PrivateChannel('conversation.' . $this->conversation->id)];
     }
 
+    public function broadcastAs(): string
+    {
+        return 'MessagesDelivered';
+    }
+
     public function broadcastWith(): array
     {
         return [
