@@ -42,6 +42,17 @@ class SendChatMessageNotificationJob implements ShouldQueue
         $recipient = User::find($recipientId);
         if (!$recipient) return;
 
+        // Skip notification if the recipient is currently viewing this conversation.
+        // active_conversation_at acts as a heartbeat — clients refresh it via
+        // focus / markAsRead. If older than 60s we assume they've left the chat.
+        if (
+            $recipient->active_conversation_id === $conversation->id
+            && $recipient->active_conversation_at
+            && $recipient->active_conversation_at->gt(now()->subSeconds(60))
+        ) {
+            return;
+        }
+
         $sender = $message->sender;
         $senderName = trim("{$sender->first_name} {$sender->last_name}");
 

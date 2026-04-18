@@ -191,6 +191,42 @@ class ChatController extends Controller
     }
 
     /**
+     * Mark the authenticated user as actively viewing a conversation.
+     * Used by SendChatMessageNotificationJob to suppress push/sms/in-app
+     * notifications while the recipient already has the chat open.
+     */
+    public function focus(Request $request, Conversation $conversation): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$conversation->hasParticipant($user->id)) {
+            abort(403, 'You do not have access to this conversation.');
+        }
+
+        $user->forceFill([
+            'active_conversation_id' => $conversation->id,
+            'active_conversation_at' => now(),
+        ])->save();
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Clear the active conversation when the user leaves the chat screen.
+     */
+    public function blur(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $user->forceFill([
+            'active_conversation_id' => null,
+            'active_conversation_at' => null,
+        ])->save();
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
      * Emit a "typing" realtime event to the other participant. No DB write.
      */
     public function typing(Request $request, Conversation $conversation): JsonResponse

@@ -84,11 +84,26 @@ function markAsRead() {
     window.axios.post(`/api/v1/chat/conversations/${props.conversation.id}/read`).catch(() => {});
 }
 
+function focusChat() {
+    if (!isParticipant) return;
+    window.axios.post(`/api/v1/chat/conversations/${props.conversation.id}/focus`).catch(() => {});
+}
+
+function blurChat() {
+    if (!isParticipant) return;
+    window.axios.post(`/api/v1/chat/presence/blur`).catch(() => {});
+}
+
+let presenceHeartbeat = null;
+
 onMounted(() => {
     scrollToBottom();
 
     // Mark existing messages as read on open (only if current user is a participant)
     markAsRead();
+    focusChat();
+    // Heartbeat — refresh active presence every 30s while the chat is open
+    presenceHeartbeat = setInterval(focusChat, 30_000);
 
     echo = initEcho(page.props.reverb);
     if (!echo) return;
@@ -140,6 +155,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
     clearTimeout(typingTimeout);
+    clearInterval(presenceHeartbeat);
+    blurChat();
     if (channel) {
         try { echo?.leave(`conversation.${props.conversation.id}`); } catch {}
     }

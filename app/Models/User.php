@@ -20,6 +20,7 @@ class User extends Authenticatable
     protected $fillable = [
         'first_name', 'last_name', 'email', 'phone', 'password',
         'role', 'status', 'sales_type', 'is_available', 'last_login_at', 'welcome_email_sent_at', 'sms_sent_at', 'profile_picture', 'last_seen_at',
+        'active_conversation_id', 'active_conversation_at',
     ];
 
     protected $appends = ['is_online'];
@@ -34,6 +35,7 @@ class User extends Authenticatable
             'welcome_email_sent_at'   => 'datetime',
             'sms_sent_at'             => 'datetime',
             'last_seen_at'            => 'datetime',
+            'active_conversation_at'  => 'datetime',
             'password' => 'hashed',
         ];
     }

@@ -629,7 +629,26 @@ Rules:
 - Auto-hide after 5s if no new `is_typing:true` arrives (fallback for when the other side disconnects mid-type).
 - Hide immediately on `is_typing:false` or when a `NewMessage` from that user arrives.
 
-### 3.10 Presence — online / last seen (Phase 2)
+### 3.10 Active-chat presence (supress notifications while chat open)
+
+When the user is actively viewing a conversation, the backend should NOT send push / SMS / in-app notifications for new messages in that same conversation (the user is already seeing them in realtime).
+
+**Tell the server when you enter / leave the chat screen:**
+
+```
+POST /api/v1/chat/conversations/{id}/focus   // on chat screen opened
+POST /api/v1/chat/presence/blur              // on chat screen closed / backgrounded
+```
+
+**Heartbeat:** re-hit `focus` every 30s while the chat screen is visible. If the server doesn't see a heartbeat for 60s, it resumes sending notifications (safety net in case the app crashes or WS drops without calling `blur`).
+
+Good triggers for these calls:
+- `focus`: `onResume` / `initState` of ChatScreen, on tab switch back to this chat.
+- `blur`: `onPause` / `dispose` of ChatScreen, on app going to background, on navigating away.
+
+`markAsRead` already refreshes the same heartbeat, so the behavior works even if the client only calls `/read` and not `/focus`.
+
+### 3.11 Presence — online / last seen (Phase 2)
 
 **No new endpoints needed.** The server updates `users.last_seen_at` automatically on every authenticated API request (throttled to once per 30s per user).
 
@@ -780,6 +799,8 @@ Existing push notification and in-app notification endpoints (covered in `10-mob
 - [ ] Show presence badges (Online / Last seen) in chat header using `other_participant.is_online` + `last_seen_at`
 - [ ] Emit typing events via `POST /conversations/{id}/typing` (throttled 3s)
 - [ ] Listen to `.UserTyping` event and show "X is typing…" with 5s auto-hide
+- [ ] Call `POST /conversations/{id}/focus` on chat open + heartbeat every 30s
+- [ ] Call `POST /chat/presence/blur` on chat close / app background
 
 ### Profile changes
 

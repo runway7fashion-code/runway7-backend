@@ -116,6 +116,13 @@ class ChatService
     {
         $now = now();
 
+        // Treat a "mark as read" as an implicit presence heartbeat — if the user
+        // keeps opening/reading the chat, we know they are actively viewing it.
+        $reader->forceFill([
+            'active_conversation_id' => $conversation->id,
+            'active_conversation_at' => $now,
+        ])->save();
+
         // If a message is read, it must have been delivered — backfill delivered_at for consistency.
         $conversation->messages()
             ->where('sender_id', '!=', $reader->id)
