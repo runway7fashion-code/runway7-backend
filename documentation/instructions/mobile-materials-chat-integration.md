@@ -648,7 +648,25 @@ Good triggers for these calls:
 
 `markAsRead` already refreshes the same heartbeat, so the behavior works even if the client only calls `/read` and not `/focus`.
 
-### 3.11 Presence — online / last seen (Phase 2)
+### 3.11 Per-user inbox channel (for the chat list screen)
+
+Each of the 4 chat events (`NewMessage`, `MessagesRead`, `MessagesDelivered`, `UserTyping`) is now broadcast on **three** channels:
+- `private-conversation.{conversation_id}` — use when inside a specific chat (existing)
+- `private-user.{user_a_id}` — the inbox channel of the first participant
+- `private-user.{user_b_id}` — the inbox channel of the second participant
+
+**In the chat list screen**, subscribe to `private-user.{ownUserId}` once and receive events for **every conversation the user belongs to**. Each event payload includes `conversation_id`, so filter client-side to update the right row.
+
+Authorization: the `user.{id}` channel only authorizes when `auth_user.id === id`.
+
+Example flow on the chat list:
+- `.NewMessage` on `private-user.{me}` with `conversation_id: 5` → update the preview text and unread count of conversation row 5, bump it to top.
+- `.UserTyping` with `conversation_id: 5, is_typing: true, user_id: other` → show "X is typing…" under conversation 5's preview (auto-hide 5s).
+- `.MessagesRead` / `.MessagesDelivered` → update ticks on the last-message preview if it's one of yours.
+
+You can keep subscribing to `private-conversation.{id}` while inside a chat — both channels receive the same events. Simpler: subscribe ONLY to `private-user.{me}` in both screens and always filter by `conversation_id`.
+
+### 3.12 Presence — online / last seen (Phase 2)
 
 **No new endpoints needed.** The server updates `users.last_seen_at` automatically on every authenticated API request (throttled to once per 30s per user).
 

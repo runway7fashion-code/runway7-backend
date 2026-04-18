@@ -15,6 +15,13 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
+// Per-user inbox channel: receives events (NewMessage, UserTyping, MessagesRead,
+// MessagesDelivered) for every conversation the user participates in. Used by the
+// chat list screen so we don't have to subscribe to each conversation individually.
+Broadcast::channel('user.{userId}', function ($user, int $userId) {
+    return (int) $user->id === $userId;
+});
+
 Broadcast::channel('conversation.{conversationId}', function ($user, int $conversationId) {
     $conversation = Conversation::find($conversationId);
     if (!$conversation) return false;
