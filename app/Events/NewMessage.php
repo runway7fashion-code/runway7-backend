@@ -22,14 +22,24 @@ class NewMessage implements ShouldBroadcast
 
     public function broadcastWith(): array
     {
+        $sender = $this->message->sender;
         return [
             'id'              => $this->message->id,
             'conversation_id' => $this->message->conversation_id,
             'sender_id'       => $this->message->sender_id,
-            'sender_name'     => $this->message->sender->first_name . ' ' . $this->message->sender->last_name,
+            'sender_name'     => $sender->first_name . ' ' . $sender->last_name,
+            'sender'          => [
+                'id'              => $sender->id,
+                'first_name'      => $sender->first_name,
+                'last_name'       => $sender->last_name,
+                'profile_picture' => $sender->profile_picture,
+            ],
             'body'            => $this->message->body,
             'type'            => $this->message->type,
             'image_url'       => $this->message->image_url,
+            'is_read'         => false,
+            'read_at'         => null,
+            'delivered_at'    => null,
             'created_at'      => $this->message->created_at->toISOString(),
         ];
     }

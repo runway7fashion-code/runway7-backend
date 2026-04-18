@@ -17,6 +17,7 @@ const userA = props.conversation.user_a;
 const userB = props.conversation.user_b;
 const show  = props.conversation.show;
 
+const messages = ref([...props.messages]);
 const messageForm = useForm({ body: '' });
 const chatContainer = ref(null);
 
@@ -37,6 +38,12 @@ function sendMessage() {
             emitTyping(false);
         },
     });
+}
+
+function appendMessage(msg) {
+    if (messages.value.some(m => m.id === msg.id)) return;
+    messages.value.push(msg);
+    nextTick(() => scrollToBottom());
 }
 
 function scrollToBottom() {
@@ -71,6 +78,7 @@ onMounted(() => {
     if (!echo) return;
 
     channel = echo.private(`conversation.${props.conversation.id}`);
+
     channel.listen('.UserTyping', (e) => {
         if (!e || e.user_id === currentUser?.id) return;
         if (e.is_typing) {
@@ -81,6 +89,34 @@ onMounted(() => {
             typingUserId.value = null;
             clearTimeout(typingTimeout);
         }
+    });
+
+    channel.listen('.NewMessage', (e) => {
+        if (!e || e.sender_id === currentUser?.id) return;
+        appendMessage(e);
+        // Clear typing indicator from this sender
+        if (typingUserId.value === e.sender_id) {
+            typingUserId.value = null;
+            clearTimeout(typingTimeout);
+        }
+    });
+
+    channel.listen('.MessagesRead', (e) => {
+        if (!e) return;
+        messages.value = messages.value.map(m =>
+            m.sender_id !== e.reader_id && !m.is_read
+                ? { ...m, is_read: true, read_at: e.read_at, delivered_at: m.delivered_at || e.read_at }
+                : m
+        );
+    });
+
+    channel.listen('.MessagesDelivered', (e) => {
+        if (!e) return;
+        messages.value = messages.value.map(m =>
+            m.sender_id !== e.recipient_id && !m.delivered_at
+                ? { ...m, delivered_at: e.delivered_at }
+                : m
+        );
     });
 });
 
@@ -109,8 +145,8 @@ function formatDate(dateStr) {
 
 function shouldShowDate(index) {
     if (index === 0) return true;
-    const prev = new Date(props.messages[index - 1].created_at).toDateString();
-    const curr = new Date(props.messages[index].created_at).toDateString();
+    const prev = new Date(messages.value[index - 1].created_at).toDateString();
+    const curr = new Date(messages.value[index].created_at).toDateString();
     return prev !== curr;
 }
 
