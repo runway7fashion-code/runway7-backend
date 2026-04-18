@@ -50,9 +50,9 @@ class HandleInertiaRequests extends Middleware
             ],
             'reverb' => [
                 'key'    => config('broadcasting.connections.reverb.key'),
-                'host'   => config('reverb.servers.reverb.options.host', env('REVERB_HOST', 'localhost')),
-                'port'   => (int) env('REVERB_PORT', 8080),
-                'scheme' => env('REVERB_SCHEME', 'http'),
+                'host'   => config('broadcasting.connections.reverb.options.host'),
+                'port'   => (int) config('broadcasting.connections.reverb.options.port'),
+                'scheme' => config('broadcasting.connections.reverb.options.scheme'),
             ],
         ];
     }
