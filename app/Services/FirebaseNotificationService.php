@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\DeviceToken;
 use App\Models\User;
 use Kreait\Firebase\Factory;
+use Kreait\Firebase\Messaging\AndroidConfig;
 use Kreait\Firebase\Messaging\ApnsConfig;
 use Kreait\Firebase\Messaging\CloudMessage;
 use Kreait\Firebase\Messaging\Notification;
@@ -87,26 +88,43 @@ class FirebaseNotificationService
 
         $notification = Notification::create($title, $body);
 
+        $threadId = $data['thread_id'] ?? null;
+
         // Configure APNs headers for iOS delivery
+        $apnsPayload = [
+            'aps' => [
+                'alert' => [
+                    'title' => $title,
+                    'body' => $body,
+                ],
+                'sound' => 'default',
+            ],
+        ];
+        if ($threadId) {
+            // iOS groups notifications in the banner/notification center by thread-id
+            $apnsPayload['aps']['thread-id'] = $threadId;
+        }
+
         $apnsConfig = ApnsConfig::fromArray([
             'headers' => [
                 'apns-priority' => '10',
                 'apns-push-type' => 'alert',
             ],
-            'payload' => [
-                'aps' => [
-                    'alert' => [
-                        'title' => $title,
-                        'body' => $body,
-                    ],
-                    'sound' => 'default',
-                ],
-            ],
+            'payload' => $apnsPayload,
         ]);
 
         $message = CloudMessage::new()
             ->withNotification($notification)
             ->withApnsConfig($apnsConfig);
+
+        if ($threadId) {
+            // Android: collapse_key replaces a previous undelivered push with the
+            // same key; tag groups them in the notification shade.
+            $message = $message->withAndroidConfig(AndroidConfig::fromArray([
+                'collapse_key' => $threadId,
+                'notification' => ['tag' => $threadId],
+            ]));
+        }
 
         if (!empty($data)) {
             $message = $message->withData($data);

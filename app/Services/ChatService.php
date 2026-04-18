@@ -137,6 +137,15 @@ class ChatService
                 'read_at' => $now,
             ]);
 
+        // Also collapse any unread in-app chat notifications for this conversation —
+        // once the user has opened the chat, the aggregated notification is stale.
+        \Illuminate\Support\Facades\DB::table('notifications')
+            ->where('notifiable_type', 'App\\Models\\User')
+            ->where('notifiable_id', $reader->id)
+            ->whereNull('read_at')
+            ->whereRaw("data::jsonb ->> 'conversation_id' = ?", [(string) $conversation->id])
+            ->update(['read_at' => $now, 'updated_at' => $now]);
+
         if ($count > 0) {
             try {
                 broadcast(new MessagesRead($conversation, $reader))->toOthers();

@@ -666,7 +666,32 @@ Example flow on the chat list:
 
 You can keep subscribing to `private-conversation.{id}` while inside a chat — both channels receive the same events. Simpler: subscribe ONLY to `private-user.{me}` in both screens and always filter by `conversation_id`.
 
-### 3.12 Presence — online / last seen (Phase 2)
+### 3.12 Grouped chat notifications
+
+In-app chat notifications are now aggregated per conversation while unread. Each notification's `data` JSON includes:
+
+```json
+{
+  "title": "Modelo Joseph",
+  "body": "latest message preview…",
+  "screen": "chat",
+  "conversation_id": 5,
+  "message_id": 42,
+  "sender_id": 660,
+  "message_count": 3
+}
+```
+
+- `body` = the LAST message received
+- `message_count` = total messages grouped since the last time the user read this chat (1 means no grouping)
+
+**Render rule in the notifications list:** show the `body` as the preview. If `message_count > 1`, show a small badge like `+2` (message_count - 1) next to the row OR render the body as `body · +2 more`. Your call — the data is there.
+
+**Push notifications (OS-level grouping):** server now sends each push with `thread_id = "chat-{conversation_id}"`. iOS and Android group pushes by this id automatically in the system notification center — you don't need extra client code for that.
+
+**When the user opens the chat**, the server auto-marks the aggregated notification as read (happens inside `markAsRead`), so the row disappears from the unread list next time you refresh it.
+
+### 3.13 Presence — online / last seen (Phase 2)
 
 **No new endpoints needed.** The server updates `users.last_seen_at` automatically on every authenticated API request (throttled to once per 30s per user).
 
