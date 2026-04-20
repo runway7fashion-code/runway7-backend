@@ -19,15 +19,9 @@ class EventController extends Controller
         $role = $user->role;
 
         $query = Event::query()
+            ->whereIn('status', ['published', 'active'])
+            ->where('end_date', '>=', today())
             ->orderBy('start_date', 'desc');
-
-        // Optional ?status filter for specific contexts (e.g. model casting should
-        // only show active events). Default behavior: published + active.
-        if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
-        } else {
-            $query->whereIn('status', ['published', 'active']);
-        }
 
         if ($role === 'model') {
             $query->whereHas('models', fn ($q) => $q->where('users.id', $user->id));
