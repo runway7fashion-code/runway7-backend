@@ -53,6 +53,7 @@ class CommunicationController extends Controller
             'public_relations' => ['media', 'press', 'influencer'],
             'tickets_manager'  => ['model', 'designer', 'attendee', 'vip', 'sponsor'],
             'accounting'       => ['designer'],
+            'sponsorship'      => ['sponsor'],
             default            => [],
         };
     }

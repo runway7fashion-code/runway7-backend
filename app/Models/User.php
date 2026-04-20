@@ -13,13 +13,13 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     // Role constants grouped by category
-    const ROLES_INTERNAL = ['admin', 'accounting', 'operation', 'tickets_manager', 'marketing', 'public_relations', 'sales', 'creative'];
+    const ROLES_INTERNAL = ['admin', 'accounting', 'operation', 'tickets_manager', 'marketing', 'public_relations', 'sales', 'creative', 'sponsorship'];
     const ROLES_PARTICIPANT = ['designer', 'model', 'media', 'volunteer', 'staff', 'assistant'];
     const ROLES_ATTENDEE = ['attendee', 'vip', 'influencer', 'press', 'sponsor', 'complementary'];
 
     protected $fillable = [
         'first_name', 'last_name', 'email', 'phone', 'password',
-        'role', 'status', 'sales_type', 'is_available', 'last_login_at', 'welcome_email_sent_at', 'sms_sent_at', 'profile_picture', 'last_seen_at',
+        'role', 'status', 'sales_type', 'sponsorship_type', 'is_available', 'last_login_at', 'welcome_email_sent_at', 'sms_sent_at', 'profile_picture', 'last_seen_at',
         'active_conversation_id', 'active_conversation_at',
     ];
 
@@ -73,6 +73,10 @@ class User extends Authenticatable
     public function isMarketing(): bool { return $this->role === 'marketing'; }
     public function isPublicRelations(): bool { return $this->role === 'public_relations'; }
     public function isSales(): bool { return $this->role === 'sales'; }
+    public function isCreative(): bool { return $this->role === 'creative'; }
+    public function isSponsorship(): bool { return $this->role === 'sponsorship'; }
+    public function isSponsorshipLider(): bool { return $this->role === 'sponsorship' && $this->sponsorship_type === 'lider'; }
+    public function isSponsorshipAsesor(): bool { return $this->role === 'sponsorship' && $this->sponsorship_type === 'asesor'; }
     public function isInternalTeam(): bool { return in_array($this->role, self::ROLES_INTERNAL); }
 
     // --- Role checks: Participants ---

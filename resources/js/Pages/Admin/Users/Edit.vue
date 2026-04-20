@@ -26,6 +26,7 @@ const form = useForm({
     phone: props.user.phone || '',
     role: props.user.role,
     sales_type: props.user.sales_type || '',
+    sponsorship_type: props.user.sponsorship_type || '',
     status: props.user.status,
     password: '',
     password_confirmation: '',
@@ -50,6 +51,7 @@ function formatRole(r) {
 const isModel = computed(() => form.role === 'model');
 const isDesigner = computed(() => form.role === 'designer');
 const isSales = computed(() => form.role === 'sales');
+const isSponsorship = computed(() => form.role === 'sponsorship');
 const showPressFields = computed(() => form.role === 'press');
 const showSponsorFields = computed(() => form.role === 'sponsor');
 const showProfileSection = computed(() => ['press', 'sponsor'].includes(form.role));
@@ -123,6 +125,14 @@ function submit() {
                         <div v-if="isSales">
                             <label class="block text-sm font-medium text-gray-700 mb-1.5">Tipo de Vendedor *</label>
                             <select v-model="form.sales_type" class="input bg-white">
+                                <option value="">Seleccionar...</option>
+                                <option value="lider">Líder</option>
+                                <option value="asesor">Asesor</option>
+                            </select>
+                        </div>
+                        <div v-if="isSponsorship">
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Tipo de Sponsorship *</label>
+                            <select v-model="form.sponsorship_type" class="input bg-white">
                                 <option value="">Seleccionar...</option>
                                 <option value="lider">Líder</option>
                                 <option value="asesor">Asesor</option>

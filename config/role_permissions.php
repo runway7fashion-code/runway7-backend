@@ -33,6 +33,10 @@ return [
         'sections' => ['designers', 'chats', 'communications'],
         'label' => 'Creative',
     ],
+    'sponsorship' => [
+        'sections' => ['dashboard', 'users', 'communications'],
+        'label' => 'Sponsorship',
+    ],
     'assistant' => [
         'sections' => [],
         'label' => 'Asistente',

@@ -11,16 +11,43 @@ use Inertia\Response;
 
 class UserController extends Controller
 {
+    /**
+     * If the authenticated user's role restricts them to manage a single
+     * target role, return that role name. Otherwise null.
+     */
+    private function restrictedToRole(): ?string
+    {
+        $auth = auth()->user();
+        return $auth && $auth->role === 'sponsorship' ? 'sponsor' : null;
+    }
+
+    private function roleCategoriesForCurrentUser(): array
+    {
+        $restricted = $this->restrictedToRole();
+        if ($restricted) {
+            return ['attendee' => [$restricted]];
+        }
+        return [
+            'internal' => User::ROLES_INTERNAL,
+            'participant' => User::ROLES_PARTICIPANT,
+            'attendee' => User::ROLES_ATTENDEE,
+        ];
+    }
+
     public function index(Request $request): Response
     {
+        $restricted = $this->restrictedToRole();
         $query = User::query();
 
-        if ($request->filled('category')) {
-            $query->byCategory($request->category);
-        }
-
-        if ($request->filled('role')) {
-            $query->role($request->role);
+        if ($restricted) {
+            $query->where('role', $restricted);
+        } else {
+            if ($request->filled('category')) {
+                $query->byCategory($request->category);
+            }
+            if ($request->filled('role')) {
+                $query->role($request->role);
+            }
         }
 
         if ($request->filled('search')) {
@@ -37,30 +64,26 @@ class UserController extends Controller
         return Inertia::render('Admin/Users/Index', [
             'users' => $users,
             'filters' => $request->only(['category', 'role', 'search']),
-            'roleCategories' => [
-                'internal' => User::ROLES_INTERNAL,
-                'participant' => User::ROLES_PARTICIPANT,
-                'attendee' => User::ROLES_ATTENDEE,
-            ],
+            'roleCategories' => $this->roleCategoriesForCurrentUser(),
+            'restrictedRole' => $restricted,
         ]);
     }
 
     public function create(): Response
     {
         return Inertia::render('Admin/Users/Create', [
-            'roleCategories' => [
-                'internal' => User::ROLES_INTERNAL,
-                'participant' => User::ROLES_PARTICIPANT,
-                'attendee' => User::ROLES_ATTENDEE,
-            ],
+            'roleCategories' => $this->roleCategoriesForCurrentUser(),
+            'restrictedRole' => $this->restrictedToRole(),
         ]);
     }
 
     public function store(Request $request)
     {
-        $allRoles = implode(',', array_merge(
-            User::ROLES_INTERNAL, User::ROLES_PARTICIPANT, User::ROLES_ATTENDEE
-        ));
+        $restricted = $this->restrictedToRole();
+        $allowedRoles = $restricted
+            ? [$restricted]
+            : array_merge(User::ROLES_INTERNAL, User::ROLES_PARTICIPANT, User::ROLES_ATTENDEE);
+        $allRoles = implode(',', $allowedRoles);
 
         $request->validate([
             'first_name' => 'required|string|max:255',
@@ -75,6 +98,7 @@ class UserController extends Controller
 
         $request->validate([
             'sales_type' => 'nullable|required_if:role,sales|in:lider,asesor',
+            'sponsorship_type' => 'nullable|required_if:role,sponsorship|in:lider,asesor',
         ]);
 
         DB::transaction(function () use ($request) {
@@ -86,6 +110,7 @@ class UserController extends Controller
                 'password' => bcrypt($request->password),
                 'role' => $request->role,
                 'sales_type' => $request->role === 'sales' ? $request->sales_type : null,
+                'sponsorship_type' => $request->role === 'sponsorship' ? $request->sponsorship_type : null,
                 'status' => $request->status,
             ]);
 
@@ -98,6 +123,11 @@ class UserController extends Controller
 
     public function show(User $user): Response
     {
+        $restricted = $this->restrictedToRole();
+        if ($restricted && $user->role !== $restricted) {
+            abort(403);
+        }
+
         $user->load([
             'modelProfile',
             'designerProfile',
@@ -115,23 +145,31 @@ class UserController extends Controller
 
     public function edit(User $user): Response
     {
+        $restricted = $this->restrictedToRole();
+        if ($restricted && $user->role !== $restricted) {
+            abort(403);
+        }
+
         $user->load(['modelProfile', 'designerProfile', 'pressProfile', 'sponsorProfile']);
 
         return Inertia::render('Admin/Users/Edit', [
             'user' => $user->append('role_category'),
-            'roleCategories' => [
-                'internal' => User::ROLES_INTERNAL,
-                'participant' => User::ROLES_PARTICIPANT,
-                'attendee' => User::ROLES_ATTENDEE,
-            ],
+            'roleCategories' => $this->roleCategoriesForCurrentUser(),
+            'restrictedRole' => $restricted,
         ]);
     }
 
     public function update(Request $request, User $user)
     {
-        $allRoles = implode(',', array_merge(
-            User::ROLES_INTERNAL, User::ROLES_PARTICIPANT, User::ROLES_ATTENDEE
-        ));
+        $restricted = $this->restrictedToRole();
+        if ($restricted && $user->role !== $restricted) {
+            abort(403);
+        }
+
+        $allowedRoles = $restricted
+            ? [$restricted]
+            : array_merge(User::ROLES_INTERNAL, User::ROLES_PARTICIPANT, User::ROLES_ATTENDEE);
+        $allRoles = implode(',', $allowedRoles);
 
         $request->validate([
             'first_name' => 'required|string|max:255',
@@ -145,6 +183,7 @@ class UserController extends Controller
 
         $request->validate([
             'sales_type' => 'nullable|required_if:role,sales|in:lider,asesor',
+            'sponsorship_type' => 'nullable|required_if:role,sponsorship|in:lider,asesor',
         ]);
 
         if ($request->filled('password')) {
@@ -159,6 +198,7 @@ class UserController extends Controller
                 'phone' => $request->phone,
                 'role' => $request->role,
                 'sales_type' => $request->role === 'sales' ? $request->sales_type : null,
+                'sponsorship_type' => $request->role === 'sponsorship' ? $request->sponsorship_type : null,
                 'status' => $request->status,
             ];
 
@@ -176,6 +216,11 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
+        $restricted = $this->restrictedToRole();
+        if ($restricted && $user->role !== $restricted) {
+            abort(403);
+        }
+
         $user->delete();
         return redirect()->route('admin.users.index')
             ->with('success', 'Usuario eliminado.');

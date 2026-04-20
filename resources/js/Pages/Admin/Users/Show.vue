@@ -73,6 +73,8 @@ const profile = props.user.model_profile
 
                 <div class="mt-4 pt-4 border-t border-gray-100 flex items-center gap-4 text-sm text-gray-500">
                     <span><strong class="text-gray-700">Rol:</strong> {{ formatRole(user.role) }}</span>
+                    <span v-if="user.role === 'sales' && user.sales_type"><strong class="text-gray-700">Tipo:</strong> {{ user.sales_type === 'lider' ? 'Líder' : 'Asesor' }}</span>
+                    <span v-if="user.role === 'sponsorship' && user.sponsorship_type"><strong class="text-gray-700">Tipo:</strong> {{ user.sponsorship_type === 'lider' ? 'Líder' : 'Asesor' }}</span>
                     <span><strong class="text-gray-700">Registrado:</strong> {{ new Date(user.created_at).toLocaleDateString('es-US', { year: 'numeric', month: 'long', day: 'numeric' }) }}</span>
                 </div>
 
