@@ -141,7 +141,6 @@ const profile = props.user.model_profile
                 <template v-if="user.role === 'sponsor' && user.sponsor_profile">
                     <div class="grid grid-cols-2 gap-4 text-sm">
                         <div v-if="user.sponsor_profile.company_name"><span class="text-gray-500">Empresa:</span> <span class="font-medium">{{ user.sponsor_profile.company_name }}</span></div>
-                        <div v-if="user.sponsor_profile.sponsorship_level"><span class="text-gray-500">Nivel:</span> <span class="font-medium capitalize">{{ user.sponsor_profile.sponsorship_level }}</span></div>
                         <div v-if="user.sponsor_profile.website"><span class="text-gray-500">Web:</span> <a :href="user.sponsor_profile.website" target="_blank" class="text-blue-600 hover:underline font-medium">{{ user.sponsor_profile.website }}</a></div>
                         <div v-if="user.sponsor_profile.notes" class="col-span-2"><span class="text-gray-500">Notas:</span> <p class="font-medium mt-1">{{ user.sponsor_profile.notes }}</p></div>
                     </div>

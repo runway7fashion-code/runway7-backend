@@ -391,7 +391,6 @@ class UserSeeder extends Seeder
         SponsorProfile::create([
             'user_id'            => $sponsor->id,
             'company_name'       => 'Luxe Brand Co.',
-            'sponsorship_level'  => 'gold',
             'website'            => 'https://luxebrand.com',
             'notes'              => 'Sponsor principal del evento. Presupuesto confirmado.',
         ]);

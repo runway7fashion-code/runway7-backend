@@ -575,6 +575,5 @@ Notificaciones push para la app móvil.
 |---------|------|-------------|
 | user_id | FK → users | |
 | company_name | string | |
-| sponsorship_level | string | `bronze`, `silver`, `gold`, `platinum` |
 | website | string nullable | |
 | notes | text nullable | |

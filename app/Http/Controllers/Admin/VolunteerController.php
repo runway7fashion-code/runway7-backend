@@ -827,6 +827,11 @@ class VolunteerController extends Controller
         return back()->with('success', $msg)->with('importSummary', $s);
     }
 
+    public function downloadImportTemplate()
+    {
+        return Excel::download(new \App\Exports\VolunteersTemplateExport(), 'volunteers_import_template.xlsx');
+    }
+
     // ──────────────────────────────────────────────
     //  Helpers
     // ──────────────────────────────────────────────

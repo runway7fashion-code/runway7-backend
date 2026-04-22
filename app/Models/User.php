@@ -19,7 +19,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'first_name', 'last_name', 'email', 'phone', 'password',
-        'role', 'status', 'sales_type', 'sponsorship_type', 'is_available', 'last_login_at', 'welcome_email_sent_at', 'sms_sent_at', 'profile_picture', 'last_seen_at',
+        'role', 'status', 'sales_type', 'sponsorship_type', 'complementary_type', 'is_available', 'last_login_at', 'welcome_email_sent_at', 'sms_sent_at', 'profile_picture', 'last_seen_at',
         'active_conversation_id', 'active_conversation_at',
     ];
 

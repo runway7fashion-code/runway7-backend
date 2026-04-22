@@ -37,6 +37,7 @@ import {
     EnvelopeIcon,
     ChatBubbleBottomCenterTextIcon,
     BellAlertIcon,
+    StarIcon,
 } from '@heroicons/vue/24/outline';
 
 const page = usePage();
@@ -109,6 +110,30 @@ const accountingItems = computed(() => {
 });
 
 const isSalesLider = computed(() => user.value?.role === 'sales' && user.value?.sales_type === 'lider');
+const isSponsorshipLider = computed(() => user.value?.role === 'sponsorship' && user.value?.sponsorship_type === 'lider');
+
+const showSponsorship = computed(() =>
+    hasSection('sponsorship_dashboard') ||
+    hasSection('sponsorship_companies') || hasSection('sponsorship_categories') ||
+    hasSection('sponsorship_packages') || hasSection('sponsorship_tags') ||
+    hasSection('sponsorship_leads') || hasSection('sponsorship_calendar') ||
+    hasSection('sponsorship_sponsors')
+);
+const sponsorshipItems = computed(() => {
+    const items = [];
+    if (hasSection('sponsorship_dashboard')) items.push({ name: 'Dashboard',   href: '/admin/sponsorship/dashboard',  icon: PresentationChartBarIcon });
+    if (hasSection('sponsorship_leads'))     items.push({ name: 'Leads',       href: '/admin/sponsorship/leads',      icon: UserPlusIcon });
+    if (hasSection('sponsorship_sponsors'))  items.push({ name: 'Sponsors',    href: '/admin/sponsorship/sponsors',   icon: StarIcon });
+    if (hasSection('sponsorship_calendar'))  items.push({ name: 'Calendar',    href: '/admin/sponsorship/calendar',   icon: CalendarDaysIcon });
+    if (hasSection('sponsorship_companies')) items.push({ name: 'Companies',   href: '/admin/sponsorship/companies',  icon: UsersIcon });
+    if (hasSection('sponsorship_packages'))  items.push({ name: 'Packages',    href: '/admin/sponsorship/packages',   icon: CurrencyDollarIcon });
+    if (hasSection('sponsorship_categories')) items.push({ name: 'Categories', href: '/admin/sponsorship/categories', icon: Cog6ToothIcon });
+    if (hasSection('sponsorship_tags'))      items.push({ name: 'Tags',        href: '/admin/sponsorship/tags',       icon: TagIcon });
+    if (hasSection('sponsorship_packages') && (isAdmin.value || isSponsorshipLider.value)) {
+        items.push({ name: 'Benefits', href: '/admin/sponsorship/benefits', icon: ClipboardDocumentListIcon });
+    }
+    return items;
+});
 const showSales = computed(() => hasSection('sales_dashboard') || hasSection('sales_designers') || hasSection('sales_leads') || hasSection('designer_packages'));
 const salesItems = computed(() => {
     const items = [];
@@ -446,6 +471,25 @@ function logout() {
                     <div class="pt-3 mt-3 border-t border-gray-800">
                         <p v-if="!sidebarCollapsed" class="px-3 mb-2 text-xs uppercase tracking-widest text-gray-600">Sales</p>
                         <Link v-for="sub in salesItems" :key="sub.name" :href="sub.href"
+                            :title="sidebarCollapsed ? sub.name : ''"
+                            class="flex items-center py-2.5 rounded-lg text-sm font-medium transition-all duration-150"
+                            :class="[
+                                $page.url.startsWith(sub.href)
+                                    ? 'bg-yellow-900/30 text-yellow-400'
+                                    : 'text-gray-400 hover:text-white hover:bg-gray-800',
+                                sidebarCollapsed ? 'justify-center px-0' : 'px-3'
+                            ]">
+                            <component :is="sub.icon" :class="['h-5 w-5 flex-shrink-0', sidebarCollapsed ? '' : 'mr-3']" />
+                            <span v-if="!sidebarCollapsed">{{ sub.name }}</span>
+                        </Link>
+                    </div>
+                </template>
+
+                <!-- Sponsorship -->
+                <template v-if="showSponsorship">
+                    <div class="pt-3 mt-3 border-t border-gray-800">
+                        <p v-if="!sidebarCollapsed" class="px-3 mb-2 text-xs uppercase tracking-widest text-gray-600">Sponsorship</p>
+                        <Link v-for="sub in sponsorshipItems" :key="sub.name" :href="sub.href"
                             :title="sidebarCollapsed ? sub.name : ''"
                             class="flex items-center py-2.5 rounded-lg text-sm font-medium transition-all duration-150"
                             :class="[

@@ -183,18 +183,7 @@ function submit() {
                     </template>
 
                     <template v-if="showSponsorFields">
-                        <div class="grid grid-cols-2 gap-4 mb-4">
-                            <div><label class="block text-sm font-medium text-gray-700 mb-1.5">Empresa *</label><input v-model="form.profile.company_name" type="text" class="input" /></div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1.5">Nivel</label>
-                                <select v-model="form.profile.sponsorship_level" class="input bg-white">
-                                    <option value="">Seleccionar...</option>
-                                    <option value="gold">Gold</option>
-                                    <option value="silver">Silver</option>
-                                    <option value="bronze">Bronze</option>
-                                </select>
-                            </div>
-                        </div>
+                        <div class="mb-4"><label class="block text-sm font-medium text-gray-700 mb-1.5">Empresa *</label><input v-model="form.profile.company_name" type="text" class="input" /></div>
                         <div class="mb-4"><label class="block text-sm font-medium text-gray-700 mb-1.5">Sitio web</label><input v-model="form.profile.website" type="url" class="input" /></div>
                         <div><label class="block text-sm font-medium text-gray-700 mb-1.5">Notas</label><textarea v-model="form.profile.notes" rows="3" class="input resize-none"></textarea></div>
                     </template>

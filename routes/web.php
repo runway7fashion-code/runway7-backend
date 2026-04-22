@@ -32,6 +32,15 @@ use App\Http\Controllers\Admin\LeadEmailController;
 use App\Http\Controllers\Admin\CommunicationController;
 use App\Http\Controllers\Admin\MaterialController;
 use App\Http\Controllers\Admin\ArtworkController;
+use App\Http\Controllers\Admin\Sponsorship\CompanyController as SponsorshipCompanyController;
+use App\Http\Controllers\Admin\Sponsorship\CategoryController as SponsorshipCategoryController;
+use App\Http\Controllers\Admin\Sponsorship\PackageController as SponsorshipPackageController;
+use App\Http\Controllers\Admin\Sponsorship\PackageBenefitController as SponsorshipPackageBenefitController;
+use App\Http\Controllers\Admin\Sponsorship\TagController as SponsorshipTagController;
+use App\Http\Controllers\Admin\Sponsorship\LeadController as SponsorshipLeadController;
+use App\Http\Controllers\Admin\Sponsorship\ConversionController as SponsorshipConversionController;
+use App\Http\Controllers\Admin\Sponsorship\SponsorController as SponsorshipSponsorController;
+use App\Http\Controllers\Admin\Sponsorship\DashboardController as SponsorshipDashboardController;
 
 Route::get('/', function () {
     return redirect()->route('admin.login');
@@ -143,6 +152,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             // Voluntarios - admin, operation
             Route::middleware('section:volunteers')->group(function () {
                 Route::get('volunteers/export', [VolunteerController::class, 'exportVolunteers'])->name('volunteers.export');
+                Route::get('volunteers/import-template', [VolunteerController::class, 'downloadImportTemplate'])->name('volunteers.import-template');
                 Route::post('volunteers/import', [VolunteerController::class, 'importVolunteers'])->name('volunteers.import');
                 Route::post('volunteers/send-bulk-onboarding', [VolunteerController::class, 'sendBulkOnboardingEmails'])->name('volunteers.send-bulk-onboarding');
                 Route::post('volunteers/send-bulk-onboarding-sms', [VolunteerController::class, 'sendBulkOnboardingSms'])->name('volunteers.send-bulk-onboarding-sms');
@@ -405,6 +415,105 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('packages', [DesignerSettingsController::class, 'storePackage'])->name('packages.store');
                 Route::put('packages/{package}', [DesignerSettingsController::class, 'updatePackage'])->name('packages.update');
                 Route::delete('packages/{package}', [DesignerSettingsController::class, 'destroyPackage'])->name('packages.destroy');
+            });
+        });
+
+        // Sponsorship — admin, sponsorship (lider/asesor)
+        Route::prefix('sponsorship')->name('sponsorship.')->group(function () {
+            // Dashboard
+            Route::middleware('section:sponsorship_dashboard')->group(function () {
+                Route::get('dashboard', [SponsorshipDashboardController::class, 'index'])->name('dashboard');
+            });
+
+            // Companies
+            Route::middleware('section:sponsorship_companies')->group(function () {
+                Route::get('companies', [SponsorshipCompanyController::class, 'index'])->name('companies.index');
+                Route::get('companies/search', [SponsorshipCompanyController::class, 'search'])->name('companies.search');
+                Route::post('companies', [SponsorshipCompanyController::class, 'store'])->name('companies.store');
+                Route::get('companies/{company}/edit', [SponsorshipCompanyController::class, 'edit'])->name('companies.edit');
+                Route::put('companies/{company}', [SponsorshipCompanyController::class, 'update'])->name('companies.update');
+                Route::delete('companies/{company}', [SponsorshipCompanyController::class, 'destroy'])->name('companies.destroy');
+            });
+
+            // Categories
+            Route::middleware('section:sponsorship_categories')->group(function () {
+                Route::get('categories', [SponsorshipCategoryController::class, 'index'])->name('categories.index');
+                Route::post('categories', [SponsorshipCategoryController::class, 'store'])->name('categories.store');
+                Route::put('categories/{category}', [SponsorshipCategoryController::class, 'update'])->name('categories.update');
+                Route::delete('categories/{category}', [SponsorshipCategoryController::class, 'destroy'])->name('categories.destroy');
+            });
+
+            // Packages
+            Route::middleware('section:sponsorship_packages')->group(function () {
+                Route::get('packages', [SponsorshipPackageController::class, 'index'])->name('packages.index');
+                Route::get('packages/create', [SponsorshipPackageController::class, 'create'])->name('packages.create');
+                Route::post('packages', [SponsorshipPackageController::class, 'store'])->name('packages.store');
+                Route::get('packages/{package}/edit', [SponsorshipPackageController::class, 'edit'])->name('packages.edit');
+                Route::put('packages/{package}', [SponsorshipPackageController::class, 'update'])->name('packages.update');
+                Route::delete('packages/{package}', [SponsorshipPackageController::class, 'destroy'])->name('packages.destroy');
+            });
+
+            // Benefits (solo lider/admin)
+            Route::middleware('section:sponsorship_benefits')->group(function () {
+                Route::get('benefits', [SponsorshipPackageBenefitController::class, 'index'])->name('benefits.index');
+                Route::post('benefits', [SponsorshipPackageBenefitController::class, 'store'])->name('benefits.store');
+                Route::put('benefits/{benefit}', [SponsorshipPackageBenefitController::class, 'update'])->name('benefits.update');
+                Route::delete('benefits/{benefit}', [SponsorshipPackageBenefitController::class, 'destroy'])->name('benefits.destroy');
+            });
+
+            // Tags
+            Route::middleware('section:sponsorship_tags')->group(function () {
+                Route::get('tags', [SponsorshipTagController::class, 'index'])->name('tags.index');
+                Route::post('tags', [SponsorshipTagController::class, 'store'])->name('tags.store');
+                Route::put('tags/{tag}', [SponsorshipTagController::class, 'update'])->name('tags.update');
+                Route::delete('tags/{tag}', [SponsorshipTagController::class, 'destroy'])->name('tags.destroy');
+            });
+
+            // Leads
+            Route::middleware('section:sponsorship_leads')->group(function () {
+                Route::get('leads', [SponsorshipLeadController::class, 'index'])->name('leads.index');
+                Route::get('leads/create', [SponsorshipLeadController::class, 'create'])->name('leads.create');
+                Route::post('leads', [SponsorshipLeadController::class, 'store'])->name('leads.store');
+                Route::get('leads/{lead}', [SponsorshipLeadController::class, 'show'])->name('leads.show');
+                Route::get('leads/{lead}/edit', [SponsorshipLeadController::class, 'edit'])->name('leads.edit');
+                Route::put('leads/{lead}', [SponsorshipLeadController::class, 'update'])->name('leads.update');
+                Route::delete('leads/{lead}', [SponsorshipLeadController::class, 'destroy'])->name('leads.destroy');
+
+                Route::patch('leads/{lead}/status', [SponsorshipLeadController::class, 'updateStatus'])->name('leads.update-status');
+                Route::patch('leads/{lead}/assign', [SponsorshipLeadController::class, 'assign'])->name('leads.assign');
+                Route::patch('leads/{lead}/tags', [SponsorshipLeadController::class, 'syncTags'])->name('leads.sync-tags');
+                Route::post('leads/{lead}/add-event', [SponsorshipLeadController::class, 'addEvent'])->name('leads.add-event');
+                Route::delete('leads/{lead}/remove-event', [SponsorshipLeadController::class, 'removeEvent'])->name('leads.remove-event');
+
+                Route::post('leads/{lead}/send-email', [SponsorshipLeadController::class, 'sendEmail'])->name('leads.send-email');
+                Route::post('leads/{lead}/documents', [SponsorshipLeadController::class, 'uploadDocument'])->name('leads.upload-document');
+                Route::delete('lead-documents/{document}', [SponsorshipLeadController::class, 'deleteDocument'])->name('leads.delete-document');
+
+                // Conversion lead → sponsor
+                Route::get('leads/{lead}/convert', [SponsorshipConversionController::class, 'show'])->name('leads.convert.show');
+                Route::post('leads/{lead}/convert', [SponsorshipConversionController::class, 'store'])->name('leads.convert.store');
+
+                // Activities / Timeline
+                Route::post('leads/{lead}/activities', [SponsorshipLeadController::class, 'addActivity'])->name('leads.add-activity');
+                Route::patch('activities/{activity}/complete', [SponsorshipLeadController::class, 'completeActivity'])->name('activities.complete');
+                Route::patch('activities/{activity}/cancel', [SponsorshipLeadController::class, 'cancelActivity'])->name('activities.cancel');
+                Route::patch('activities/{activity}/not-completed', [SponsorshipLeadController::class, 'notCompletedActivity'])->name('activities.not-completed');
+                Route::delete('activities/{activity}', [SponsorshipLeadController::class, 'destroyActivity'])->name('activities.destroy');
+            });
+
+            // Calendar
+            Route::middleware('section:sponsorship_calendar')->group(function () {
+                Route::get('calendar', [SponsorshipLeadController::class, 'calendar'])->name('calendar');
+                Route::get('calendar/events', [SponsorshipLeadController::class, 'calendarEvents'])->name('calendar.events');
+            });
+
+            // Sponsors
+            Route::middleware('section:sponsorship_sponsors')->group(function () {
+                Route::get('sponsors', [SponsorshipSponsorController::class, 'index'])->name('sponsors.index');
+                Route::get('sponsors/{user}', [SponsorshipSponsorController::class, 'show'])->name('sponsors.show');
+                Route::post('sponsors/{user}/send-onboarding', [SponsorshipSponsorController::class, 'sendOnboarding'])->name('sponsors.send-onboarding');
+                Route::post('sponsors/{user}/guests', [SponsorshipSponsorController::class, 'addGuest'])->name('sponsors.add-guest');
+                Route::delete('guests/{guest}', [SponsorshipSponsorController::class, 'removeGuest'])->name('sponsors.remove-guest');
             });
         });
 

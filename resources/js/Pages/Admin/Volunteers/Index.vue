@@ -595,41 +595,79 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
         <Teleport to="body">
             <div v-if="showImportModal" class="fixed inset-0 z-50 flex items-center justify-center">
                 <div class="absolute inset-0 bg-black/50" @click="showImportModal = false"></div>
-                <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-                    <div class="flex items-center justify-between mb-4">
+                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+                    <!-- Header -->
+                    <div class="flex items-center justify-between mb-5">
                         <h3 class="text-lg font-bold text-gray-900">Importar Voluntarios desde Excel</h3>
                         <button @click="showImportModal = false" class="text-gray-400 hover:text-gray-600">
                             <XMarkIcon class="w-5 h-5" />
                         </button>
                     </div>
-                    <p class="text-sm text-gray-500 mb-4">
-                        El archivo debe tener columnas: <strong>email</strong> (obligatorio), first_name, last_name, phone, instagram, location, tshirt_size, experience, availability.
-                    </p>
-                    <form @submit.prevent="submitImport" class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Archivo Excel *</label>
-                            <input ref="fileInput" type="file" accept=".xlsx,.xls,.csv" @change="handleFileChange"
-                                class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2" />
-                            <p v-if="importForm.errors.file" class="text-red-500 text-xs mt-1">{{ importForm.errors.file }}</p>
+
+                    <!-- Download template -->
+                    <div class="mb-4">
+                        <a href="/admin/operations/volunteers/import-template"
+                            class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-xl transition-colors">
+                            <ArrowDownTrayIcon class="w-4 h-4" />
+                            Download Template (.xlsx)
+                        </a>
+                        <p class="mt-2 text-xs text-gray-500">The template includes all accepted columns with example data.</p>
+                    </div>
+
+                    <!-- Formato esperado -->
+                    <div class="bg-gray-50 rounded-xl p-4 mb-5 text-xs text-gray-600">
+                        <p class="font-semibold text-gray-800 mb-2">Accepted columns:</p>
+                        <div class="grid grid-cols-2 gap-1">
+                            <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">email</span> <span class="text-red-500">*required</span></span>
+                            <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">first_name</span></span>
+                            <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">last_name</span></span>
+                            <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">phone</span></span>
+                            <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">instagram</span></span>
+                            <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">location</span></span>
+                            <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">tshirt_size</span></span>
+                            <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">experience</span></span>
+                            <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">work_style</span></span>
+                            <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">availability</span></span>
+                            <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">contribution</span></span>
+                            <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">resume_link</span></span>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Asignar a evento</label>
-                            <select v-model="importForm.event_id" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white">
-                                <option value="">Sin asignar</option>
-                                <option v-for="ev in events" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
-                            </select>
-                        </div>
-                        <div class="flex justify-end gap-3 pt-2">
-                            <button @click="showImportModal = false" type="button"
-                                class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
-                                Cancelar
-                            </button>
-                            <button type="submit" :disabled="importForm.processing || !importForm.file"
-                                class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-40">
-                                {{ importForm.processing ? 'Importando...' : 'Importar' }}
-                            </button>
-                        </div>
-                    </form>
+                        <p class="mt-2 text-gray-500">Formats: <strong>.xlsx, .xls, .csv</strong></p>
+                    </div>
+
+                    <!-- Selector de evento -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Asignar a un evento <span class="text-gray-400 font-normal">(opcional)</span></label>
+                        <select v-model="importForm.event_id"
+                            class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
+                            <option value="">— Sin asignar a evento —</option>
+                            <option v-for="ev in events" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
+                        </select>
+                        <p class="mt-1.5 text-xs text-gray-400">
+                            Si no seleccionas un evento, los voluntarios se crean sin asignación.
+                        </p>
+                    </div>
+
+                    <!-- Input archivo -->
+                    <div class="mb-5">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar archivo</label>
+                        <input ref="fileInput" type="file" accept=".xlsx,.xls,.csv"
+                            @change="handleFileChange"
+                            class="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800 cursor-pointer" />
+                        <p v-if="importForm.errors.file" class="mt-1 text-xs text-red-500">{{ importForm.errors.file }}</p>
+                    </div>
+
+                    <!-- Acciones -->
+                    <div class="flex gap-3">
+                        <button @click="showImportModal = false"
+                            class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                            Cancelar
+                        </button>
+                        <button @click="submitImport"
+                            :disabled="!importForm.file || importForm.processing"
+                            class="flex-1 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                            {{ importForm.processing ? 'Importando...' : 'Importar' }}
+                        </button>
+                    </div>
                 </div>
             </div>
         </Teleport>

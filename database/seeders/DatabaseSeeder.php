@@ -20,6 +20,8 @@ class DatabaseSeeder extends Seeder
             SupportCaseSeeder::class,
             ConversationSeeder::class,
             BannerSeeder::class,
+            SponsorshipCategorySeeder::class,
+            SponsorshipPackageBenefitSeeder::class,
         ]);
     }
 }
