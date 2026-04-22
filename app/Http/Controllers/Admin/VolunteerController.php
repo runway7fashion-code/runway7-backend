@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Maatwebsite\Excel\Facades\Excel;
@@ -156,8 +157,8 @@ class VolunteerController extends Controller
         $validated = $request->validate([
             'first_name'                              => 'required|string|max:255',
             'last_name'                               => 'required|string|max:255',
-            'email'                                   => 'required|email|unique:users,email',
-            'phone'                                   => 'nullable|string|unique:users,phone',
+            'email'                                   => ['required', 'email', Rule::unique('users', 'email')->whereNull('deleted_at')],
+            'phone'                                   => ['nullable', 'string', Rule::unique('users', 'phone')->whereNull('deleted_at')],
             'age'                                     => 'nullable|integer|min:18|max:80',
             'gender'                                  => 'nullable|in:female,male,non_binary',
             'location'                                => 'nullable|string|max:255',
@@ -287,8 +288,8 @@ class VolunteerController extends Controller
         $validated = $request->validate([
             'first_name'             => 'required|string|max:255',
             'last_name'              => 'nullable|string|max:255',
-            'email'                  => "required|email|unique:users,email,{$volunteer->id}",
-            'phone'                  => "nullable|string|unique:users,phone,{$volunteer->id}",
+            'email'                  => ['required', 'email', Rule::unique('users', 'email')->ignore($volunteer->id)->whereNull('deleted_at')],
+            'phone'                  => ['nullable', 'string', Rule::unique('users', 'phone')->ignore($volunteer->id)->whereNull('deleted_at')],
             'age'                    => 'nullable|integer|min:18|max:80',
             'gender'                 => 'nullable|in:female,male,non_binary',
             'location'               => 'nullable|string|max:255',

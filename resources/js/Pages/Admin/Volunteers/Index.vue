@@ -622,6 +622,8 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                             <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">first_name</span></span>
                             <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">last_name</span></span>
                             <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">phone</span></span>
+                            <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">age</span></span>
+                            <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">gender</span></span>
                             <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">instagram</span></span>
                             <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">location</span></span>
                             <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">tshirt_size</span></span>
@@ -630,8 +632,9 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                             <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">availability</span></span>
                             <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">contribution</span></span>
                             <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">resume_link</span></span>
+                            <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">notes</span></span>
                         </div>
-                        <p class="mt-2 text-gray-500">Formats: <strong>.xlsx, .xls, .csv</strong></p>
+                        <p class="mt-2 text-gray-500">Solo <strong>email</strong> es obligatorio. Formats: <strong>.xlsx, .xls, .csv</strong></p>
                     </div>
 
                     <!-- Selector de evento -->

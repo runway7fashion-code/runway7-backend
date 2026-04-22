@@ -66,7 +66,12 @@ class VolunteersImport implements ToCollection, WithHeadingRow
         }
 
         // Actualizar o crear perfil
+        $ageRaw = $row['age'] ?? $row['edad'] ?? null;
+        $age = is_numeric($ageRaw) ? (int) $ageRaw : null;
+
         $profileData = array_filter([
+            'age'                    => $age,
+            'gender'                 => trim($row['gender'] ?? $row['genero'] ?? '') ?: null,
             'location'               => trim($row['location'] ?? $row['ubicacion'] ?? '') ?: null,
             'tshirt_size'            => trim($row['tshirt_size'] ?? $row['talla'] ?? '') ?: null,
             'experience'             => trim($row['experience'] ?? $row['experiencia'] ?? '') ?: null,
@@ -75,6 +80,7 @@ class VolunteersImport implements ToCollection, WithHeadingRow
             'contribution'           => trim($row['contribution'] ?? $row['contribucion'] ?? '') ?: null,
             'resume_link'            => trim($row['resume_link'] ?? $row['resume'] ?? '') ?: null,
             'instagram'              => $instagram ?: null,
+            'notes'                  => trim($row['notes'] ?? $row['notas'] ?? '') ?: null,
         ], fn ($v) => $v !== null);
 
         if (!empty($profileData)) {

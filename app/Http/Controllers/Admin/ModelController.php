@@ -21,6 +21,7 @@ use App\Services\ActivityLogService;
 use App\Services\ModelService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Maatwebsite\Excel\Facades\Excel;
@@ -439,8 +440,8 @@ class ModelController extends Controller
         $request->validate([
             'first_name'  => 'required|string|max:255',
             'last_name'   => 'required|string|max:255',
-            'email'       => 'required|email|unique:users',
-            'phone'       => 'nullable|string|unique:users',
+            'email'       => ['required', 'email', Rule::unique('users', 'email')->whereNull('deleted_at')],
+            'phone'       => ['nullable', 'string', Rule::unique('users', 'phone')->whereNull('deleted_at')],
             'instagram'   => 'nullable|string|max:255',
             'age'         => 'nullable|integer|min:16|max:80',
             'gender'      => 'nullable|in:female,male,non_binary',
@@ -547,8 +548,8 @@ class ModelController extends Controller
         $request->validate([
             'first_name'  => 'required|string|max:255',
             'last_name'   => 'nullable|string|max:255',
-            'email'       => "required|email|unique:users,email,{$model->id}",
-            'phone'       => "nullable|string|unique:users,phone,{$model->id}",
+            'email'       => ['required', 'email', Rule::unique('users', 'email')->ignore($model->id)->whereNull('deleted_at')],
+            'phone'       => ['nullable', 'string', Rule::unique('users', 'phone')->ignore($model->id)->whereNull('deleted_at')],
             'status'      => 'nullable|in:active,inactive,pending,applicant',
             'instagram'   => 'nullable|string|max:255',
             'age'         => 'nullable|integer|min:16|max:80',

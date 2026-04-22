@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -176,7 +177,7 @@ class DesignerController extends Controller
         $request->validate([
             'first_name'      => 'required|string|max:255',
             'last_name'       => 'required|string|max:255',
-            'email'           => 'required|email|unique:users',
+            'email'           => ['required', 'email', Rule::unique('users', 'email')->whereNull('deleted_at')],
             'phone'           => 'nullable|string',
             'brand_name'      => 'required|string|max:255',
             'collection_name' => 'nullable|string|max:255',
@@ -378,8 +379,8 @@ class DesignerController extends Controller
         $request->validate([
             'first_name'      => 'required|string|max:255',
             'last_name'       => 'required|string|max:255',
-            'email'           => "required|email|unique:users,email,{$designer->id}",
-            'phone'           => "nullable|string|unique:users,phone,{$designer->id}",
+            'email'           => ['required', 'email', Rule::unique('users', 'email')->ignore($designer->id)->whereNull('deleted_at')],
+            'phone'           => ['nullable', 'string', Rule::unique('users', 'phone')->ignore($designer->id)->whereNull('deleted_at')],
             'status'          => 'nullable|in:active,inactive,pending,registered',
             'brand_name'      => 'required|string|max:255',
             'collection_name' => 'nullable|string|max:255',

@@ -18,6 +18,8 @@ class VolunteersTemplateExport implements FromArray, WithHeadings, WithStyles, S
             'first_name',
             'last_name',
             'phone',
+            'age',
+            'gender',
             'instagram',
             'location',
             'tshirt_size',
@@ -26,6 +28,7 @@ class VolunteersTemplateExport implements FromArray, WithHeadings, WithStyles, S
             'availability',
             'contribution',
             'resume_link',
+            'notes',
         ];
     }
 
@@ -37,6 +40,8 @@ class VolunteersTemplateExport implements FromArray, WithHeadings, WithStyles, S
                 'Jane',
                 'Doe',
                 '+1 555-123-4567',
+                24,
+                'female',
                 '@jane.doe',
                 'New York, NY',
                 'M',
@@ -45,12 +50,15 @@ class VolunteersTemplateExport implements FromArray, WithHeadings, WithStyles, S
                 'full',
                 'I can help with logistics and backstage coordination.',
                 'https://drive.google.com/file/d/123abc/view',
+                'Prefers evening shifts. Speaks English and Spanish.',
             ],
             [
                 'maria.garcia@email.com',
                 'Maria',
                 'Garcia',
                 '+1 305-987-6543',
+                22,
+                'female',
                 '@maria.garcia',
                 'Miami, FL',
                 'S',
@@ -58,6 +66,7 @@ class VolunteersTemplateExport implements FromArray, WithHeadings, WithStyles, S
                 'yes',
                 'partial',
                 'Available for model check-in and guest reception.',
+                '',
                 '',
             ],
         ];
@@ -71,6 +80,8 @@ class VolunteersTemplateExport implements FromArray, WithHeadings, WithStyles, S
             'Optional',                                  // first_name
             'Optional',                                  // last_name
             'Optional',                                  // phone
+            'Optional (number)',                         // age
+            'female / male / non_binary',                // gender
             '@username',                                 // instagram
             'City, State',                               // location
             'XS / S / M / L / XL / XXL',                 // tshirt_size
@@ -79,6 +90,7 @@ class VolunteersTemplateExport implements FromArray, WithHeadings, WithStyles, S
             'full / partial / limited',                  // availability
             'Free text',                                 // contribution
             'Public URL (Google Drive, Dropbox, etc.)',  // resume_link
+            'Internal notes (free text)',                // notes
         ];
         foreach ($notes as $i => $note) {
             $col = chr(65 + $i);

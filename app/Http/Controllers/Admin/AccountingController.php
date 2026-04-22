@@ -25,6 +25,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -549,7 +550,7 @@ class AccountingController extends Controller
         $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,' . $designer->id,
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($designer->id)->whereNull('deleted_at')],
             'phone' => 'nullable|string|max:50',
             'status' => 'nullable|in:active,inactive,pending,registered',
             'brand_name' => 'nullable|string|max:255',

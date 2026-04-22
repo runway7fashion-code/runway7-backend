@@ -17,6 +17,7 @@ use App\Services\DesignerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -313,8 +314,8 @@ class SalesController extends Controller
         $request->validate([
             'first_name'  => 'required|string|max:255',
             'last_name'   => 'required|string|max:255',
-            'email'       => 'required|email|unique:users',
-            'phone'       => 'nullable|string|unique:users,phone',
+            'email'       => ['required', 'email', Rule::unique('users', 'email')->whereNull('deleted_at')],
+            'phone'       => ['nullable', 'string', Rule::unique('users', 'phone')->whereNull('deleted_at')],
             'brand_name'  => 'required|string|max:255',
             'country'     => 'required|string|max:255',
             'event_id'    => 'required|exists:events,id',
