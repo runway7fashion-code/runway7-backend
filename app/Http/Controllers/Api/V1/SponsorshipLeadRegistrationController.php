@@ -96,15 +96,19 @@ class SponsorshipLeadRegistrationController extends Controller
             Log::warning('Sponsorship lead confirmation job dispatch failed: ' . $e->getMessage());
         }
 
-        // Notificar a líderes sponsorship
+        // Notificar a admins + líderes sponsorship (sin duplicar)
         try {
-            $leaders = User::where('role', 'sponsorship')
-                ->where('sponsorship_type', 'lider')
-                ->whereNull('deleted_at')
+            $notifiables = User::whereNull('deleted_at')
+                ->where(function ($q) {
+                    $q->where('role', 'admin')
+                      ->orWhere(function ($q2) {
+                          $q2->where('role', 'sponsorship')->where('sponsorship_type', 'lider');
+                      });
+                })
                 ->get();
 
-            foreach ($leaders as $leader) {
-                $leader->notify(new NewSponsorshipLead($lead));
+            foreach ($notifiables as $u) {
+                $u->notify(new NewSponsorshipLead($lead));
             }
         } catch (\Throwable $e) {
             Log::warning('Sponsorship lead notification failed: ' . $e->getMessage());
