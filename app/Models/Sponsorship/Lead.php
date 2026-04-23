@@ -76,11 +76,6 @@ class Lead extends Model
             ->withTimestamps();
     }
 
-    public function documents()
-    {
-        return $this->hasMany(LeadDocument::class, 'lead_id');
-    }
-
     public function activities()
     {
         return $this->hasMany(LeadActivity::class, 'lead_id')->orderByDesc('created_at');

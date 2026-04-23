@@ -8,7 +8,7 @@ use App\Models\Sponsorship\Category;
 use App\Models\Sponsorship\Company;
 use App\Models\Sponsorship\Lead;
 use App\Models\Sponsorship\LeadActivity;
-use App\Models\Sponsorship\LeadDocument;
+use App\Models\Sponsorship\LeadActivityFile;
 use App\Models\Sponsorship\LeadEmail;
 use App\Models\Sponsorship\Package;
 use App\Models\Sponsorship\Tag;
@@ -259,9 +259,9 @@ class LeadController extends Controller
             'emails',
             'events:id,name,start_date,end_date',
             'tags:id,name,color',
-            'documents.uploader:id,first_name,last_name',
             'activities.creator:id,first_name,last_name',
             'activities.assignedTo:id,first_name,last_name',
+            'activities.files',
         ]);
 
         return Inertia::render('Admin/Sponsorship/Leads/Show', [
@@ -429,45 +429,6 @@ class LeadController extends Controller
         return back()->with('success', 'Evento quitado.');
     }
 
-    // ─────────────────────────── Documentos ───────────────────────────
-
-    public function uploadDocument(Request $request, Lead $lead)
-    {
-        $this->authorizeSee($lead);
-
-        $request->validate([
-            'file' => 'required|file|max:20480', // 20MB
-            'note' => 'nullable|string|max:255',
-        ]);
-
-        $file = $request->file('file');
-        $path = $file->store("sponsorship/leads/{$lead->id}", 'public');
-
-        LeadDocument::create([
-            'lead_id'             => $lead->id,
-            'uploaded_by_user_id' => auth()->id(),
-            'original_name'       => $file->getClientOriginalName(),
-            'path'                => $path,
-            'mime_type'           => $file->getMimeType(),
-            'size'                => $file->getSize(),
-            'note'                => $request->input('note'),
-        ]);
-
-        return back()->with('success', 'Documento subido.');
-    }
-
-    public function deleteDocument(LeadDocument $document)
-    {
-        $this->authorizeSee($document->lead);
-
-        if ($document->path) {
-            Storage::disk('public')->delete($document->path);
-        }
-        $document->delete();
-
-        return back()->with('success', 'Documento eliminado.');
-    }
-
     // ─────────────────────────── Direct email to lead ───────────────────────────
 
     public function sendEmail(Request $request, Lead $lead)
@@ -519,6 +480,8 @@ class LeadController extends Controller
             'scheduled_at'        => 'nullable|date',
             'assigned_to_user_id' => 'nullable|exists:users,id',
             'is_contract'         => 'nullable|boolean',
+            'files'               => 'nullable|array',
+            'files.*'             => 'file|max:20480',
         ]);
 
         $isScheduled = !empty($validated['scheduled_at']);
@@ -535,6 +498,20 @@ class LeadController extends Controller
             'status'              => $isScheduled ? 'pending' : 'completed',
             'is_contract'         => ($validated['type'] === 'email' && !empty($validated['is_contract'])),
         ]);
+
+        // Guardar archivos adjuntos
+        if ($request->hasFile('files')) {
+            foreach ($request->file('files') as $file) {
+                $path = $file->store("sponsorship/lead-files/{$lead->id}", 'public');
+                LeadActivityFile::create([
+                    'activity_id' => $activity->id,
+                    'file_path'   => $path,
+                    'file_name'   => $file->getClientOriginalName(),
+                    'size'        => $file->getSize(),
+                    'mime_type'   => $file->getMimeType(),
+                ]);
+            }
+        }
 
         // Si la actividad queda completada inmediatamente, aplicar reglas de status
         if (!$isScheduled) {

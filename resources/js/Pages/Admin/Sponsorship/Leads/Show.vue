@@ -3,9 +3,10 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import {
-    PencilSquareIcon, TrashIcon, BuildingOffice2Icon, EnvelopeIcon, PhoneIcon,
-    LinkIcon, GlobeAltIcon, StarIcon, ArrowDownTrayIcon, XMarkIcon, PlusIcon,
-    CheckCircleIcon, ClockIcon, NoSymbolIcon, XCircleIcon, DocumentTextIcon,
+    ArrowLeftIcon, EnvelopeIcon, PhoneIcon, GlobeAltIcon, LinkIcon, TrashIcon,
+    PencilSquareIcon, CheckCircleIcon, ClockIcon, UserIcon, PlusIcon,
+    ChatBubbleLeftIcon, CalendarDaysIcon, PhoneArrowUpRightIcon,
+    DocumentTextIcon, ChevronDownIcon, StarIcon, ArrowDownTrayIcon, XMarkIcon,
 } from '@heroicons/vue/24/outline';
 import { StarIcon as StarSolid } from '@heroicons/vue/24/solid';
 
@@ -19,67 +20,222 @@ const props = defineProps({
     isLider: Boolean,
 });
 
-// Status change
-const statusForm = useForm({ status: props.lead.status });
-function updateStatus() {
-    statusForm.patch(`/admin/sponsorship/leads/${props.lead.id}/status`, { preserveScroll: true });
+// ───────────── Helpers ─────────────
+function formatDate(date) {
+    if (!date) return '—';
+    const d = new Date(date);
+    if (isNaN(d)) return date;
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+function formatDateTime(date) {
+    if (!date) return '—';
+    const d = new Date(date);
+    if (isNaN(d)) return date;
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+function formatNoteDate(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) + ', ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+function relativeTime(date) {
+    if (!date) return '';
+    const now = new Date();
+    const d = new Date(date);
+    const diffMins = Math.floor((now - d) / 60000);
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 30) return `${diffDays}d ago`;
+    return formatDate(date);
+}
+function statusLabel(key) { return props.statuses?.[key]?.label || key; }
+function statusBadgeStyle(key) {
+    const s = props.statuses?.[key];
+    if (!s) return 'bg-gray-100 text-gray-600';
+    // Match bg based on the hex color converted to a soft bg
+    return '';
+}
+function activityTypeLabel(key) { return props.activityTypes?.[key]?.label || key; }
+function activityTypeBg(key) {
+    const color = props.activityTypes?.[key]?.color || '#9CA3AF';
+    return color + '20';
+}
+function activityTypeFg(key) {
+    return props.activityTypes?.[key]?.color || '#6B7280';
+}
+function activityIcon(typeKey) {
+    const icons = {
+        call: PhoneArrowUpRightIcon,
+        email: EnvelopeIcon,
+        meeting: CalendarDaysIcon,
+        note: DocumentTextIcon,
+    };
+    return icons[typeKey] || ChatBubbleLeftIcon;
 }
 
-// Assignment (lider)
-const assignForm = useForm({ assigned_to_user_id: props.lead.assigned_to_user_id });
-function updateAssignment() {
-    assignForm.patch(`/admin/sponsorship/leads/${props.lead.id}/assign`, { preserveScroll: true });
+const primaryEmail = computed(() => (props.lead.emails || []).find(e => e.is_primary)?.email || null);
+const secondaryEmails = computed(() => (props.lead.emails || []).filter(e => !e.is_primary));
+
+function instagramHandle(v) {
+    if (!v) return null;
+    let h = String(v).split('?')[0];
+    h = h.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/+$/, '').replace(/^@/, '');
+    return h || null;
 }
 
-// Tags
-const tagsForm = useForm({ tag_ids: (props.lead.tags || []).map(t => t.id) });
-function toggleTag(id) {
-    const i = tagsForm.tag_ids.indexOf(id);
-    if (i >= 0) tagsForm.tag_ids.splice(i, 1);
-    else tagsForm.tag_ids.push(id);
+// ───────────── Status / Assignment ─────────────
+function changeStatus(newStatus) {
+    if (newStatus === props.lead.status) return;
+    router.patch(`/admin/sponsorship/leads/${props.lead.id}/status`, { status: newStatus }, { preserveScroll: true });
 }
+function reassignAdvisor(advisorId) {
+    router.patch(`/admin/sponsorship/leads/${props.lead.id}/assign`, { assigned_to_user_id: advisorId || null }, { preserveScroll: true });
+}
+
+// ───────────── Tags ─────────────
+const editingTags = ref(false);
+const selectedTagIds = ref([]);
+const tagSearch = ref('');
+function startEditTags() {
+    selectedTagIds.value = (props.lead.tags || []).map(t => t.id);
+    tagSearch.value = '';
+    editingTags.value = true;
+}
+function cancelEditTags() { editingTags.value = false; tagSearch.value = ''; }
+function addTag(tagId) {
+    if (!selectedTagIds.value.includes(tagId)) selectedTagIds.value.push(tagId);
+    tagSearch.value = '';
+}
+function removeTag(tagId) { selectedTagIds.value = selectedTagIds.value.filter(id => id !== tagId); }
 function saveTags() {
-    tagsForm.patch(`/admin/sponsorship/leads/${props.lead.id}/tags`, { preserveScroll: true });
+    router.patch(`/admin/sponsorship/leads/${props.lead.id}/tags`, { tag_ids: selectedTagIds.value }, {
+        preserveScroll: true, onSuccess: () => { editingTags.value = false; },
+    });
 }
+const filteredTags = computed(() => {
+    if (!props.tags) return [];
+    return props.tags.filter(t =>
+        !selectedTagIds.value.includes(t.id) &&
+        (!tagSearch.value || t.name.toLowerCase().includes(tagSearch.value.toLowerCase()))
+    );
+});
+function getTagById(id) { return props.tags?.find(t => t.id === id); }
 
-// Event management
-const addEventForm = useForm({ event_id: '' });
+// ───────────── Events ─────────────
+const showAddEventModal = ref(false);
+const newEventId = ref('');
 function addEvent() {
-    if (!addEventForm.event_id) return;
-    addEventForm.post(`/admin/sponsorship/leads/${props.lead.id}/add-event`, {
+    if (!newEventId.value) return;
+    router.post(`/admin/sponsorship/leads/${props.lead.id}/add-event`, { event_id: newEventId.value }, {
         preserveScroll: true,
-        onSuccess: () => addEventForm.reset(),
+        onSuccess: () => { showAddEventModal.value = false; newEventId.value = ''; },
     });
 }
 function removeEvent(eventId) {
-    useForm({ event_id: eventId }).delete(`/admin/sponsorship/leads/${props.lead.id}/remove-event`, { preserveScroll: true });
+    if (!confirm('Remove this event from the lead?')) return;
+    router.delete(`/admin/sponsorship/leads/${props.lead.id}/remove-event`, { data: { event_id: eventId }, preserveScroll: true });
 }
-
 const availableEvents = computed(() => {
-    const currentIds = (props.lead.events || []).map(e => e.id);
-    return props.events.filter(e => !currentIds.includes(e.id));
+    const assignedIds = (props.lead.events || []).map(e => e.id);
+    return (props.events || []).filter(e => !assignedIds.includes(e.id));
 });
 
-// Documents
-const showUploadModal = ref(false);
-const uploadForm = useForm({ file: null, note: '' });
-function uploadDocument() {
-    if (!uploadForm.file) return;
-    uploadForm.post(`/admin/sponsorship/leads/${props.lead.id}/documents`, {
+// ───────────── Notes (CRM style) ─────────────
+const noteExpanded = ref(false);
+const noteContent = ref('');
+const noteTitle = ref('');
+const noteShowTitle = ref(false);
+const noteFiles = ref([]);
+const noteFileInput = ref(null);
+
+const leadNotes = computed(() =>
+    (props.lead.activities || []).filter(a => a.type === 'note').sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+);
+
+function handleNoteFileSelect(e) {
+    for (const file of e.target.files) {
+        noteFiles.value.push({ file, name: file.name });
+    }
+    e.target.value = '';
+}
+function removeNoteFile(i) { noteFiles.value.splice(i, 1); }
+
+function saveNote() {
+    if (!noteContent.value.trim()) return;
+    const formData = new FormData();
+    formData.append('type', 'note');
+    formData.append('title', noteTitle.value.trim() || 'Note');
+    formData.append('description', noteContent.value.trim());
+    noteFiles.value.forEach((f, i) => formData.append(`files[${i}]`, f.file));
+
+    router.post(`/admin/sponsorship/leads/${props.lead.id}/activities`, formData, {
         preserveScroll: true,
         forceFormData: true,
-        onSuccess: () => { showUploadModal.value = false; uploadForm.reset(); },
+        onSuccess: () => cancelNote(),
     });
 }
-function deleteDocument(doc) {
-    if (!confirm(`Delete "${doc.original_name}"?`)) return;
-    useForm({}).delete(`/admin/sponsorship/lead-documents/${doc.id}`, { preserveScroll: true });
+function cancelNote() {
+    noteContent.value = ''; noteTitle.value = '';
+    noteFiles.value = [];
+    noteExpanded.value = false; noteShowTitle.value = false;
+    if (noteFileInput.value) noteFileInput.value.value = '';
 }
 
+// ───────────── Activities ─────────────
+const showActivityModal = ref(false);
+const activityForm = useForm({
+    type: 'call', title: '', description: '', scheduled_at: '',
+    assigned_to_user_id: null, is_contract: false,
+    files: [],
+});
+function addActivityFile(e) {
+    activityForm.files = [...activityForm.files, ...Array.from(e.target.files || [])];
+    e.target.value = '';
+}
+function removeActivityFile(i) { activityForm.files.splice(i, 1); }
+function submitActivity() {
+    activityForm.post(`/admin/sponsorship/leads/${props.lead.id}/activities`, {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => { activityForm.reset(); activityForm.type = 'call'; showActivityModal.value = false; },
+    });
+}
+function changeActivityStatus(activityId, status) {
+    if (status === 'completed') return router.patch(`/admin/sponsorship/activities/${activityId}/complete`, {}, { preserveScroll: true });
+    if (status === 'cancelled') return router.patch(`/admin/sponsorship/activities/${activityId}/cancel`, {}, { preserveScroll: true });
+    if (status === 'not_completed') return router.patch(`/admin/sponsorship/activities/${activityId}/not-completed`, {}, { preserveScroll: true });
+}
 
-function formatDate(d) {
-    if (!d) return '—';
-    return new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+const sortedActivities = computed(() => {
+    if (!props.lead.activities) return [];
+    return [...props.lead.activities].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+});
+
+const expandedActivities = ref([]);
+function toggleActivityExpand(id) {
+    if (expandedActivities.value.includes(id)) expandedActivities.value = expandedActivities.value.filter(x => x !== id);
+    else expandedActivities.value.push(id);
+}
+function isActivityExpanded(id) { return expandedActivities.value.includes(id); }
+
+// ───────────── Send Email modal ─────────────
+const showEmailModal = ref(false);
+const emailForm = useForm({ subject: '', body: '', is_contract: false, attachments: [] });
+function addEmailAttachment(e) {
+    const files = Array.from(e.target.files || []);
+    emailForm.attachments = [...emailForm.attachments, ...files];
+    e.target.value = '';
+}
+function removeEmailAttachment(i) { emailForm.attachments.splice(i, 1); }
+function submitEmail() {
+    emailForm.post(`/admin/sponsorship/leads/${props.lead.id}/send-email`, {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => { showEmailModal.value = false; emailForm.reset(); },
+    });
 }
 
 function formatSize(bytes) {
@@ -89,432 +245,476 @@ function formatSize(bytes) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// ─── Activities ─────────────────────────────────────────
-const showActivityModal = ref(false);
-const activityForm = useForm({
-    type: 'call',
-    title: '',
-    description: '',
-    scheduled_at: '',
-    assigned_to_user_id: null,
-    is_contract: false,
-});
-
-function submitActivity() {
-    activityForm.post(`/admin/sponsorship/leads/${props.lead.id}/activities`, {
-        preserveScroll: true,
-        onSuccess: () => {
-            showActivityModal.value = false;
-            activityForm.reset();
-            activityForm.type = 'call';
-        },
-    });
-}
-
-function completeActivity(id) {
-    useForm({}).patch(`/admin/sponsorship/activities/${id}/complete`, { preserveScroll: true });
-}
-function cancelActivity(id) {
-    useForm({}).patch(`/admin/sponsorship/activities/${id}/cancel`, { preserveScroll: true });
-}
-function notCompletedActivity(id) {
-    useForm({}).patch(`/admin/sponsorship/activities/${id}/not-completed`, { preserveScroll: true });
-}
-function deleteActivity(id) {
-    if (!confirm('Delete this activity?')) return;
-    useForm({}).delete(`/admin/sponsorship/activities/${id}`, { preserveScroll: true });
-}
-
-const activityStatusColors = {
-    pending:       'bg-yellow-100 text-yellow-700',
-    completed:     'bg-green-100 text-green-700',
-    cancelled:     'bg-gray-100 text-gray-500',
-    not_completed: 'bg-red-100 text-red-700',
-};
-
-// ─── Send email ─────────────────────────────────────────
-const showEmailModal = ref(false);
-const emailForm = useForm({
-    subject: '',
-    body: '',
-    is_contract: false,
-    attachments: [],
-});
-function addAttachment(e) {
-    const files = Array.from(e.target.files || []);
-    emailForm.attachments = [...emailForm.attachments, ...files];
-    e.target.value = '';
-}
-function removeAttachment(i) {
-    emailForm.attachments.splice(i, 1);
-}
-function submitEmail() {
-    emailForm.post(`/admin/sponsorship/leads/${props.lead.id}/send-email`, {
-        forceFormData: true,
-        preserveScroll: true,
-        onSuccess: () => {
-            showEmailModal.value = false;
-            emailForm.reset();
-        },
-    });
+// ───────────── Delete lead ─────────────
+const showDeleteModal = ref(false);
+function deleteLead() {
+    router.delete(`/admin/sponsorship/leads/${props.lead.id}`);
 }
 </script>
 
 <template>
     <AdminLayout>
         <template #header>
-            <div class="flex items-center space-x-2 text-sm">
-                <Link href="/admin/sponsorship/leads" class="text-gray-400 hover:text-gray-600">Leads</Link>
+            <div class="flex items-center gap-3">
+                <Link href="/admin/sponsorship/leads" class="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-sm">
+                    <ArrowLeftIcon class="w-4 h-4" /> Leads
+                </Link>
                 <span class="text-gray-300">/</span>
-                <span class="text-gray-700 font-medium">{{ lead.first_name }} {{ lead.last_name }}</span>
+                <h2 class="text-lg font-semibold text-gray-900">{{ lead.first_name }} {{ lead.last_name }}</h2>
             </div>
         </template>
 
-        <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Main column -->
-            <div class="lg:col-span-2 space-y-6">
-                <!-- Header -->
-                <div class="bg-white rounded-2xl border border-gray-200 p-6">
-                    <div class="flex items-start justify-between">
-                        <div class="flex items-center gap-3">
-                            <StarSolid v-if="lead.is_contract_winner" class="w-6 h-6 text-[#D4AF37]" title="Contract winner" />
-                            <div>
-                                <h3 class="text-2xl font-bold text-gray-900">{{ lead.first_name }} {{ lead.last_name }}</h3>
-                                <p v-if="lead.charge" class="text-sm text-gray-500">{{ lead.charge }}</p>
-                            </div>
+        <div class="max-w-8xl mx-auto space-y-6">
+            <!-- Header Card -->
+            <div class="bg-white rounded-2xl border border-gray-200 p-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="flex flex-wrap gap-4 items-center flex-1">
+                        <div class="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                            <span class="text-lg font-bold text-gray-400">{{ lead.first_name?.[0] }}{{ lead.last_name?.[0] }}</span>
                         </div>
-                        <div class="flex gap-2 flex-wrap">
-                            <button @click="showEmailModal = true"
-                                class="px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-1.5">
-                                <EnvelopeIcon class="w-4 h-4" /> Send email
-                            </button>
-                            <Link v-if="!lead.converted_user_id" :href="`/admin/sponsorship/leads/${lead.id}/convert`"
-                                class="px-3 py-2 text-sm font-semibold text-white bg-[#D4AF37] rounded-lg hover:bg-yellow-600 flex items-center gap-1.5">
-                                <StarIcon class="w-4 h-4" /> Close contract & Convert
-                            </Link>
-                            <Link :href="`/admin/sponsorship/leads/${lead.id}/edit`"
-                                class="px-3 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
-                                <PencilSquareIcon class="w-4 h-4" /> Edit
-                            </Link>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                {{ lead.first_name }} {{ lead.last_name }}
+                                <StarSolid v-if="lead.is_contract_winner" class="w-5 h-5 text-[#D4AF37]" title="Contract winner" />
+                            </h3>
+                            <p v-if="lead.company" class="text-gray-500 text-sm">{{ lead.company.name }}</p>
+                        </div>
+                        <div class="flex flex-col text-xs text-gray-400 ml-2">
+                            <span v-if="lead.source">Source: <span class="font-medium text-gray-600">{{ lead.source }}<span v-if="lead.source_detail"> ({{ lead.source_detail }})</span></span></span>
+                            <span>Registered: {{ formatDateTime(lead.created_at) }}</span>
+                            <span v-if="lead.last_email_sent_at">Last email: {{ formatDateTime(lead.last_email_sent_at) }}
+                                <span v-if="lead.last_email_status" class="ml-1 text-[10px] px-1 rounded"
+                                    :class="lead.last_email_status === 'sent' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'">{{ lead.last_email_status }}</span>
+                            </span>
+                        </div>
+                        <div class="flex flex-col ml-2">
+                            <span class="text-xs font-medium rounded-lg px-3 py-1 w-fit mb-1 text-white"
+                                :style="{ backgroundColor: statuses[lead.status]?.color }">
+                                Lead status: {{ statusLabel(lead.status) }}
+                            </span>
+                            <div v-if="isLider && advisors?.length" class="flex items-center gap-1 mb-1">
+                                <span class="text-xs text-gray-400">Advisor:</span>
+                                <select :value="lead.assigned_to?.id || ''" @change="reassignAdvisor($event.target.value)"
+                                    class="text-xs font-medium text-gray-600 border border-gray-200 rounded px-1.5 py-0.5 bg-white focus:outline-none focus:ring-1 focus:ring-black/10">
+                                    <option value="">— Unassigned —</option>
+                                    <option v-for="a in advisors" :key="a.id" :value="a.id">
+                                        {{ a.first_name }} {{ a.last_name }}{{ a.sponsorship_type === 'lider' ? ' (L)' : '' }}
+                                    </option>
+                                </select>
+                            </div>
+                            <span v-else-if="lead.assigned_to" class="text-xs text-gray-400">Advisor: <span class="font-medium text-gray-600">{{ lead.assigned_to.first_name }} {{ lead.assigned_to.last_name }}</span></span>
                         </div>
                     </div>
-
-                    <div class="mt-5 pt-5 border-t border-gray-100 grid grid-cols-2 gap-3 text-sm">
-                        <div class="flex items-start gap-2">
-                            <BuildingOffice2Icon class="w-4 h-4 text-gray-400 mt-0.5" />
-                            <div>
-                                <p class="text-xs text-gray-400">Company</p>
-                                <p class="font-medium text-gray-900">{{ lead.company?.name }}</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-2">
-                            <PhoneIcon class="w-4 h-4 text-gray-400 mt-0.5" />
-                            <div>
-                                <p class="text-xs text-gray-400">Phone</p>
-                                <p class="font-medium text-gray-900">{{ lead.phone || '—' }}</p>
-                            </div>
-                        </div>
-                        <div v-if="lead.linkedin_url" class="flex items-start gap-2">
-                            <LinkIcon class="w-4 h-4 text-gray-400 mt-0.5" />
-                            <div>
-                                <p class="text-xs text-gray-400">LinkedIn</p>
-                                <a :href="lead.linkedin_url" target="_blank" class="font-medium text-blue-600 hover:underline truncate block">{{ lead.linkedin_url }}</a>
-                            </div>
-                        </div>
-                        <div v-if="lead.website_url" class="flex items-start gap-2">
-                            <GlobeAltIcon class="w-4 h-4 text-gray-400 mt-0.5" />
-                            <div>
-                                <p class="text-xs text-gray-400">Website</p>
-                                <a :href="lead.website_url" target="_blank" class="font-medium text-blue-600 hover:underline truncate block">{{ lead.website_url }}</a>
-                            </div>
-                        </div>
-                        <div v-if="lead.instagram" class="flex items-start gap-2">
-                            <span class="w-4 h-4 text-gray-400 text-xs font-bold mt-0.5">IG</span>
-                            <div>
-                                <p class="text-xs text-gray-400">Instagram</p>
-                                <p class="font-medium text-gray-900">{{ lead.instagram }}</p>
-                            </div>
-                        </div>
-                        <div v-if="lead.category" class="flex items-start gap-2">
-                            <span class="w-4 h-4 rounded bg-gray-200 mt-0.5"></span>
-                            <div>
-                                <p class="text-xs text-gray-400">Category</p>
-                                <p class="font-medium text-gray-900">{{ lead.category.name }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Emails -->
-                <div class="bg-white rounded-2xl border border-gray-200 p-6">
-                    <h4 class="font-semibold text-gray-900 mb-4">Emails</h4>
-                    <div class="space-y-2">
-                        <div v-for="em in lead.emails" :key="em.id" class="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-lg">
-                            <EnvelopeIcon class="w-4 h-4 text-gray-400" />
-                            <span class="text-sm text-gray-900">{{ em.email }}</span>
-                            <span v-if="em.is_primary" class="ml-auto text-xs px-2 py-0.5 bg-[#D4AF37] text-white rounded">Primary</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Events -->
-                <div class="bg-white rounded-2xl border border-gray-200 p-6">
-                    <h4 class="font-semibold text-gray-900 mb-4">Events ({{ lead.events?.length || 0 }})</h4>
-                    <div class="space-y-2 mb-4">
-                        <div v-for="e in lead.events" :key="e.id" class="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg">
-                            <div>
-                                <p class="text-sm font-medium text-gray-900">{{ e.name }}</p>
-                                <p v-if="e.start_date" class="text-xs text-gray-500">{{ formatDate(e.start_date) }}</p>
-                            </div>
-                            <button @click="removeEvent(e.id)" class="text-red-500 hover:text-red-700">
-                                <XMarkIcon class="w-5 h-5" />
-                            </button>
-                        </div>
-                    </div>
-                    <div v-if="availableEvents.length" class="flex gap-2">
-                        <select v-model="addEventForm.event_id" class="input-sm flex-1">
-                            <option value="">Add event...</option>
-                            <option v-for="e in availableEvents" :key="e.id" :value="e.id">{{ e.name }}</option>
-                        </select>
-                        <button @click="addEvent" :disabled="!addEventForm.event_id"
-                            class="px-3 py-2 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 disabled:opacity-40 flex items-center gap-1">
-                            <PlusIcon class="w-4 h-4" /> Add
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Documents -->
-                <div class="bg-white rounded-2xl border border-gray-200 p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h4 class="font-semibold text-gray-900">Documents ({{ lead.documents?.length || 0 }})</h4>
-                        <button @click="showUploadModal = true"
-                            class="px-3 py-1.5 text-xs font-medium text-white bg-black rounded-lg hover:bg-gray-800 flex items-center gap-1">
-                            <PlusIcon class="w-4 h-4" /> Upload
-                        </button>
-                    </div>
-                    <div v-if="lead.documents?.length" class="space-y-2">
-                        <div v-for="d in lead.documents" :key="d.id"
-                            class="flex items-center justify-between px-3 py-2 border border-gray-100 rounded-lg">
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-medium text-gray-900 truncate">{{ d.original_name }}</p>
-                                <p class="text-xs text-gray-500">
-                                    {{ formatSize(d.size) }} ·
-                                    {{ d.uploader ? `${d.uploader.first_name} ${d.uploader.last_name}` : 'Unknown' }} ·
-                                    {{ formatDate(d.created_at) }}
-                                </p>
-                                <p v-if="d.note" class="text-xs text-gray-400 italic">{{ d.note }}</p>
-                            </div>
-                            <div class="flex gap-1">
-                                <a :href="`/storage/${d.path}`" target="_blank" class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
-                                    <ArrowDownTrayIcon class="w-4 h-4" />
-                                </a>
-                                <button @click="deleteDocument(d)" class="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
-                                    <TrashIcon class="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <p v-else class="text-sm text-gray-400">No documents uploaded.</p>
-                </div>
-
-                <!-- Notes -->
-                <div v-if="lead.notes" class="bg-white rounded-2xl border border-gray-200 p-6">
-                    <h4 class="font-semibold text-gray-900 mb-2">Notes</h4>
-                    <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ lead.notes }}</p>
-                </div>
-
-                <!-- Activities / Timeline -->
-                <div class="bg-white rounded-2xl border border-gray-200 p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h4 class="font-semibold text-gray-900">Timeline ({{ lead.activities?.length || 0 }})</h4>
+                    <div class="flex items-center gap-2 flex-wrap">
                         <button @click="showActivityModal = true"
-                            class="px-3 py-1.5 text-xs font-medium text-white bg-black rounded-lg hover:bg-gray-800 flex items-center gap-1">
-                            <PlusIcon class="w-4 h-4" /> Add activity
+                            class="px-4 py-1.5 bg-[#D4AF37] text-white rounded-lg text-xs font-medium hover:bg-[#b8962f] transition-colors flex items-center gap-1">
+                            <PlusIcon class="w-3.5 h-3.5" /> Activity
+                        </button>
+                        <button @click="showEmailModal = true"
+                            class="px-4 py-1.5 bg-gray-700 text-white rounded-lg text-xs font-medium hover:bg-gray-600 transition-colors flex items-center gap-1">
+                            <EnvelopeIcon class="w-3.5 h-3.5" /> Send Email
+                        </button>
+                        <Link :href="`/admin/sponsorship/leads/${lead.id}/edit`"
+                            class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors flex items-center gap-1">
+                            <PencilSquareIcon class="w-3.5 h-3.5" /> Edit
+                        </Link>
+                        <Link v-if="!lead.converted_user_id" :href="`/admin/sponsorship/leads/${lead.id}/convert`"
+                            class="px-4 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600 transition-colors flex items-center gap-1">
+                            <StarIcon class="w-3.5 h-3.5" /> Close contract & Convert
+                        </Link>
+                        <button v-if="isLider" @click="showDeleteModal = true"
+                            class="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors flex items-center gap-1">
+                            <TrashIcon class="w-3.5 h-3.5" />
                         </button>
                     </div>
-                    <div v-if="lead.activities?.length" class="space-y-3">
-                        <div v-for="a in lead.activities" :key="a.id"
-                            class="flex gap-3 border-l-4 pl-4 py-2"
-                            :style="{ borderColor: activityTypes[a.type]?.color || '#ccc' }">
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-2 flex-wrap">
-                                    <span class="text-xs px-1.5 py-0.5 rounded text-white"
-                                        :style="{ backgroundColor: activityTypes[a.type]?.color }">
-                                        {{ activityTypes[a.type]?.label || a.type }}
-                                    </span>
-                                    <span class="text-xs px-1.5 py-0.5 rounded"
-                                        :class="activityStatusColors[a.status]">
-                                        {{ a.status.replace('_', ' ') }}
-                                    </span>
-                                    <span v-if="a.is_contract"
-                                        class="text-xs px-1.5 py-0.5 rounded bg-[#D4AF37] text-white">Contract</span>
-                                </div>
-                                <p class="text-sm font-medium text-gray-900 mt-1">{{ a.title }}</p>
-                                <p v-if="a.description" class="text-xs text-gray-600 mt-1 whitespace-pre-wrap">{{ a.description }}</p>
-                                <div class="text-xs text-gray-500 mt-1 space-x-2">
-                                    <span v-if="a.scheduled_at">⏰ {{ formatDate(a.scheduled_at) }}</span>
-                                    <span v-if="a.completed_at">✓ {{ formatDate(a.completed_at) }}</span>
-                                    <span v-if="a.assigned_to">→ {{ a.assigned_to.first_name }} {{ a.assigned_to.last_name }}</span>
-                                    <span v-if="a.creator">by {{ a.creator.first_name }} {{ a.creator.last_name }}</span>
-                                </div>
-                            </div>
-                            <div class="flex gap-1 items-start">
-                                <button v-if="a.status === 'pending'" @click="completeActivity(a.id)"
-                                    title="Complete" class="p-1.5 rounded-lg hover:bg-green-50 text-gray-400 hover:text-green-600">
-                                    <CheckCircleIcon class="w-5 h-5" />
-                                </button>
-                                <button v-if="a.status === 'pending'" @click="notCompletedActivity(a.id)"
-                                    title="Not completed" class="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
-                                    <XCircleIcon class="w-5 h-5" />
-                                </button>
-                                <button v-if="a.status === 'pending'" @click="cancelActivity(a.id)"
-                                    title="Cancel" class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
-                                    <NoSymbolIcon class="w-5 h-5" />
-                                </button>
-                                <button @click="deleteActivity(a.id)"
-                                    title="Delete" class="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500">
-                                    <TrashIcon class="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <p v-else class="text-sm text-gray-400">No activities yet.</p>
                 </div>
             </div>
 
-            <!-- Sidebar -->
-            <div class="space-y-6">
-                <!-- Status -->
-                <div class="bg-white rounded-2xl border border-gray-200 p-5">
-                    <label class="block text-xs uppercase tracking-wider text-gray-400 mb-2">Status</label>
-                    <select v-model="statusForm.status" @change="updateStatus" class="input-sm w-full">
-                        <option v-for="(meta, key) in statuses" :key="key" :value="key">{{ meta.label }}</option>
-                    </select>
-                    <div class="mt-3 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white"
-                        :style="{ backgroundColor: statuses[lead.status]?.color }">
-                        {{ statuses[lead.status]?.label }}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+                <!-- Col 1: Contact + Tags + Business + Documents -->
+                <div class="space-y-6">
+                    <!-- Contact + Tags -->
+                    <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-5">
+                        <div>
+                            <h4 class="font-semibold text-gray-800 mb-3">Contact Info</h4>
+                            <div class="grid grid-cols-1 gap-3 text-sm">
+                                <div v-if="primaryEmail" class="flex items-center gap-2">
+                                    <EnvelopeIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                    <span class="text-gray-700 truncate">{{ primaryEmail }}</span>
+                                </div>
+                                <div v-for="em in secondaryEmails" :key="em.id" class="flex items-center gap-2 pl-6">
+                                    <span class="text-xs text-gray-400">+</span>
+                                    <span class="text-gray-500 text-xs truncate">{{ em.email }}</span>
+                                </div>
+                                <div v-if="lead.phone" class="flex items-center gap-2">
+                                    <PhoneIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                    <a :href="`tel:${lead.phone}`" class="text-blue-600 hover:underline">{{ lead.phone }}</a>
+                                </div>
+                                <div v-if="lead.charge" class="flex items-center gap-2">
+                                    <UserIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                    <span class="text-gray-700">{{ lead.charge }}</span>
+                                </div>
+                                <div v-if="lead.instagram" class="flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-pink-500 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                                    </svg>
+                                    <a :href="`https://instagram.com/${instagramHandle(lead.instagram)}`" target="_blank" class="text-pink-600 hover:text-pink-700">@{{ instagramHandle(lead.instagram) }}</a>
+                                </div>
+                                <div v-if="lead.website_url" class="flex items-center gap-2">
+                                    <GlobeAltIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                    <a :href="lead.website_url" target="_blank" class="text-blue-600 hover:underline truncate">{{ lead.website_url }}</a>
+                                </div>
+                                <div v-if="lead.linkedin_url" class="flex items-center gap-2">
+                                    <LinkIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                    <a :href="lead.linkedin_url" target="_blank" class="text-blue-600 hover:underline truncate">LinkedIn</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tags -->
+                        <div class="pt-4 border-t border-gray-100">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-medium text-gray-500">Tags</span>
+                                <div v-if="editingTags" class="flex items-center gap-1.5">
+                                    <button @click="saveTags" class="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center hover:bg-gray-800 transition-colors">
+                                        <CheckCircleIcon class="w-3.5 h-3.5" />
+                                    </button>
+                                    <button @click="cancelEditTags" class="w-7 h-7 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center hover:bg-gray-300 transition-colors">
+                                        <XMarkIcon class="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                            <div v-if="!editingTags" class="flex flex-wrap items-center gap-1.5">
+                                <span v-for="t in lead.tags" :key="t.id"
+                                    class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border border-gray-300"
+                                    :style="{ backgroundColor: t.color + '50', color: '#1f2937' }">{{ t.name }}</span>
+                                <button @click="startEditTags"
+                                    class="w-7 h-7 rounded-full border-2 border-dashed border-gray-300 text-gray-400 flex items-center justify-center hover:border-gray-400 hover:text-gray-500 transition-colors">
+                                    <PlusIcon class="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                            <div v-else>
+                                <div class="border border-gray-900 rounded-xl p-3">
+                                    <div class="flex flex-wrap gap-1.5 mb-2">
+                                        <span v-for="id in selectedTagIds" :key="id"
+                                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer"
+                                            :style="{ backgroundColor: (getTagById(id)?.color || '#6B7280') + '50', color: '#1f2937' }"
+                                            @click="removeTag(id)">
+                                            {{ getTagById(id)?.name }} <XMarkIcon class="w-3 h-3" />
+                                        </span>
+                                        <span v-if="!selectedTagIds.length" class="text-xs text-gray-400 italic py-1">No tags</span>
+                                    </div>
+                                    <div class="relative">
+                                        <input v-model="tagSearch" type="text" placeholder="Tag Name"
+                                            class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-black focus:border-black" />
+                                        <div v-if="filteredTags.length" class="mt-1 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-sm">
+                                            <button v-for="t in filteredTags" :key="t.id" @click="addTag(t.id)"
+                                                class="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2 transition-colors">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium"
+                                                    :style="{ backgroundColor: t.color + '50', color: '#1f2937' }">{{ t.name }}</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Business Information -->
+                    <div class="bg-white rounded-2xl border border-gray-200 p-4">
+                        <h4 class="font-semibold text-gray-800 mb-4">Business Information</h4>
+                        <dl class="space-y-2 text-sm">
+                            <div class="flex items-center gap-2 mb-3">
+                                <dt class="text-gray-500">Company:</dt>
+                                <dd class="font-medium text-gray-900">{{ lead.company?.name || '—' }}</dd>
+                            </div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <dt class="text-gray-500">Category:</dt>
+                                <dd class="font-medium text-gray-900">{{ lead.category?.name || '—' }}</dd>
+                            </div>
+                            <div class="flex items-center gap-2 mb-3">
+                                <dt class="text-gray-500">Source:</dt>
+                                <dd class="font-medium text-gray-900">{{ lead.source }}<span v-if="lead.source_detail" class="text-gray-500"> ({{ lead.source_detail }})</span></dd>
+                            </div>
+                            <div v-if="lead.converted_user" class="flex items-center gap-2 mb-3">
+                                <dt class="text-gray-500">Converted to:</dt>
+                                <dd class="font-medium text-green-700">{{ lead.converted_user.first_name }} {{ lead.converted_user.last_name }}</dd>
+                            </div>
+                            <div v-if="lead.notes" class="pt-2 border-t border-gray-100">
+                                <dt class="text-gray-500 mb-1">Initial notes:</dt>
+                                <dd class="text-gray-700 whitespace-pre-line">{{ lead.notes }}</dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                </div>
+
+                <!-- Col 2-3: Status & Events + Notes -->
+                <div class="md:col-span-2 lg:col-span-2 space-y-6">
+                    <!-- Status & Events -->
+                    <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-4">
+                        <h4 class="font-semibold text-gray-800">Status & Assignment</h4>
+
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Lead Status</label>
+                            <select @change="changeStatus($event.target.value)" :value="lead.status"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black focus:border-black">
+                                <option v-for="(info, key) in statuses" :key="key" :value="key">{{ info.label }}</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-xs text-gray-400">Events of interest</label>
+                                <button @click="showAddEventModal = true" class="text-xs text-blue-600 hover:text-blue-800 font-medium">+ Add Event</button>
+                            </div>
+                            <div v-if="lead.events?.length" class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                <div v-for="ev in lead.events" :key="ev.id" class="border border-gray-100 rounded-lg px-3 py-2 flex items-center justify-between">
+                                    <p class="text-xs font-medium text-gray-700 truncate">{{ ev.name }}</p>
+                                    <button @click="removeEvent(ev.id)" class="text-gray-300 hover:text-red-500 transition-colors" title="Remove event">
+                                        <XMarkIcon class="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                            <p v-else class="text-xs text-gray-400 italic">No events assigned.</p>
+                        </div>
+                    </div>
+
+                    <!-- Notes CRM -->
+                    <div class="bg-white rounded-2xl border border-gray-200 p-4">
+                        <h4 class="font-semibold text-gray-800 mb-4">Notes</h4>
+
+                        <div class="mb-5">
+                            <div v-if="!noteExpanded" @click="noteExpanded = true"
+                                class="border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-400 cursor-text hover:border-gray-300 transition-colors">
+                                What's this note about?
+                            </div>
+                            <div v-else class="border-2 border-black rounded-xl overflow-hidden">
+                                <div v-if="noteShowTitle" class="px-4 pt-3">
+                                    <input v-model="noteTitle" type="text" placeholder="Title (optional)"
+                                        class="w-full border-0 p-0 text-sm font-semibold text-gray-900 focus:ring-0 placeholder-gray-400" />
+                                </div>
+                                <textarea v-model="noteContent" rows="3" placeholder="What's this note about?"
+                                    class="w-full border-0 px-4 py-3 text-sm text-gray-700 focus:ring-0 placeholder-gray-400 resize-none"></textarea>
+                                <div v-if="noteFiles.length" class="px-4 py-2 border-t border-gray-100 space-y-1">
+                                    <div v-for="(f, idx) in noteFiles" :key="idx" class="flex items-center justify-between bg-blue-50 rounded-lg px-3 py-1.5">
+                                        <div class="flex items-center gap-2 text-xs text-blue-700">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                            <span class="truncate max-w-48">{{ f.name }}</span>
+                                        </div>
+                                        <button @click="removeNoteFile(idx)" class="text-xs text-red-500 hover:text-red-700">&times;</button>
+                                    </div>
+                                </div>
+                                <div class="px-4 py-2 bg-gray-50 flex items-center gap-3 border-t border-gray-100">
+                                    <button @click="saveNote" :disabled="!noteContent.trim()"
+                                        class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors">Save</button>
+                                    <button @click="cancelNote"
+                                        class="px-4 py-1.5 border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-100 transition-colors">Cancel</button>
+                                    <label class="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 cursor-pointer transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                        Attach File
+                                        <input type="file" ref="noteFileInput" @change="handleNoteFileSelect" multiple class="hidden" />
+                                    </label>
+                                    <button v-if="!noteShowTitle" @click="noteShowTitle = true"
+                                        class="text-xs text-gray-500 hover:text-gray-700 transition-colors">Add a Title</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-0 divide-y divide-gray-100">
+                            <div v-for="note in leadNotes" :key="note.id" class="py-4 first:pt-0">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5"
+                                        :class="note.creator ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'">
+                                        {{ note.creator ? (note.creator.first_name?.[0] || '') + (note.creator.last_name?.[0] || '') : 'R7' }}
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 mb-0.5">
+                                            <span class="text-sm font-semibold text-gray-900">{{ note.creator ? note.creator.first_name + ' ' + note.creator.last_name : 'System' }}</span>
+                                            <span class="text-xs text-gray-400">{{ formatNoteDate(note.created_at) }}</span>
+                                        </div>
+                                        <p v-if="note.title && note.title !== 'Note' && note.title !== 'Nota'" class="text-sm font-semibold text-gray-800 mb-0.5">{{ note.title }}</p>
+                                        <p class="text-sm text-gray-600 whitespace-pre-line">{{ note.description }}</p>
+                                        <div v-if="note.files?.length" class="flex flex-wrap gap-1.5 mt-2">
+                                            <a v-for="f in note.files" :key="f.id" :href="`/storage/${f.file_path}`" target="_blank"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-100 transition-colors">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                                {{ f.file_name }}
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <p v-if="!leadNotes.length" class="text-sm text-gray-400 italic py-4">No notes yet.</p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Assignment -->
-                <div class="bg-white rounded-2xl border border-gray-200 p-5">
-                    <label class="block text-xs uppercase tracking-wider text-gray-400 mb-2">Assigned to</label>
-                    <select v-if="isLider" v-model="assignForm.assigned_to_user_id" @change="updateAssignment" class="input-sm w-full">
-                        <option :value="null">— Unassigned</option>
-                        <option v-for="a in advisors" :key="a.id" :value="a.id">
-                            {{ a.first_name }} {{ a.last_name }} {{ a.sponsorship_type === 'lider' ? '(L)' : '' }}
-                        </option>
-                    </select>
-                    <p v-else class="text-sm font-medium text-gray-900">
-                        {{ lead.assigned_to ? `${lead.assigned_to.first_name} ${lead.assigned_to.last_name}` : 'Unassigned' }}
-                    </p>
-                </div>
+                <!-- Col 4: Activity Timeline -->
+                <div class="space-y-6">
+                    <div class="bg-white rounded-2xl border border-gray-200 p-4">
+                        <h4 class="font-semibold text-gray-800 mb-4">Activity History</h4>
 
-                <!-- Tags -->
-                <div class="bg-white rounded-2xl border border-gray-200 p-5">
-                    <label class="block text-xs uppercase tracking-wider text-gray-400 mb-3">Tags</label>
-                    <div class="flex flex-wrap gap-2 mb-3">
-                        <button v-for="t in tags" :key="t.id" type="button" @click="toggleTag(t.id)"
-                            class="px-2 py-0.5 text-xs rounded-full border transition-all"
-                            :style="tagsForm.tag_ids.includes(t.id) ? { backgroundColor: t.color, color: 'white', borderColor: t.color } : {}"
-                            :class="tagsForm.tag_ids.includes(t.id) ? '' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'">
-                            {{ t.name }}
-                        </button>
-                    </div>
-                    <button @click="saveTags" class="text-xs text-blue-600 hover:underline">Save tags</button>
-                </div>
+                        <div v-if="sortedActivities.length" class="space-y-4">
+                            <div v-for="activity in sortedActivities" :key="activity.id" class="relative pl-7">
+                                <div class="absolute left-2.5 top-6 bottom-0 w-px bg-gray-100"></div>
+                                <div class="absolute left-0 top-0.5 w-5 h-5 rounded-full flex items-center justify-center"
+                                    :style="{ backgroundColor: activityTypeBg(activity.type) }">
+                                    <component :is="activityIcon(activity.type)" class="w-3 h-3" :style="{ color: activityTypeFg(activity.type) }" />
+                                </div>
 
-                <!-- Meta -->
-                <div class="bg-white rounded-2xl border border-gray-200 p-5 space-y-2 text-xs">
-                    <div>
-                        <span class="text-gray-400">Source: </span>
-                        <span class="font-medium text-gray-700">{{ lead.source }}<span v-if="lead.source_detail"> ({{ lead.source_detail }})</span></span>
-                    </div>
-                    <div>
-                        <span class="text-gray-400">Registered by: </span>
-                        <span class="font-medium text-gray-700">
-                            {{ lead.registered_by ? `${lead.registered_by.first_name} ${lead.registered_by.last_name}` : '—' }}
-                        </span>
-                    </div>
-                    <div>
-                        <span class="text-gray-400">Created: </span>
-                        <span class="font-medium text-gray-700">{{ formatDate(lead.created_at) }}</span>
-                    </div>
-                    <div v-if="lead.last_contacted_at">
-                        <span class="text-gray-400">Last contacted: </span>
-                        <span class="font-medium text-gray-700">{{ formatDate(lead.last_contacted_at) }}</span>
-                    </div>
-                    <div v-if="lead.last_email_sent_at">
-                        <span class="text-gray-400">Last email: </span>
-                        <span class="font-medium text-gray-700">{{ formatDate(lead.last_email_sent_at) }}</span>
-                        <span class="ml-1 px-1.5 py-0.5 rounded text-xs"
-                            :class="lead.last_email_status === 'sent' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
-                            {{ lead.last_email_status }}
-                        </span>
-                    </div>
-                    <div v-if="lead.converted_user">
-                        <span class="text-gray-400">Converted to sponsor: </span>
-                        <span class="font-medium text-gray-700">{{ lead.converted_user.first_name }} {{ lead.converted_user.last_name }}</span>
+                                <div class="pb-4">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div class="min-w-0">
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <span class="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                                                    :style="{ backgroundColor: activityTypeBg(activity.type), color: activityTypeFg(activity.type) }">
+                                                    {{ activityTypeLabel(activity.type) }}
+                                                </span>
+                                                <span v-if="activity.is_contract"
+                                                    class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#D4AF37] text-white">Contract</span>
+                                                <span class="text-sm font-medium text-gray-900"
+                                                    :class="isActivityExpanded(activity.id) ? 'whitespace-normal break-words' : 'truncate'">{{ activity.title }}</span>
+                                            </div>
+                                            <p v-if="activity.description" class="text-xs text-gray-500 mt-1 whitespace-pre-line">{{ activity.description }}</p>
+                                            <div v-if="activity.files?.length" class="flex flex-wrap gap-1 mt-2">
+                                                <a v-for="f in activity.files" :key="f.id" :href="`/storage/${f.file_path}`" target="_blank"
+                                                    class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-50 border border-gray-200 rounded text-[10px] text-gray-600 hover:bg-gray-100 transition-colors">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                                    {{ f.file_name }}
+                                                </a>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                                            <select @change="changeActivityStatus(activity.id, $event.target.value)" :value="activity.status"
+                                                class="text-[10px] font-medium rounded-lg px-2 py-1 border-0 cursor-pointer focus:ring-1 focus:ring-black"
+                                                :class="{
+                                                    'bg-amber-50 text-amber-700': activity.status === 'pending',
+                                                    'bg-green-50 text-green-700': activity.status === 'completed',
+                                                    'bg-gray-100 text-gray-500': activity.status === 'cancelled',
+                                                    'bg-red-50 text-red-600': activity.status === 'not_completed',
+                                                }">
+                                                <option value="pending">Pending</option>
+                                                <option value="completed">Completed</option>
+                                                <option value="cancelled">Cancelled</option>
+                                                <option value="not_completed">Not completed</option>
+                                            </select>
+                                            <button v-if="activity.title && activity.title.length > 25" @click="toggleActivityExpand(activity.id)"
+                                                class="inline-flex items-center gap-0.5 text-[10px] text-gray-400 hover:text-gray-700 transition-colors">
+                                                {{ isActivityExpanded(activity.id) ? 'Ver menos' : 'Ver más' }}
+                                                <ChevronDownIcon class="w-3 h-3 transition-transform" :class="{ 'rotate-180': isActivityExpanded(activity.id) }" />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center gap-2 mt-1.5 text-[11px] text-gray-400">
+                                        <span v-if="activity.creator">{{ activity.creator.first_name }} {{ activity.creator.last_name }}</span>
+                                        <span>{{ relativeTime(activity.created_at) }}</span>
+                                        <span v-if="activity.scheduled_at" class="flex items-center gap-0.5">
+                                            <ClockIcon class="w-3 h-3" />
+                                            {{ formatDateTime(activity.scheduled_at) }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p v-else class="text-sm text-gray-400 italic text-center py-4">No activities recorded.</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Upload modal -->
+        <!-- Modals -->
         <Teleport to="body">
-            <div v-if="showUploadModal" class="fixed inset-0 z-50 flex items-center justify-center">
-                <div class="absolute inset-0 bg-black/50" @click="showUploadModal = false"></div>
-                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Upload document</h3>
+            <!-- Activity Modal -->
+            <div v-if="showActivityModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl w-full max-w-lg p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">New Activity</h3>
+                        <button @click="showActivityModal = false" class="text-gray-400 hover:text-gray-600"><XMarkIcon class="w-5 h-5" /></button>
+                    </div>
                     <div class="space-y-3">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">File *</label>
-                            <input type="file" @change="e => uploadForm.file = e.target.files[0]" class="w-full text-sm" />
-                            <p v-if="uploadForm.errors.file" class="text-xs text-red-500 mt-1">{{ uploadForm.errors.file }}</p>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Type *</label>
+                                <select v-model="activityForm.type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+                                    <option v-for="(meta, key) in activityTypes" :key="key" :value="key">{{ meta.label }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Scheduled at</label>
+                                <input v-model="activityForm.scheduled_at" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                            </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Note</label>
-                            <input v-model="uploadForm.note" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Title *</label>
+                            <input v-model="activityForm.title" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
                         </div>
-                        <div class="flex justify-end gap-2">
-                            <button @click="showUploadModal = false" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
-                            <button @click="uploadDocument" :disabled="uploadForm.processing || !uploadForm.file"
-                                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
-                                Upload
-                            </button>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                            <textarea v-model="activityForm.description" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"></textarea>
+                        </div>
+                        <div v-if="activityForm.type === 'call' || activityForm.type === 'meeting'">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Assign to</label>
+                            <select v-model="activityForm.assigned_to_user_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+                                <option :value="null">— Me</option>
+                                <option v-for="a in advisors" :key="a.id" :value="a.id">{{ a.first_name }} {{ a.last_name }}{{ a.sponsorship_type === 'lider' ? ' (L)' : '' }}</option>
+                            </select>
+                        </div>
+                        <label v-if="activityForm.type === 'email'" class="flex items-center gap-2 text-sm bg-yellow-50 border border-[#D4AF37] rounded-lg px-3 py-2">
+                            <input v-model="activityForm.is_contract" type="checkbox" class="rounded" />
+                            <span>This email is the contract — status will change to <strong>Contrato</strong>.</span>
+                        </label>
+                        <div>
+                            <label class="inline-flex items-center gap-2 px-3 py-1.5 border border-dashed border-gray-300 rounded-lg text-xs cursor-pointer hover:bg-gray-50">
+                                <PlusIcon class="w-4 h-4" /> Attach files
+                                <input type="file" multiple @change="addActivityFile" class="hidden" />
+                            </label>
+                            <div v-if="activityForm.files.length" class="mt-2 space-y-1">
+                                <div v-for="(f, i) in activityForm.files" :key="i" class="flex items-center justify-between text-xs bg-gray-50 rounded px-2 py-1">
+                                    <span class="truncate">{{ f.name }}</span>
+                                    <button type="button" @click="removeActivityFile(i)" class="text-red-500"><XMarkIcon class="w-3 h-3" /></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex justify-end gap-2 pt-2">
+                            <button @click="showActivityModal = false" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                            <button @click="submitActivity" :disabled="activityForm.processing || !activityForm.title"
+                                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">Save</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Send email modal -->
-            <div v-if="showEmailModal" class="fixed inset-0 z-50 flex items-center justify-center">
-                <div class="absolute inset-0 bg-black/50" @click="showEmailModal = false"></div>
-                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-auto">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Send email to {{ lead.first_name }} {{ lead.last_name }}</h3>
-                    <p class="text-xs text-gray-500 mb-4">Will be sent from your email. Creates a completed activity in the timeline.</p>
+            <!-- Send Email Modal -->
+            <div v-if="showEmailModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-auto p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Send email to {{ lead.first_name }} {{ lead.last_name }}</h3>
+                        <button @click="showEmailModal = false" class="text-gray-400 hover:text-gray-600"><XMarkIcon class="w-5 h-5" /></button>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4">Sent from your email. Creates a completed activity in the timeline.</p>
                     <div class="space-y-3">
                         <div>
                             <label class="text-xs font-medium text-gray-600">Subject *</label>
                             <input v-model="emailForm.subject" type="text" class="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-                            <p v-if="emailForm.errors.subject" class="text-xs text-red-500 mt-1">{{ emailForm.errors.subject }}</p>
                         </div>
                         <div>
                             <label class="text-xs font-medium text-gray-600">Body *</label>
                             <textarea v-model="emailForm.body" rows="8" class="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"></textarea>
-                            <p v-if="emailForm.errors.body" class="text-xs text-red-500 mt-1">{{ emailForm.errors.body }}</p>
                         </div>
                         <div>
                             <label class="inline-flex items-center gap-2 px-3 py-1.5 border border-dashed border-gray-300 rounded-lg text-xs cursor-pointer hover:bg-gray-50">
                                 <PlusIcon class="w-4 h-4" /> Attach files
-                                <input type="file" multiple @change="addAttachment" class="hidden" />
+                                <input type="file" multiple @change="addEmailAttachment" class="hidden" />
                             </label>
                             <div v-if="emailForm.attachments.length" class="mt-2 space-y-1">
                                 <div v-for="(f, i) in emailForm.attachments" :key="i" class="flex items-center justify-between text-xs bg-gray-50 rounded px-2 py-1">
                                     <span class="truncate">{{ f.name }}</span>
-                                    <button type="button" @click="removeAttachment(i)" class="text-red-500">
-                                        <XMarkIcon class="w-3 h-3" />
-                                    </button>
+                                    <button type="button" @click="removeEmailAttachment(i)" class="text-red-500"><XMarkIcon class="w-3 h-3" /></button>
                                 </div>
                             </div>
                         </div>
@@ -523,9 +723,8 @@ function submitEmail() {
                             <span>This is the contract email. Lead status will switch to <strong>Contrato</strong>.</span>
                         </label>
                         <div class="flex justify-end gap-2 pt-2">
-                            <button type="button" @click="showEmailModal = false"
-                                class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
-                            <button type="button" @click="submitEmail" :disabled="emailForm.processing || !emailForm.subject || !emailForm.body"
+                            <button @click="showEmailModal = false" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                            <button @click="submitEmail" :disabled="emailForm.processing || !emailForm.subject || !emailForm.body"
                                 class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
                                 {{ emailForm.processing ? 'Sending...' : 'Send email' }}
                             </button>
@@ -534,68 +733,38 @@ function submitEmail() {
                 </div>
             </div>
 
-            <!-- Add activity modal -->
-            <div v-if="showActivityModal" class="fixed inset-0 z-50 flex items-center justify-center">
-                <div class="absolute inset-0 bg-black/50" @click="showActivityModal = false"></div>
-                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">New activity</h3>
-                    <div class="space-y-3">
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Type *</label>
-                                <select v-model="activityForm.type" class="input-sm w-full">
-                                    <option v-for="(meta, key) in activityTypes" :key="key" :value="key">{{ meta.label }}</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1">Scheduled at</label>
-                                <input v-model="activityForm.scheduled_at" type="datetime-local" class="input-sm w-full" />
-                            </div>
-                        </div>
+            <!-- Add Event Modal -->
+            <div v-if="showAddEventModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl w-full max-w-md p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Add event</h3>
+                        <button @click="showAddEventModal = false" class="text-gray-400 hover:text-gray-600"><XMarkIcon class="w-5 h-5" /></button>
+                    </div>
+                    <select v-model="newEventId" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white mb-4">
+                        <option value="">Select event...</option>
+                        <option v-for="e in availableEvents" :key="e.id" :value="e.id">{{ e.name }}</option>
+                    </select>
+                    <div class="flex justify-end gap-2">
+                        <button @click="showAddEventModal = false" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                        <button @click="addEvent" :disabled="!newEventId" class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">Add</button>
+                    </div>
+                </div>
+            </div>
 
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Title *</label>
-                            <input v-model="activityForm.title" type="text" class="input-sm w-full" />
-                            <p v-if="activityForm.errors.title" class="text-xs text-red-500 mt-1">{{ activityForm.errors.title }}</p>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Description</label>
-                            <textarea v-model="activityForm.description" rows="3" class="input-sm w-full resize-none"></textarea>
-                        </div>
-
-                        <div v-if="activityForm.type === 'call' || activityForm.type === 'meeting'">
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Assign to</label>
-                            <select v-model="activityForm.assigned_to_user_id" class="input-sm w-full">
-                                <option :value="null">— Me</option>
-                                <option v-for="a in advisors" :key="a.id" :value="a.id">
-                                    {{ a.first_name }} {{ a.last_name }} {{ a.sponsorship_type === 'lider' ? '(L)' : '' }}
-                                </option>
-                            </select>
-                            <p class="text-xs text-gray-400 mt-1">The assigned person will see this activity on their calendar.</p>
-                        </div>
-
-                        <label v-if="activityForm.type === 'email'" class="flex items-center gap-2 text-sm bg-yellow-50 border border-[#D4AF37] rounded-lg px-3 py-2">
-                            <input v-model="activityForm.is_contract" type="checkbox" class="rounded" />
-                            <span>This email is the contract. When marked completed, the lead status will change to <strong>Contrato</strong> automatically.</span>
-                        </label>
-
-                        <div class="flex justify-end gap-2 pt-2">
-                            <button type="button" @click="showActivityModal = false"
-                                class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
-                            <button type="button" @click="submitActivity" :disabled="activityForm.processing || !activityForm.title"
-                                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
-                                Save
-                            </button>
-                        </div>
+            <!-- Delete Modal -->
+            <div v-if="showDeleteModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl w-full max-w-sm p-6 text-center">
+                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <TrashIcon class="w-6 h-6 text-red-500" />
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Delete lead?</h3>
+                    <p class="text-sm text-gray-500 mb-5">All emails, events, tags and activities will be deleted.</p>
+                    <div class="flex gap-3">
+                        <button @click="showDeleteModal = false" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                        <button @click="deleteLead" class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Delete</button>
                     </div>
                 </div>
             </div>
         </Teleport>
     </AdminLayout>
 </template>
-
-<style scoped>
-@reference "tailwindcss";
-.input-sm { @apply border border-gray-300 rounded-lg px-2.5 py-2 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-black/10; }
-</style>

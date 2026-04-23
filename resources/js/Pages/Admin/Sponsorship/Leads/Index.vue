@@ -58,6 +58,20 @@ function formatDate(d) {
     if (!d) return '—';
     return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
+
+function instagramHandle(v) {
+    if (!v) return null;
+    let h = String(v).split('?')[0];
+    h = h.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '');
+    h = h.replace(/\/+$/, '');
+    h = h.replace(/^@/, '');
+    return h || null;
+}
+
+function instagramUrl(v) {
+    const h = instagramHandle(v);
+    return h ? `https://instagram.com/${h}` : null;
+}
 </script>
 
 <template>
@@ -136,6 +150,7 @@ function formatDate(d) {
                             <th class="px-4 py-3 font-medium">Name</th>
                             <th class="px-4 py-3 font-medium">Company</th>
                             <th class="px-4 py-3 font-medium">Email</th>
+                            <th class="px-4 py-3 font-medium">Instagram</th>
                             <th class="px-4 py-3 font-medium">Assigned to</th>
                             <th class="px-4 py-3 font-medium">Status</th>
                             <th class="px-4 py-3 font-medium">Tags</th>
@@ -144,7 +159,9 @@ function formatDate(d) {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                        <tr v-for="l in leads.data" :key="l.id" class="hover:bg-gray-50">
+                        <tr v-for="l in leads.data" :key="l.id"
+                            class="hover:bg-gray-50 cursor-pointer transition-colors"
+                            @click="router.visit(`/admin/sponsorship/leads/${l.id}`)">
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-2">
                                     <StarSolid v-if="l.is_contract_winner" class="w-4 h-4 text-[#D4AF37]" title="Contract winner" />
@@ -156,6 +173,13 @@ function formatDate(d) {
                             </td>
                             <td class="px-4 py-3 text-gray-700">{{ l.company?.name || '—' }}</td>
                             <td class="px-4 py-3 text-gray-600 text-xs">{{ l.primary_email?.email || '—' }}</td>
+                            <td class="px-4 py-3 text-xs" @click.stop>
+                                <a v-if="instagramUrl(l.instagram)" :href="instagramUrl(l.instagram)" target="_blank" rel="noopener"
+                                    class="text-blue-600 hover:underline">
+                                    @{{ instagramHandle(l.instagram) }}
+                                </a>
+                                <span v-else class="text-gray-400">—</span>
+                            </td>
                             <td class="px-4 py-3 text-gray-600">
                                 {{ l.assigned_to ? `${l.assigned_to.first_name} ${l.assigned_to.last_name}` : '—' }}
                             </td>
@@ -182,7 +206,7 @@ function formatDate(d) {
                                 </div>
                                 <span v-else class="text-gray-400">—</span>
                             </td>
-                            <td class="px-4 py-3 text-right">
+                            <td class="px-4 py-3 text-right" @click.stop>
                                 <div class="inline-flex gap-1">
                                     <Link :href="`/admin/sponsorship/leads/${l.id}`" class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
                                         <EyeIcon class="w-4 h-4" />
@@ -194,7 +218,7 @@ function formatDate(d) {
                             </td>
                         </tr>
                         <tr v-if="!leads.data.length">
-                            <td colspan="8" class="px-6 py-12 text-center text-gray-400 text-sm">
+                            <td colspan="9" class="px-6 py-12 text-center text-gray-400 text-sm">
                                 No leads found with current filters.
                             </td>
                         </tr>

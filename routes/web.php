@@ -487,8 +487,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::delete('leads/{lead}/remove-event', [SponsorshipLeadController::class, 'removeEvent'])->name('leads.remove-event');
 
                 Route::post('leads/{lead}/send-email', [SponsorshipLeadController::class, 'sendEmail'])->name('leads.send-email');
-                Route::post('leads/{lead}/documents', [SponsorshipLeadController::class, 'uploadDocument'])->name('leads.upload-document');
-                Route::delete('lead-documents/{document}', [SponsorshipLeadController::class, 'deleteDocument'])->name('leads.delete-document');
 
                 // Conversion lead → sponsor
                 Route::get('leads/{lead}/convert', [SponsorshipConversionController::class, 'show'])->name('leads.convert.show');
