@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { ref, nextTick, onMounted, onBeforeUnmount, watch } from 'vue';
-import { ChatBubbleLeftRightIcon, PaperAirplaneIcon } from '@heroicons/vue/24/outline';
+import { ChatBubbleLeftRightIcon, PaperAirplaneIcon, ArrowsRightLeftIcon } from '@heroicons/vue/24/outline';
 import { initEcho } from '@/echo.js';
 
 const props = defineProps({
@@ -213,6 +213,41 @@ function presenceLabel(user) {
     }
     return `Last seen on ${last.toLocaleDateString('en', { day: 'numeric', month: 'short' })}`;
 }
+
+// Reassignment — only makes sense when there's an operation/admin participant
+const INTERNAL_ROLES = ['admin', 'operation', 'sales', 'creative', 'tickets_manager', 'accounting', 'marketing', 'public_relations', 'sponsorship'];
+const canReassign = ['admin', 'operation'].includes(currentUser?.role) &&
+    (INTERNAL_ROLES.includes(userA?.role) || INTERNAL_ROLES.includes(userB?.role));
+const showReassignPanel = ref(false);
+const reassignAgents = ref([]);
+const reassignLoading = ref(false);
+const reassignError = ref('');
+
+async function openReassign() {
+    showReassignPanel.value = !showReassignPanel.value;
+    if (!showReassignPanel.value) return;
+    reassignLoading.value = true;
+    reassignError.value = '';
+    try {
+        const { data } = await window.axios.get('/admin/operations/chats/support-assignments');
+        const currentOpId = INTERNAL_ROLES.includes(userA?.role) ? userA.id : userB?.id;
+        reassignAgents.value = (data.agents || []).filter(a => a.id !== currentOpId);
+    } catch (e) {
+        reassignError.value = e?.response?.data?.message || 'Error loading agents.';
+    } finally {
+        reassignLoading.value = false;
+    }
+}
+
+async function reassignTo(agentId) {
+    try {
+        await window.axios.post(`/admin/operations/chats/${props.conversation.id}/reassign`, { user_id: agentId });
+        showReassignPanel.value = false;
+        router.reload({ only: ['conversation', 'messages'] });
+    } catch (e) {
+        reassignError.value = e?.response?.data?.message || 'Error reassigning.';
+    }
+}
 </script>
 
 <template>
@@ -279,6 +314,31 @@ function presenceLabel(user) {
                         </span>
                         <p v-if="show" class="text-sm text-gray-700 font-medium mt-1">{{ show?.name }}</p>
                         <p v-if="show" class="text-xs text-gray-400">{{ show?.event_day?.event?.name }}</p>
+
+                        <!-- Reassign -->
+                        <div v-if="canReassign" class="relative mt-2 inline-block text-left">
+                            <button @click="openReassign"
+                                class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-700">
+                                <ArrowsRightLeftIcon class="w-3.5 h-3.5" /> Reassign
+                            </button>
+                            <div v-if="showReassignPanel"
+                                class="absolute right-0 mt-1 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-20">
+                                <div class="px-3 py-2 border-b border-gray-100 text-[11px] text-gray-500 uppercase tracking-wide">Assign to</div>
+                                <div v-if="reassignLoading" class="px-4 py-4 text-center text-gray-400 text-xs">Loading…</div>
+                                <div v-else-if="reassignError" class="px-4 py-4 text-center text-red-500 text-xs">{{ reassignError }}</div>
+                                <div v-else-if="reassignAgents.length === 0" class="px-4 py-4 text-center text-gray-400 text-xs">No other agents available.</div>
+                                <div v-else class="max-h-56 overflow-y-auto">
+                                    <button v-for="a in reassignAgents" :key="a.id"
+                                        @click="reassignTo(a.id)"
+                                        class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+                                        <div class="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-bold text-gray-500">
+                                            {{ a.first_name?.[0] }}{{ a.last_name?.[0] }}
+                                        </div>
+                                        {{ a.first_name }} {{ a.last_name }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

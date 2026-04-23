@@ -80,9 +80,9 @@ class ChatController extends Controller
             'message' => 'nullable|string|max:2000',
         ]);
 
-        // Find an Operation user (or admin as fallback)
-        $operationUser = User::where('role', 'operation')->where('status', 'active')->first()
-            ?? User::where('role', 'admin')->first();
+        // Route to the agent assigned to this requester's role (balanced),
+        // falling back to any active operation user, then admin.
+        $operationUser = $this->chatService->resolveSupportAgent($user);
 
         if (!$operationUser) {
             return response()->json(['message' => 'No support agents available.'], 503);

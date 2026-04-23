@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, watch, computed } from 'vue';
-import { PlusIcon, XMarkIcon, ChatBubbleLeftRightIcon } from '@heroicons/vue/24/outline';
+import { PlusIcon, XMarkIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     conversations: Object,
@@ -90,6 +90,59 @@ const roleColors = {
     creative: 'bg-fuchsia-100 text-fuchsia-700', tickets_manager: 'bg-orange-100 text-orange-700',
 };
 const contextLabels = { casting: 'Casting', material: 'Material' };
+
+// Support assignments modal
+const showSettingsModal = ref(false);
+const settingsLoading = ref(false);
+const settingsSaving  = ref(false);
+const settingsError   = ref('');
+const supportAgents   = ref([]);
+const supportRoles    = ['designer', 'model', 'media', 'volunteer'];
+const roleAssignments = ref({ designer: [], model: [], media: [], volunteer: [] });
+const inactiveAssignees = ref({ designer: [], model: [], media: [], volunteer: [] });
+
+async function openSettings() {
+    showSettingsModal.value = true;
+    settingsLoading.value = true;
+    settingsError.value = '';
+    try {
+        const { data } = await window.axios.get('/admin/operations/chats/support-assignments');
+        supportAgents.value = data.agents;
+        const next = { designer: [], model: [], media: [], volunteer: [] };
+        const inactive = { designer: [], model: [], media: [], volunteer: [] };
+        for (const role of supportRoles) {
+            const rows = data.assignments?.[role] ?? [];
+            next[role] = rows.filter(r => !r.inactive).map(r => r.user_id);
+            inactive[role] = rows.filter(r => r.inactive);
+        }
+        roleAssignments.value = next;
+        inactiveAssignees.value = inactive;
+    } catch (e) {
+        settingsError.value = e?.response?.data?.message || 'Error loading assignments.';
+    } finally {
+        settingsLoading.value = false;
+    }
+}
+
+function toggleAgent(role, agentId) {
+    const list = roleAssignments.value[role];
+    const idx = list.indexOf(agentId);
+    if (idx >= 0) list.splice(idx, 1);
+    else list.push(agentId);
+}
+
+async function saveSettings() {
+    settingsSaving.value = true;
+    settingsError.value = '';
+    try {
+        await window.axios.put('/admin/operations/chats/support-assignments', roleAssignments.value);
+        showSettingsModal.value = false;
+    } catch (e) {
+        settingsError.value = e?.response?.data?.message || 'Error saving.';
+    } finally {
+        settingsSaving.value = false;
+    }
+}
 </script>
 
 <template>
@@ -103,10 +156,16 @@ const contextLabels = { casting: 'Casting', material: 'Material' };
                 <h3 class="text-2xl font-bold text-gray-900">Chats</h3>
                 <p class="text-gray-500 text-sm mt-1">{{ conversations.total }} conversations</p>
             </div>
-            <button @click="showNewChatModal = true"
-                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors flex items-center gap-1.5">
-                <PlusIcon class="w-4 h-4" /> New Chat
-            </button>
+            <div class="flex items-center gap-2">
+                <button @click="openSettings"
+                    class="px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+                    <Cog6ToothIcon class="w-4 h-4" /> Settings
+                </button>
+                <button @click="showNewChatModal = true"
+                    class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors flex items-center gap-1.5">
+                    <PlusIcon class="w-4 h-4" /> New Chat
+                </button>
+            </div>
         </div>
 
         <!-- Filters -->
@@ -209,6 +268,61 @@ const contextLabels = { casting: 'Casting', material: 'Material' };
                 </div>
             </div>
         </div>
+
+        <!-- Support Assignments (Settings) Modal -->
+        <Teleport to="body">
+            <div v-if="showSettingsModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showSettingsModal = false">
+                <div class="bg-white rounded-2xl w-full max-w-2xl shadow-xl max-h-[85vh] flex flex-col">
+                    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900">Support routing</h3>
+                            <p class="text-xs text-gray-500 mt-0.5">Pick the operation users that will handle support chats from each role.</p>
+                        </div>
+                        <button @click="showSettingsModal = false" class="p-1 rounded-lg hover:bg-gray-100"><XMarkIcon class="w-5 h-5 text-gray-400" /></button>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto px-6 py-4">
+                        <div v-if="settingsLoading" class="text-center text-gray-400 py-10 text-sm">Loading…</div>
+                        <div v-else-if="settingsError" class="text-center text-red-500 py-6 text-sm">{{ settingsError }}</div>
+                        <div v-else class="space-y-5">
+                            <div v-for="role in supportRoles" :key="role">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-semibold text-gray-800">{{ roleLabels[role] }}</span>
+                                    <span class="text-[11px] text-gray-400">{{ roleAssignments[role].length }} selected</span>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <button v-for="agent in supportAgents" :key="agent.id"
+                                        @click="toggleAgent(role, agent.id)"
+                                        type="button"
+                                        class="px-3 py-1.5 rounded-full text-xs border transition-colors"
+                                        :class="roleAssignments[role].includes(agent.id)
+                                            ? 'bg-black text-white border-black'
+                                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'">
+                                        {{ agent.first_name }} {{ agent.last_name }}
+                                    </button>
+                                    <span v-if="supportAgents.length === 0" class="text-xs text-gray-400 italic">No active operation users.</span>
+                                </div>
+                                <div v-if="inactiveAssignees[role].length" class="mt-2 flex flex-wrap gap-1.5">
+                                    <span v-for="a in inactiveAssignees[role]" :key="a.user_id"
+                                        class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] bg-red-50 text-red-700 border border-red-100">
+                                        <ExclamationTriangleIcon class="w-3 h-3" />
+                                        {{ a.first_name }} {{ a.last_name }} · inactive
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="px-6 py-3 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+                        <button @click="showSettingsModal = false" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg">Cancel</button>
+                        <button @click="saveSettings" :disabled="settingsLoading || settingsSaving"
+                            class="px-5 py-2 text-sm font-semibold text-white bg-black hover:bg-gray-800 rounded-lg disabled:opacity-50">
+                            {{ settingsSaving ? 'Saving…' : 'Save' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
 
         <!-- New Chat Modal -->
         <Teleport to="body">

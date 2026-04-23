@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ChatSupportAssignment;
 use App\Models\Conversation;
 use App\Models\Event;
 use App\Models\User;
 use App\Services\ChatService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -135,5 +138,91 @@ class ChatController extends Controller
         $this->chatService->sendMessage($conversation, $sender, $request->body);
 
         return back();
+    }
+
+    /**
+     * List the support assignments (which operation users handle which roles)
+     * + the active operation users available to pick from.
+     */
+    public function supportAssignments(): JsonResponse
+    {
+        $assignments = ChatSupportAssignment::with('user:id,first_name,last_name,status')
+            ->get()
+            ->groupBy('role')
+            ->map(fn ($rows) => $rows->map(fn ($a) => [
+                'user_id'     => $a->user_id,
+                'first_name'  => $a->user?->first_name,
+                'last_name'   => $a->user?->last_name,
+                'status'      => $a->user?->status,
+                'inactive'    => $a->user?->status !== 'active',
+            ])->values());
+
+        $agents = User::where('role', 'operation')
+            ->where('status', 'active')
+            ->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name']);
+
+        return response()->json([
+            'roles'       => ['designer', 'model', 'media', 'volunteer'],
+            'assignments' => $assignments,
+            'agents'      => $agents,
+        ]);
+    }
+
+    /**
+     * Replace the full mapping. Body: { designer: [ids], model: [ids], ... }.
+     */
+    public function saveSupportAssignments(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'designer'   => 'array',
+            'designer.*' => 'integer|exists:users,id',
+            'model'      => 'array',
+            'model.*'    => 'integer|exists:users,id',
+            'media'      => 'array',
+            'media.*'    => 'integer|exists:users,id',
+            'volunteer'  => 'array',
+            'volunteer.*' => 'integer|exists:users,id',
+        ]);
+
+        DB::transaction(function () use ($data) {
+            foreach (['designer', 'model', 'media', 'volunteer'] as $role) {
+                $userIds = $data[$role] ?? [];
+                ChatSupportAssignment::where('role', $role)->delete();
+                foreach ($userIds as $userId) {
+                    ChatSupportAssignment::create(['role' => $role, 'user_id' => $userId]);
+                }
+            }
+        });
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Reassign a support conversation to another operation user.
+     */
+    public function reassign(Request $request, Conversation $conversation): JsonResponse
+    {
+        $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+        ]);
+
+        $actor = auth()->user();
+        if (!$actor->isAdmin() && !$actor->isOperation()) {
+            abort(403);
+        }
+
+        $newAgent = User::find($request->user_id);
+        if (!$newAgent->isInternalTeam()) {
+            return response()->json(['message' => 'The new agent must be internal staff.'], 422);
+        }
+
+        try {
+            $this->chatService->reassignSupportConversation($conversation, $newAgent, $actor);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['ok' => true]);
     }
 }
