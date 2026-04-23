@@ -62,8 +62,7 @@ class ChatService
 
         // Lazy re-route: if this is a support chat and the counterpart agent is
         // now inactive, transparently reassign to an active agent before delivering.
-        // Skip for system messages (reassignment itself emits one, avoid recursion).
-        if ($type !== 'system' && !$sender->isInternalTeam()) {
+        if (!$sender->isInternalTeam()) {
             $conversation = $this->maybeLazyReassign($conversation, $sender);
         }
 
@@ -292,14 +291,11 @@ class ChatService
             'user_b_id' => max($newAgent->id, $counterpartId),
         ]);
 
-        $actorLabel = $actor ? trim($actor->first_name . ' ' . $actor->last_name) : 'operation';
-        $newLabel = trim($newAgent->first_name . ' ' . $newAgent->last_name);
-        $this->sendMessage(
-            $conversation,
-            $actor ?? $newAgent,
-            "Conversation reassigned to {$newLabel} by {$actorLabel}.",
-            'system'
-        );
+        // Friendly handoff message from the new agent — rendered as a normal
+        // chat bubble so mobile clients show it without needing to implement
+        // a separate system-message renderer.
+        $greeting = "Hi! I'm {$newAgent->first_name}, I'll be taking over this conversation from now on.";
+        $this->sendMessage($conversation, $newAgent, $greeting);
 
         return $conversation->fresh();
     }
