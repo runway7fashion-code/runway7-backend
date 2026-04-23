@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\Sponsorship\SendLeadConfirmationEmailJob;
 use App\Models\Sponsorship\Company;
 use App\Models\Sponsorship\Lead;
+use App\Models\Sponsorship\LeadActivity;
 use App\Models\Sponsorship\LeadEmail;
 use App\Models\User;
 use App\Notifications\Sponsorship\NewSponsorshipLead;
@@ -84,6 +85,17 @@ class SponsorshipLeadRegistrationController extends Controller
                 'lead_id'    => $lead->id,
                 'email'      => $email,
                 'is_primary' => true,
+            ]);
+
+            LeadActivity::create([
+                'lead_id'             => $lead->id,
+                'created_by_user_id'  => null,
+                'assigned_to_user_id' => null,
+                'type'                => 'system',
+                'title'               => 'Lead registrado desde la web',
+                'description'         => "Email: {$email}, Empresa: {$company->name}",
+                'status'              => 'completed',
+                'completed_at'        => now(),
             ]);
 
             return $lead;

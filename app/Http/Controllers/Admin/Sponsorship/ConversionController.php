@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Sponsorship;
 
 use App\Http\Controllers\Controller;
 use App\Models\Sponsorship\Lead;
+use App\Models\Sponsorship\LeadActivity;
 use App\Models\Sponsorship\Package;
 use App\Models\Sponsorship\Registration;
 use App\Models\Sponsorship\RegistrationDocument;
@@ -161,10 +162,36 @@ class ConversionController extends Controller
             ]);
 
             // 7. Cascada: otros leads de la company con status activo → cerrado
-            Lead::where('company_id', $company->id)
+            $cascadedLeads = Lead::where('company_id', $company->id)
                 ->where('id', '!=', $lead->id)
                 ->whereNotIn('status', ['cerrado', 'rechazado', 'perdido'])
-                ->update(['status' => 'cerrado']);
+                ->get();
+
+            foreach ($cascadedLeads as $other) {
+                $other->update(['status' => 'cerrado']);
+                LeadActivity::create([
+                    'lead_id'             => $other->id,
+                    'created_by_user_id'  => auth()->id(),
+                    'assigned_to_user_id' => auth()->id(),
+                    'type'                => 'system',
+                    'title'               => "Cerrado automáticamente — contrato ganado por {$user->first_name} {$user->last_name}",
+                    'description'         => "La empresa {$company->name} firmó contrato con otro lead.",
+                    'status'              => 'completed',
+                    'completed_at'        => now(),
+                ]);
+            }
+
+            // Log en el lead convertido
+            LeadActivity::create([
+                'lead_id'             => $lead->id,
+                'created_by_user_id'  => auth()->id(),
+                'assigned_to_user_id' => auth()->id(),
+                'type'                => 'system',
+                'title'               => "Convertido a sponsor: {$user->first_name} {$user->last_name}",
+                'description'         => "Package: " . ($registration->package?->name ?? '—') . ", Agreed price: \${$registration->agreed_price}",
+                'status'              => 'completed',
+                'completed_at'        => now(),
+            ]);
 
             return [
                 'user'         => $user,

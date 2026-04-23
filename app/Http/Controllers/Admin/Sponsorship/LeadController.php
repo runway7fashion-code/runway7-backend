@@ -60,6 +60,20 @@ class LeadController extends Controller
         }
     }
 
+    private function logActivity(Lead $lead, string $type, string $title, ?string $description = null): void
+    {
+        LeadActivity::create([
+            'lead_id'             => $lead->id,
+            'created_by_user_id'  => auth()->id(),
+            'assigned_to_user_id' => auth()->id(),
+            'type'                => $type,
+            'title'               => $title,
+            'description'         => $description,
+            'status'              => 'completed',
+            'completed_at'        => now(),
+        ]);
+    }
+
     private function syncEmails(Lead $lead, string $primary, array $secondaries = []): void
     {
         $all = array_merge([$primary], $secondaries);
@@ -237,6 +251,13 @@ class LeadController extends Controller
                 $lead->tags()->sync($validated['tag_ids']);
             }
 
+            $this->logActivity(
+                $lead,
+                'system',
+                'Lead creado manualmente',
+                "Email: {$validated['email']}, Empresa: " . ($lead->company?->name ?? '—')
+            );
+
             return $lead;
         });
 
@@ -371,7 +392,21 @@ class LeadController extends Controller
             'status' => ['required', Rule::in(array_keys(Lead::STATUSES))],
         ]);
 
+        $oldStatus = $lead->status;
+        if ($oldStatus === $validated['status']) {
+            return back();
+        }
+
         $lead->update(['status' => $validated['status']]);
+
+        $oldLabel = Lead::STATUSES[$oldStatus]['label'] ?? $oldStatus;
+        $newLabel = Lead::STATUSES[$validated['status']]['label'] ?? $validated['status'];
+        $this->logActivity(
+            $lead,
+            'status_change',
+            "Estado cambiado de {$oldLabel} a {$newLabel}",
+            "{$oldLabel} → {$newLabel}"
+        );
 
         return back()->with('success', 'Status actualizado.');
     }
@@ -384,7 +419,19 @@ class LeadController extends Controller
             'assigned_to_user_id' => 'nullable|exists:users,id',
         ]);
 
-        $lead->update(['assigned_to_user_id' => $validated['assigned_to_user_id'] ?? null]);
+        $oldAssignedId = $lead->assigned_to_user_id;
+        $newAssignedId = $validated['assigned_to_user_id'] ?? null;
+        if ($oldAssignedId === $newAssignedId) {
+            return back();
+        }
+
+        $lead->update(['assigned_to_user_id' => $newAssignedId]);
+
+        $newUser = $newAssignedId ? User::find($newAssignedId) : null;
+        $title = $newUser
+            ? "Asignado manualmente a {$newUser->first_name} {$newUser->last_name}"
+            : 'Lead sin asignar';
+        $this->logActivity($lead, 'assignment', $title);
 
         return back()->with('success', 'Asignación actualizada.');
     }
@@ -411,7 +458,13 @@ class LeadController extends Controller
             'event_id' => 'required|exists:events,id',
         ]);
 
+        $alreadyAttached = $lead->events()->where('events.id', $validated['event_id'])->exists();
         $lead->events()->syncWithoutDetaching([$validated['event_id']]);
+
+        if (!$alreadyAttached) {
+            $eventName = \App\Models\Event::find($validated['event_id'])?->name ?? '—';
+            $this->logActivity($lead, 'system', "Evento agregado: {$eventName}");
+        }
 
         return back()->with('success', 'Evento agregado.');
     }
@@ -424,7 +477,10 @@ class LeadController extends Controller
             'event_id' => 'required|exists:events,id',
         ]);
 
+        $eventName = \App\Models\Event::find($validated['event_id'])?->name ?? '—';
         $lead->events()->detach($validated['event_id']);
+
+        $this->logActivity($lead, 'system', "Evento removido: {$eventName}");
 
         return back()->with('success', 'Evento quitado.');
     }
