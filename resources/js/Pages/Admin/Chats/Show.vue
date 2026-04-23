@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { ref, nextTick, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, nextTick, onMounted, onBeforeUnmount, watch, computed } from 'vue';
 import { ChatBubbleLeftRightIcon, PaperAirplaneIcon, ArrowsRightLeftIcon } from '@heroicons/vue/24/outline';
 import { initEcho } from '@/echo.js';
 
@@ -13,9 +13,12 @@ const props = defineProps({
 const page = usePage();
 const currentUser = page.props.auth?.user;
 
-const userA = props.conversation.user_a;
-const userB = props.conversation.user_b;
-const show  = props.conversation.show;
+// Reactive to prop updates — a reassignment swaps user_a/user_b on the server,
+// Inertia reloads the `conversation` prop, and these computeds re-evaluate so
+// the UI (input enabled/disabled, header names, ticks) updates live.
+const userA = computed(() => props.conversation.user_a);
+const userB = computed(() => props.conversation.user_b);
+const show  = computed(() => props.conversation.show);
 
 const messages = ref([...props.messages]);
 const messageForm = useForm({ body: '' });
@@ -73,24 +76,26 @@ function onInput() {
 
 const typingUserName = () => {
     if (!typingUserId.value) return '';
-    const u = typingUserId.value === userA?.id ? userA : userB;
+    const u = typingUserId.value === userA.value?.id ? userA.value : userB.value;
     return u?.first_name || 'Someone';
 };
 
-const isParticipant = currentUser && (currentUser.id === userA?.id || currentUser.id === userB?.id);
+const isParticipant = computed(() =>
+    !!currentUser && (currentUser.id === userA.value?.id || currentUser.id === userB.value?.id)
+);
 
 function markAsRead() {
-    if (!isParticipant) return;
+    if (!isParticipant.value) return;
     window.axios.post(`/api/v1/chat/conversations/${props.conversation.id}/read`).catch(() => {});
 }
 
 function focusChat() {
-    if (!isParticipant) return;
+    if (!isParticipant.value) return;
     window.axios.post(`/api/v1/chat/conversations/${props.conversation.id}/focus`).catch(() => {});
 }
 
 function blurChat() {
-    if (!isParticipant) return;
+    if (!isParticipant.value) return;
     window.axios.post(`/api/v1/chat/presence/blur`).catch(() => {});
 }
 
@@ -216,8 +221,10 @@ function presenceLabel(user) {
 
 // Reassignment — only makes sense when there's an operation/admin participant
 const INTERNAL_ROLES = ['admin', 'operation', 'sales', 'creative', 'tickets_manager', 'accounting', 'marketing', 'public_relations', 'sponsorship'];
-const canReassign = ['admin', 'operation'].includes(currentUser?.role) &&
-    (INTERNAL_ROLES.includes(userA?.role) || INTERNAL_ROLES.includes(userB?.role));
+const canReassign = computed(() =>
+    ['admin', 'operation'].includes(currentUser?.role) &&
+    (INTERNAL_ROLES.includes(userA.value?.role) || INTERNAL_ROLES.includes(userB.value?.role))
+);
 const showReassignPanel = ref(false);
 const reassignAgents = ref([]);
 const reassignLoading = ref(false);
@@ -230,7 +237,7 @@ async function openReassign() {
     reassignError.value = '';
     try {
         const { data } = await window.axios.get('/admin/operations/chats/support-assignments');
-        const currentOpId = INTERNAL_ROLES.includes(userA?.role) ? userA.id : userB?.id;
+        const currentOpId = INTERNAL_ROLES.includes(userA.value?.role) ? userA.value.id : userB.value?.id;
         reassignAgents.value = (data.agents || []).filter(a => a.id !== currentOpId);
     } catch (e) {
         reassignError.value = e?.response?.data?.message || 'Error loading agents.';
