@@ -192,7 +192,6 @@ class ChatService
         if ($assignedIds->isNotEmpty()) {
             $candidates = User::whereIn('id', $assignedIds)
                 ->where('status', 'active')
-                ->whereNull('deleted_at')
                 ->get();
 
             if ($candidates->isNotEmpty()) {
@@ -244,7 +243,7 @@ class ChatService
             return $conversation;
         }
 
-        if ($counterpart->status === 'active' && !$counterpart->trashed()) {
+        if ($counterpart->status === 'active') {
             return $conversation;
         }
 
