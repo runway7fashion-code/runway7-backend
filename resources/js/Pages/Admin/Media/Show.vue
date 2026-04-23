@@ -56,12 +56,6 @@ function assignEvent() {
     });
 }
 
-// Delete
-const showDeleteModal = ref(false);
-function confirmDelete() {
-    router.delete(`/admin/operations/media/${props.media.id}`, { onSuccess: () => { showDeleteModal.value = false; } });
-}
-
 // Assistant
 const assistantForm = ref({ full_name: '', document_id: '', phone: '', email: '', event_id: '' });
 function addAssistant() {
@@ -129,7 +123,6 @@ function openPassModal(evt) { passModal.value = evt.pass; }
                                 <DevicePhoneMobileIcon class="w-3.5 h-3.5 inline mr-1" /> Enviar SMS
                             </button>
                             <Link :href="`/admin/operations/media/${media.id}/edit`" class="px-3 py-1.5 border border-gray-200 text-xs font-medium rounded-lg hover:bg-gray-50 text-gray-700">Editar</Link>
-                            <button @click="showDeleteModal = true" class="px-3 py-1.5 border border-red-200 text-xs font-medium rounded-lg hover:bg-red-50 text-red-600">Eliminar</button>
                         </div>
                     </div>
 
@@ -255,21 +248,6 @@ function openPassModal(evt) { passModal.value = evt.pass; }
             </div>
         </div>
     </AdminLayout>
-
-    <!-- Delete Modal -->
-    <Teleport to="body">
-        <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center">
-            <div class="absolute inset-0 bg-black/60" @click="showDeleteModal = false"></div>
-            <div class="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full mx-4 p-6 z-10 text-center">
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">¿Eliminar media?</h3>
-                <p class="text-sm text-gray-500 mb-5">Esta acción es irreversible.</p>
-                <div class="flex gap-3">
-                    <button @click="showDeleteModal = false" class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancelar</button>
-                    <button @click="confirmDelete" class="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700">Eliminar</button>
-                </div>
-            </div>
-        </div>
-    </Teleport>
 
     <!-- QR Pass Modal -->
     <Teleport to="body">

@@ -144,13 +144,6 @@ function sendSms() {
     router.post(`/admin/operations/volunteers/${props.volunteer.id}/send-onboarding-sms`, {}, { preserveScroll: true });
 }
 
-// Delete
-const showDeleteModal = ref(false);
-function deleteVolunteer() {
-    router.delete(`/admin/operations/volunteers/${props.volunteer.id}`, {
-        onSuccess: () => { showDeleteModal.value = false; },
-    });
-}
 </script>
 
 <template>
@@ -195,10 +188,6 @@ function deleteVolunteer() {
                                     class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
                                     Editar
                                 </Link>
-                                <button @click="showDeleteModal = true"
-                                    class="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors flex items-center gap-1">
-                                    <TrashIcon class="w-3.5 h-3.5" /> Eliminar
-                                </button>
                             </div>
                         </div>
 
@@ -458,32 +447,5 @@ function deleteVolunteer() {
             </div>
         </Teleport>
 
-        <!-- Modal: Confirmar eliminar -->
-        <Teleport to="body">
-            <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center">
-                <div class="absolute inset-0 bg-black/50" @click="showDeleteModal = false"></div>
-                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
-                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <TrashIcon class="w-6 h-6 text-red-500" />
-                    </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-1">¿Eliminar a {{ volunteer.first_name }} {{ volunteer.last_name }}?</h3>
-                    <p class="text-sm text-gray-500 mb-4">Esta acción es permanente y no se puede deshacer.</p>
-                    <div class="bg-red-50 border border-red-100 rounded-xl p-4 mb-5 text-left">
-                        <p class="text-xs font-semibold text-red-700 mb-2">Se eliminará de forma definitiva:</p>
-                        <ul class="text-xs text-red-600 space-y-1">
-                            <li>• Cuenta de usuario y datos personales</li>
-                            <li>• Perfil de voluntario y notas internas</li>
-                            <li>• Asignaciones a eventos y horarios</li>
-                            <li>• Historial de comunicaciones</li>
-                            <li>• Pases de acceso generados</li>
-                        </ul>
-                    </div>
-                    <div class="flex gap-3">
-                        <button @click="showDeleteModal = false" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancelar</button>
-                        <button @click="deleteVolunteer" class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Eliminar definitivamente</button>
-                    </div>
-                </div>
-            </div>
-        </Teleport>
     </AdminLayout>
 </template>

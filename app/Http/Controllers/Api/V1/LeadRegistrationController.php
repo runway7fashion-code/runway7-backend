@@ -159,7 +159,6 @@ class LeadRegistrationController extends Controller
         try {
             $leaders = User::where('role', 'sales')
                 ->where('sales_type', 'lider')
-                ->whereNull('deleted_at')
                 ->get();
 
             foreach ($leaders as $leader) {

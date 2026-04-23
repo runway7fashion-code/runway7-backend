@@ -123,13 +123,6 @@ const passModal = ref(null);
 function openPassModal(evt) { passModal.value = { ...evt.pass, event_name: evt.name }; }
 function closePassModal()   { passModal.value = null; }
 
-// Modal eliminar
-const showDeleteModal = ref(false);
-function deleteModel() {
-    router.delete(`/admin/operations/models/${props.model.id}`, {
-        onSuccess: () => { showDeleteModal.value = false; },
-    });
-}
 </script>
 
 <template>
@@ -187,11 +180,6 @@ function deleteModel() {
                                     class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
                                     Editar
                                 </Link>
-                                <button @click="showDeleteModal = true"
-                                    class="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors flex items-center gap-1">
-                                    <TrashIcon class="w-3.5 h-3.5" />
-                                    Eliminar
-                                </button>
                             </div>
                         </div>
 
@@ -487,62 +475,6 @@ function deleteModel() {
             </div>
         </div>
     </AdminLayout>
-
-    <!-- Modal: Confirmar eliminación -->
-    <Teleport to="body">
-        <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center">
-            <div class="absolute inset-0 bg-black/60" @click="showDeleteModal = false"></div>
-            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
-                <!-- Ícono -->
-                <div class="flex items-center justify-center w-12 h-12 rounded-full bg-red-50 mx-auto mb-4">
-                    <TrashIcon class="w-6 h-6 text-red-600" />
-                </div>
-
-                <!-- Título -->
-                <h3 class="text-lg font-bold text-gray-900 text-center mb-1">
-                    ¿Eliminar a {{ model.first_name }} {{ model.last_name }}?
-                </h3>
-                <p class="text-sm text-gray-500 text-center mb-5">Esta acción es permanente y no se puede deshacer.</p>
-
-                <!-- Detalles de lo que se elimina -->
-                <div class="bg-red-50 border border-red-100 rounded-xl p-4 mb-6 space-y-1.5">
-                    <p class="text-xs font-semibold text-red-700 mb-2">Se eliminará de forma definitiva:</p>
-                    <div class="flex items-start gap-2 text-xs text-red-600">
-                        <span class="mt-0.5">•</span>
-                        <span>Cuenta de usuario y datos personales</span>
-                    </div>
-                    <div class="flex items-start gap-2 text-xs text-red-600">
-                        <span class="mt-0.5">•</span>
-                        <span>Foto de perfil y todas las fotos del comp card</span>
-                    </div>
-                    <div class="flex items-start gap-2 text-xs text-red-600">
-                        <span class="mt-0.5">•</span>
-                        <span>Asignaciones a eventos y slots de casting</span>
-                    </div>
-                    <div class="flex items-start gap-2 text-xs text-red-600">
-                        <span class="mt-0.5">•</span>
-                        <span>Participación en shows</span>
-                    </div>
-                    <div class="flex items-start gap-2 text-xs text-red-600">
-                        <span class="mt-0.5">•</span>
-                        <span>Pases de acceso generados</span>
-                    </div>
-                </div>
-
-                <!-- Botones -->
-                <div class="flex gap-3">
-                    <button @click="showDeleteModal = false"
-                        class="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                        Cancelar
-                    </button>
-                    <button @click="deleteModel"
-                        class="flex-1 px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors">
-                        Eliminar definitivamente
-                    </button>
-                </div>
-            </div>
-        </div>
-    </Teleport>
 
     <!-- Modal: Ver Pase QR -->
     <Teleport to="body">

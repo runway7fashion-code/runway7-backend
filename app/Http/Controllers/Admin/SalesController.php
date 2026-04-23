@@ -17,7 +17,6 @@ use App\Services\DesignerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -72,8 +71,7 @@ class SalesController extends Controller
         }
 
         // Conversion rate = designers registered / total leads assigned
-        $totalLeadsForUser = DesignerLead::whereNull('deleted_at')
-            ->when($isAsesor, fn($q) => $q->where('assigned_to', $user->id))
+        $totalLeadsForUser = DesignerLead::when($isAsesor, fn($q) => $q->where('assigned_to', $user->id))
             ->count();
         $conversionRate = $totalLeadsForUser > 0 ? round(($totalRegistrations / $totalLeadsForUser) * 100) : 0;
 
@@ -130,7 +128,7 @@ class SalesController extends Controller
                 $cancelled = $q()->where('status', 'cancelled')->count();
                 $revenue   = (float) $q()->where('status', '!=', 'cancelled')->sum('agreed_price');
 
-                $totalLeads = DesignerLead::where('assigned_to', $rep->id)->whereNull('deleted_at')->count();
+                $totalLeads = DesignerLead::where('assigned_to', $rep->id)->count();
 
                 return [
                     'id'              => $rep->id,
@@ -314,8 +312,8 @@ class SalesController extends Controller
         $request->validate([
             'first_name'  => 'required|string|max:255',
             'last_name'   => 'required|string|max:255',
-            'email'       => ['required', 'email', Rule::unique('users', 'email')->whereNull('deleted_at')],
-            'phone'       => ['nullable', 'string', Rule::unique('users', 'phone')->whereNull('deleted_at')],
+            'email'       => 'required|email|unique:users,email',
+            'phone'       => 'nullable|string|unique:users,phone',
             'brand_name'  => 'required|string|max:255',
             'country'     => 'required|string|max:255',
             'event_id'    => 'required|exists:events,id',
@@ -679,8 +677,7 @@ class SalesController extends Controller
         $downpay    = (float) $base()->where('status', '!=', 'cancelled')->sum('downpayment');
         $avgDeal    = ($total - $cancelled) > 0 ? round($revenue / ($total - $cancelled), 2) : 0;
         // Conversion rate = designers registered / total leads
-        $totalLeadsHistory = DesignerLead::whereNull('deleted_at')
-            ->when($repId, fn($q) => $q->where('assigned_to', $repId))
+        $totalLeadsHistory = DesignerLead::when($repId, fn($q) => $q->where('assigned_to', $repId))
             ->count();
         $confRate = $totalLeadsHistory > 0 ? round(($total / $totalLeadsHistory) * 100) : 0;
 
@@ -730,7 +727,7 @@ class SalesController extends Controller
             $revenue   = (float) $q()->where('status', '!=', 'cancelled')->sum('agreed_price');
 
             // Conversion rate = designers registered / total leads assigned
-            $totalLeads = \App\Models\DesignerLead::where('assigned_to', $rep->id)->whereNull('deleted_at')->count();
+            $totalLeads = \App\Models\DesignerLead::where('assigned_to', $rep->id)->count();
 
             return [
                 'id'               => $rep->id,

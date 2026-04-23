@@ -26,7 +26,6 @@ use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -177,7 +176,7 @@ class DesignerController extends Controller
         $request->validate([
             'first_name'      => 'required|string|max:255',
             'last_name'       => 'required|string|max:255',
-            'email'           => ['required', 'email', Rule::unique('users', 'email')->whereNull('deleted_at')],
+            'email'           => 'required|email|unique:users,email',
             'phone'           => 'nullable|string',
             'brand_name'      => 'required|string|max:255',
             'collection_name' => 'nullable|string|max:255',
@@ -379,8 +378,8 @@ class DesignerController extends Controller
         $request->validate([
             'first_name'      => 'required|string|max:255',
             'last_name'       => 'required|string|max:255',
-            'email'           => ['required', 'email', Rule::unique('users', 'email')->ignore($designer->id)->whereNull('deleted_at')],
-            'phone'           => ['nullable', 'string', Rule::unique('users', 'phone')->ignore($designer->id)->whereNull('deleted_at')],
+            'email'           => "required|email|unique:users,email,{$designer->id}",
+            'phone'           => "nullable|string|unique:users,phone,{$designer->id}",
             'status'          => 'nullable|in:active,inactive,pending,registered',
             'brand_name'      => 'required|string|max:255',
             'collection_name' => 'nullable|string|max:255',
@@ -417,15 +416,6 @@ class DesignerController extends Controller
 
         return redirect()->route('admin.designers.show', $designer)
             ->with('success', 'Diseñador actualizado exitosamente.');
-    }
-
-    public function destroy(User $designer)
-    {
-        $this->authorizeDesigner($designer);
-        $designer->delete();
-
-        return redirect()->route('admin.designers.index')
-            ->with('success', 'Diseñador eliminado.');
     }
 
     public function uploadProfilePicture(Request $request, User $designer)

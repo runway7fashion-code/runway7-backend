@@ -18,7 +18,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Maatwebsite\Excel\Facades\Excel;
@@ -157,8 +156,8 @@ class VolunteerController extends Controller
         $validated = $request->validate([
             'first_name'                              => 'required|string|max:255',
             'last_name'                               => 'required|string|max:255',
-            'email'                                   => ['required', 'email', Rule::unique('users', 'email')->whereNull('deleted_at')],
-            'phone'                                   => ['nullable', 'string', Rule::unique('users', 'phone')->whereNull('deleted_at')],
+            'email'                                   => 'required|email|unique:users,email',
+            'phone'                                   => 'nullable|string|unique:users,phone',
             'age'                                     => 'nullable|integer|min:18|max:80',
             'gender'                                  => 'nullable|in:female,male,non_binary',
             'location'                                => 'nullable|string|max:255',
@@ -288,8 +287,8 @@ class VolunteerController extends Controller
         $validated = $request->validate([
             'first_name'             => 'required|string|max:255',
             'last_name'              => 'nullable|string|max:255',
-            'email'                  => ['required', 'email', Rule::unique('users', 'email')->ignore($volunteer->id)->whereNull('deleted_at')],
-            'phone'                  => ['nullable', 'string', Rule::unique('users', 'phone')->ignore($volunteer->id)->whereNull('deleted_at')],
+            'email'                  => "required|email|unique:users,email,{$volunteer->id}",
+            'phone'                  => "nullable|string|unique:users,phone,{$volunteer->id}",
             'age'                    => 'nullable|integer|min:18|max:80',
             'gender'                 => 'nullable|in:female,male,non_binary',
             'location'               => 'nullable|string|max:255',
@@ -334,23 +333,6 @@ class VolunteerController extends Controller
 
         return redirect()->route('admin.volunteers.show', $volunteer)
             ->with('success', 'Voluntario actualizado correctamente.');
-    }
-
-    public function destroy(User $volunteer)
-    {
-        $this->authorizeVolunteer($volunteer);
-
-        DB::transaction(function () use ($volunteer) {
-            $volunteer->volunteerSchedules()->delete();
-            $volunteer->volunteerProfile?->delete();
-            $volunteer->eventsAsVolunteer()->detach();
-            DB::table('event_passes')->where('user_id', $volunteer->id)->delete();
-            DB::table('communication_logs')->where('user_id', $volunteer->id)->delete();
-            $volunteer->forceDelete();
-        });
-
-        return redirect()->route('admin.volunteers.index')
-            ->with('success', 'Voluntario eliminado correctamente.');
     }
 
     // ──────────────────────────────────────────────

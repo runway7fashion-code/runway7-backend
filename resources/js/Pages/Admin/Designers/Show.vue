@@ -105,14 +105,7 @@ function sendOnboardingSms() {
     });
 }
 
-// Delete designer
-const showDeleteModal = ref(false);
 const previewDoc = ref(null);
-function deleteDesigner() {
-    router.delete(`/admin/operations/designers/${props.designer.id}`, {
-        onSuccess: () => showDeleteModal.value = false,
-    });
-}
 
 // Modal pase
 const passModal = ref(null);
@@ -233,11 +226,6 @@ const socialLinks = computed(() => {
                                     class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
                                     Edit
                                 </Link>
-                                <button @click="showDeleteModal = true"
-                                    class="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors flex items-center gap-1.5">
-                                    <TrashIcon class="w-3.5 h-3.5" />
-                                    Delete
-                                </button>
                             </div>
                         </div>
 
@@ -605,44 +593,6 @@ const socialLinks = computed(() => {
         </div>
     </Teleport>
 
-    <!-- Modal: Confirmar eliminación -->
-    <Teleport to="body">
-        <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center">
-            <div class="absolute inset-0 bg-black/60" @click="showDeleteModal = false"></div>
-            <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
-                <button @click="showDeleteModal = false" class="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600">
-                    <XMarkIcon class="h-5 w-5" />
-                </button>
-                <div class="flex justify-center mb-3">
-                    <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center">
-                        <TrashIcon class="w-6 h-6 text-red-500" />
-                    </div>
-                </div>
-                <h3 class="text-lg font-bold text-gray-900 mb-1 text-center">Delete {{ designer.first_name }} {{ designer.last_name }}?</h3>
-                <p class="text-sm text-gray-500 mb-4 text-center">This action is permanent and cannot be undone.</p>
-                <div class="bg-red-50 border border-red-100 rounded-xl p-4 mb-5">
-                    <p class="text-sm font-medium text-red-700 mb-2">The following will be permanently deleted:</p>
-                    <ul class="text-sm text-red-600 space-y-1 list-disc list-inside">
-                        <li>User account and personal data</li>
-                        <li>Designer profile and brand</li>
-                        <li>Event and show assignments</li>
-                        <li>Submitted materials and displays</li>
-                        <li>Generated access passes</li>
-                    </ul>
-                </div>
-                <div class="flex gap-3">
-                    <button @click="showDeleteModal = false"
-                        class="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
-                        Cancel
-                    </button>
-                    <button @click="deleteDesigner"
-                        class="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors">
-                        Delete permanently
-                    </button>
-                </div>
-            </div>
-        </div>
-    </Teleport>
 
     <!-- Modal: Modelos asignadas -->
     <Teleport to="body">

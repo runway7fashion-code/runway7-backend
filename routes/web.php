@@ -62,7 +62,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Usuarios - solo admin
         Route::middleware('section:users')->group(function () {
-            Route::resource('users', UserController::class);
+            Route::resource('users', UserController::class)->except(['destroy']);
         });
 
         // ═══════════════════════════════════════════
@@ -76,7 +76,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('models/import', [ModelController::class, 'importModels'])->name('models.import');
                 Route::get('models/import-template', [ModelController::class, 'downloadImportTemplate'])->name('models.import-template');
                 Route::post('models/send-pending-emails', [ModelController::class, 'sendPendingWelcomeEmails'])->name('models.send-pending-emails');
-                Route::resource('models', ModelController::class);
+                Route::resource('models', ModelController::class)->except(['destroy']);
                 Route::post('models/{model}/assign-event', [ModelController::class, 'assignEvent'])->name('models.assign-event');
                 Route::delete('models/{model}/remove-event/{event}', [ModelController::class, 'removeEvent'])->name('models.remove-event');
                 Route::post('models/{model}/upload-photo/{position}', [ModelController::class, 'uploadPhoto'])->name('models.upload-photo');
@@ -100,7 +100,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::middleware('section:designers')->group(function () {
                 Route::get('designers/export', [DesignerController::class, 'exportDesigners'])->name('designers.export');
                 Route::post('designers/import', [DesignerController::class, 'importDesigners'])->name('designers.import');
-                Route::resource('designers', DesignerController::class);
+                Route::resource('designers', DesignerController::class)->except(['destroy']);
                 Route::patch('designers/{designer}/status', [DesignerController::class, 'updateStatus'])->name('designers.update-status');
                 Route::post('designers/{designer}/assign-event', [DesignerController::class, 'assignEvent'])->name('designers.assign-event');
                 Route::post('designers/{designer}/events/{event}/toggle-feature', [DesignerController::class, 'toggleEventFeature'])->name('designers.toggle-event-feature');
@@ -156,7 +156,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('volunteers/import', [VolunteerController::class, 'importVolunteers'])->name('volunteers.import');
                 Route::post('volunteers/send-bulk-onboarding', [VolunteerController::class, 'sendBulkOnboardingEmails'])->name('volunteers.send-bulk-onboarding');
                 Route::post('volunteers/send-bulk-onboarding-sms', [VolunteerController::class, 'sendBulkOnboardingSms'])->name('volunteers.send-bulk-onboarding-sms');
-                Route::resource('volunteers', VolunteerController::class);
+                Route::resource('volunteers', VolunteerController::class)->except(['destroy']);
                 Route::patch('volunteers/{volunteer}/status', [VolunteerController::class, 'updateStatus'])->name('volunteers.update-status');
                 Route::post('volunteers/{volunteer}/assign-event', [VolunteerController::class, 'assignEvent'])->name('volunteers.assign-event');
                 Route::delete('volunteers/{volunteer}/remove-event/{event}', [VolunteerController::class, 'removeEvent'])->name('volunteers.remove-event');
@@ -171,7 +171,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
             // Media - admin, operation
             Route::middleware('section:media')->group(function () {
-                Route::resource('media', MediaController::class)->parameters(['media' => 'media']);
+                Route::resource('media', MediaController::class)->parameters(['media' => 'media'])->except(['destroy']);
                 Route::patch('media/{media}/status', [MediaController::class, 'updateStatus'])->name('media.update-status');
                 Route::post('media/{media}/assign-event', [MediaController::class, 'assignEvent'])->name('media.assign-event');
                 Route::delete('media/{media}/remove-event/{event}', [MediaController::class, 'removeEvent'])->name('media.remove-event');
@@ -380,7 +380,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::patch('activities/{activity}/complete', [LeadController::class, 'completeActivity'])->name('leads.complete-activity');
                 Route::patch('activities/{activity}/cancel', [LeadController::class, 'cancelActivity'])->name('leads.cancel-activity');
                 Route::patch('activities/{activity}/not-completed', [LeadController::class, 'notCompletedActivity'])->name('leads.not-completed-activity');
-                Route::delete('leads/{lead}', [LeadController::class, 'destroy'])->name('leads.destroy');
                 Route::patch('leads/{lead}/tags', [LeadController::class, 'syncTags'])->name('leads.sync-tags');
                 Route::post('leads/{lead}/add-event', [LeadController::class, 'addEvent'])->name('leads.add-event');
                 Route::delete('leads/{lead}/remove-event', [LeadController::class, 'removeEvent'])->name('leads.remove-event');
@@ -477,7 +476,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('leads/{lead}', [SponsorshipLeadController::class, 'show'])->name('leads.show');
                 Route::get('leads/{lead}/edit', [SponsorshipLeadController::class, 'edit'])->name('leads.edit');
                 Route::put('leads/{lead}', [SponsorshipLeadController::class, 'update'])->name('leads.update');
-                Route::delete('leads/{lead}', [SponsorshipLeadController::class, 'destroy'])->name('leads.destroy');
 
                 Route::patch('leads/{lead}/status', [SponsorshipLeadController::class, 'updateStatus'])->name('leads.update-status');
                 Route::patch('leads/{lead}/assign', [SponsorshipLeadController::class, 'assign'])->name('leads.assign');

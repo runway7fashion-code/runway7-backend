@@ -24,8 +24,7 @@ class LeadController extends Controller
         $user = auth()->user();
         $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
 
-        $query = DesignerLead::with(['events:id,name', 'assignedTo:id,first_name,last_name', 'tags:id,name,color'])
-            ->whereNull('deleted_at');
+        $query = DesignerLead::with(['events:id,name', 'assignedTo:id,first_name,last_name', 'tags:id,name,color']);
 
         // Advisors only see their leads
         if (!$isLeader) {
@@ -85,7 +84,7 @@ class LeadController extends Controller
         }
 
         // Stats
-        $baseQuery = DesignerLead::whereNull('deleted_at');
+        $baseQuery = DesignerLead::query();
         if (!$isLeader) {
             $baseQuery->where('assigned_to', $user->id);
         }
@@ -104,8 +103,7 @@ class LeadController extends Controller
 
         // Opportunity stats (ventas) — respect user role
         $oppBase = \DB::table('lead_events')
-            ->join('designer_leads', 'designer_leads.id', '=', 'lead_events.lead_id')
-            ->whereNull('designer_leads.deleted_at');
+            ->join('designer_leads', 'designer_leads.id', '=', 'lead_events.lead_id');
         if (!$isLeader) {
             $oppBase->where('designer_leads.assigned_to', $user->id);
         }
@@ -128,7 +126,7 @@ class LeadController extends Controller
 
         // Advisors list for assignment filter/dropdown
         $advisors = $isLeader
-            ? User::where('role', 'sales')->whereNull('deleted_at')->select('id', 'first_name', 'last_name', 'sales_type', 'is_available')->get()
+            ? User::where('role', 'sales')->select('id', 'first_name', 'last_name', 'sales_type', 'is_available')->get()
             : collect();
 
         $events = Event::whereNull('deleted_at')->select('id', 'name')->orderBy('start_date', 'desc')->get();
@@ -153,8 +151,7 @@ class LeadController extends Controller
         $user = auth()->user();
         $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
 
-        $query = DesignerLead::with(['events:id,name', 'assignedTo:id,first_name,last_name', 'tags:id,name'])
-            ->whereNull('deleted_at');
+        $query = DesignerLead::with(['events:id,name', 'assignedTo:id,first_name,last_name', 'tags:id,name']);
         if (!$isLeader) $query->where('assigned_to', $user->id);
 
         if ($request->filled('search')) {
@@ -213,7 +210,7 @@ class LeadController extends Controller
         ]);
 
         $advisors = $isLeader
-            ? User::where('role', 'sales')->whereNull('deleted_at')->select('id', 'first_name', 'last_name', 'sales_type', 'is_available')->get()
+            ? User::where('role', 'sales')->select('id', 'first_name', 'last_name', 'sales_type', 'is_available')->get()
             : collect();
 
         $events = Event::whereNull('deleted_at')->select('id', 'name')->orderBy('start_date', 'desc')->get();
@@ -237,7 +234,7 @@ class LeadController extends Controller
         $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
         $events = Event::whereNull('deleted_at')->select('id', 'name')->orderBy('start_date', 'desc')->get();
         $advisors = $isLeader
-            ? User::where('role', 'sales')->whereNull('deleted_at')->select('id', 'first_name', 'last_name')->get()
+            ? User::where('role', 'sales')->select('id', 'first_name', 'last_name')->get()
             : collect();
 
         return Inertia::render('Admin/Sales/Leads/Create', [
@@ -376,7 +373,7 @@ class LeadController extends Controller
     {
         $lead->load('events');
         $events = Event::whereNull('deleted_at')->select('id', 'name')->orderBy('start_date', 'desc')->get();
-        $advisors = User::where('role', 'sales')->whereNull('deleted_at')->select('id', 'first_name', 'last_name')->get();
+        $advisors = User::where('role', 'sales')->select('id', 'first_name', 'last_name')->get();
 
         return Inertia::render('Admin/Sales/Leads/Edit', [
             'lead'     => $lead,
@@ -745,20 +742,6 @@ class LeadController extends Controller
         return back()->with('success', $user->is_available ? 'You are now available to receive leads.' : 'You will no longer receive new leads.');
     }
 
-    public function destroy(DesignerLead $lead)
-    {
-        // Delete related activities (soft delete doesn't trigger cascade)
-        $lead->activities()->delete();
-
-        // Delete bot messages that reference this lead
-        SalesBotMessage::where('action_url', 'like', "%/leads/{$lead->id}%")
-            ->delete();
-
-        $lead->forceDelete();
-
-        return redirect()->route('admin.sales.leads.index')->with('success', 'Prospect deleted.');
-    }
-
     /**
      * Return leads for auto-complete in designer create form
      */
@@ -800,7 +783,7 @@ class LeadController extends Controller
         $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
 
         $advisors = $isLeader
-            ? User::where('role', 'sales')->whereNull('deleted_at')->select('id', 'first_name', 'last_name')->get()
+            ? User::where('role', 'sales')->select('id', 'first_name', 'last_name')->get()
             : collect();
 
         return Inertia::render('Admin/Sales/Calendar', [

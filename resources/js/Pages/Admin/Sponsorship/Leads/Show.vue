@@ -76,11 +76,6 @@ function deleteDocument(doc) {
     useForm({}).delete(`/admin/sponsorship/lead-documents/${doc.id}`, { preserveScroll: true });
 }
 
-// Delete lead
-const showDeleteModal = ref(false);
-function deleteLead() {
-    useForm({}).delete(`/admin/sponsorship/leads/${props.lead.id}`);
-}
 
 function formatDate(d) {
     if (!d) return '—';
@@ -201,10 +196,6 @@ function submitEmail() {
                                 class="px-3 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
                                 <PencilSquareIcon class="w-4 h-4" /> Edit
                             </Link>
-                            <button v-if="isLider" @click="showDeleteModal = true"
-                                class="px-3 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 flex items-center gap-1.5">
-                                <TrashIcon class="w-4 h-4" /> Delete
-                            </button>
                         </div>
                     </div>
 
@@ -492,22 +483,6 @@ function submitEmail() {
                                 Upload
                             </button>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Delete modal -->
-            <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center">
-                <div class="absolute inset-0 bg-black/50" @click="showDeleteModal = false"></div>
-                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
-                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <TrashIcon class="w-6 h-6 text-red-500" />
-                    </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Delete lead?</h3>
-                    <p class="text-sm text-gray-500 mb-5">All emails, events, tags and documents will be deleted. This cannot be undone.</p>
-                    <div class="flex gap-3">
-                        <button @click="showDeleteModal = false" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
-                        <button @click="deleteLead" class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Delete</button>
                     </div>
                 </div>
             </div>

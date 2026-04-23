@@ -53,8 +53,7 @@ class ChatController extends Controller
         $events = Event::orderBy('start_date', 'desc')->get(['id', 'name']);
 
         // Users for new chat modal
-        $users = User::whereNull('deleted_at')
-            ->whereNotIn('role', ['admin'])
+        $users = User::whereNotIn('role', ['admin'])
             ->select('id', 'first_name', 'last_name', 'email', 'role', 'status')
             ->orderBy('first_name')
             ->get();

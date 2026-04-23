@@ -361,15 +361,6 @@ class LeadController extends Controller
             ->with('success', 'Lead actualizado.');
     }
 
-    public function destroy(Lead $lead)
-    {
-        if (!$this->isLider()) abort(403, 'Solo un líder puede eliminar leads.');
-
-        $lead->delete();
-        return redirect()->route('admin.sponsorship.leads.index')
-            ->with('success', 'Lead eliminado.');
-    }
-
     // ─────────────────────────── Acciones rápidas ───────────────────────────
 
     public function updateStatus(Request $request, Lead $lead)
@@ -627,7 +618,6 @@ class LeadController extends Controller
     public function calendar()
     {
         $advisors = User::where('role', 'sponsorship')
-            ->whereNull('deleted_at')
             ->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name', 'sponsorship_type']);
 

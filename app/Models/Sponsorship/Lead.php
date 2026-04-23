@@ -5,11 +5,9 @@ namespace App\Models\Sponsorship;
 use App\Models\Event;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Lead extends Model
 {
-    use SoftDeletes;
 
     protected $table = 'sponsorship_leads';
 

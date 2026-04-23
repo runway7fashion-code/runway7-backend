@@ -66,7 +66,7 @@ function formatDate(d) {
             <h2 class="text-lg font-semibold text-gray-900">Sponsorship Leads</h2>
         </template>
 
-        <div class="max-w-7xl mx-auto space-y-4">
+        <div class="space-y-4">
             <!-- Top bar -->
             <div class="flex items-center justify-between">
                 <p class="text-sm text-gray-500">{{ totalCount }} leads total</p>
@@ -89,37 +89,37 @@ function formatDate(d) {
                 </button>
             </div>
 
-            <!-- Filtros -->
-            <div class="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-                <div class="relative">
-                    <MagnifyingGlassIcon class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                    <input v-model="search" type="text" placeholder="Buscar por nombre, email, teléfono o empresa..."
-                        class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
-                </div>
-                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
-                    <select v-if="isLider" v-model="assignedTo" class="input-sm">
+            <!-- Search + Filtros (todo en una sola fila en pantallas grandes) -->
+            <div class="bg-white rounded-xl border border-gray-200 p-4">
+                <div class="flex flex-wrap items-stretch gap-2">
+                    <div class="relative flex-[2] min-w-[220px]">
+                        <MagnifyingGlassIcon class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+                        <input v-model="search" type="text" placeholder="Buscar por nombre, email, teléfono o empresa..."
+                            class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                    </div>
+                    <select v-if="isLider" v-model="assignedTo" class="input-sm flex-1 min-w-[120px]">
                         <option value="">All advisors</option>
                         <option v-for="a in advisors" :key="a.id" :value="a.id">
                             {{ a.first_name }} {{ a.last_name }} {{ a.sponsorship_type === 'lider' ? '(L)' : '' }}
                         </option>
                     </select>
-                    <select v-model="eventId" class="input-sm">
+                    <select v-model="eventId" class="input-sm flex-1 min-w-[110px]">
                         <option value="">All events</option>
                         <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
                     </select>
-                    <select v-model="categoryId" class="input-sm">
+                    <select v-model="categoryId" class="input-sm flex-1 min-w-[110px]">
                         <option value="">All categories</option>
                         <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
                     </select>
-                    <select v-model="tagId" class="input-sm">
+                    <select v-model="tagId" class="input-sm flex-1 min-w-[100px]">
                         <option value="">All tags</option>
                         <option v-for="t in tags" :key="t.id" :value="t.id">{{ t.name }}</option>
                     </select>
-                    <select v-model="source" class="input-sm">
+                    <select v-model="source" class="input-sm flex-1 min-w-[110px]">
                         <option value="">All sources</option>
                         <option v-for="s in sources" :key="s" :value="s">{{ s }}</option>
                     </select>
-                    <select v-model="emailSend" class="input-sm">
+                    <select v-model="emailSend" class="input-sm flex-1 min-w-[120px]">
                         <option value="">Email status</option>
                         <option value="none">No email sent</option>
                         <option value="sent">Email sent</option>

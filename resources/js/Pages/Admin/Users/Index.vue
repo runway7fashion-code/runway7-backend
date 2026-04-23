@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router } from '@inertiajs/vue3';
 import { ref, watch, computed } from 'vue';
-import { EyeIcon, PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/outline';
+import { EyeIcon, PencilSquareIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     users: Object,
@@ -70,11 +70,6 @@ function applyFilters() {
     }, { preserveState: true, replace: true });
 }
 
-function deleteUser(user) {
-    if (confirm(`¿Eliminar a ${user.first_name} ${user.last_name}?`)) {
-        router.delete(`/admin/users/${user.id}`);
-    }
-}
 </script>
 
 <template>
@@ -167,9 +162,6 @@ function deleteUser(user) {
                                     <Link :href="`/admin/users/${user.id}/edit`" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors" title="Editar">
                                         <PencilSquareIcon class="w-4 h-4" />
                                     </Link>
-                                    <button @click="deleteUser(user)" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors" title="Eliminar">
-                                        <TrashIcon class="w-4 h-4" />
-                                    </button>
                                 </div>
                             </td>
                         </tr>

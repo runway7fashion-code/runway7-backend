@@ -22,11 +22,6 @@ function formatRole(r) {
     return r.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 
-function deleteUser() {
-    if (confirm(`¿Eliminar a ${props.user.first_name} ${props.user.last_name}? Esta acción no se puede deshacer.`)) {
-        router.delete(`/admin/users/${props.user.id}`);
-    }
-}
 
 const profile = props.user.model_profile
     || props.user.designer_profile
@@ -83,10 +78,6 @@ const profile = props.user.model_profile
                         class="px-4 py-2 text-sm font-semibold text-white bg-black rounded-lg hover:bg-gray-800 transition-colors">
                         Editar
                     </Link>
-                    <button @click="deleteUser"
-                        class="px-4 py-2 text-sm font-semibold text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors">
-                        Eliminar
-                    </button>
                 </div>
             </div>
 

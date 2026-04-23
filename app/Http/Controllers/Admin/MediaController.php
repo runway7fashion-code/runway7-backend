@@ -17,7 +17,6 @@ use App\Services\TwilioService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -170,7 +169,7 @@ class MediaController extends Controller
         $request->validate([
             'first_name'    => 'required|string|max:255',
             'last_name'     => 'nullable|string|max:255',
-            'email'         => ['required', 'email', Rule::unique('users', 'email')->whereNull('deleted_at')],
+            'email'         => 'required|email|unique:users,email',
             'phone'         => 'nullable|string',
             'category'      => 'required|in:videographer,photographer',
             'portfolio_url' => 'nullable|url|max:500',
@@ -253,7 +252,7 @@ class MediaController extends Controller
         $request->validate([
             'first_name'    => 'required|string|max:255',
             'last_name'     => 'nullable|string|max:255',
-            'email'         => ['required', 'email', Rule::unique('users', 'email')->ignore($media->id)->whereNull('deleted_at')],
+            'email'         => "required|email|unique:users,email,{$media->id}",
             'phone'         => 'nullable|string',
             'status'        => 'nullable|in:applicant,pending,active,inactive',
             'category'      => 'required|in:videographer,photographer',
@@ -287,20 +286,6 @@ class MediaController extends Controller
     // ──────────────────────────────────────────────
     //  Delete
     // ──────────────────────────────────────────────
-
-    public function destroy(User $media)
-    {
-        $this->authorizeMedia($media);
-
-        DB::transaction(function () use ($media) {
-            DB::table('event_passes')->where('user_id', $media->id)->delete();
-            DB::table('media_assistants')->where('media_id', $media->id)->delete();
-            $media->forceDelete();
-        });
-
-        return redirect()->route('admin.media.index')
-            ->with('success', 'Media eliminado.');
-    }
 
     // ──────────────────────────────────────────────
     //  Event management

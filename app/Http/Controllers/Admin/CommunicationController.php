@@ -82,7 +82,6 @@ class CommunicationController extends Controller
         }
 
         $query = User::query()
-            ->whereNull('deleted_at')
             ->whereIn('role', $allowedRoles)
             ->select('id', 'first_name', 'last_name', 'email', 'phone', 'role', 'status', 'profile_picture', 'created_at');
 

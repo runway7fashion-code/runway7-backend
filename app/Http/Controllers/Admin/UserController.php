@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -89,8 +88,8 @@ class UserController extends Controller
         $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => ['required', 'email', Rule::unique('users', 'email')->whereNull('deleted_at')],
-            'phone' => ['nullable', 'string', Rule::unique('users', 'phone')->whereNull('deleted_at')],
+            'email' => 'required|email|unique:users,email',
+            'phone' => 'nullable|string|unique:users,phone',
             'password' => 'required|string|min:8|confirmed',
             'role' => "required|in:{$allRoles}",
             'status' => 'required|in:active,inactive,pending,registered',
@@ -175,8 +174,8 @@ class UserController extends Controller
         $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)->whereNull('deleted_at')],
-            'phone' => ['nullable', 'string', Rule::unique('users', 'phone')->ignore($user->id)->whereNull('deleted_at')],
+            'email' => "required|email|unique:users,email,{$user->id}",
+            'phone' => "nullable|string|unique:users,phone,{$user->id}",
             'role' => "required|in:{$allRoles}",
             'status' => 'required|in:active,inactive,pending,registered',
             'profile' => 'nullable|array',
@@ -213,18 +212,6 @@ class UserController extends Controller
 
         return redirect()->route('admin.users.index')
             ->with('success', 'Usuario actualizado exitosamente.');
-    }
-
-    public function destroy(User $user)
-    {
-        $restricted = $this->restrictedToRole();
-        if ($restricted && $user->role !== $restricted) {
-            abort(403);
-        }
-
-        $user->delete();
-        return redirect()->route('admin.users.index')
-            ->with('success', 'Usuario eliminado.');
     }
 
     private function syncProfile(User $user, array $profile): void

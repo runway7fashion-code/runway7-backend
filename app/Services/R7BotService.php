@@ -116,7 +116,7 @@ PROMPT;
 
         // Search for matching leads
         $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
-        $query = DesignerLead::whereNull('deleted_at');
+        $query = DesignerLead::query();
         if (!$isLeader) {
             $query->where('assigned_to', $user->id);
         }
@@ -256,7 +256,7 @@ PROMPT;
     private function buildLeadsList(User $user): string
     {
         $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
-        $query = DesignerLead::whereNull('deleted_at');
+        $query = DesignerLead::query();
         if (!$isLeader) {
             $query->where('assigned_to', $user->id);
         }
@@ -279,7 +279,7 @@ PROMPT;
         $now = now('America/Lima');
         $today = $now->format('Y-m-d');
 
-        $leadsQuery = DesignerLead::whereNull('deleted_at');
+        $leadsQuery = DesignerLead::query();
         if (!$isLeader) {
             $leadsQuery->where('assigned_to', $user->id);
         }

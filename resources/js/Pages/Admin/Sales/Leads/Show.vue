@@ -209,8 +209,6 @@ function changeActivityStatus(activityId, status) {
     if (status === 'not_completed') return router.patch(`/admin/sales/activities/${activityId}/not-completed`, {}, { preserveScroll: true });
 }
 
-// Delete lead
-const showDeleteModal = ref(false);
 const showActivityModal = ref(false);
 const showStatusInfo = ref(false);
 const showAddEventModal = ref(false);
@@ -233,11 +231,6 @@ const availableEvents = computed(() => {
     const assignedIds = (props.lead.events || []).map(e => e.id);
     return (props.events || []).filter(e => !assignedIds.includes(e.id));
 });
-function deleteLead() {
-    router.delete(`/admin/sales/leads/${props.lead.id}`, {
-        onSuccess: () => { showDeleteModal.value = false; },
-    });
-}
 
 // Helpers
 function statusBadgeStyle(statusKey) {
@@ -400,10 +393,6 @@ function isActivityExpanded(id) {
                         <button v-if="lead.status !== 'redirected'" @click="showRedirectModal = true"
                             class="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600 transition-colors flex items-center gap-1">
                             <ArrowTopRightOnSquareIcon class="w-3.5 h-3.5" /> Send to Ops
-                        </button>
-                        <button @click="showDeleteModal = true"
-                            class="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors flex items-center gap-1">
-                            <TrashIcon class="w-3.5 h-3.5" /> Delete
                         </button>
                     </div>
                 </div>
@@ -903,29 +892,6 @@ function isActivityExpanded(id) {
                 </div>
             </div>
 
-            <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center">
-                <div class="absolute inset-0 bg-black/50" @click="showDeleteModal = false"></div>
-                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <TrashIcon class="w-6 h-6 text-red-500" />
-                    </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2 text-center">Delete {{ lead.first_name }} {{ lead.last_name }}?</h3>
-                    <div class="bg-red-50 border border-red-100 rounded-lg p-3 mb-4 text-sm text-gray-700">
-                        <p class="font-medium text-red-700 mb-2">The following will be permanently deleted:</p>
-                        <ul class="space-y-1 text-xs text-gray-600">
-                            <li>- Prospect: <span class="font-medium">{{ lead.first_name }} {{ lead.last_name }}</span> ({{ lead.company_name }})</li>
-                            <li>- {{ lead.activities?.length || 0 }} recorded activities (calls, emails, meetings, notes)</li>
-                            <li v-if="lead.activities?.filter(a => a.status === 'pending').length">- <span class="text-red-600 font-medium">{{ lead.activities.filter(a => a.status === 'pending').length }} pending activities in calendar</span></li>
-                            <li>- Related bot messages</li>
-                        </ul>
-                        <p v-if="lead.converted_designer" class="mt-2 text-xs text-green-700 font-medium">The converted designer will NOT be affected.</p>
-                    </div>
-                    <div class="flex gap-3">
-                        <button @click="showDeleteModal = false" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
-                        <button @click="deleteLead" class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Delete</button>
-                    </div>
-                </div>
-            </div>
         </Teleport>
     <!-- Send Email Modal -->
     <Teleport to="body">

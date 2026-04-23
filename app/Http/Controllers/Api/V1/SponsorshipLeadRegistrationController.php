@@ -98,8 +98,7 @@ class SponsorshipLeadRegistrationController extends Controller
 
         // Notificar a admins + líderes sponsorship (sin duplicar)
         try {
-            $notifiables = User::whereNull('deleted_at')
-                ->where(function ($q) {
+            $notifiables = User::where(function ($q) {
                     $q->where('role', 'admin')
                       ->orWhere(function ($q2) {
                           $q2->where('role', 'sponsorship')->where('sponsorship_type', 'lider');

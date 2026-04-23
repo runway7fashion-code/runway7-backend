@@ -19,7 +19,6 @@ class LeadAssignmentService
     {
         $availableAdvisors = User::where('role', 'sales')
             ->where('is_available', true)
-            ->whereNull('deleted_at')
             ->orderBy('id')
             ->get();
 

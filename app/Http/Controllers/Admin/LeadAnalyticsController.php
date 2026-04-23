@@ -28,7 +28,7 @@ class LeadAnalyticsController extends Controller
         $advisorId = $request->input('advisor');
 
         // Base query scoped by role
-        $baseQuery = DesignerLead::whereNull('deleted_at');
+        $baseQuery = DesignerLead::query();
         if (!$isLeader) {
             $baseQuery->where('assigned_to', $user->id);
         }
@@ -56,9 +56,7 @@ class LeadAnalyticsController extends Controller
         // Opportunity stats (event-level)
         $oppQuery = LeadEvent::query();
         if (!$isLeader) {
-            $oppQuery->whereHas('lead', fn($q) => $q->where('assigned_to', $user->id)->whereNull('deleted_at'));
-        } else {
-            $oppQuery->whereHas('lead', fn($q) => $q->whereNull('deleted_at'));
+            $oppQuery->whereHas('lead', fn($q) => $q->where('assigned_to', $user->id));
         }
         if ($eventId) $oppQuery->where('event_id', $eventId);
         if ($advisorId) {
@@ -72,7 +70,6 @@ class LeadAnalyticsController extends Controller
         // Average conversion time (days from lead created_at to event status → converted)
         $avgConversionDays = LeadEvent::where('lead_events.status', 'converted')
             ->whereHas('lead', function ($q) use ($isLeader, $user, $advisorId) {
-                $q->whereNull('designer_leads.deleted_at');
                 if (!$isLeader) $q->where('designer_leads.assigned_to', $user->id);
                 if ($advisorId) $q->where('designer_leads.assigned_to', $advisorId);
             })
@@ -116,9 +113,7 @@ class LeadAnalyticsController extends Controller
         // ──────────────────────────────────────
         $pipelineQuery = LeadEvent::query();
         if (!$isLeader) {
-            $pipelineQuery->whereHas('lead', fn($q) => $q->where('assigned_to', $user->id)->whereNull('deleted_at'));
-        } else {
-            $pipelineQuery->whereHas('lead', fn($q) => $q->whereNull('deleted_at'));
+            $pipelineQuery->whereHas('lead', fn($q) => $q->where('assigned_to', $user->id));
         }
         if ($eventId) $pipelineQuery->where('event_id', $eventId);
         if ($advisorId) {
@@ -168,7 +163,7 @@ class LeadAnalyticsController extends Controller
         if ($isLeader) {
             $advisors = User::where('role', 'sales')->get(['id', 'first_name', 'last_name']);
             foreach ($advisors as $adv) {
-                $advLeads = DesignerLead::whereNull('deleted_at')->where('assigned_to', $adv->id);
+                $advLeads = DesignerLead::where('assigned_to', $adv->id);
                 $advLeadsPeriod = (clone $advLeads)->whereBetween('created_at', [$from, $to])->count();
                 $advTotal = (clone $advLeads)->count();
                 $advClients = (clone $advLeads)->where('status', 'client')->count();
@@ -260,7 +255,7 @@ class LeadAnalyticsController extends Controller
         // 8. Tags performance
         // ──────────────────────────────────────
         $tagsData = LeadTag::withCount('leads')->get()->map(function ($tag) {
-            $tagLeadIds = $tag->leads()->whereNull('designer_leads.deleted_at')->pluck('designer_leads.id');
+            $tagLeadIds = $tag->leads()->pluck('designer_leads.id');
             $converted = $tagLeadIds->isNotEmpty()
                 ? LeadEvent::whereIn('lead_id', $tagLeadIds)->where('status', 'converted')->distinct('lead_id')->count('lead_id')
                 : 0;
@@ -323,7 +318,6 @@ class LeadAnalyticsController extends Controller
         $advisorId = $request->input('advisor');
 
         $query = DesignerLead::with(['events:id,name', 'assignedTo:id,first_name,last_name', 'tags:id,name', 'leadEvents'])
-            ->whereNull('deleted_at')
             ->whereBetween('created_at', [$from, $to]);
 
         if (!$isLeader) {

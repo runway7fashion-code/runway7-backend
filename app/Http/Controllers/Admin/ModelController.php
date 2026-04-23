@@ -21,7 +21,6 @@ use App\Services\ActivityLogService;
 use App\Services\ModelService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Maatwebsite\Excel\Facades\Excel;
@@ -440,8 +439,8 @@ class ModelController extends Controller
         $request->validate([
             'first_name'  => 'required|string|max:255',
             'last_name'   => 'required|string|max:255',
-            'email'       => ['required', 'email', Rule::unique('users', 'email')->whereNull('deleted_at')],
-            'phone'       => ['nullable', 'string', Rule::unique('users', 'phone')->whereNull('deleted_at')],
+            'email'       => 'required|email|unique:users,email',
+            'phone'       => 'nullable|string|unique:users,phone',
             'instagram'   => 'nullable|string|max:255',
             'age'         => 'nullable|integer|min:16|max:80',
             'gender'      => 'nullable|in:female,male,non_binary',
@@ -548,8 +547,8 @@ class ModelController extends Controller
         $request->validate([
             'first_name'  => 'required|string|max:255',
             'last_name'   => 'nullable|string|max:255',
-            'email'       => ['required', 'email', Rule::unique('users', 'email')->ignore($model->id)->whereNull('deleted_at')],
-            'phone'       => ['nullable', 'string', Rule::unique('users', 'phone')->ignore($model->id)->whereNull('deleted_at')],
+            'email'       => "required|email|unique:users,email,{$model->id}",
+            'phone'       => "nullable|string|unique:users,phone,{$model->id}",
             'status'      => 'nullable|in:active,inactive,pending,applicant',
             'instagram'   => 'nullable|string|max:255',
             'age'         => 'nullable|integer|min:16|max:80',
@@ -650,29 +649,6 @@ class ModelController extends Controller
 
         return redirect()->route('admin.models.show', $model)
             ->with('success', 'Modelo actualizada exitosamente.');
-    }
-
-    public function destroy(Request $request, User $model)
-    {
-        $this->authorizeModel($model);
-
-        $modelName = "{$model->first_name} {$model->last_name}";
-
-        try {
-            $this->modelService->deleteModel($model);
-        } catch (\Exception $e) {
-            return redirect()->route('admin.models.index')
-                ->withErrors(['delete' => 'No se pudo eliminar la modelo: ' . $e->getMessage()]);
-        }
-
-        $this->activityLog->log(
-            ActivityAction::StatusChanged, null, $request->user(),
-            "Modelo eliminada: {$modelName}",
-            ['deleted_user' => $modelName]
-        );
-
-        return redirect()->route('admin.models.index')
-            ->with('success', 'Modelo eliminada correctamente.');
     }
 
     public function assignEvent(Request $request, User $model)

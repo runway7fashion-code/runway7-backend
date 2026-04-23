@@ -18,8 +18,7 @@ class IncomingLeadController extends Controller
     public function index(Request $request)
     {
         $query = DesignerLead::where('status', 'redirected')
-            ->with(['redirectedByUser:id,first_name,last_name', 'convertedUser:id,first_name,last_name'])
-            ->whereNull('deleted_at');
+            ->with(['redirectedByUser:id,first_name,last_name', 'convertedUser:id,first_name,last_name']);
 
         if ($request->filled('redirect_type')) {
             $query->where('redirect_type', $request->redirect_type);
@@ -40,10 +39,10 @@ class IncomingLeadController extends Controller
         }
 
         $stats = [
-            'total'     => DesignerLead::where('status', 'redirected')->whereNull('deleted_at')->count(),
-            'new'       => DesignerLead::where('status', 'redirected')->where('redirect_status', 'new')->whereNull('deleted_at')->count(),
-            'converted' => DesignerLead::where('status', 'redirected')->where('redirect_status', 'converted')->whereNull('deleted_at')->count(),
-            'rejected'  => DesignerLead::where('status', 'redirected')->where('redirect_status', 'rejected')->whereNull('deleted_at')->count(),
+            'total'     => DesignerLead::where('status', 'redirected')->count(),
+            'new'       => DesignerLead::where('status', 'redirected')->where('redirect_status', 'new')->count(),
+            'converted' => DesignerLead::where('status', 'redirected')->where('redirect_status', 'converted')->count(),
+            'rejected'  => DesignerLead::where('status', 'redirected')->where('redirect_status', 'rejected')->count(),
         ];
 
         $leads = $query->orderByRaw("CASE WHEN redirect_status = 'new' THEN 0 ELSE 1 END")
