@@ -615,13 +615,21 @@ function logout() {
                             </div>
                             <div class="max-h-72 overflow-y-auto">
                                 <div v-if="!notifications.length" class="px-4 py-6 text-center text-gray-400 text-sm">Sin notificaciones</div>
-                                <div v-for="n in notifications" :key="n.id"
-                                    class="px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                                <component v-for="n in notifications" :key="n.id"
+                                    :is="n.data.screen === 'chat' && n.data.conversation_id ? Link : 'div'"
+                                    :href="n.data.screen === 'chat' && n.data.conversation_id ? `/admin/operations/chats/${n.data.conversation_id}` : undefined"
+                                    class="block px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors"
                                     :class="n.read_at ? 'opacity-50' : 'bg-blue-50/40'">
-                                    <p class="text-sm font-medium" :class="n.read_at ? 'text-gray-500' : 'text-gray-900'">{{ n.data.title }}</p>
-                                    <p class="text-xs text-gray-500 mt-0.5">{{ n.data.message }}</p>
+                                    <div class="flex items-center gap-2">
+                                        <span v-if="n.data.screen === 'chat'" class="inline-flex items-center gap-1 text-[10px] font-semibold text-white bg-black px-1.5 py-0.5 rounded-full">
+                                            <ChatBubbleLeftRightIcon class="w-3 h-3" /> Chat
+                                        </span>
+                                        <p class="text-sm font-medium flex-1 truncate" :class="n.read_at ? 'text-gray-500' : 'text-gray-900'">{{ n.data.title }}</p>
+                                        <span v-if="n.data.message_count > 1" class="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">+{{ n.data.message_count - 1 }}</span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-0.5 truncate">{{ n.data.body || n.data.message }}</p>
                                     <p class="text-xs text-gray-400 mt-1">{{ new Date(n.created_at).toLocaleString('es-US') }}</p>
-                                </div>
+                                </component>
                             </div>
                         </div>
                     </div>
