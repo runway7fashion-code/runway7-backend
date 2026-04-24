@@ -36,9 +36,23 @@ class ConversionController extends Controller
 
         $lead->load(['company', 'events:id,name,start_date', 'primaryEmail', 'emails']);
 
+        // The lead must have at least one event before it can be converted,
+        // otherwise there is nothing to create a registration against.
+        if ($lead->events->isEmpty()) {
+            return redirect()->route('admin.sponsorship.leads.show', $lead)
+                ->with('error', 'This lead has no events assigned. Add at least one event before converting to sponsor.');
+        }
+
+        $primary = $lead->emails->firstWhere('is_primary', true);
+        if (!$primary) {
+            return redirect()->route('admin.sponsorship.leads.show', $lead)
+                ->with('error', 'This lead has no primary email. Add one before converting to sponsor.');
+        }
+
         return Inertia::render('Admin/Sponsorship/Leads/Convert', [
-            'lead'     => $lead,
-            'packages' => Package::where('is_active', true)->orderBy('name')->get(['id', 'name', 'price', 'assistants_count']),
+            'lead'      => $lead,
+            'packages'  => Package::where('is_active', true)->orderBy('name')->get(['id', 'name', 'price', 'assistants_count']),
+            'countries' => \App\Models\Country::where('is_active', true)->orderBy('order')->orderBy('name')->get(['name', 'code', 'phone', 'flag']),
         ]);
     }
 

@@ -7,6 +7,7 @@ import { StarIcon, ExclamationTriangleIcon, XMarkIcon, DocumentTextIcon, PlusIco
 const props = defineProps({
     lead: Object,
     packages: Array,
+    countries: Array,
 });
 
 const primaryEmail = props.lead.emails?.find(e => e.is_primary)?.email || '';
@@ -104,7 +105,10 @@ function formatFileSize(bytes) {
                         </div>
                         <div>
                             <label class="label">Country</label>
-                            <input v-model="form.company_country" type="text" class="input" />
+                            <select v-model="form.company_country" class="input bg-white">
+                                <option value="">Select country...</option>
+                                <option v-for="c in countries" :key="c.code" :value="c.name">{{ c.flag }} {{ c.name }}</option>
+                            </select>
                         </div>
                     </div>
 

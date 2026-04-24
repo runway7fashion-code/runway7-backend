@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, useForm } from '@inertiajs/vue3';
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import { PlusIcon, XMarkIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -10,6 +10,7 @@ const props = defineProps({
     events: Array,
     tags: Array,
     sources: Array,
+    countries: Array,
     advisors: Array,
     isLider: Boolean,
 });
@@ -17,13 +18,28 @@ const props = defineProps({
 const primaryEmail = props.lead.emails?.find(e => e.is_primary)?.email || '';
 const secondaryEmails = (props.lead.emails || []).filter(e => !e.is_primary).map(e => e.email);
 
+// Split stored phone into prefix + number ("+1 555 1234" -> "+1" / "555 1234")
+const phoneCodes = (props.countries || []).map(c => c.phone).sort((a, b) => b.length - a.length);
+function splitPhone(raw) {
+    if (!raw) return { code: '+1', number: '' };
+    const trimmed = raw.trim();
+    for (const c of phoneCodes) {
+        if (trimmed.startsWith(c)) {
+            return { code: c, number: trimmed.slice(c.length).trim() };
+        }
+    }
+    return { code: '+1', number: trimmed };
+}
+const initialPhone = splitPhone(props.lead.phone);
+
 const form = useForm({
     company_id: props.lead.company_id,
     first_name: props.lead.first_name,
     last_name: props.lead.last_name,
     email: primaryEmail,
     secondary_emails: secondaryEmails,
-    phone: props.lead.phone || '',
+    phone_code: initialPhone.code,
+    phone: initialPhone.number,
     charge: props.lead.charge || '',
     linkedin_url: props.lead.linkedin_url || '',
     website_url: props.lead.website_url || '',
@@ -37,27 +53,12 @@ const form = useForm({
     tag_ids: (props.lead.tags || []).map(t => t.id),
 });
 
-// Company
+// Company — pre-filled from lead.company (controller now loads the relation)
 const companyQuery = ref('');
 const companySuggestions = ref([]);
-const selectedCompany = ref(null);
+const selectedCompany = ref(props.lead.company ? { id: props.lead.company.id, name: props.lead.company.name } : null);
 const showCompanyDropdown = ref(false);
 let companyTimeout;
-
-onMounted(async () => {
-    // Preload the current company via search
-    if (props.lead.company_id) {
-        try {
-            const res = await fetch(`/admin/sponsorship/companies/search?q=${encodeURIComponent('')}`);
-        } catch (e) {}
-        // Best: use the lead.company already provided from controller via relationship
-    }
-});
-
-// Simply reuse lead.company if loaded
-if (props.lead.company) {
-    selectedCompany.value = { id: props.lead.company.id, name: props.lead.company.name };
-}
 
 function searchCompanies() {
     clearTimeout(companyTimeout);
@@ -107,7 +108,14 @@ function toggleTag(id) {
 const showSourceDetail = computed(() => form.source === 'other');
 
 function submit() {
-    form.put(`/admin/sponsorship/leads/${props.lead.id}`);
+    form.transform(data => {
+        const phone = (data.phone || '').trim();
+        const code = (data.phone_code || '').trim();
+        const full = phone ? `${code} ${phone}`.trim() : null;
+        // eslint-disable-next-line no-unused-vars
+        const { phone_code, ...rest } = data;
+        return { ...rest, phone: full };
+    }).put(`/admin/sponsorship/leads/${props.lead.id}`);
 }
 </script>
 
@@ -130,9 +138,10 @@ function submit() {
                     <h4 class="font-semibold text-gray-900 mb-4">Company *</h4>
                     <div v-if="!selectedCompany" class="space-y-2">
                         <div class="relative">
-                            <MagnifyingGlassIcon class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+                            <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                             <input v-model="companyQuery" @input="searchCompanies" @focus="showCompanyDropdown = true"
-                                type="text" placeholder="Search existing company..." class="input pl-10" />
+                                type="text" placeholder="Search existing company..."
+                                class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
                             <ul v-if="showCompanyDropdown && companySuggestions.length"
                                 class="absolute z-10 bg-white border border-gray-200 rounded-lg shadow mt-1 w-full max-h-60 overflow-auto">
                                 <li v-for="c in companySuggestions" :key="c.id" @click="pickCompany(c)"
@@ -193,7 +202,13 @@ function submit() {
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="label">Phone</label>
-                            <input v-model="form.phone" type="tel" class="input" />
+                            <div class="flex gap-2">
+                                <select v-model="form.phone_code"
+                                    class="w-32 shrink-0 border border-gray-300 rounded-lg px-2 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400">
+                                    <option v-for="c in countries" :key="c.code" :value="c.phone">{{ c.flag }} {{ c.phone }}</option>
+                                </select>
+                                <input v-model="form.phone" type="tel" placeholder="(555) 123-4567" class="input flex-1" />
+                            </div>
                         </div>
                         <div>
                             <label class="label">Charge</label>

@@ -186,6 +186,7 @@ class LeadController extends Controller
             'events'     => Event::whereNull('deleted_at')->orderBy('start_date', 'desc')->get(['id', 'name']),
             'tags'       => Tag::orderBy('name')->get(['id', 'name', 'color']),
             'sources'    => Lead::SOURCES,
+            'countries'  => \App\Models\Country::where('is_active', true)->orderBy('order')->orderBy('name')->get(['name', 'code', 'phone', 'flag']),
             'advisors'   => $this->isLider()
                 ? User::where('role', 'sponsorship')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'sponsorship_type'])
                 : [],
@@ -304,7 +305,7 @@ class LeadController extends Controller
     {
         $this->authorizeSee($lead);
 
-        $lead->load(['emails', 'events:id', 'tags:id']);
+        $lead->load(['company:id,name', 'emails', 'events:id', 'tags:id']);
 
         return Inertia::render('Admin/Sponsorship/Leads/Edit', [
             'lead'       => $lead,
@@ -312,6 +313,7 @@ class LeadController extends Controller
             'events'     => Event::whereNull('deleted_at')->orderBy('start_date', 'desc')->get(['id', 'name']),
             'tags'       => Tag::orderBy('name')->get(['id', 'name', 'color']),
             'sources'    => Lead::SOURCES,
+            'countries'  => \App\Models\Country::where('is_active', true)->orderBy('order')->orderBy('name')->get(['name', 'code', 'phone', 'flag']),
             'advisors'   => $this->isLider()
                 ? User::where('role', 'sponsorship')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'sponsorship_type'])
                 : [],

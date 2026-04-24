@@ -79,6 +79,18 @@ function activityIcon(typeKey) {
 const primaryEmail = computed(() => (props.lead.emails || []).find(e => e.is_primary)?.email || null);
 const secondaryEmails = computed(() => (props.lead.emails || []).filter(e => !e.is_primary));
 
+const canConvert = computed(() =>
+    !props.lead.converted_user_id &&
+    (props.lead.events || []).length > 0 &&
+    !!primaryEmail.value
+);
+const convertDisabledReason = computed(() => {
+    if (props.lead.converted_user_id) return 'Already converted';
+    if (!primaryEmail.value) return 'Add a primary email before converting';
+    if ((props.lead.events || []).length === 0) return 'Assign at least one event before converting';
+    return '';
+});
+
 function instagramHandle(v) {
     if (!v) return null;
     let h = String(v).split('?')[0];
@@ -328,10 +340,15 @@ function openPreview(file) {
                             class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors flex items-center gap-1">
                             <PencilSquareIcon class="w-3.5 h-3.5" /> Edit
                         </Link>
-                        <Link v-if="!lead.converted_user_id" :href="`/admin/sponsorship/leads/${lead.id}/convert`"
+                        <Link v-if="canConvert" :href="`/admin/sponsorship/leads/${lead.id}/convert`"
                             class="px-4 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600 transition-colors flex items-center gap-1">
                             <StarIcon class="w-3.5 h-3.5" /> Close contract & Convert
                         </Link>
+                        <span v-else-if="!lead.converted_user_id"
+                            :title="convertDisabledReason"
+                            class="px-4 py-1.5 bg-gray-200 text-gray-400 rounded-lg text-xs font-medium flex items-center gap-1 cursor-not-allowed">
+                            <StarIcon class="w-3.5 h-3.5" /> Close contract & Convert
+                        </span>
                     </div>
                 </div>
             </div>

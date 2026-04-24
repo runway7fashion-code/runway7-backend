@@ -9,9 +9,12 @@ const props = defineProps({
     events: Array,
     tags: Array,
     sources: Array,
+    countries: Array,
     advisors: Array,
     isLider: Boolean,
 });
+
+const defaultPhoneCode = props.countries?.find(c => c.code === 'US')?.phone || props.countries?.[0]?.phone || '+1';
 
 const form = useForm({
     company_id: null,
@@ -19,6 +22,7 @@ const form = useForm({
     last_name: '',
     email: '',
     secondary_emails: [],
+    phone_code: defaultPhoneCode,
     phone: '',
     charge: '',
     linkedin_url: '',
@@ -130,7 +134,15 @@ function toggleTag(id) {
 const showSourceDetail = computed(() => form.source === 'other');
 
 function submit() {
-    form.post('/admin/sponsorship/leads');
+    // Transform the phone field to include country code (e.g. "+1 555 1234")
+    form.transform(data => {
+        const phone = (data.phone || '').trim();
+        const code = (data.phone_code || '').trim();
+        const full = phone ? `${code} ${phone}`.trim() : null;
+        // eslint-disable-next-line no-unused-vars
+        const { phone_code, ...rest } = data;
+        return { ...rest, phone: full };
+    }).post('/admin/sponsorship/leads');
 }
 </script>
 
@@ -153,10 +165,10 @@ function submit() {
                     <h4 class="font-semibold text-gray-900 mb-4">Company *</h4>
                     <div v-if="!selectedCompany" class="space-y-2">
                         <div class="relative">
-                            <MagnifyingGlassIcon class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+                            <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                             <input v-model="companyQuery" @input="searchCompanies" @focus="showCompanyDropdown = true"
                                 type="text" placeholder="Search existing company..."
-                                class="input pl-10" />
+                                class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
                             <ul v-if="showCompanyDropdown && companySuggestions.length"
                                 class="absolute z-10 bg-white border border-gray-200 rounded-lg shadow mt-1 w-full max-h-60 overflow-auto">
                                 <li v-for="c in companySuggestions" :key="c.id"
@@ -222,7 +234,13 @@ function submit() {
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="label">Phone</label>
-                            <input v-model="form.phone" type="tel" class="input" />
+                            <div class="flex gap-2">
+                                <select v-model="form.phone_code"
+                                    class="w-32 shrink-0 border border-gray-300 rounded-lg px-2 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400">
+                                    <option v-for="c in countries" :key="c.code" :value="c.phone">{{ c.flag }} {{ c.phone }}</option>
+                                </select>
+                                <input v-model="form.phone" type="tel" placeholder="(555) 123-4567" class="input flex-1" />
+                            </div>
                         </div>
                         <div>
                             <label class="label">Charge</label>
