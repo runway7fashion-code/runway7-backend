@@ -100,6 +100,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::middleware('section:designers')->group(function () {
                 Route::get('designers/export', [DesignerController::class, 'exportDesigners'])->name('designers.export');
                 Route::post('designers/import', [DesignerController::class, 'importDesigners'])->name('designers.import');
+                Route::get('designers/overdue-materials', [DesignerController::class, 'overdueMaterials'])->name('designers.overdue-materials');
+                Route::post('designers/{designer}/events/{event}/send-deadline-reminder', [DesignerController::class, 'sendDeadlineReminder'])->name('designers.send-deadline-reminder');
                 Route::resource('designers', DesignerController::class)->except(['destroy']);
                 Route::patch('designers/{designer}/status', [DesignerController::class, 'updateStatus'])->name('designers.update-status');
                 Route::post('designers/{designer}/assign-event', [DesignerController::class, 'assignEvent'])->name('designers.assign-event');

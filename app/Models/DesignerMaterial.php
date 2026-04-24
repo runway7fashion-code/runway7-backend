@@ -59,4 +59,29 @@ class DesignerMaterial extends Model
     public function isSimple(): bool        { return $this->status_flow === self::FLOW_SIMPLE; }
     public function isBio(): bool           { return $this->name === 'Bio'; }
     public function isMoodboard(): bool     { return in_array($this->name, ['Hair Mood Board', 'Makeup Mood Board']); }
+
+    // Scope: materials the designer is responsible for and still hasn't finished
+    public function scopePendingForDesigner($query)
+    {
+        return $query->where('upload_by', 'designer')
+            ->whereIn('status', [self::STATUS_PENDING, self::STATUS_IN_PROGRESS]);
+    }
+
+    // Does this (designer, event) pair still have materials pending from the designer?
+    public static function designerHasPending(int $designerId, int $eventId): bool
+    {
+        return self::where('designer_id', $designerId)
+            ->where('event_id', $eventId)
+            ->pendingForDesigner()
+            ->exists();
+    }
+
+    // How many materials are still pending for the designer on this event
+    public static function countPendingForDesigner(int $designerId, int $eventId): int
+    {
+        return self::where('designer_id', $designerId)
+            ->where('event_id', $eventId)
+            ->pendingForDesigner()
+            ->count();
+    }
 }

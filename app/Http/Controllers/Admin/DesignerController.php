@@ -448,6 +448,174 @@ class DesignerController extends Controller
         return back()->with('success', 'Profile picture deleted.');
     }
 
+    /**
+     * List of designers with materials deadline that has already passed
+     * and still have pending materials. Used for operations to follow up.
+     */
+    public function overdueMaterials(Request $request): Response
+    {
+        $today = now()->startOfDay();
+
+        // Pull pivot rows with deadline in the past, limited to active/registered designers
+        $pivotQuery = DB::table('event_designer as ed')
+            ->join('users as u', 'u.id', '=', 'ed.designer_id')
+            ->join('events as e', 'e.id', '=', 'ed.event_id')
+            ->leftJoin('designer_profiles as dp', 'dp.user_id', '=', 'u.id')
+            ->leftJoin('users as rep', 'rep.id', '=', 'dp.sales_rep_id')
+            ->whereNotNull('ed.materials_deadline')
+            ->where('ed.materials_deadline', '<', $today->toDateString())
+            ->where('u.role', 'designer')
+            ->whereIn('u.status', ['active', 'registered', 'pending']);
+
+        if ($request->filled('event_id')) {
+            $pivotQuery->where('ed.event_id', $request->event_id);
+        }
+
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $pivotQuery->where(function ($q) use ($s) {
+                $q->where('u.first_name', 'ilike', "%{$s}%")
+                  ->orWhere('u.last_name', 'ilike', "%{$s}%")
+                  ->orWhere('u.email', 'ilike', "%{$s}%")
+                  ->orWhere('dp.brand_name', 'ilike', "%{$s}%");
+            });
+        }
+
+        $pivotQuery->select([
+            'ed.id as pivot_id',
+            'ed.designer_id',
+            'ed.event_id',
+            'ed.materials_deadline',
+            'u.first_name',
+            'u.last_name',
+            'u.email',
+            'u.profile_picture',
+            'dp.brand_name',
+            'e.name as event_name',
+            'rep.id as sales_rep_id',
+            'rep.first_name as sales_rep_first_name',
+            'rep.last_name as sales_rep_last_name',
+        ])->orderBy('ed.materials_deadline', 'asc');
+
+        $rows = $pivotQuery->get();
+
+        // Filter: only those with pending materials
+        $filtered = $rows->filter(function ($row) {
+            return DesignerMaterial::countPendingForDesigner($row->designer_id, $row->event_id) > 0;
+        })->map(function ($row) use ($today) {
+            $pendingCount = DesignerMaterial::countPendingForDesigner($row->designer_id, $row->event_id);
+            $deadline = \Carbon\Carbon::parse($row->materials_deadline);
+
+            return [
+                'designer_id'     => $row->designer_id,
+                'designer_name'   => trim("{$row->first_name} {$row->last_name}"),
+                'designer_email'  => $row->email,
+                'profile_picture' => $row->profile_picture,
+                'brand_name'      => $row->brand_name,
+                'event_id'        => $row->event_id,
+                'event_name'      => $row->event_name,
+                'deadline'        => $deadline->toDateString(),
+                'days_overdue'    => (int) $today->diffInDays($deadline, false) * -1,
+                'pending_count'   => $pendingCount,
+                'sales_rep'       => $row->sales_rep_id
+                    ? trim("{$row->sales_rep_first_name} {$row->sales_rep_last_name}")
+                    : null,
+            ];
+        })->values();
+
+        $stats = [
+            'designers_overdue'     => $filtered->count(),
+            'total_pending'         => $filtered->sum('pending_count'),
+            'max_days_overdue'      => $filtered->max('days_overdue') ?? 0,
+        ];
+
+        $events = Event::orderBy('start_date', 'desc')->get(['id', 'name']);
+
+        return Inertia::render('Admin/Designers/OverdueMaterials', [
+            'rows'    => $filtered,
+            'stats'   => $stats,
+            'events'  => $events,
+            'filters' => $request->only(['event_id', 'search']),
+        ]);
+    }
+
+    /**
+     * Fire a manual deadline reminder (email + push + in-app) for a single designer/event
+     * from the overdue materials panel.
+     */
+    public function sendDeadlineReminder(Request $request, User $designer, Event $event)
+    {
+        $this->authorizeDesigner($designer);
+
+        $pivot = DB::table('event_designer')
+            ->where('designer_id', $designer->id)
+            ->where('event_id', $event->id)
+            ->first(['materials_deadline']);
+
+        if (!$pivot || !$pivot->materials_deadline) {
+            return back()->withErrors(['deadline' => 'This designer has no deadline set for this event.']);
+        }
+
+        $pendingCount = DesignerMaterial::countPendingForDesigner($designer->id, $event->id);
+        if ($pendingCount === 0) {
+            return back()->with('success', 'This designer has no pending materials — nothing to send.');
+        }
+
+        $deadline = \Carbon\Carbon::parse($pivot->materials_deadline);
+        $daysRemaining = (int) now()->startOfDay()->diffInDays($deadline, false);
+        $stage = $daysRemaining < 0 ? 'overdue' : ($daysRemaining === 0 ? 'today' : ($daysRemaining <= 1 ? 'tomorrow' : ($daysRemaining <= 3 ? 'soon' : ($daysRemaining <= 7 ? 'upcoming' : 'early'))));
+
+        $firebase = app(\App\Services\FirebaseNotificationService::class);
+        $deadlineDate = $deadline->format('F j, Y');
+
+        // In-app
+        try {
+            $designer->notify(new \App\Notifications\MaterialsDeadlineReminder(
+                eventName:     $event->name,
+                deadlineDate:  $deadlineDate,
+                daysRemaining: $daysRemaining,
+                pendingCount:  $pendingCount,
+                stage:         $stage,
+                eventId:       $event->id,
+            ));
+        } catch (\Throwable $e) {
+            \Log::warning("Manual deadline reminder: in-app failed — {$e->getMessage()}");
+        }
+
+        // Push
+        try {
+            $firebase->sendToUser(
+                $designer,
+                $stage === 'overdue' ? 'Deadline passed' : 'Materials deadline reminder',
+                $stage === 'overdue'
+                    ? "Uploads for {$event->name} are blocked. Contact your advisor."
+                    : "{$pendingCount} pending for {$event->name}. Due {$deadlineDate}.",
+                ['type' => 'materials_deadline_reminder', 'stage' => $stage, 'event_id' => (string) $event->id],
+            );
+        } catch (\Throwable $e) {
+            \Log::warning("Manual deadline reminder: push failed — {$e->getMessage()}");
+        }
+
+        // Email
+        try {
+            if ($designer->email) {
+                \Mail::to($designer->email, "{$designer->first_name} {$designer->last_name}")
+                    ->send(new \App\Mail\MaterialsDeadlineReminderMail(
+                        designer:      $designer,
+                        eventName:     $event->name,
+                        deadlineDate:  $deadlineDate,
+                        daysRemaining: $daysRemaining,
+                        pendingCount:  $pendingCount,
+                        stage:         $stage,
+                    ));
+            }
+        } catch (\Throwable $e) {
+            \Log::warning("Manual deadline reminder: email failed — {$e->getMessage()}");
+        }
+
+        return back()->with('success', "Reminder sent to {$designer->first_name} {$designer->last_name}.");
+    }
+
     public function exportDesigners(Request $request)
     {
         $filename = 'disenadores_' . now()->format('Ymd_His') . '.xlsx';
