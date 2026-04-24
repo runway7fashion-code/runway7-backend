@@ -117,7 +117,7 @@ class AuthController extends Controller
             ]);
 
             try {
-                Mail::to($user->email)->send(new PasswordResetCodeMail($code, $user->first_name));
+                Mail::to($user->email)->send(new PasswordResetCodeMail($code, $user));
             } catch (\Throwable $e) {
                 Log::warning('Password reset email failed for '.$email.': '.$e->getMessage());
             }
