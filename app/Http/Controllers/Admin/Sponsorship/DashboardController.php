@@ -28,11 +28,15 @@ class DashboardController extends Controller
         // Rango: por defecto mes actual
         $from = $request->filled('from') ? Carbon::parse($request->from)->startOfDay() : Carbon::now()->startOfMonth();
         $to   = $request->filled('to')   ? Carbon::parse($request->to)->endOfDay()     : Carbon::now()->endOfMonth();
-        $eventId = $request->filled('event_id') ? (int) $request->event_id : null;
+        $eventId   = $request->filled('event_id')   ? (int) $request->event_id   : null;
+        $advisorId = $request->filled('advisor_id') ? (int) $request->advisor_id : null;
+
+        // Advisor filter: solo líderes pueden filtrar; asesores siempre ven solo lo suyo.
+        $effectiveAdvisorId = $isLider ? $advisorId : $user->id;
 
         // ─── Leads totals + by status ───
         $leadsQuery = Lead::query();
-        if (!$isLider) $leadsQuery->where('assigned_to_user_id', $user->id);
+        if ($effectiveAdvisorId) $leadsQuery->where('assigned_to_user_id', $effectiveAdvisorId);
         if ($eventId) $leadsQuery->whereHas('events', fn($q) => $q->where('events.id', $eventId));
 
         $leadsTotal = (clone $leadsQuery)->count();
@@ -49,7 +53,7 @@ class DashboardController extends Controller
 
         // ─── Contracts closed in range ───
         $registrationsQuery = Registration::query();
-        if (!$isLider) $registrationsQuery->where('created_by_user_id', $user->id);
+        if ($effectiveAdvisorId) $registrationsQuery->where('created_by_user_id', $effectiveAdvisorId);
         if ($eventId)  $registrationsQuery->where('event_id', $eventId);
 
         $contractsInRange = (clone $registrationsQuery)->whereBetween('created_at', [$from, $to])->count();
@@ -59,7 +63,8 @@ class DashboardController extends Controller
         $rankingQuery = Registration::query()
             ->whereBetween('created_at', [$from, $to])
             ->whereNotNull('created_by_user_id');
-        if ($eventId) $rankingQuery->where('event_id', $eventId);
+        if ($eventId)             $rankingQuery->where('event_id', $eventId);
+        if ($effectiveAdvisorId)  $rankingQuery->where('created_by_user_id', $effectiveAdvisorId);
 
         $rankingRaw = $rankingQuery
             ->selectRaw('created_by_user_id, COUNT(*) as contracts_count, COALESCE(SUM(agreed_price),0) as total_revenue')
@@ -93,11 +98,15 @@ class DashboardController extends Controller
             ],
             'ranking' => $ranking,
             'filters' => [
-                'from'     => $from->toDateString(),
-                'to'       => $to->toDateString(),
-                'event_id' => $eventId,
+                'from'       => $from->toDateString(),
+                'to'         => $to->toDateString(),
+                'event_id'   => $eventId,
+                'advisor_id' => $advisorId,
             ],
             'events'   => Event::whereNull('deleted_at')->orderBy('start_date', 'desc')->get(['id', 'name']),
+            'advisors' => $isLider
+                ? User::where('role', 'sponsorship')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'sponsorship_type'])
+                : [],
             'statuses' => Lead::STATUSES,
             'isLider'  => $isLider,
         ]);

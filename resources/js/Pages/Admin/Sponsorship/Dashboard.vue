@@ -9,6 +9,7 @@ const props = defineProps({
     ranking: Array,
     filters: Object,
     events: Array,
+    advisors: Array,
     statuses: Object,
     isLider: Boolean,
 });
@@ -16,12 +17,14 @@ const props = defineProps({
 const from = ref(props.filters.from);
 const to = ref(props.filters.to);
 const eventId = ref(props.filters.event_id || '');
+const advisorId = ref(props.filters.advisor_id || '');
 
-watch([from, to, eventId], () => {
+watch([from, to, eventId, advisorId], () => {
     router.get('/admin/sponsorship/dashboard', {
         from: from.value,
         to: to.value,
         event_id: eventId.value || undefined,
+        advisor_id: advisorId.value || undefined,
     }, { preserveState: true, replace: true });
 });
 
@@ -54,6 +57,15 @@ function formatPrice(v) {
                     <select v-model="eventId" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
                         <option value="">All events</option>
                         <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
+                    </select>
+                </div>
+                <div v-if="isLider" class="flex-1 min-w-[200px]">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Advisor</label>
+                    <select v-model="advisorId" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                        <option value="">All advisors</option>
+                        <option v-for="a in advisors" :key="a.id" :value="a.id">
+                            {{ a.first_name }} {{ a.last_name }}{{ a.sponsorship_type === 'lider' ? ' (Leader)' : '' }}
+                        </option>
                     </select>
                 </div>
             </div>
