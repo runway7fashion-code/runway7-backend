@@ -151,6 +151,7 @@ const tagsModalLead = ref(null);
                         <tr>
                             <th class="px-4 py-3 font-medium">Name</th>
                             <th class="px-4 py-3 font-medium">Company</th>
+                            <th class="px-4 py-3 font-medium">Category</th>
                             <th class="px-4 py-3 font-medium">Email</th>
                             <th class="px-4 py-3 font-medium">Instagram</th>
                             <th class="px-4 py-3 font-medium">Assigned to</th>
@@ -174,6 +175,7 @@ const tagsModalLead = ref(null);
                                 </div>
                             </td>
                             <td class="px-4 py-3 text-gray-700">{{ l.company?.name || '—' }}</td>
+                            <td class="px-4 py-3 text-gray-600 text-xs">{{ l.category?.name || '—' }}</td>
                             <td class="px-4 py-3 text-gray-600 text-xs">{{ l.primary_email?.email || '—' }}</td>
                             <td class="px-4 py-3 text-xs" @click.stop>
                                 <a v-if="instagramUrl(l.instagram)" :href="instagramUrl(l.instagram)" target="_blank" rel="noopener"
@@ -228,7 +230,7 @@ const tagsModalLead = ref(null);
                             </td>
                         </tr>
                         <tr v-if="!leads.data.length">
-                            <td colspan="9" class="px-6 py-12 text-center text-gray-400 text-sm">
+                            <td colspan="10" class="px-6 py-12 text-center text-gray-400 text-sm">
                                 No leads found with current filters.
                             </td>
                         </tr>
