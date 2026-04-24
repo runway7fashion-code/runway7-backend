@@ -3,7 +3,7 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import {
-    ArrowLeftIcon, EnvelopeIcon, PhoneIcon, GlobeAltIcon, LinkIcon, TrashIcon,
+    ArrowLeftIcon, EnvelopeIcon, PhoneIcon, GlobeAltIcon, LinkIcon,
     PencilSquareIcon, CheckCircleIcon, ClockIcon, UserIcon, PlusIcon,
     ChatBubbleLeftIcon, CalendarDaysIcon, PhoneArrowUpRightIcon,
     DocumentTextIcon, ChevronDownIcon, StarIcon, ArrowDownTrayIcon, XMarkIcon,
@@ -260,11 +260,6 @@ function openPreview(file) {
     previewDoc.value = { url, viewerUrl, name: file.file_name, isImage };
 }
 
-// ───────────── Delete lead ─────────────
-const showDeleteModal = ref(false);
-function deleteLead() {
-    router.delete(`/admin/sponsorship/leads/${props.lead.id}`);
-}
 </script>
 
 <template>
@@ -337,10 +332,6 @@ function deleteLead() {
                             class="px-4 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600 transition-colors flex items-center gap-1">
                             <StarIcon class="w-3.5 h-3.5" /> Close contract & Convert
                         </Link>
-                        <button v-if="isLider" @click="showDeleteModal = true"
-                            class="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors flex items-center gap-1">
-                            <TrashIcon class="w-3.5 h-3.5" />
-                        </button>
                     </div>
                 </div>
             </div>
@@ -790,20 +781,6 @@ function deleteLead() {
                 </div>
             </div>
 
-            <!-- Delete Modal -->
-            <div v-if="showDeleteModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                <div class="bg-white rounded-2xl w-full max-w-sm p-6 text-center">
-                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <TrashIcon class="w-6 h-6 text-red-500" />
-                    </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Delete lead?</h3>
-                    <p class="text-sm text-gray-500 mb-5">All emails, events, tags and activities will be deleted.</p>
-                    <div class="flex gap-3">
-                        <button @click="showDeleteModal = false" class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
-                        <button @click="deleteLead" class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Delete</button>
-                    </div>
-                </div>
-            </div>
         </Teleport>
     </AdminLayout>
 </template>
