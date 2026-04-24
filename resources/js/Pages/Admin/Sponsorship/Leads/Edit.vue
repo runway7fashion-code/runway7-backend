@@ -284,7 +284,7 @@ function submit() {
                 </div>
 
                 <div v-if="isLider" class="bg-white rounded-xl border border-gray-200 p-6">
-                    <label class="label">Assigned to</label>
+                    <label class="label">Lead Owner</label>
                     <select v-model="form.assigned_to_user_id" class="input bg-white">
                         <option :value="null">— Unassigned</option>
                         <option v-for="a in advisors" :key="a.id" :value="a.id">
