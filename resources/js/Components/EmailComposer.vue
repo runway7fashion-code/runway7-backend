@@ -13,6 +13,9 @@ import { XMarkIcon, PaperClipIcon, ClockIcon } from '@heroicons/vue/24/outline';
 const props = defineProps({
     recipientLabel: { type: String, default: '' },
     processing: { type: Boolean, default: false },
+    hideSchedule: { type: Boolean, default: false },
+    hideBccNote: { type: Boolean, default: false },
+    sendLabel: { type: String, default: 'Send' },
 });
 
 const emit = defineEmits(['send', 'close']);
@@ -150,6 +153,9 @@ const formatSize = (bytes) => {
                     <EditorContent :editor="editor" />
                 </div>
 
+                <!-- Extra options slot (e.g. contract toggle) -->
+                <slot name="extra-options" />
+
                 <!-- Attachments -->
                 <div v-if="attachments.length" class="space-y-1">
                     <div v-for="(file, i) in attachments" :key="i" class="flex items-center gap-2 text-xs bg-gray-50 rounded-lg px-3 py-2">
@@ -161,7 +167,7 @@ const formatSize = (bytes) => {
                 </div>
 
                 <!-- Schedule -->
-                <div v-if="showSchedule" class="bg-gray-50 rounded-lg p-4 space-y-3">
+                <div v-if="showSchedule && !hideSchedule" class="bg-gray-50 rounded-lg p-4 space-y-3">
                     <p class="text-sm font-medium text-gray-700">Schedule Email</p>
                     <div class="space-y-2">
                         <label class="flex items-center gap-2 text-sm cursor-pointer">
@@ -192,16 +198,16 @@ const formatSize = (bytes) => {
                 <button @click="fileInput.click()" class="p-2 rounded-lg hover:bg-gray-100 text-gray-500" title="Attach File">
                     <PaperClipIcon class="w-4 h-4" />
                 </button>
-                <button @click="showSchedule = !showSchedule" :class="showSchedule ? 'bg-gray-200' : ''" class="p-2 rounded-lg hover:bg-gray-100 text-gray-500" title="Schedule">
+                <button v-if="!hideSchedule" @click="showSchedule = !showSchedule" :class="showSchedule ? 'bg-gray-200' : ''" class="p-2 rounded-lg hover:bg-gray-100 text-gray-500" title="Schedule">
                     <ClockIcon class="w-4 h-4" />
                 </button>
-                <p class="text-xs text-gray-400 ml-2">You'll receive a BCC copy.</p>
+                <p v-if="!hideBccNote" class="text-xs text-gray-400 ml-2">You'll receive a BCC copy.</p>
             </div>
             <div class="flex gap-3">
                 <button @click="emit('close')" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg">Cancel</button>
                 <button @click="handleSend" :disabled="processing"
                     class="px-5 py-2 text-sm font-semibold text-white bg-black hover:bg-gray-800 rounded-lg disabled:opacity-50">
-                    {{ processing ? 'Sending...' : (scheduleOption !== 'now' && showSchedule ? 'Schedule' : 'Send') }}
+                    {{ processing ? 'Sending...' : (scheduleOption !== 'now' && showSchedule && !hideSchedule ? 'Schedule' : sendLabel) }}
                 </button>
             </div>
         </div>

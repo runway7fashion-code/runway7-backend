@@ -32,7 +32,7 @@ class SendLeadOutreachEmailJob implements ShouldQueue
 
     public function handle(): void
     {
-        $lead = Lead::with(['primaryEmail'])->find($this->leadId);
+        $lead = Lead::with(['primaryEmail', 'emails'])->find($this->leadId);
         $sender = User::find($this->senderUserId);
 
         if (!$lead || !$sender) {
@@ -46,14 +46,26 @@ class SendLeadOutreachEmailJob implements ShouldQueue
             return;
         }
 
+        // CC: cualquier email secundario registrado para este lead.
+        $ccEmails = $lead->emails
+            ->where('is_primary', false)
+            ->pluck('email')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
         try {
-            Mail::to($primary->email, "{$lead->first_name} {$lead->last_name}")
-                ->send(new LeadOutreachMail(
-                    sender: $sender,
-                    subjectLine: $this->subjectLine,
-                    bodyText: $this->bodyText,
-                    attachmentPaths: $this->attachmentPaths,
-                ));
+            $pending = Mail::to($primary->email, "{$lead->first_name} {$lead->last_name}");
+            if (!empty($ccEmails)) {
+                $pending->cc($ccEmails);
+            }
+            $pending->send(new LeadOutreachMail(
+                sender: $sender,
+                subjectLine: $this->subjectLine,
+                bodyText: $this->bodyText,
+                attachmentPaths: $this->attachmentPaths,
+            ));
 
             $lead->update([
                 'last_email_sent_at' => now(),

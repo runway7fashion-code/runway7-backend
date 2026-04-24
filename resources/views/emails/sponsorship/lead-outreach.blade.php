@@ -10,7 +10,12 @@
         .card { max-width: 560px; margin: 0 auto; background:#fff; border-radius:16px; overflow:hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.10); }
         .header { background:#000; padding: 24px 40px; text-align:center; }
         .header img { display:block; margin:0 auto; }
-        .body { padding: 32px 40px; font-size:15px; line-height:1.7; color:#333; white-space: pre-wrap; }
+        .body { padding: 32px 40px; font-size:15px; line-height:1.7; color:#333; }
+        .body p { margin: 0 0 12px 0; }
+        .body ul, .body ol { margin: 0 0 12px 0; padding-left: 24px; }
+        .body a { color:#D4AF37; text-decoration: underline; }
+        .body img { max-width: 100%; height: auto; border-radius: 8px; margin: 8px 0; }
+        .body hr { border: 0; border-top: 1px solid #e5e7eb; margin: 12px 0; }
         .signature { margin-top: 28px; padding-top: 18px; border-top: 1px solid #eee; font-size: 13px; color: #444; line-height: 1.65; }
         .signature .name { font-size: 14px; font-weight: 700; color: #111; }
         .signature .title { font-size: 12px; color: #666; margin-bottom: 6px; }
@@ -25,7 +30,7 @@
         <div class="header">
             <img src="{{ url('/images/logo-email.png') }}" alt="Runway 7 Fashion" width="100" height="100" />
         </div>
-        <div class="body">{!! nl2br(e($bodyText)) !!}<div class="signature">
+        <div class="body">{!! $bodyText !!}<div class="signature">
             <div class="name">Christina Kovacs</div>
             <div class="title">Sponsors Relations Director</div>
             Phone: +1 (646)-480-9431<br>

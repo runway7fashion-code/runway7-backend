@@ -1,5 +1,6 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import EmailComposer from '@/Components/EmailComposer.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 import {
@@ -286,18 +287,22 @@ function emailDelivery(activity) {
 
 // ───────────── Send Email modal ─────────────
 const showEmailModal = ref(false);
-const emailForm = useForm({ subject: '', body: '', is_contract: false, attachments: [] });
-function addEmailAttachment(e) {
-    const files = Array.from(e.target.files || []);
-    emailForm.attachments = [...emailForm.attachments, ...files];
-    e.target.value = '';
-}
-function removeEmailAttachment(i) { emailForm.attachments.splice(i, 1); }
-function submitEmail() {
-    emailForm.post(`/admin/sponsorship/leads/${props.lead.id}/send-email`, {
+const emailProcessing = ref(false);
+const emailIsContract = ref(false);
+
+function handleEmailSend({ subject, body, attachments }) {
+    const formData = new FormData();
+    formData.append('subject', subject);
+    formData.append('body', body);
+    formData.append('is_contract', emailIsContract.value ? '1' : '0');
+    attachments.forEach((f) => formData.append('attachments[]', f));
+
+    emailProcessing.value = true;
+    router.post(`/admin/sponsorship/leads/${props.lead.id}/send-email`, formData, {
         forceFormData: true,
         preserveScroll: true,
-        onSuccess: () => { showEmailModal.value = false; emailForm.reset(); },
+        onSuccess: () => { showEmailModal.value = false; emailIsContract.value = false; },
+        onFinish: () => { emailProcessing.value = false; },
     });
 }
 
@@ -695,7 +700,10 @@ function openPreview(file) {
                                                     :class="emailDelivery(activity).cls">{{ emailDelivery(activity).label }}</span>
                                                 <span class="text-sm font-medium text-gray-900 line-clamp-2 break-words">{{ activity.title }}</span>
                                             </div>
-                                            <p v-if="activity.description" class="text-xs text-gray-500 mt-1 whitespace-pre-line line-clamp-3 break-words">{{ activity.description }}</p>
+                                            <div v-if="activity.description && activity.type === 'email'"
+                                                class="sponsorship-email-preview text-xs text-gray-500 mt-1 line-clamp-3 break-words"
+                                                v-html="activity.description"></div>
+                                            <p v-else-if="activity.description" class="text-xs text-gray-500 mt-1 whitespace-pre-line line-clamp-3 break-words">{{ activity.description }}</p>
                                             <div v-if="activity.files?.length" class="flex flex-wrap gap-1 mt-2">
                                                 <button v-for="f in activity.files" :key="f.id" @click="openPreview(f)"
                                                     class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-50 border border-gray-200 rounded text-[10px] text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer">
@@ -806,48 +814,24 @@ function openPreview(file) {
                 </div>
             </div>
 
-            <!-- Send Email Modal -->
-            <div v-if="showEmailModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-auto p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">Send email to {{ lead.first_name }} {{ lead.last_name }}</h3>
-                        <button @click="showEmailModal = false" class="text-gray-400 hover:text-gray-600"><XMarkIcon class="w-5 h-5" /></button>
-                    </div>
-                    <p class="text-xs text-gray-500 mb-4">Sent from your email. Creates a completed activity in the timeline.</p>
-                    <div class="space-y-3">
-                        <div>
-                            <label class="text-xs font-medium text-gray-600">Subject *</label>
-                            <input v-model="emailForm.subject" type="text" class="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-                        </div>
-                        <div>
-                            <label class="text-xs font-medium text-gray-600">Body *</label>
-                            <textarea v-model="emailForm.body" rows="8" class="w-full mt-1 border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"></textarea>
-                        </div>
-                        <div>
-                            <label class="inline-flex items-center gap-2 px-3 py-1.5 border border-dashed border-gray-300 rounded-lg text-xs cursor-pointer hover:bg-gray-50">
-                                <PlusIcon class="w-4 h-4" /> Attach files
-                                <input type="file" multiple @change="addEmailAttachment" class="hidden" />
-                            </label>
-                            <div v-if="emailForm.attachments.length" class="mt-2 space-y-1">
-                                <div v-for="(f, i) in emailForm.attachments" :key="i" class="flex items-center justify-between text-xs bg-gray-50 rounded px-2 py-1">
-                                    <span class="truncate">{{ f.name }}</span>
-                                    <button type="button" @click="removeEmailAttachment(i)" class="text-red-500"><XMarkIcon class="w-3 h-3" /></button>
-                                </div>
-                            </div>
-                        </div>
+            <!-- Send Email Modal (rich text via EmailComposer) -->
+            <div v-if="showEmailModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showEmailModal = false">
+                <EmailComposer
+                    :recipient-label="`${lead.first_name} ${lead.last_name}${primaryEmail ? ' <' + primaryEmail + '>' : ''}`"
+                    :processing="emailProcessing"
+                    :hide-schedule="true"
+                    :hide-bcc-note="true"
+                    send-label="Send email"
+                    @send="handleEmailSend"
+                    @close="showEmailModal = false"
+                >
+                    <template #extra-options>
                         <label class="flex items-center gap-2 text-sm bg-yellow-50 border border-[#D4AF37] rounded-lg px-3 py-2">
-                            <input v-model="emailForm.is_contract" type="checkbox" class="rounded" />
+                            <input v-model="emailIsContract" type="checkbox" class="rounded" />
                             <span>This is the contract email. Lead status will switch to <strong>Contrato</strong>.</span>
                         </label>
-                        <div class="flex justify-end gap-2 pt-2">
-                            <button @click="showEmailModal = false" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
-                            <button @click="submitEmail" :disabled="emailForm.processing || !emailForm.subject || !emailForm.body"
-                                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
-                                {{ emailForm.processing ? 'Sending...' : 'Send email' }}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                    </template>
+                </EmailComposer>
             </div>
 
             <!-- Add Event Modal -->
@@ -900,7 +884,10 @@ function openPreview(file) {
                             <span v-if="viewingActivity.scheduled_at">Scheduled: <span class="text-gray-700">{{ formatDateTime(viewingActivity.scheduled_at) }}</span></span>
                             <span v-if="viewingActivity.completed_at">Completed: <span class="text-gray-700">{{ formatDateTime(viewingActivity.completed_at) }}</span></span>
                         </div>
-                        <div v-if="viewingActivity.description" class="text-sm text-gray-700 whitespace-pre-line break-words border-t border-gray-100 pt-3">{{ viewingActivity.description }}</div>
+                        <div v-if="viewingActivity.description && viewingActivity.type === 'email'"
+                            class="sponsorship-email-preview text-sm text-gray-700 break-words border-t border-gray-100 pt-3"
+                            v-html="viewingActivity.description"></div>
+                        <div v-else-if="viewingActivity.description" class="text-sm text-gray-700 whitespace-pre-line break-words border-t border-gray-100 pt-3">{{ viewingActivity.description }}</div>
                         <div v-if="viewingActivity.files?.length" class="border-t border-gray-100 pt-3">
                             <p class="text-xs font-medium text-gray-500 mb-2">Attachments</p>
                             <div class="flex flex-wrap gap-1.5">
@@ -942,3 +929,13 @@ function openPreview(file) {
         </Teleport>
     </AdminLayout>
 </template>
+
+<style>
+.sponsorship-email-preview p { margin: 0 0 0.5em 0; }
+.sponsorship-email-preview p:last-child { margin-bottom: 0; }
+.sponsorship-email-preview ul, .sponsorship-email-preview ol { padding-left: 1.25em; margin: 0 0 0.5em 0; }
+.sponsorship-email-preview a { color: #D4AF37; text-decoration: underline; }
+.sponsorship-email-preview img { max-width: 100%; height: auto; border-radius: 6px; margin: 6px 0; }
+.sponsorship-email-preview hr { border: 0; border-top: 1px solid #e5e7eb; margin: 10px 0; }
+.sponsorship-email-preview strong { font-weight: 600; color: #111827; }
+</style>
