@@ -127,7 +127,7 @@ class SponsorController extends Controller
 
         // Validar email único en users
         $emailLower = mb_strtolower(trim($validated['email']));
-        if (User::withTrashed()->whereRaw('LOWER(email) = ?', [$emailLower])->exists()) {
+        if (User::whereRaw('LOWER(email) = ?', [$emailLower])->exists()) {
             return back()->withErrors(['email' => 'A user with that email already exists.'])->withInput();
         }
 

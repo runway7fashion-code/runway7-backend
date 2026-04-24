@@ -81,7 +81,7 @@ class ConversionController extends Controller
 
         // Validar que el email no exista en users
         $emailLower = mb_strtolower(trim($validated['email']));
-        $existingUser = User::withTrashed()->whereRaw('LOWER(email) = ?', [$emailLower])->first();
+        $existingUser = User::whereRaw('LOWER(email) = ?', [$emailLower])->first();
         if ($existingUser) {
             return back()->withErrors([
                 'email' => "A user with that email already exists (role: {$existingUser->role}). Use a different email or contact the admin.",
