@@ -20,8 +20,8 @@ class LeadOutreachMail extends Mailable
 
     public function build()
     {
-        $mail = $this->from($this->sender->email, "{$this->sender->first_name} {$this->sender->last_name}")
-            ->replyTo($this->sender->email, "{$this->sender->first_name} {$this->sender->last_name}")
+        $mail = $this->from($this->sender->email, 'Runway 7 Fashion')
+            ->replyTo($this->sender->email, 'Runway 7 Fashion')
             ->subject($this->subjectLine)
             ->view('emails.sponsorship.lead-outreach', [
                 'sender' => $this->sender,

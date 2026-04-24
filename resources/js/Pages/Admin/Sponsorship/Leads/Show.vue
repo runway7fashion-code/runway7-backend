@@ -6,7 +6,7 @@ import {
     ArrowLeftIcon, EnvelopeIcon, PhoneIcon, GlobeAltIcon, LinkIcon,
     PencilSquareIcon, CheckCircleIcon, ClockIcon, UserIcon, PlusIcon,
     ChatBubbleLeftIcon, CalendarDaysIcon, PhoneArrowUpRightIcon,
-    DocumentTextIcon, ChevronDownIcon, StarIcon, ArrowDownTrayIcon, XMarkIcon,
+    DocumentTextIcon, StarIcon, ArrowDownTrayIcon, XMarkIcon,
 } from '@heroicons/vue/24/outline';
 import { StarIcon as StarSolid } from '@heroicons/vue/24/solid';
 
@@ -272,12 +272,17 @@ const sortedActivities = computed(() => {
     return [...props.lead.activities].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 });
 
-const expandedActivities = ref([]);
-function toggleActivityExpand(id) {
-    if (expandedActivities.value.includes(id)) expandedActivities.value = expandedActivities.value.filter(x => x !== id);
-    else expandedActivities.value.push(id);
+const viewingActivity = ref(null);
+function openActivityDetail(activity) { viewingActivity.value = activity; }
+function closeActivityDetail() { viewingActivity.value = null; }
+
+function emailDelivery(activity) {
+    if (activity.type !== 'email') return null;
+    if (activity.status === 'completed') return { label: 'Sent', cls: 'bg-green-50 text-green-700 border border-green-200' };
+    if (activity.status === 'not_completed') return { label: 'Failed', cls: 'bg-red-50 text-red-700 border border-red-200' };
+    if (activity.status === 'pending') return { label: 'Queued', cls: 'bg-amber-50 text-amber-700 border border-amber-200' };
+    return null;
 }
-function isActivityExpanded(id) { return expandedActivities.value.includes(id); }
 
 // ───────────── Send Email modal ─────────────
 const showEmailModal = ref(false);
@@ -677,7 +682,7 @@ function openPreview(file) {
 
                                 <div class="pb-4">
                                     <div class="flex items-start justify-between gap-2">
-                                        <div class="min-w-0">
+                                        <div class="min-w-0 flex-1">
                                             <div class="flex items-center gap-2 flex-wrap">
                                                 <span class="text-[10px] font-medium px-1.5 py-0.5 rounded"
                                                     :style="{ backgroundColor: activityTypeBg(activity.type), color: activityTypeFg(activity.type) }">
@@ -685,10 +690,12 @@ function openPreview(file) {
                                                 </span>
                                                 <span v-if="activity.is_contract"
                                                     class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#D4AF37] text-white">Contract</span>
-                                                <span class="text-sm font-medium text-gray-900"
-                                                    :class="isActivityExpanded(activity.id) ? 'whitespace-normal break-words' : 'truncate'">{{ activity.title }}</span>
+                                                <span v-if="emailDelivery(activity)"
+                                                    class="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                                                    :class="emailDelivery(activity).cls">{{ emailDelivery(activity).label }}</span>
+                                                <span class="text-sm font-medium text-gray-900 line-clamp-2 break-words">{{ activity.title }}</span>
                                             </div>
-                                            <p v-if="activity.description" class="text-xs text-gray-500 mt-1 whitespace-pre-line">{{ activity.description }}</p>
+                                            <p v-if="activity.description" class="text-xs text-gray-500 mt-1 whitespace-pre-line line-clamp-3 break-words">{{ activity.description }}</p>
                                             <div v-if="activity.files?.length" class="flex flex-wrap gap-1 mt-2">
                                                 <button v-for="f in activity.files" :key="f.id" @click="openPreview(f)"
                                                     class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-50 border border-gray-200 rounded text-[10px] text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer">
@@ -712,10 +719,9 @@ function openPreview(file) {
                                                 <option value="cancelled">Cancelled</option>
                                                 <option value="not_completed">Not completed</option>
                                             </select>
-                                            <button v-if="activity.title && activity.title.length > 25" @click="toggleActivityExpand(activity.id)"
-                                                class="inline-flex items-center gap-0.5 text-[10px] text-gray-400 hover:text-gray-700 transition-colors">
-                                                {{ isActivityExpanded(activity.id) ? 'See less' : 'See more' }}
-                                                <ChevronDownIcon class="w-3 h-3 transition-transform" :class="{ 'rotate-180': isActivityExpanded(activity.id) }" />
+                                            <button @click="openActivityDetail(activity)"
+                                                class="inline-flex items-center gap-1 text-[10px] font-medium text-gray-500 hover:text-black px-2 py-0.5 rounded border border-gray-200 hover:border-gray-400 transition-colors">
+                                                View
                                             </button>
                                         </div>
                                     </div>
@@ -858,6 +864,53 @@ function openPreview(file) {
                     <div class="flex justify-end gap-2">
                         <button @click="showAddEventModal = false" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
                         <button @click="addEvent" :disabled="!newEventId" class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">Add</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Detail Modal -->
+            <div v-if="viewingActivity" class="fixed inset-0 z-50 flex items-center justify-center">
+                <div class="absolute inset-0 bg-black/60" @click="closeActivityDetail"></div>
+                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] mx-4 flex flex-col overflow-hidden">
+                    <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200 flex-shrink-0">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                                :style="{ backgroundColor: activityTypeBg(viewingActivity.type), color: activityTypeFg(viewingActivity.type) }">
+                                {{ activityTypeLabel(viewingActivity.type) }}
+                            </span>
+                            <span v-if="viewingActivity.is_contract" class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#D4AF37] text-white">Contract</span>
+                            <span v-if="emailDelivery(viewingActivity)" class="text-[10px] font-medium px-1.5 py-0.5 rounded" :class="emailDelivery(viewingActivity).cls">{{ emailDelivery(viewingActivity).label }}</span>
+                            <span class="text-[11px] font-medium px-2 py-0.5 rounded"
+                                :class="{
+                                    'bg-amber-50 text-amber-700': viewingActivity.status === 'pending',
+                                    'bg-green-50 text-green-700': viewingActivity.status === 'completed',
+                                    'bg-gray-100 text-gray-500': viewingActivity.status === 'cancelled',
+                                    'bg-red-50 text-red-600': viewingActivity.status === 'not_completed',
+                                }">
+                                {{ viewingActivity.status }}
+                            </span>
+                        </div>
+                        <button @click="closeActivityDetail" class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg text-lg leading-none">&times;</button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+                        <h3 class="text-base font-semibold text-gray-900 break-words">{{ viewingActivity.title }}</h3>
+                        <div class="flex flex-wrap gap-3 text-[11px] text-gray-500">
+                            <span v-if="viewingActivity.creator">By: <span class="text-gray-700 font-medium">{{ viewingActivity.creator.first_name }} {{ viewingActivity.creator.last_name }}</span></span>
+                            <span>Created: <span class="text-gray-700">{{ formatDateTime(viewingActivity.created_at) }}</span></span>
+                            <span v-if="viewingActivity.scheduled_at">Scheduled: <span class="text-gray-700">{{ formatDateTime(viewingActivity.scheduled_at) }}</span></span>
+                            <span v-if="viewingActivity.completed_at">Completed: <span class="text-gray-700">{{ formatDateTime(viewingActivity.completed_at) }}</span></span>
+                        </div>
+                        <div v-if="viewingActivity.description" class="text-sm text-gray-700 whitespace-pre-line break-words border-t border-gray-100 pt-3">{{ viewingActivity.description }}</div>
+                        <div v-if="viewingActivity.files?.length" class="border-t border-gray-100 pt-3">
+                            <p class="text-xs font-medium text-gray-500 mb-2">Attachments</p>
+                            <div class="flex flex-wrap gap-1.5">
+                                <button v-for="f in viewingActivity.files" :key="f.id" @click="openPreview(f)"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                    {{ f.file_name }}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

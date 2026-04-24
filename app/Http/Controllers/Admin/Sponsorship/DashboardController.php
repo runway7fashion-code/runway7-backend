@@ -41,10 +41,18 @@ class DashboardController extends Controller
 
         $leadsTotal = (clone $leadsQuery)->count();
         $leadsByStatus = (clone $leadsQuery)
+            ->where('status', '!=', 'cerrado')
             ->selectRaw('status, COUNT(*) as total')
             ->groupBy('status')
             ->pluck('total', 'status')
             ->toArray();
+
+        // "Closed" sólo cuenta los leads que efectivamente se convirtieron a sponsor
+        // (no los leads cascadeados al cerrar el contrato ganador de la misma company).
+        $leadsByStatus['cerrado'] = (clone $leadsQuery)
+            ->where('status', 'cerrado')
+            ->where('is_contract_winner', true)
+            ->count();
 
         $leadsInRange = (clone $leadsQuery)->whereBetween('created_at', [$from, $to])->count();
 
