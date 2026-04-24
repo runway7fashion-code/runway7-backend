@@ -6,6 +6,7 @@ use App\Mail\Sponsorship\LeadOutreachMail;
 use App\Models\Sponsorship\Lead;
 use App\Models\Sponsorship\LeadActivity;
 use App\Models\User;
+use App\Services\Sponsorship\ZohoSentFolderAppender;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -60,12 +61,23 @@ class SendLeadOutreachEmailJob implements ShouldQueue
             if (!empty($ccEmails)) {
                 $pending->cc($ccEmails);
             }
-            $pending->send(new LeadOutreachMail(
+            $sentMessage = $pending->send(new LeadOutreachMail(
                 sender: $sender,
                 subjectLine: $this->subjectLine,
                 bodyText: $this->bodyText,
                 attachmentPaths: $this->attachmentPaths,
             ));
+
+            // Best-effort: copiar el MIME a la carpeta Sent de Zoho del remitente,
+            // para que aparezca como enviado en su bandeja. No interrumpe el flujo.
+            if ($sentMessage) {
+                try {
+                    $raw = $sentMessage->getSymfonySentMessage()->toString();
+                    app(ZohoSentFolderAppender::class)->append($sender, $raw);
+                } catch (\Throwable $e) {
+                    Log::warning("[Zoho APPEND] Could not build MIME for sender {$sender->email}: " . $e->getMessage());
+                }
+            }
 
             $lead->update([
                 'last_email_sent_at' => now(),
