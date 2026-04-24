@@ -113,6 +113,10 @@ const tagsModalLead = ref(null);
                         <input v-model="search" type="text" placeholder="Search by name, email, phone or company..."
                             class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                     </div>
+                    <select v-model="status" class="input-sm flex-1 min-w-[110px]">
+                        <option value="">All statuses</option>
+                        <option v-for="(meta, key) in statuses" :key="key" :value="key">{{ meta.label }}</option>
+                    </select>
                     <select v-if="isLider" v-model="assignedTo" class="input-sm flex-1 min-w-[120px]">
                         <option value="">All advisors</option>
                         <option v-for="a in advisors" :key="a.id" :value="a.id">
