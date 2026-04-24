@@ -14,6 +14,7 @@ enum ActivityAction: string
     case PhotoDeleted = 'photo_deleted';
     case ProfileUpdated = 'profile_updated';
     case DesignerShowAssigned = 'designer_show_assigned';
+    case PasswordReset = 'password_reset';
 
     public function label(): string
     {
@@ -28,6 +29,7 @@ enum ActivityAction: string
             self::PhotoDeleted => 'Foto eliminada',
             self::ProfileUpdated => 'Perfil actualizado',
             self::DesignerShowAssigned => 'Diseñador asignado a show',
+            self::PasswordReset => 'Reset de contraseña',
         };
     }
 
@@ -44,6 +46,7 @@ enum ActivityAction: string
             self::PhotoDeleted => 'orange',
             self::ProfileUpdated => 'gray',
             self::DesignerShowAssigned => 'pink',
+            self::PasswordReset => 'amber',
         };
     }
 }

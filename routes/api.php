@@ -3,6 +3,14 @@
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function () {
+    // Password reset — strict rate limiting since both endpoints are public
+    Route::post('auth/forgot-password', [App\Http\Controllers\Api\V1\AuthController::class, 'forgotPassword'])
+        ->middleware('throttle:3,15')
+        ->name('auth.forgot-password');
+    Route::post('auth/reset-password', [App\Http\Controllers\Api\V1\AuthController::class, 'resetPassword'])
+        ->middleware('throttle:5,15')
+        ->name('auth.reset-password');
+
     // Auth pública — rate limited: 10 intentos por minuto
     Route::middleware('throttle:10,1')->group(function () {
         Route::post('auth/login', [App\Http\Controllers\Api\V1\AuthController::class, 'login']);
