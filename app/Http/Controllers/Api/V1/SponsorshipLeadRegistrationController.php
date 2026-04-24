@@ -92,8 +92,8 @@ class SponsorshipLeadRegistrationController extends Controller
                 'created_by_user_id'  => null,
                 'assigned_to_user_id' => null,
                 'type'                => 'system',
-                'title'               => 'Lead registrado desde la web',
-                'description'         => "Email: {$email}, Empresa: {$company->name}",
+                'title'               => 'Lead registered from the website',
+                'description'         => "Email: {$email}, Company: {$company->name}",
                 'status'              => 'completed',
                 'completed_at'        => now(),
             ]);

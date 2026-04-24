@@ -181,7 +181,7 @@ function submit() {
                     </div>
                 </div>
 
-                <!-- Info básica -->
+                <!-- Basic info -->
                 <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
                     <h4 class="font-semibold text-gray-900">Contact info</h4>
 
@@ -304,7 +304,7 @@ function submit() {
                     <select v-model="form.assigned_to_user_id" class="input bg-white">
                         <option :value="null">— (Me by default)</option>
                         <option v-for="a in advisors" :key="a.id" :value="a.id">
-                            {{ a.first_name }} {{ a.last_name }} {{ a.sponsorship_type === 'lider' ? '(Líder)' : '(Asesor)' }}
+                            {{ a.first_name }} {{ a.last_name }} {{ a.sponsorship_type === 'lider' ? '(Leader)' : '(Advisor)' }}
                         </option>
                     </select>
                 </div>

@@ -36,7 +36,7 @@ class LeadController extends Controller
     {
         if ($this->isLider()) return;
         if ($lead->assigned_to_user_id !== auth()->id()) {
-            abort(403, 'Este lead no está asignado a ti.');
+            abort(403, 'This lead is not assigned to you.');
         }
     }
 
@@ -46,7 +46,7 @@ class LeadController extends Controller
         $duplicates = array_unique(array_diff_assoc($normalized, array_unique($normalized)));
         if ($duplicates) {
             throw ValidationException::withMessages([
-                'emails' => 'No puede repetirse el mismo email en la lista.',
+                'emails' => 'The same email cannot be repeated in the list.',
             ]);
         }
         foreach ($normalized as $email) {
@@ -54,7 +54,7 @@ class LeadController extends Controller
             if ($leadId) $query->where('lead_id', '!=', $leadId);
             if ($query->exists()) {
                 throw ValidationException::withMessages([
-                    'emails' => "El email {$email} ya está registrado en otro lead.",
+                    'emails' => "The email {$email} is already registered in another lead.",
                 ]);
             }
         }
@@ -254,15 +254,15 @@ class LeadController extends Controller
             $this->logActivity(
                 $lead,
                 'system',
-                'Lead creado manualmente',
-                "Email: {$validated['email']}, Empresa: " . ($lead->company?->name ?? '—')
+                'Lead created manually',
+                "Email: {$validated['email']}, Company: " . ($lead->company?->name ?? '—')
             );
 
             return $lead;
         });
 
         return redirect()->route('admin.sponsorship.leads.show', $lead)
-            ->with('success', 'Lead creado.');
+            ->with('success', 'Lead created.');
     }
 
     // ─────────────────────────── Show ───────────────────────────
@@ -379,7 +379,7 @@ class LeadController extends Controller
         });
 
         return redirect()->route('admin.sponsorship.leads.show', $lead)
-            ->with('success', 'Lead actualizado.');
+            ->with('success', 'Lead updated.');
     }
 
     // ─────────────────────────── Acciones rápidas ───────────────────────────
@@ -404,16 +404,16 @@ class LeadController extends Controller
         $this->logActivity(
             $lead,
             'status_change',
-            "Estado cambiado de {$oldLabel} a {$newLabel}",
+            "Status changed from {$oldLabel} to {$newLabel}",
             "{$oldLabel} → {$newLabel}"
         );
 
-        return back()->with('success', 'Status actualizado.');
+        return back()->with('success', 'Status updated.');
     }
 
     public function assign(Request $request, Lead $lead)
     {
-        if (!$this->isLider()) abort(403, 'Solo un líder puede reasignar.');
+        if (!$this->isLider()) abort(403, 'Only a leader can reassign leads.');
 
         $validated = $request->validate([
             'assigned_to_user_id' => 'nullable|exists:users,id',
@@ -429,11 +429,11 @@ class LeadController extends Controller
 
         $newUser = $newAssignedId ? User::find($newAssignedId) : null;
         $title = $newUser
-            ? "Asignado manualmente a {$newUser->first_name} {$newUser->last_name}"
-            : 'Lead sin asignar';
+            ? "Manually assigned to {$newUser->first_name} {$newUser->last_name}"
+            : 'Lead unassigned';
         $this->logActivity($lead, 'assignment', $title);
 
-        return back()->with('success', 'Asignación actualizada.');
+        return back()->with('success', 'Assignment updated.');
     }
 
     public function syncTags(Request $request, Lead $lead)
@@ -447,7 +447,7 @@ class LeadController extends Controller
 
         $lead->tags()->sync($validated['tag_ids'] ?? []);
 
-        return back()->with('success', 'Tags actualizados.');
+        return back()->with('success', 'Tags updated.');
     }
 
     public function addEvent(Request $request, Lead $lead)
@@ -463,10 +463,10 @@ class LeadController extends Controller
 
         if (!$alreadyAttached) {
             $eventName = \App\Models\Event::find($validated['event_id'])?->name ?? '—';
-            $this->logActivity($lead, 'system', "Evento agregado: {$eventName}");
+            $this->logActivity($lead, 'system', "Event added: {$eventName}");
         }
 
-        return back()->with('success', 'Evento agregado.');
+        return back()->with('success', 'Event added.');
     }
 
     public function removeEvent(Request $request, Lead $lead)
@@ -480,9 +480,9 @@ class LeadController extends Controller
         $eventName = \App\Models\Event::find($validated['event_id'])?->name ?? '—';
         $lead->events()->detach($validated['event_id']);
 
-        $this->logActivity($lead, 'system', "Evento removido: {$eventName}");
+        $this->logActivity($lead, 'system', "Event removed: {$eventName}");
 
-        return back()->with('success', 'Evento quitado.');
+        return back()->with('success', 'Event removed.');
     }
 
     // ─────────────────────────── Direct email to lead ───────────────────────────
@@ -501,7 +501,7 @@ class LeadController extends Controller
 
         $primary = $lead->emails()->where('is_primary', true)->first();
         if (!$primary) {
-            return back()->withErrors(['email' => 'El lead no tiene email principal.']);
+            return back()->withErrors(['email' => 'The lead has no primary email.']);
         }
 
         $paths = [];
@@ -520,7 +520,7 @@ class LeadController extends Controller
             attachmentPaths: $paths,
         );
 
-        return back()->with('success', 'Email encolado para envío.');
+        return back()->with('success', 'Email queued for sending.');
     }
 
     // ─────────────────────────── Activities / Timeline ───────────────────────────
@@ -574,7 +574,7 @@ class LeadController extends Controller
             $this->applyActivityRules($lead->fresh(), $activity);
         }
 
-        return back()->with('success', 'Actividad creada.');
+        return back()->with('success', 'Activity created.');
     }
 
     public function completeActivity(LeadActivity $activity)
@@ -591,7 +591,7 @@ class LeadController extends Controller
         if (request()->wantsJson()) {
             return response()->json(['ok' => true]);
         }
-        return back()->with('success', 'Actividad completada.');
+        return back()->with('success', 'Activity completed.');
     }
 
     public function cancelActivity(LeadActivity $activity)
@@ -600,7 +600,7 @@ class LeadController extends Controller
         $activity->update(['status' => 'cancelled']);
 
         if (request()->wantsJson()) return response()->json(['ok' => true]);
-        return back()->with('success', 'Actividad cancelada.');
+        return back()->with('success', 'Activity cancelled.');
     }
 
     public function notCompletedActivity(LeadActivity $activity)
@@ -609,14 +609,14 @@ class LeadController extends Controller
         $activity->update(['status' => 'not_completed']);
 
         if (request()->wantsJson()) return response()->json(['ok' => true]);
-        return back()->with('success', 'Actividad marcada como no completada.');
+        return back()->with('success', 'Activity marked as not completed.');
     }
 
     public function destroyActivity(LeadActivity $activity)
     {
         $this->authorizeSee($activity->lead);
         $activity->delete();
-        return back()->with('success', 'Actividad eliminada.');
+        return back()->with('success', 'Activity deleted.');
     }
 
     /**

@@ -93,7 +93,7 @@ class SponsorController extends Controller
 
         SendSponsorOnboardingEmailJob::dispatch($user->id, $request->input('registration_id'));
 
-        return back()->with('success', 'Onboarding email encolado.');
+        return back()->with('success', 'Onboarding email queued.');
     }
 
     public function addGuest(Request $request, User $user)
@@ -122,13 +122,13 @@ class SponsorController extends Controller
             ->count();
 
         if ($currentGuests >= $maxGuests) {
-            return back()->withErrors(['quota' => "Este sponsor ya alcanzó el límite de {$maxGuests} invitados permitidos por sus paquetes."])->withInput();
+            return back()->withErrors(['quota' => "This sponsor has reached the guest limit of {$maxGuests} allowed by their packages."])->withInput();
         }
 
         // Validar email único en users
         $emailLower = mb_strtolower(trim($validated['email']));
         if (User::withTrashed()->whereRaw('LOWER(email) = ?', [$emailLower])->exists()) {
-            return back()->withErrors(['email' => 'Ya existe un usuario con ese email.'])->withInput();
+            return back()->withErrors(['email' => 'A user with that email already exists.'])->withInput();
         }
 
         DB::transaction(function () use ($validated, $user, $emailLower) {
@@ -154,7 +154,7 @@ class SponsorController extends Controller
             ]);
         });
 
-        return back()->with('success', 'Invitado agregado. Contraseña temporal: runway7.');
+        return back()->with('success', 'Guest added. Temporary password: runway7.');
     }
 
     public function removeGuest(ComplementaryGuest $guest)
@@ -164,6 +164,6 @@ class SponsorController extends Controller
         $guest->delete();
         User::where('id', $guestUserId)->delete();
 
-        return back()->with('success', 'Invitado eliminado.');
+        return back()->with('success', 'Guest removed.');
     }
 }

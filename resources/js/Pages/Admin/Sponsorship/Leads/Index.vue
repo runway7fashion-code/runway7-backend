@@ -72,6 +72,8 @@ function instagramUrl(v) {
     const h = instagramHandle(v);
     return h ? `https://instagram.com/${h}` : null;
 }
+
+const tagsModalLead = ref(null);
 </script>
 
 <template>
@@ -108,7 +110,7 @@ function instagramUrl(v) {
                 <div class="flex flex-wrap items-stretch gap-2">
                     <div class="relative flex-[2] min-w-[220px]">
                         <MagnifyingGlassIcon class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                        <input v-model="search" type="text" placeholder="Buscar por nombre, email, teléfono o empresa..."
+                        <input v-model="search" type="text" placeholder="Search by name, email, phone or company..."
                             class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                     </div>
                     <select v-if="isLider" v-model="assignedTo" class="input-sm flex-1 min-w-[120px]">
@@ -189,12 +191,20 @@ function instagramUrl(v) {
                                     {{ statuses[l.status]?.label || l.status }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3">
-                                <div class="flex flex-wrap gap-1">
-                                    <span v-for="t in l.tags" :key="t.id"
-                                        class="text-xs px-1.5 py-0.5 rounded text-white"
-                                        :style="{ backgroundColor: t.color }">{{ t.name }}</span>
+                            <td class="px-4 py-3" @click.stop>
+                                <div v-if="l.tags?.length === 1">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium"
+                                        :style="{ backgroundColor: l.tags[0].color + '30', color: '#1f2937' }">
+                                        {{ l.tags[0].name }}
+                                    </span>
                                 </div>
+                                <div v-else-if="l.tags?.length > 1">
+                                    <button @click="tagsModalLead = l"
+                                        class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                                        Multiple ({{ l.tags.length }})
+                                    </button>
+                                </div>
+                                <span v-else class="text-gray-400 text-xs">—</span>
                             </td>
                             <td class="px-4 py-3 text-xs text-gray-500">
                                 <div v-if="l.last_email_sent_at">
@@ -226,7 +236,7 @@ function instagramUrl(v) {
                 </table>
             </div>
 
-            <!-- Paginación -->
+            <!-- Pagination -->
             <div v-if="leads.last_page > 1" class="flex justify-center gap-1">
                 <Link v-for="link in leads.links" :key="link.label" :href="link.url ?? '#'"
                     class="px-3 py-1.5 text-sm rounded-lg border"
@@ -237,6 +247,35 @@ function instagramUrl(v) {
                     v-html="link.label"></Link>
             </div>
         </div>
+
+        <!-- Tags Modal -->
+        <Teleport to="body">
+            <div v-if="tagsModalLead" class="fixed inset-0 z-50 flex items-center justify-center">
+                <div class="absolute inset-0 bg-black/50" @click="tagsModalLead = null"></div>
+                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+                    <div class="bg-gray-50 px-6 py-4 flex items-center justify-between border-b">
+                        <div>
+                            <h3 class="font-semibold text-gray-900">Tags for {{ tagsModalLead.first_name }} {{ tagsModalLead.last_name }}</h3>
+                            <p class="text-xs text-gray-500">{{ tagsModalLead.tags?.length }} assigned tags</p>
+                        </div>
+                        <button @click="tagsModalLead = null" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                    </div>
+                    <div class="px-6 py-4">
+                        <div class="flex flex-wrap gap-2">
+                            <span v-for="t in tagsModalLead.tags" :key="t.id"
+                                class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium"
+                                :style="{ backgroundColor: t.color + '30', color: '#1f2937' }">
+                                {{ t.name }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="border-t px-6 py-3 flex justify-between">
+                        <Link :href="`/admin/sponsorship/leads/${tagsModalLead.id}`" class="text-sm font-medium text-gray-700 hover:text-black">View profile →</Link>
+                        <button @click="tagsModalLead = null" class="text-sm text-gray-500 hover:text-gray-700">Close</button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </AdminLayout>
 </template>
 

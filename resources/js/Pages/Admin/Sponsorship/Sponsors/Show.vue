@@ -23,7 +23,7 @@ const guestsLeft = computed(() => Math.max(0, (props.totalAllowedGuests || 0) - 
 
 // Onboarding email
 function sendOnboarding(regId = null) {
-    if (!confirm('Enviar onboarding email?')) return;
+    if (!confirm('Send onboarding email?')) return;
     useForm({ registration_id: regId }).post(`/admin/sponsorship/sponsors/${props.sponsor.id}/send-onboarding`, { preserveScroll: true });
 }
 

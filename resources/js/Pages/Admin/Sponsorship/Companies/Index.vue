@@ -47,7 +47,7 @@ function deleteCompany() {
             <div class="flex items-center gap-3">
                 <div class="relative flex-1">
                     <MagnifyingGlassIcon class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                    <input v-model="search" @input="onSearch" type="text" placeholder="Buscar por nombre, industria o país..."
+                    <input v-model="search" @input="onSearch" type="text" placeholder="Search by name, industry or country..."
                         class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                 </div>
                 <button @click="showCreate = true"
@@ -123,7 +123,7 @@ function deleteCompany() {
                             <input v-model="createForm.name" type="text" autofocus
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             <p v-if="createForm.errors.name" class="text-xs text-red-500 mt-1">{{ createForm.errors.name }}</p>
-                            <p class="text-xs text-gray-500 mt-1">Solo el nombre se requiere ahora. El resto de datos se completan después.</p>
+                            <p class="text-xs text-gray-500 mt-1">Only the name is required now. The rest of the details can be completed later.</p>
                         </div>
                         <div class="flex justify-end gap-2">
                             <button type="button" @click="showCreate = false" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>

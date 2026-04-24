@@ -245,6 +245,21 @@ function formatSize(bytes) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// ───────────── File preview modal ─────────────
+const previewDoc = ref(null);
+function openPreview(file) {
+    const url = `/storage/${file.file_path}`;
+    const ext = file.file_name?.split('.').pop()?.toLowerCase();
+    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext);
+    const isOffice = ['docx', 'doc', 'xlsx', 'xls', 'pptx', 'ppt'].includes(ext);
+    let viewerUrl = url;
+    if (isOffice) {
+        const fullUrl = window.location.origin + url;
+        viewerUrl = `https://docs.google.com/gview?url=${encodeURIComponent(fullUrl)}&embedded=true`;
+    }
+    previewDoc.value = { url, viewerUrl, name: file.file_name, isImage };
+}
+
 // ───────────── Delete lead ─────────────
 const showDeleteModal = ref(false);
 function deleteLead() {
@@ -537,11 +552,11 @@ function deleteLead() {
                                         <p v-if="note.title && note.title !== 'Note' && note.title !== 'Nota'" class="text-sm font-semibold text-gray-800 mb-0.5">{{ note.title }}</p>
                                         <p class="text-sm text-gray-600 whitespace-pre-line">{{ note.description }}</p>
                                         <div v-if="note.files?.length" class="flex flex-wrap gap-1.5 mt-2">
-                                            <a v-for="f in note.files" :key="f.id" :href="`/storage/${f.file_path}`" target="_blank"
-                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-100 transition-colors">
+                                            <button v-for="f in note.files" :key="f.id" @click="openPreview(f)"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                                                 {{ f.file_name }}
-                                            </a>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -579,11 +594,11 @@ function deleteLead() {
                                             </div>
                                             <p v-if="activity.description" class="text-xs text-gray-500 mt-1 whitespace-pre-line">{{ activity.description }}</p>
                                             <div v-if="activity.files?.length" class="flex flex-wrap gap-1 mt-2">
-                                                <a v-for="f in activity.files" :key="f.id" :href="`/storage/${f.file_path}`" target="_blank"
-                                                    class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-50 border border-gray-200 rounded text-[10px] text-gray-600 hover:bg-gray-100 transition-colors">
+                                                <button v-for="f in activity.files" :key="f.id" @click="openPreview(f)"
+                                                    class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-50 border border-gray-200 rounded text-[10px] text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer">
                                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                                                     {{ f.file_name }}
-                                                </a>
+                                                </button>
                                             </div>
                                         </div>
 
@@ -603,7 +618,7 @@ function deleteLead() {
                                             </select>
                                             <button v-if="activity.title && activity.title.length > 25" @click="toggleActivityExpand(activity.id)"
                                                 class="inline-flex items-center gap-0.5 text-[10px] text-gray-400 hover:text-gray-700 transition-colors">
-                                                {{ isActivityExpanded(activity.id) ? 'Ver menos' : 'Ver más' }}
+                                                {{ isActivityExpanded(activity.id) ? 'See less' : 'See more' }}
                                                 <ChevronDownIcon class="w-3 h-3 transition-transform" :class="{ 'rotate-180': isActivityExpanded(activity.id) }" />
                                             </button>
                                         </div>
@@ -747,6 +762,30 @@ function deleteLead() {
                     <div class="flex justify-end gap-2">
                         <button @click="showAddEventModal = false" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
                         <button @click="addEvent" :disabled="!newEventId" class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">Add</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- File Preview Modal -->
+            <div v-if="previewDoc" class="fixed inset-0 z-50 flex items-center justify-center">
+                <div class="absolute inset-0 bg-black/70" @click="previewDoc = null"></div>
+                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] mx-4 flex flex-col overflow-hidden">
+                    <div class="flex items-center justify-between px-5 py-3 border-b border-gray-200 flex-shrink-0">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                            <span class="text-sm font-medium text-gray-900 truncate">{{ previewDoc.name }}</span>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <a :href="previewDoc.url" download
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
+                                Download
+                            </a>
+                            <button @click="previewDoc = null" class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors text-lg leading-none">&times;</button>
+                        </div>
+                    </div>
+                    <div class="flex-1 bg-gray-100 overflow-auto flex items-center justify-center">
+                        <img v-if="previewDoc.isImage" :src="previewDoc.url" :alt="previewDoc.name" class="max-w-full max-h-full object-contain" />
+                        <iframe v-else :src="previewDoc.viewerUrl" class="w-full h-full border-0"></iframe>
                     </div>
                 </div>
             </div>

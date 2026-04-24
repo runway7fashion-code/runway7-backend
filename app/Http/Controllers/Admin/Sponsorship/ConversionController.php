@@ -21,7 +21,7 @@ class ConversionController extends Controller
         $u = auth()->user();
         $isLider = $u->role === 'admin' || ($u->role === 'sponsorship' && $u->sponsorship_type === 'lider');
         if (!$isLider && $lead->assigned_to_user_id !== $u->id) {
-            abort(403, 'Este lead no está asignado a ti.');
+            abort(403, 'This lead is not assigned to you.');
         }
     }
 
@@ -31,7 +31,7 @@ class ConversionController extends Controller
 
         if ($lead->converted_user_id) {
             return redirect()->route('admin.sponsorship.leads.show', $lead)
-                ->with('error', 'Este lead ya fue convertido a sponsor.');
+                ->with('error', 'This lead has already been converted to sponsor.');
         }
 
         $lead->load(['company', 'events:id,name,start_date', 'primaryEmail', 'emails']);
@@ -47,7 +47,7 @@ class ConversionController extends Controller
         $this->authorizeLead($lead);
 
         if ($lead->converted_user_id) {
-            return back()->with('error', 'Este lead ya fue convertido.');
+            return back()->with('error', 'This lead has already been converted.');
         }
 
         $validated = $request->validate([
@@ -84,7 +84,7 @@ class ConversionController extends Controller
         $existingUser = User::withTrashed()->whereRaw('LOWER(email) = ?', [$emailLower])->first();
         if ($existingUser) {
             return back()->withErrors([
-                'email' => "Ya existe un usuario con ese email (rol: {$existingUser->role}). Usa otro email o contacta al admin.",
+                'email' => "A user with that email already exists (role: {$existingUser->role}). Use a different email or contact the admin.",
             ])->withInput();
         }
 
@@ -174,20 +174,20 @@ class ConversionController extends Controller
                     'created_by_user_id'  => auth()->id(),
                     'assigned_to_user_id' => auth()->id(),
                     'type'                => 'system',
-                    'title'               => "Cerrado automáticamente — contrato ganado por {$user->first_name} {$user->last_name}",
-                    'description'         => "La empresa {$company->name} firmó contrato con otro lead.",
+                    'title'               => "Auto-closed — contract won by {$user->first_name} {$user->last_name}",
+                    'description'         => "The company {$company->name} signed a contract with another lead.",
                     'status'              => 'completed',
                     'completed_at'        => now(),
                 ]);
             }
 
-            // Log en el lead convertido
+            // Log on the converted lead
             LeadActivity::create([
                 'lead_id'             => $lead->id,
                 'created_by_user_id'  => auth()->id(),
                 'assigned_to_user_id' => auth()->id(),
                 'type'                => 'system',
-                'title'               => "Convertido a sponsor: {$user->first_name} {$user->last_name}",
+                'title'               => "Converted to sponsor: {$user->first_name} {$user->last_name}",
                 'description'         => "Package: " . ($registration->package?->name ?? '—') . ", Agreed price: \${$registration->agreed_price}",
                 'status'              => 'completed',
                 'completed_at'        => now(),
@@ -200,6 +200,6 @@ class ConversionController extends Controller
         });
 
         return redirect()->route('admin.sponsorship.leads.show', $lead)
-            ->with('success', "Lead convertido a sponsor correctamente. Contraseña temporal: runway7 — recuerda enviar el onboarding desde la página de sponsors.");
+            ->with('success', "Lead successfully converted to sponsor. Temporary password: runway7 — remember to send the onboarding email from the Sponsors page.");
     }
 }

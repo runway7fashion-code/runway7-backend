@@ -25,8 +25,8 @@ class NewSponsorshipLead extends Notification
 
         return [
             'type'    => 'new_sponsorship_lead',
-            'title'   => 'Nuevo Sponsorship Lead',
-            'message' => "{$fullName} ({$company}) se registró como prospecto",
+            'title'   => 'New Sponsorship Lead',
+            'message' => "{$fullName} ({$company}) registered as a prospect",
             'lead_id' => $lead->id,
             'url'     => "/admin/sponsorship/leads/{$lead->id}",
         ];

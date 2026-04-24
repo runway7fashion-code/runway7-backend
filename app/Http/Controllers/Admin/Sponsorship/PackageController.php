@@ -56,7 +56,7 @@ class PackageController extends Controller
         });
 
         return redirect()->route('admin.sponsorship.packages.index')
-            ->with('success', 'Paquete creado.');
+            ->with('success', 'Package created.');
     }
 
     public function edit(Package $package)
@@ -93,7 +93,7 @@ class PackageController extends Controller
         });
 
         return redirect()->route('admin.sponsorship.packages.index')
-            ->with('success', 'Paquete actualizado.');
+            ->with('success', 'Package updated.');
     }
 
     public function destroy(Package $package)
@@ -101,6 +101,6 @@ class PackageController extends Controller
         // NOTE: cuando creemos sponsorship_registrations, validar que no esté en uso.
         $package->benefits()->detach();
         $package->delete();
-        return back()->with('success', 'Paquete eliminado.');
+        return back()->with('success', 'Package deleted.');
     }
 }

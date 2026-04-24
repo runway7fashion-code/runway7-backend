@@ -29,7 +29,7 @@ class PackageBenefitController extends Controller
 
         PackageBenefit::create($validated);
 
-        return back()->with('success', 'Beneficio creado.');
+        return back()->with('success', 'Benefit created.');
     }
 
     public function update(Request $request, PackageBenefit $benefit)
@@ -43,7 +43,7 @@ class PackageBenefitController extends Controller
 
         $benefit->update($validated);
 
-        return back()->with('success', 'Beneficio actualizado.');
+        return back()->with('success', 'Benefit updated.');
     }
 
     public function destroy(PackageBenefit $benefit)
@@ -52,7 +52,7 @@ class PackageBenefitController extends Controller
 
         $benefit->packages()->detach();
         $benefit->delete();
-        return back()->with('success', 'Beneficio eliminado.');
+        return back()->with('success', 'Benefit deleted.');
     }
 
     private function authorizeLider(): void
@@ -61,7 +61,7 @@ class PackageBenefitController extends Controller
         $isAdmin = $user && $user->role === 'admin';
         $isSponsorshipLider = $user && $user->role === 'sponsorship' && $user->sponsorship_type === 'lider';
         if (!$isAdmin && !$isSponsorshipLider) {
-            abort(403, 'Solo líderes o admin pueden gestionar beneficios.');
+            abort(403, 'Only leaders or admins can manage benefits.');
         }
     }
 }

@@ -273,7 +273,7 @@ function submit() {
                     <select v-model="form.assigned_to_user_id" class="input bg-white">
                         <option :value="null">— Unassigned</option>
                         <option v-for="a in advisors" :key="a.id" :value="a.id">
-                            {{ a.first_name }} {{ a.last_name }} {{ a.sponsorship_type === 'lider' ? '(Líder)' : '(Asesor)' }}
+                            {{ a.first_name }} {{ a.last_name }} {{ a.sponsorship_type === 'lider' ? '(Leader)' : '(Advisor)' }}
                         </option>
                     </select>
                 </div>

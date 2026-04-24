@@ -19,7 +19,7 @@ function onSearch() {
 }
 
 function sendOnboarding(sponsor) {
-    if (!confirm(`Enviar email de onboarding a ${sponsor.first_name} ${sponsor.last_name}?`)) return;
+    if (!confirm(`Send onboarding email to ${sponsor.first_name} ${sponsor.last_name}?`)) return;
     useForm({}).post(`/admin/sponsorship/sponsors/${sponsor.id}/send-onboarding`, { preserveScroll: true });
 }
 
@@ -38,7 +38,7 @@ function formatDate(d) {
         <div class="max-w-7xl mx-auto space-y-4">
             <div class="relative">
                 <MagnifyingGlassIcon class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                <input v-model="search" @input="onSearch" type="text" placeholder="Buscar sponsor por nombre, email o empresa..."
+                <input v-model="search" @input="onSearch" type="text" placeholder="Search sponsor by name, email or company..."
                     class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
             </div>
 

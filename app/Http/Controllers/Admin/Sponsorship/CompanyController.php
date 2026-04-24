@@ -40,7 +40,7 @@ class CompanyController extends Controller
         // Unique case-insensitive check against non-trashed rows
         $exists = Company::whereRaw('LOWER(name) = ?', [mb_strtolower($validated['name'])])->exists();
         if ($exists) {
-            return back()->withErrors(['name' => 'Ya existe una empresa con ese nombre.'])->withInput();
+            return back()->withErrors(['name' => 'A company with that name already exists.'])->withInput();
         }
 
         $company = Company::create([
@@ -53,7 +53,7 @@ class CompanyController extends Controller
         }
 
         return redirect()->route('admin.sponsorship.companies.edit', $company)
-            ->with('success', 'Empresa creada. Completa los datos.');
+            ->with('success', 'Company created. Please complete the details.');
     }
 
     public function edit(Company $company)
@@ -79,19 +79,19 @@ class CompanyController extends Controller
             ->where('id', '!=', $company->id)
             ->exists();
         if ($duplicate) {
-            return back()->withErrors(['name' => 'Ya existe otra empresa con ese nombre.'])->withInput();
+            return back()->withErrors(['name' => 'Another company with that name already exists.'])->withInput();
         }
 
         $company->update($validated);
 
-        return back()->with('success', 'Empresa actualizada.');
+        return back()->with('success', 'Company updated.');
     }
 
     public function destroy(Company $company)
     {
         $company->delete();
         return redirect()->route('admin.sponsorship.companies.index')
-            ->with('success', 'Empresa eliminada.');
+            ->with('success', 'Company deleted.');
     }
 
     /**

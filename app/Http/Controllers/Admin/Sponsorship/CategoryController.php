@@ -27,7 +27,7 @@ class CategoryController extends Controller
 
         Category::create($validated);
 
-        return back()->with('success', 'Categoría creada.');
+        return back()->with('success', 'Category created.');
     }
 
     public function update(Request $request, Category $category)
@@ -39,13 +39,13 @@ class CategoryController extends Controller
 
         $category->update($validated);
 
-        return back()->with('success', 'Categoría actualizada.');
+        return back()->with('success', 'Category updated.');
     }
 
     public function destroy(Category $category)
     {
         // NOTE: cuando creemos sponsorship_leads, validar que no esté en uso.
         $category->delete();
-        return back()->with('success', 'Categoría eliminada.');
+        return back()->with('success', 'Category deleted.');
     }
 }

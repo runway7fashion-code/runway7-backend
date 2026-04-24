@@ -27,7 +27,7 @@ class TagController extends Controller
 
         Tag::create($validated);
 
-        return back()->with('success', 'Tag creado.');
+        return back()->with('success', 'Tag created.');
     }
 
     public function update(Request $request, Tag $tag)
@@ -39,12 +39,12 @@ class TagController extends Controller
 
         $tag->update($validated);
 
-        return back()->with('success', 'Tag actualizado.');
+        return back()->with('success', 'Tag updated.');
     }
 
     public function destroy(Tag $tag)
     {
         $tag->delete();
-        return back()->with('success', 'Tag eliminado.');
+        return back()->with('success', 'Tag deleted.');
     }
 }

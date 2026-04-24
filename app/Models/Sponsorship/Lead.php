@@ -30,14 +30,14 @@ class Lead extends Model
     ];
 
     public const STATUSES = [
-        'nuevo'               => ['label' => 'Nuevo',                'color' => '#3B82F6'],
-        'contactado'          => ['label' => 'Contactado',           'color' => '#8B5CF6'],
-        'interesado'          => ['label' => 'Interesado',           'color' => '#EAB308'],
-        'contrato'            => ['label' => 'Contrato',             'color' => '#F97316'],
-        'cerrado'             => ['label' => 'Cerrado',              'color' => '#10B981'],
-        'siguiente_temporada' => ['label' => 'Siguiente temporada',  'color' => '#6366F1'],
-        'rechazado'           => ['label' => 'Rechazado',            'color' => '#EF4444'],
-        'perdido'             => ['label' => 'Perdido',              'color' => '#64748B'],
+        'nuevo'               => ['label' => 'New',             'color' => '#3B82F6'],
+        'contactado'          => ['label' => 'Contacted',       'color' => '#8B5CF6'],
+        'interesado'          => ['label' => 'Interested',      'color' => '#EAB308'],
+        'contrato'            => ['label' => 'Contract sent',   'color' => '#F97316'],
+        'cerrado'             => ['label' => 'Closed',          'color' => '#10B981'],
+        'siguiente_temporada' => ['label' => 'Next season',     'color' => '#6366F1'],
+        'rechazado'           => ['label' => 'Rejected',        'color' => '#EF4444'],
+        'perdido'             => ['label' => 'Lost',            'color' => '#64748B'],
     ];
 
     public const SOURCES = [
