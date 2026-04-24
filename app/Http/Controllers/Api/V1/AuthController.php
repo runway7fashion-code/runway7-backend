@@ -28,6 +28,17 @@ class AuthController extends Controller
         ]);
 
         if (!Auth::attempt($request->only('email', 'password'))) {
+            $targetEmail = strtolower($request->input('email') ?? '');
+            $target = User::where('email', $targetEmail)->first();
+            Log::info('login_failed', [
+                'email'          => $targetEmail,
+                'user_exists'    => (bool) $target,
+                'user_status'    => $target?->status,
+                'user_role'      => $target?->role,
+                'password_len'   => strlen($request->input('password') ?? ''),
+                'ip'             => $request->ip(),
+                'ua'             => substr((string) $request->userAgent(), 0, 80),
+            ]);
             throw ValidationException::withMessages([
                 'email' => ['Las credenciales son incorrectas.'],
             ]);

@@ -201,12 +201,14 @@ function submit() {
                     <div v-if="showPasswordFields" class="grid grid-cols-2 gap-4 mt-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5">Nueva contraseña</label>
-                            <input v-model="form.password" type="password" class="input" :class="form.errors.password && 'border-red-300'" />
+                            <input v-model="form.password" type="password" class="input" :class="form.errors.password && 'border-red-300'"
+                                autocomplete="new-password" />
                             <p v-if="form.errors.password" class="err">{{ form.errors.password }}</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5">Confirmar</label>
-                            <input v-model="form.password_confirmation" type="password" class="input" />
+                            <input v-model="form.password_confirmation" type="password" class="input"
+                                autocomplete="new-password" />
                         </div>
                     </div>
                     <p v-else class="text-sm text-gray-400 mt-2">La contraseña actual se mantiene si no cambias este campo.</p>
