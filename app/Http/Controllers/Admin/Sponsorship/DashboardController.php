@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Sponsorship;
 
 use App\Http\Controllers\Controller;
 use App\Models\Event;
+use App\Models\Sponsorship\Category;
 use App\Models\Sponsorship\Lead;
 use App\Models\Sponsorship\Registration;
 use App\Models\User;
@@ -28,15 +29,14 @@ class DashboardController extends Controller
         // Rango: por defecto mes actual
         $from = $request->filled('from') ? Carbon::parse($request->from)->startOfDay() : Carbon::now()->startOfMonth();
         $to   = $request->filled('to')   ? Carbon::parse($request->to)->endOfDay()     : Carbon::now()->endOfMonth();
-        $eventId   = $request->filled('event_id')   ? (int) $request->event_id   : null;
-        $advisorId = $request->filled('advisor_id') ? (int) $request->advisor_id : null;
+        $eventId = $request->filled('event_id') ? (int) $request->event_id : null;
 
-        // Advisor filter: solo líderes pueden filtrar; asesores siempre ven solo lo suyo.
-        $effectiveAdvisorId = $isLider ? $advisorId : $user->id;
+        // Asesores ven solo lo suyo; líderes ven todo el equipo.
+        $scopedAdvisorId = $isLider ? null : $user->id;
 
         // ─── Leads totals + by status ───
         $leadsQuery = Lead::query();
-        if ($effectiveAdvisorId) $leadsQuery->where('assigned_to_user_id', $effectiveAdvisorId);
+        if ($scopedAdvisorId) $leadsQuery->where('assigned_to_user_id', $scopedAdvisorId);
         if ($eventId) $leadsQuery->whereHas('events', fn($q) => $q->where('events.id', $eventId));
 
         $leadsTotal = (clone $leadsQuery)->count();
@@ -53,39 +53,35 @@ class DashboardController extends Controller
 
         // ─── Contracts closed in range ───
         $registrationsQuery = Registration::query();
-        if ($effectiveAdvisorId) $registrationsQuery->where('created_by_user_id', $effectiveAdvisorId);
-        if ($eventId)  $registrationsQuery->where('event_id', $eventId);
+        if ($scopedAdvisorId) $registrationsQuery->where('created_by_user_id', $scopedAdvisorId);
+        if ($eventId)         $registrationsQuery->where('event_id', $eventId);
 
         $contractsInRange = (clone $registrationsQuery)->whereBetween('created_at', [$from, $to])->count();
         $contractsTotal   = (clone $registrationsQuery)->count();
 
-        // ─── Ranking asesores (del mes/rango) ───
-        $rankingQuery = Registration::query()
-            ->whereBetween('created_at', [$from, $to])
-            ->whereNotNull('created_by_user_id');
-        if ($eventId)             $rankingQuery->where('event_id', $eventId);
-        if ($effectiveAdvisorId)  $rankingQuery->where('created_by_user_id', $effectiveAdvisorId);
-
-        $rankingRaw = $rankingQuery
-            ->selectRaw('created_by_user_id, COUNT(*) as contracts_count, COALESCE(SUM(agreed_price),0) as total_revenue')
-            ->groupBy('created_by_user_id')
+        // ─── Top 3 categorías con más contratos cerrados (en el rango) ───
+        $topCategoriesRaw = Registration::query()
+            ->whereBetween('sponsorship_registrations.created_at', [$from, $to])
+            ->when($scopedAdvisorId, fn($q) => $q->where('created_by_user_id', $scopedAdvisorId))
+            ->when($eventId, fn($q) => $q->where('event_id', $eventId))
+            ->join('sponsorship_leads', 'sponsorship_leads.id', '=', 'sponsorship_registrations.lead_id')
+            ->whereNotNull('sponsorship_leads.category_id')
+            ->selectRaw('sponsorship_leads.category_id, COUNT(*) as contracts_count, COALESCE(SUM(agreed_price),0) as total_revenue')
+            ->groupBy('sponsorship_leads.category_id')
             ->orderByDesc('contracts_count')
-            ->limit(20)
+            ->limit(3)
             ->get();
 
-        $advisorIds = $rankingRaw->pluck('created_by_user_id')->toArray();
-        $advisors   = User::whereIn('id', $advisorIds)->get(['id', 'first_name', 'last_name', 'sponsorship_type'])->keyBy('id');
+        $categoryNames = Category::whereIn('id', $topCategoriesRaw->pluck('category_id'))
+            ->pluck('name', 'id')
+            ->toArray();
 
-        $ranking = $rankingRaw->map(function ($row) use ($advisors) {
-            $u = $advisors->get($row->created_by_user_id);
-            return [
-                'user_id'           => $row->created_by_user_id,
-                'name'              => $u ? "{$u->first_name} {$u->last_name}" : 'Unknown',
-                'sponsorship_type'  => $u->sponsorship_type ?? null,
-                'contracts_count'   => (int) $row->contracts_count,
-                'total_revenue'     => (float) $row->total_revenue,
-            ];
-        })->values();
+        $topCategories = $topCategoriesRaw->map(fn($row) => [
+            'category_id'     => $row->category_id,
+            'name'            => $categoryNames[$row->category_id] ?? 'Unknown',
+            'contracts_count' => (int) $row->contracts_count,
+            'total_revenue'   => (float) $row->total_revenue,
+        ])->values();
 
         return Inertia::render('Admin/Sponsorship/Dashboard', [
             'stats' => [
@@ -96,17 +92,13 @@ class DashboardController extends Controller
                 'contractsTotal'   => $contractsTotal,
                 'contractsInRange' => $contractsInRange,
             ],
-            'ranking' => $ranking,
+            'topCategories' => $topCategories,
             'filters' => [
-                'from'       => $from->toDateString(),
-                'to'         => $to->toDateString(),
-                'event_id'   => $eventId,
-                'advisor_id' => $advisorId,
+                'from'     => $from->toDateString(),
+                'to'       => $to->toDateString(),
+                'event_id' => $eventId,
             ],
             'events'   => Event::whereNull('deleted_at')->orderBy('start_date', 'desc')->get(['id', 'name']),
-            'advisors' => $isLider
-                ? User::where('role', 'sponsorship')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'sponsorship_type'])
-                : [],
             'statuses' => Lead::STATUSES,
             'isLider'  => $isLider,
         ]);

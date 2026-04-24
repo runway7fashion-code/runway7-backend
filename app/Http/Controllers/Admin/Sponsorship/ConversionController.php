@@ -137,7 +137,10 @@ class ConversionController extends Controller
                 'notes'        => $company->notes,
             ]);
 
-            // 4. Crear registration
+            // 4. Crear registration — se acredita al asesor asignado al lead,
+            //    no al usuario autenticado (que puede ser el líder ejecutando la conversión).
+            $creditedTo = $lead->assigned_to_user_id ?? auth()->id();
+
             $registration = Registration::create([
                 'lead_id'             => $lead->id,
                 'sponsor_user_id'     => $user->id,
@@ -149,7 +152,7 @@ class ConversionController extends Controller
                 'installments_count' => $validated['installments_count'],
                 'notes'               => $validated['notes'] ?? null,
                 'status'              => 'registered',
-                'created_by_user_id'  => auth()->id(),
+                'created_by_user_id'  => $creditedTo,
             ]);
 
             // 5. Documentos
