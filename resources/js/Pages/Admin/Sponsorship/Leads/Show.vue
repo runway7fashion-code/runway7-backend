@@ -196,6 +196,52 @@ function cancelNote() {
     if (noteFileInput.value) noteFileInput.value.value = '';
 }
 
+// ─── Edit existing note ─────────────────────────────────
+const editingNoteId = ref(null);
+const editingNoteTitle = ref('');
+const editingNoteDescription = ref('');
+const editingNoteFiles = ref([]);
+const editingNoteShowTitle = ref(false);
+
+function startEditNote(note) {
+    editingNoteId.value = note.id;
+    editingNoteTitle.value = note.title && note.title !== 'Note' && note.title !== 'Nota' ? note.title : '';
+    editingNoteDescription.value = note.description || '';
+    editingNoteFiles.value = [];
+    editingNoteShowTitle.value = !!editingNoteTitle.value;
+}
+
+function cancelEditNote() {
+    editingNoteId.value = null;
+    editingNoteTitle.value = '';
+    editingNoteDescription.value = '';
+    editingNoteFiles.value = [];
+    editingNoteShowTitle.value = false;
+}
+
+function addEditNoteFile(e) {
+    for (const file of e.target.files) {
+        editingNoteFiles.value.push({ file, name: file.name });
+    }
+    e.target.value = '';
+}
+function removeEditNoteFile(i) { editingNoteFiles.value.splice(i, 1); }
+
+function saveEditNote(noteId) {
+    if (!editingNoteDescription.value.trim()) return;
+    const formData = new FormData();
+    formData.append('_method', 'PATCH');
+    formData.append('title', editingNoteTitle.value.trim() || 'Note');
+    formData.append('description', editingNoteDescription.value.trim());
+    editingNoteFiles.value.forEach((f, i) => formData.append(`files[${i}]`, f.file));
+
+    router.post(`/admin/sponsorship/activities/${noteId}`, formData, {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => cancelEditNote(),
+    });
+}
+
 // ───────────── Activities ─────────────
 const showActivityModal = ref(false);
 const activityForm = useForm({
@@ -553,18 +599,60 @@ function openPreview(file) {
                                         {{ note.creator ? (note.creator.first_name?.[0] || '') + (note.creator.last_name?.[0] || '') : 'R7' }}
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <div class="flex items-center gap-2 mb-0.5">
-                                            <span class="text-sm font-semibold text-gray-900">{{ note.creator ? note.creator.first_name + ' ' + note.creator.last_name : 'System' }}</span>
-                                            <span class="text-xs text-gray-400">{{ formatNoteDate(note.created_at) }}</span>
-                                        </div>
-                                        <p v-if="note.title && note.title !== 'Note' && note.title !== 'Nota'" class="text-sm font-semibold text-gray-800 mb-0.5">{{ note.title }}</p>
-                                        <p class="text-sm text-gray-600 whitespace-pre-line">{{ note.description }}</p>
-                                        <div v-if="note.files?.length" class="flex flex-wrap gap-1.5 mt-2">
-                                            <button v-for="f in note.files" :key="f.id" @click="openPreview(f)"
-                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer">
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
-                                                {{ f.file_name }}
+                                        <div class="flex items-center justify-between gap-2 mb-0.5">
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <span class="text-sm font-semibold text-gray-900">{{ note.creator ? note.creator.first_name + ' ' + note.creator.last_name : 'System' }}</span>
+                                                <span class="text-xs text-gray-400">{{ formatNoteDate(note.created_at) }}</span>
+                                            </div>
+                                            <button v-if="editingNoteId !== note.id" @click="startEditNote(note)"
+                                                class="text-xs text-gray-400 hover:text-gray-700 transition-colors flex items-center gap-1">
+                                                <PencilSquareIcon class="w-3.5 h-3.5" /> Edit
                                             </button>
+                                        </div>
+
+                                        <!-- View mode -->
+                                        <template v-if="editingNoteId !== note.id">
+                                            <p v-if="note.title && note.title !== 'Note' && note.title !== 'Nota'" class="text-sm font-semibold text-gray-800 mb-0.5">{{ note.title }}</p>
+                                            <p class="text-sm text-gray-600 whitespace-pre-line">{{ note.description }}</p>
+                                            <div v-if="note.files?.length" class="flex flex-wrap gap-1.5 mt-2">
+                                                <button v-for="f in note.files" :key="f.id" @click="openPreview(f)"
+                                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                                    {{ f.file_name }}
+                                                </button>
+                                            </div>
+                                            <p v-if="note.edited_at" class="text-[11px] text-gray-400 italic mt-2">
+                                                Edited by {{ note.editor ? `${note.editor.first_name} ${note.editor.last_name}` : 'Unknown' }} on {{ formatNoteDate(note.edited_at) }}
+                                            </p>
+                                        </template>
+
+                                        <!-- Edit mode -->
+                                        <div v-else class="border-2 border-black rounded-xl overflow-hidden mt-1">
+                                            <div v-if="editingNoteShowTitle" class="px-4 pt-3">
+                                                <input v-model="editingNoteTitle" type="text" placeholder="Title (optional)"
+                                                    class="w-full border-0 p-0 text-sm font-semibold text-gray-900 focus:ring-0 placeholder-gray-400" />
+                                            </div>
+                                            <textarea v-model="editingNoteDescription" rows="3"
+                                                class="w-full border-0 px-4 py-3 text-sm text-gray-700 focus:ring-0 placeholder-gray-400 resize-none"></textarea>
+                                            <div v-if="editingNoteFiles.length" class="px-4 py-2 border-t border-gray-100 space-y-1">
+                                                <div v-for="(f, idx) in editingNoteFiles" :key="idx" class="flex items-center justify-between bg-blue-50 rounded-lg px-3 py-1.5">
+                                                    <span class="text-xs text-blue-700 truncate max-w-48">{{ f.name }}</span>
+                                                    <button @click="removeEditNoteFile(idx)" class="text-xs text-red-500">&times;</button>
+                                                </div>
+                                            </div>
+                                            <div class="px-4 py-2 bg-gray-50 flex items-center gap-3 border-t border-gray-100">
+                                                <button @click="saveEditNote(note.id)" :disabled="!editingNoteDescription.trim()"
+                                                    class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 disabled:opacity-40">Save</button>
+                                                <button @click="cancelEditNote"
+                                                    class="px-4 py-1.5 border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-100">Cancel</button>
+                                                <label class="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 cursor-pointer">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                                                    Attach File
+                                                    <input type="file" multiple @change="addEditNoteFile" class="hidden" />
+                                                </label>
+                                                <button v-if="!editingNoteShowTitle" @click="editingNoteShowTitle = true"
+                                                    class="text-xs text-gray-500 hover:text-gray-700">Add a Title</button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

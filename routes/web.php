@@ -497,6 +497,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::patch('activities/{activity}/complete', [SponsorshipLeadController::class, 'completeActivity'])->name('activities.complete');
                 Route::patch('activities/{activity}/cancel', [SponsorshipLeadController::class, 'cancelActivity'])->name('activities.cancel');
                 Route::patch('activities/{activity}/not-completed', [SponsorshipLeadController::class, 'notCompletedActivity'])->name('activities.not-completed');
+                Route::match(['put', 'patch'], 'activities/{activity}', [SponsorshipLeadController::class, 'updateActivity'])->name('activities.update');
                 Route::delete('activities/{activity}', [SponsorshipLeadController::class, 'destroyActivity'])->name('activities.destroy');
             });
 

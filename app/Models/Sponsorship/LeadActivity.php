@@ -13,11 +13,13 @@ class LeadActivity extends Model
         'lead_id',
         'created_by_user_id',
         'assigned_to_user_id',
+        'edited_by_user_id',
         'type',
         'title',
         'description',
         'scheduled_at',
         'completed_at',
+        'edited_at',
         'status',
         'is_contract',
     ];
@@ -25,6 +27,7 @@ class LeadActivity extends Model
     protected $casts = [
         'scheduled_at' => 'datetime',
         'completed_at' => 'datetime',
+        'edited_at'    => 'datetime',
         'is_contract'  => 'boolean',
     ];
 
@@ -53,6 +56,11 @@ class LeadActivity extends Model
     public function assignedTo()
     {
         return $this->belongsTo(User::class, 'assigned_to_user_id');
+    }
+
+    public function editor()
+    {
+        return $this->belongsTo(User::class, 'edited_by_user_id');
     }
 
     public function files()

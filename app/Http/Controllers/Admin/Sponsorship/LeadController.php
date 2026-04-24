@@ -283,6 +283,7 @@ class LeadController extends Controller
             'tags:id,name,color',
             'activities.creator:id,first_name,last_name',
             'activities.assignedTo:id,first_name,last_name',
+            'activities.editor:id,first_name,last_name',
             'activities.files',
         ]);
 
@@ -619,6 +620,45 @@ class LeadController extends Controller
         $this->authorizeSee($activity->lead);
         $activity->delete();
         return back()->with('success', 'Activity deleted.');
+    }
+
+    public function updateActivity(Request $request, LeadActivity $activity)
+    {
+        $this->authorizeSee($activity->lead);
+
+        // Only notes can be freely edited for now.
+        if ($activity->type !== 'note') {
+            abort(403, 'Only notes can be edited.');
+        }
+
+        $validated = $request->validate([
+            'title'       => 'nullable|string|max:255',
+            'description' => 'required|string',
+            'files'       => 'nullable|array',
+            'files.*'     => 'file|max:20480',
+        ]);
+
+        $activity->update([
+            'title'             => $validated['title'] ?: 'Note',
+            'description'       => $validated['description'],
+            'edited_by_user_id' => auth()->id(),
+            'edited_at'         => now(),
+        ]);
+
+        if ($request->hasFile('files')) {
+            foreach ($request->file('files') as $file) {
+                $path = $file->store("sponsorship/lead-files/{$activity->lead_id}", 'public');
+                LeadActivityFile::create([
+                    'activity_id' => $activity->id,
+                    'file_path'   => $path,
+                    'file_name'   => $file->getClientOriginalName(),
+                    'size'        => $file->getSize(),
+                    'mime_type'   => $file->getMimeType(),
+                ]);
+            }
+        }
+
+        return back()->with('success', 'Note updated.');
     }
 
     /**
