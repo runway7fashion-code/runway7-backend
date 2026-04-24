@@ -16,11 +16,12 @@ class DashboardController extends Controller
         $user = $request->user();
 
         return match($user->role) {
-            'admin'      => $this->adminDashboard(),
-            'operation'  => $this->operationDashboard(),
-            'accounting' => redirect()->route('admin.accounting.dashboard'),
-            'sales'      => redirect()->route('admin.sales.dashboard'),
-            default      => $this->defaultDashboard($user),
+            'admin'        => $this->adminDashboard(),
+            'operation'    => $this->operationDashboard(),
+            'accounting'   => redirect()->route('admin.accounting.dashboard'),
+            'sales'        => redirect()->route('admin.sales.dashboard'),
+            'sponsorship'  => redirect()->route('admin.sponsorship.dashboard'),
+            default        => $this->defaultDashboard($user),
         };
     }
 

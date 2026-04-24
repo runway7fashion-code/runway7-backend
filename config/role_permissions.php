@@ -34,7 +34,7 @@ return [
         'label' => 'Creative',
     ],
     'sponsorship' => [
-        'sections' => ['dashboard', 'users', 'communications', 'sponsorship_companies', 'sponsorship_categories', 'sponsorship_packages', 'sponsorship_benefits', 'sponsorship_tags', 'sponsorship_leads', 'sponsorship_calendar', 'sponsorship_sponsors', 'sponsorship_dashboard'],
+        'sections' => ['users', 'communications', 'sponsorship_companies', 'sponsorship_categories', 'sponsorship_packages', 'sponsorship_benefits', 'sponsorship_tags', 'sponsorship_leads', 'sponsorship_calendar', 'sponsorship_sponsors', 'sponsorship_dashboard'],
         'label' => 'Sponsorship',
     ],
     'assistant' => [
