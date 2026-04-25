@@ -504,14 +504,24 @@ class ChatController extends Controller
 
     private function serializeGroup(Conversation $g, User $viewer): array
     {
-        $g->loadMissing(['creator:id,first_name,last_name,profile_picture',
-            'participants.user:id,first_name,last_name,profile_picture,role']);
+        $g->loadMissing([
+            'creator:id,first_name,last_name,profile_picture',
+            'participants.user:id,first_name,last_name,profile_picture,role',
+            'show:id,name,event_day_id',
+            'show.eventDay:id,event_id',
+            'show.eventDay.event:id,name',
+        ]);
+
+        $event = $g->show?->eventDay?->event;
 
         return [
             'id'              => $g->id,
             'is_group'        => true,
             'name'            => $g->name,
             'show_id'         => $g->show_id,
+            'show_name'       => $g->show?->name,
+            'event_id'        => $event?->id,
+            'event_name'      => $event?->name,
             'created_by_id'   => $g->created_by_id,
             'is_creator'      => $g->created_by_id === $viewer->id,
             'creator'         => $g->creator ? [
