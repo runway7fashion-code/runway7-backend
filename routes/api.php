@@ -52,6 +52,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('me', [App\Http\Controllers\Api\V1\AuthController::class, 'me']);
         Route::post('auth/logout', [App\Http\Controllers\Api\V1\AuthController::class, 'logout']);
 
+        // Member info — groups in common with another user
+        Route::get('users/{user}/common-groups', [App\Http\Controllers\Api\V1\ChatController::class, 'commonGroups'])->name('users.common-groups');
+
         // Chat
         Route::prefix('chat')->name('chat.')->group(function () {
             Route::get('conversations', [App\Http\Controllers\Api\V1\ChatController::class, 'conversations'])->name('conversations');

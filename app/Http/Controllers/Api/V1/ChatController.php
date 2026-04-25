@@ -422,6 +422,35 @@ class ChatController extends Controller
         return response()->json(['data' => $models]);
     }
 
+    /**
+     * Groups where both the authenticated user and {user} are active members.
+     * Used by the mobile member-info screen.
+     */
+    public function commonGroups(Request $request, User $user): JsonResponse
+    {
+        $me = $request->user();
+
+        $groups = Conversation::where('is_group', true)
+            ->where('status', 'active')
+            ->whereHas('participants', fn ($q) => $q->where('user_id', $me->id))
+            ->whereHas('participants', fn ($q) => $q->where('user_id', $user->id))
+            ->withCount('participants')
+            ->with('show:id,name')
+            ->orderByDesc('last_message_at')
+            ->get();
+
+        return response()->json([
+            'data' => $groups->map(fn ($g) => [
+                'id'              => $g->id,
+                'name'            => $g->name,
+                'member_count'    => $g->participants_count,
+                'show_id'         => $g->show_id,
+                'show_name'       => $g->show?->name,
+                'last_message_at' => $g->last_message_at?->toISOString(),
+            ])->values(),
+        ]);
+    }
+
     private function ensureGroupAccess(User $user, Conversation $conversation): void
     {
         if (!$conversation->is_group) abort(422, 'Not a group.');
