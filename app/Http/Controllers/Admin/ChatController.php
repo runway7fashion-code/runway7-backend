@@ -23,11 +23,13 @@ class ChatController extends Controller
         $query = Conversation::with([
             'userA:id,first_name,last_name,email,profile_picture,role,last_seen_at',
             'userB:id,first_name,last_name,email,profile_picture,role,last_seen_at',
+            'creator:id,first_name,last_name,profile_picture,role',
+            'participants.user:id,first_name,last_name,profile_picture,role',
             'show:id,name,event_day_id',
             'show.eventDay:id,event_id,label',
             'show.eventDay.event:id,name',
             'lastMessage',
-        ])->withCount('messages');
+        ])->withCount(['messages', 'participants']);
 
         if ($request->filled('event')) {
             $query->whereHas('show.eventDay.event', fn($q) => $q->where('events.id', $request->event));
@@ -35,7 +37,9 @@ class ChatController extends Controller
 
         if ($request->filled('context_type')) {
             if ($request->context_type === 'general') {
-                $query->whereNull('context_type');
+                $query->whereNull('context_type')->where('is_group', false);
+            } elseif ($request->context_type === 'group') {
+                $query->where('is_group', true);
             } else {
                 $query->where('context_type', $request->context_type);
             }
@@ -74,6 +78,8 @@ class ChatController extends Controller
         $conversation->load([
             'userA:id,first_name,last_name,email,profile_picture,role,last_seen_at',
             'userB:id,first_name,last_name,email,profile_picture,role,last_seen_at',
+            'creator:id,first_name,last_name,profile_picture,role',
+            'participants.user:id,first_name,last_name,profile_picture,role',
             'show:id,name,event_day_id',
             'show.eventDay:id,event_id,label,date',
             'show.eventDay.event:id,name',
@@ -196,6 +202,27 @@ class ChatController extends Controller
         });
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Create a group from the panel. Internal team can create groups with any
+     * users; the form already filters to non-admin users.
+     */
+    public function createGroup(Request $request)
+    {
+        $request->validate([
+            'name'         => 'required|string|max:120',
+            'member_ids'   => 'required|array|min:1',
+            'member_ids.*' => 'integer|exists:users,id',
+        ]);
+
+        $sender = auth()->user();
+        if (!$sender->isInternalTeam()) abort(403);
+
+        $conversation = $this->chatService->createGroup($sender, $request->name, $request->member_ids);
+
+        return redirect()->route('admin.chats.show', $conversation)
+            ->with('success', 'Group created.');
     }
 
     /**

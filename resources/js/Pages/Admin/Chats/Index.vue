@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, watch, computed } from 'vue';
-import { PlusIcon, XMarkIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline';
+import { PlusIcon, XMarkIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, ExclamationTriangleIcon, UserGroupIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     conversations: Object,
@@ -91,6 +91,32 @@ const roleColors = {
 };
 const contextLabels = { casting: 'Casting', material: 'Material' };
 
+// Group creation modal
+const showGroupModal = ref(false);
+const groupForm = useForm({ name: '', member_ids: [] });
+const groupSearch = ref('');
+const groupRoleFilter = ref('');
+const filteredGroupCandidates = computed(() => {
+    let list = props.users || [];
+    if (groupRoleFilter.value) list = list.filter(u => u.role === groupRoleFilter.value);
+    if (groupSearch.value) {
+        const s = groupSearch.value.toLowerCase();
+        list = list.filter(u => `${u.first_name} ${u.last_name}`.toLowerCase().includes(s));
+    }
+    return list.slice(0, 30);
+});
+function toggleGroupMember(uid) {
+    const idx = groupForm.member_ids.indexOf(uid);
+    if (idx >= 0) groupForm.member_ids.splice(idx, 1);
+    else groupForm.member_ids.push(uid);
+}
+function submitGroup() {
+    if (!groupForm.name.trim() || groupForm.member_ids.length === 0) return;
+    groupForm.post('/admin/operations/chats/groups', {
+        onSuccess: () => { showGroupModal.value = false; groupForm.reset(); groupSearch.value = ''; },
+    });
+}
+
 // Support assignments modal
 const showSettingsModal = ref(false);
 const settingsLoading = ref(false);
@@ -161,6 +187,10 @@ async function saveSettings() {
                     class="px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-1.5">
                     <Cog6ToothIcon class="w-4 h-4" /> Settings
                 </button>
+                <button @click="showGroupModal = true"
+                    class="px-3 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-1.5">
+                    <UserGroupIcon class="w-4 h-4" /> New Group
+                </button>
                 <button @click="showNewChatModal = true"
                     class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors flex items-center gap-1.5">
                     <PlusIcon class="w-4 h-4" /> New Chat
@@ -177,6 +207,7 @@ async function saveSettings() {
                 <option value="casting">Casting</option>
                 <option value="material">Material</option>
                 <option value="general">General</option>
+                <option value="group">Groups</option>
             </select>
             <select v-model="event" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                 <option value="">All events</option>
@@ -202,9 +233,18 @@ async function saveSettings() {
                         <td colspan="6" class="text-center text-gray-400 py-12">No conversations yet.</td>
                     </tr>
                     <tr v-for="c in conversations.data" :key="c.id" class="hover:bg-gray-50 transition-colors cursor-pointer" @click="router.visit(`/admin/operations/chats/${c.id}`)">
-                        <!-- User A -->
-                        <td class="px-5 py-3">
-                            <div class="flex items-center gap-2">
+                        <!-- User A / Group -->
+                        <td class="px-5 py-3" :colspan="c.is_group ? 2 : 1">
+                            <div v-if="c.is_group" class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                    {{ (c.name || 'G').split(' ').map(s => s[0]).slice(0,2).join('').toUpperCase() }}
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-semibold text-gray-900 truncate">{{ c.name }}</p>
+                                    <p class="text-xs text-gray-500">Group · {{ c.participants_count ?? c.participants?.length ?? 0 }} members · by {{ c.creator?.first_name }} {{ c.creator?.last_name }}</p>
+                                </div>
+                            </div>
+                            <div v-else class="flex items-center gap-2">
                                 <div class="w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                                     <img v-if="storageUrl(c.user_a?.profile_picture)" :src="storageUrl(c.user_a.profile_picture)" class="w-full h-full object-cover" />
                                     <div v-else class="w-full h-full flex items-center justify-center text-xs font-bold text-gray-500">
@@ -217,8 +257,8 @@ async function saveSettings() {
                                 </div>
                             </div>
                         </td>
-                        <!-- User B -->
-                        <td class="px-4 py-3">
+                        <!-- User B (only for 1:1) -->
+                        <td v-if="!c.is_group" class="px-4 py-3">
                             <div class="flex items-center gap-2">
                                 <div class="w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                                     <img v-if="storageUrl(c.user_b?.profile_picture)" :src="storageUrl(c.user_b.profile_picture)" class="w-full h-full object-cover" />
@@ -234,7 +274,8 @@ async function saveSettings() {
                         </td>
                         <!-- Type -->
                         <td class="px-4 py-3">
-                            <span v-if="c.context_type" class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">{{ contextLabels[c.context_type] || c.context_type }}</span>
+                            <span v-if="c.is_group" class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">Group</span>
+                            <span v-else-if="c.context_type" class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">{{ contextLabels[c.context_type] || c.context_type }}</span>
                             <span v-else class="text-xs text-gray-400">General</span>
                             <p v-if="c.show" class="text-xs text-gray-400 mt-0.5">{{ c.show?.name }}</p>
                         </td>
@@ -318,6 +359,61 @@ async function saveSettings() {
                         <button @click="saveSettings" :disabled="settingsLoading || settingsSaving"
                             class="px-5 py-2 text-sm font-semibold text-white bg-black hover:bg-gray-800 rounded-lg disabled:opacity-50">
                             {{ settingsSaving ? 'Saving…' : 'Save' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- New Group Modal -->
+        <Teleport to="body">
+            <div v-if="showGroupModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showGroupModal = false">
+                <div class="bg-white rounded-2xl w-full max-w-lg shadow-xl max-h-[85vh] flex flex-col">
+                    <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+                        <h3 class="text-lg font-bold text-gray-900">New Group</h3>
+                        <button @click="showGroupModal = false" class="p-1 rounded-lg hover:bg-gray-100"><XMarkIcon class="w-5 h-5 text-gray-400" /></button>
+                    </div>
+                    <div class="px-6 py-4 space-y-3 flex-shrink-0">
+                        <input v-model="groupForm.name" type="text" placeholder="Group name"
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                        <div class="flex gap-2">
+                            <input v-model="groupSearch" type="text" placeholder="Search users..."
+                                class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                            <select v-model="groupRoleFilter" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
+                                <option value="">All roles</option>
+                                <option value="designer">Designer</option>
+                                <option value="model">Model</option>
+                                <option value="media">Media</option>
+                                <option value="volunteer">Volunteer</option>
+                                <option value="operation">Operation</option>
+                            </select>
+                        </div>
+                        <p class="text-xs text-gray-400">{{ groupForm.member_ids.length }} selected</p>
+                    </div>
+                    <div class="flex-1 overflow-y-auto px-6">
+                        <div v-for="user in filteredGroupCandidates" :key="user.id"
+                            class="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors"
+                            :class="groupForm.member_ids.includes(user.id) ? 'bg-black text-white' : 'hover:bg-gray-50'"
+                            @click="toggleGroupMember(user.id)">
+                            <div class="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold"
+                                :class="groupForm.member_ids.includes(user.id) ? 'bg-gray-700 text-white' : 'text-gray-500'">
+                                {{ user.first_name?.[0] }}{{ user.last_name?.[0] }}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium truncate">{{ user.first_name }} {{ user.last_name }}</p>
+                                <p class="text-xs truncate" :class="groupForm.member_ids.includes(user.id) ? 'text-gray-300' : 'text-gray-500'">{{ user.email }}</p>
+                            </div>
+                            <span class="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                                :class="groupForm.member_ids.includes(user.id) ? 'bg-gray-700 text-gray-200' : (roleColors[user.role] || 'bg-gray-100 text-gray-500')">
+                                {{ roleLabels[user.role] || user.role }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="px-6 py-3 border-t border-gray-100 flex justify-end gap-3 flex-shrink-0">
+                        <button @click="showGroupModal = false" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg">Cancel</button>
+                        <button @click="submitGroup" :disabled="!groupForm.name.trim() || groupForm.member_ids.length === 0 || groupForm.processing"
+                            class="px-5 py-2 text-sm font-semibold text-white bg-black hover:bg-gray-800 rounded-lg disabled:opacity-50">
+                            {{ groupForm.processing ? 'Creating…' : 'Create Group' }}
                         </button>
                     </div>
                 </div>

@@ -21,11 +21,11 @@ class MessagesDelivered implements ShouldBroadcast
 
     public function broadcastOn(): array
     {
-        return [
-            new PrivateChannel('conversation.' . $this->conversation->id),
-            new PrivateChannel('user.' . $this->conversation->user_a_id),
-            new PrivateChannel('user.' . $this->conversation->user_b_id),
-        ];
+        $channels = [new PrivateChannel('conversation.' . $this->conversation->id)];
+        foreach ($this->conversation->participantIds() as $uid) {
+            $channels[] = new PrivateChannel('user.' . $uid);
+        }
+        return $channels;
     }
 
     public function broadcastAs(): string

@@ -19,6 +19,8 @@ const currentUser = page.props.auth?.user;
 const userA = computed(() => props.conversation.user_a);
 const userB = computed(() => props.conversation.user_b);
 const show  = computed(() => props.conversation.show);
+const isGroup = computed(() => !!props.conversation.is_group);
+const groupParticipants = computed(() => props.conversation.participants ?? []);
 
 const messages = ref([...props.messages]);
 const messageForm = useForm({ body: '' });
@@ -80,9 +82,13 @@ const typingUserName = () => {
     return u?.first_name || 'Someone';
 };
 
-const isParticipant = computed(() =>
-    !!currentUser && (currentUser.id === userA.value?.id || currentUser.id === userB.value?.id)
-);
+const isParticipant = computed(() => {
+    if (!currentUser) return false;
+    if (isGroup.value) {
+        return groupParticipants.value.some(p => p.user_id === currentUser.id);
+    }
+    return currentUser.id === userA.value?.id || currentUser.id === userB.value?.id;
+});
 
 function markAsRead() {
     if (!isParticipant.value) return;
@@ -268,8 +274,30 @@ async function reassignTo(agentId) {
         </template>
 
         <div class="max-w-3xl mx-auto">
-            <!-- Conversation info -->
-            <div class="bg-white rounded-2xl border border-gray-200 p-5 mb-5">
+            <!-- Group info (read-only for admin/operation) -->
+            <div v-if="isGroup" class="bg-white rounded-2xl border border-gray-200 p-5 mb-5">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-full bg-black text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                        {{ (conversation.name || 'G').split(' ').map(s => s[0]).slice(0,2).join('').toUpperCase() }}
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-base font-semibold text-gray-900">{{ conversation.name }}</p>
+                        <p class="text-xs text-gray-500">Group · {{ groupParticipants.length }} members · created by {{ conversation.creator?.first_name }} {{ conversation.creator?.last_name }}</p>
+                    </div>
+                    <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">Group</span>
+                </div>
+                <div class="mt-3 flex flex-wrap gap-1.5">
+                    <span v-for="p in groupParticipants" :key="p.id"
+                        class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] bg-gray-50 border border-gray-200 text-gray-700">
+                        <span class="w-4 h-4 rounded-full bg-gray-200 flex items-center justify-center text-[8px] font-bold">{{ p.user?.first_name?.[0] }}</span>
+                        {{ p.user?.first_name }} {{ p.user?.last_name }}
+                        <span v-if="p.role === 'admin'" class="text-[9px] uppercase text-amber-600 font-semibold">admin</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- 1:1 Conversation info -->
+            <div v-else class="bg-white rounded-2xl border border-gray-200 p-5 mb-5">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-6">
                         <!-- User A -->

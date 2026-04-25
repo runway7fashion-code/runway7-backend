@@ -64,6 +64,16 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('conversations/{conversation}/delivered', [App\Http\Controllers\Api\V1\ChatController::class, 'markAsDelivered'])->name('mark-delivered');
             Route::post('conversations/{conversation}/read', [App\Http\Controllers\Api\V1\ChatController::class, 'markAsRead'])->name('mark-read');
 
+            // Groups (Phase B)
+            Route::post('groups',                              [App\Http\Controllers\Api\V1\ChatController::class, 'createGroup'])->name('groups.create');
+            Route::get('groups/eligible-shows',                [App\Http\Controllers\Api\V1\ChatController::class, 'eligibleShowsForGroup'])->name('groups.eligible-shows');
+            Route::get('groups/eligible-members/{show}',       [App\Http\Controllers\Api\V1\ChatController::class, 'eligibleMembersForGroup'])->name('groups.eligible-members');
+            Route::get('groups/{conversation}',                [App\Http\Controllers\Api\V1\ChatController::class, 'showGroup'])->name('groups.show');
+            Route::put('groups/{conversation}',                [App\Http\Controllers\Api\V1\ChatController::class, 'updateGroup'])->name('groups.update');
+            Route::post('groups/{conversation}/members',       [App\Http\Controllers\Api\V1\ChatController::class, 'addGroupMember'])->name('groups.add-member');
+            Route::delete('groups/{conversation}/members/{userId}', [App\Http\Controllers\Api\V1\ChatController::class, 'removeGroupMember'])->name('groups.remove-member');
+            Route::post('groups/{conversation}/leave',         [App\Http\Controllers\Api\V1\ChatController::class, 'leaveGroup'])->name('groups.leave');
+
             // Per-user state (archive / favorite / pin)
             Route::post('conversations/{conversation}/archive',    [App\Http\Controllers\Api\V1\ChatController::class, 'archive'])->name('archive');
             Route::delete('conversations/{conversation}/archive',  [App\Http\Controllers\Api\V1\ChatController::class, 'unarchive'])->name('unarchive');

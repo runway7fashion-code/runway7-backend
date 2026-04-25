@@ -26,9 +26,10 @@ Broadcast::channel('conversation.{conversationId}', function ($user, int $conver
     $conversation = Conversation::find($conversationId);
     if (!$conversation) return false;
 
-    // Both chat participants can subscribe. Admins get a moderation view.
-    if ((int) $user->id === (int) $conversation->user_a_id) return true;
-    if ((int) $user->id === (int) $conversation->user_b_id) return true;
+    // 1:1 or group: any active participant can subscribe.
+    if ($conversation->hasParticipant((int) $user->id)) return true;
+
+    // Internal moderators get a read-only view.
     if ($user->role === 'admin' || $user->role === 'operation') return true;
 
     return false;

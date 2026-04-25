@@ -213,6 +213,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::middleware('section:chats')->group(function () {
                 Route::get('chats', [ChatController::class, 'index'])->name('chats.index');
                 Route::post('chats', [ChatController::class, 'store'])->name('chats.store');
+                Route::post('chats/groups', [ChatController::class, 'createGroup'])->name('chats.groups.store');
                 Route::get('chats/support-assignments', [ChatController::class, 'supportAssignments'])->name('chats.support-assignments');
                 Route::put('chats/support-assignments', [ChatController::class, 'saveSupportAssignments'])->name('chats.support-assignments.save');
                 Route::get('chats/{conversation}', [ChatController::class, 'show'])->name('chats.show');

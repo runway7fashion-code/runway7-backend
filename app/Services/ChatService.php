@@ -8,9 +8,11 @@ use App\Events\NewMessage;
 use App\Jobs\SendChatMessageNotificationJob;
 use App\Models\ChatSupportAssignment;
 use App\Models\Conversation;
+use App\Models\ConversationParticipant;
 use App\Models\Message;
 use App\Models\Show;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class ChatService
 {
@@ -200,8 +202,7 @@ class ChatService
                   ->where('messages.sender_id', '!=', $user->id)
                   ->where('messages.is_read', false);
             })->whereNull('cus.archived_at'),
-            'groups'    => $query->whereRaw('FALSE')->whereNull('cus.archived_at'), // Phase B will replace with is_group filter
-
+            'groups'    => $query->where('conversations.is_group', true)->whereNull('cus.archived_at'),
             default     => $query->whereNull('cus.archived_at'),
         };
 
@@ -231,6 +232,74 @@ class ChatService
             ->orderByRaw('cus.pinned_at IS NULL, cus.pinned_at DESC NULLS LAST')
             ->orderByDesc('conversations.last_message_at')
             ->get();
+    }
+
+    // ───────────────────────────────────────────── GROUPS ─────────────────────────────────────────────
+
+    /**
+     * Create a group conversation. Validation is the caller's responsibility
+     * (the controller knows whether the creator is an internal user or a designer
+     * and applies the appropriate restrictions). The creator is added as 'admin';
+     * everyone else as 'member'.
+     */
+    public function createGroup(User $creator, string $name, array $memberIds, ?int $showId = null): Conversation
+    {
+        return DB::transaction(function () use ($creator, $name, $memberIds, $showId) {
+            $conversation = Conversation::create([
+                'is_group'      => true,
+                'name'          => $name,
+                'created_by_id' => $creator->id,
+                'show_id'       => $showId,
+                'status'        => 'active',
+                'last_message_at' => now(),
+            ]);
+
+            // Creator first as admin, then unique members as members.
+            ConversationParticipant::create([
+                'conversation_id' => $conversation->id,
+                'user_id'         => $creator->id,
+                'role'            => 'admin',
+                'joined_at'       => now(),
+            ]);
+            foreach (array_unique(array_filter($memberIds)) as $uid) {
+                if ($uid === $creator->id) continue;
+                ConversationParticipant::create([
+                    'conversation_id' => $conversation->id,
+                    'user_id'         => $uid,
+                    'role'            => 'member',
+                    'joined_at'       => now(),
+                ]);
+            }
+
+            return $conversation->fresh();
+        });
+    }
+
+    /**
+     * Add a member to a group. Only the creator can call this from the API.
+     */
+    public function addMember(Conversation $conversation, User $member): ConversationParticipant
+    {
+        if (!$conversation->is_group) {
+            throw new \Exception('Only group conversations support members.');
+        }
+
+        return ConversationParticipant::updateOrCreate(
+            ['conversation_id' => $conversation->id, 'user_id' => $member->id],
+            ['role' => 'member', 'joined_at' => now(), 'left_at' => null]
+        );
+    }
+
+    /**
+     * Remove a member from a group (sets left_at).
+     */
+    public function removeMember(Conversation $conversation, int $userId): void
+    {
+        if (!$conversation->is_group) return;
+
+        ConversationParticipant::where('conversation_id', $conversation->id)
+            ->where('user_id', $userId)
+            ->update(['left_at' => now()]);
     }
 
     /**

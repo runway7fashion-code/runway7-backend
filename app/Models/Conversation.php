@@ -13,12 +13,14 @@ class Conversation extends Model
         'user_a_id', 'user_b_id', 'show_id',
         'context_type', 'context_id',
         'status', 'last_message_at',
+        'is_group', 'name', 'created_by_id',
     ];
 
     protected function casts(): array
     {
         return [
             'last_message_at' => 'datetime',
+            'is_group'        => 'boolean',
         ];
     }
 
@@ -26,6 +28,31 @@ class Conversation extends Model
     public function userA()    { return $this->belongsTo(User::class, 'user_a_id'); }
     public function userB()    { return $this->belongsTo(User::class, 'user_b_id'); }
     public function show()     { return $this->belongsTo(Show::class); }
+    public function creator()  { return $this->belongsTo(User::class, 'created_by_id'); }
+
+    // Group participants (only meaningful when is_group=true)
+    public function participants()
+    {
+        return $this->hasMany(ConversationParticipant::class)->whereNull('left_at');
+    }
+
+    public function allParticipants()
+    {
+        return $this->hasMany(ConversationParticipant::class);
+    }
+
+    /**
+     * Returns user IDs of every active participant of this conversation,
+     * regardless of whether it is a 1:1 or a group. Used for fan-out of
+     * broadcasts and notifications.
+     */
+    public function participantIds(): array
+    {
+        if ($this->is_group) {
+            return $this->participants()->pluck('user_id')->all();
+        }
+        return array_filter([$this->user_a_id, $this->user_b_id]);
+    }
 
     // Backward compat aliases (casting conversations still reference model/designer)
     public function model()    { return $this->belongsTo(User::class, 'user_a_id'); }
@@ -49,13 +76,17 @@ class Conversation extends Model
             ->count();
     }
 
-    public function getOtherParticipant(int $userId): User
+    public function getOtherParticipant(int $userId): ?User
     {
+        if ($this->is_group) return null; // groups have many participants, no "other"
         return $this->user_a_id === $userId ? $this->userB : $this->userA;
     }
 
     public function hasParticipant(int $userId): bool
     {
+        if ($this->is_group) {
+            return $this->participants()->where('user_id', $userId)->exists();
+        }
         return $this->user_a_id === $userId || $this->user_b_id === $userId;
     }
 
@@ -84,12 +115,20 @@ class Conversation extends Model
     }
 
     /**
-     * Scope: conversations for a specific user.
+     * Scope: conversations the user belongs to (1:1 via user_a/user_b OR group via pivot).
      */
     public function scopeForUser($query, int $userId)
     {
         return $query->where(function ($q) use ($userId) {
-            $q->where('user_a_id', $userId)->orWhere('user_b_id', $userId);
+            $q->where('conversations.user_a_id', $userId)
+              ->orWhere('conversations.user_b_id', $userId)
+              ->orWhereExists(function ($sub) use ($userId) {
+                  $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                      ->from('conversation_participants')
+                      ->whereColumn('conversation_participants.conversation_id', 'conversations.id')
+                      ->where('conversation_participants.user_id', $userId)
+                      ->whereNull('conversation_participants.left_at');
+              });
         });
     }
 
