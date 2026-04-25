@@ -279,6 +279,22 @@ function closeActivityDetail() { viewingActivity.value = null; }
 
 function emailDelivery(activity) {
     if (activity.type !== 'email') return null;
+
+    // Si Mailgun nos confirmó un estado específico vía webhook, tiene prioridad.
+    switch (activity.delivery_status) {
+        case 'delivered':
+            return { label: 'Delivered', cls: 'bg-green-50 text-green-700 border border-green-200' };
+        case 'bounced':
+            return { label: 'Bounced', cls: 'bg-red-50 text-red-700 border border-red-200' };
+        case 'complained':
+            return { label: 'Complained', cls: 'bg-orange-50 text-orange-700 border border-orange-200' };
+        case 'rejected':
+            return { label: 'Rejected', cls: 'bg-red-50 text-red-700 border border-red-200' };
+        case 'temporary_fail':
+            return { label: 'Retrying', cls: 'bg-amber-50 text-amber-700 border border-amber-200' };
+    }
+
+    // Fallback al status local del job.
     if (activity.status === 'completed') return { label: 'Sent', cls: 'bg-green-50 text-green-700 border border-green-200' };
     if (activity.status === 'not_completed') return { label: 'Failed', cls: 'bg-red-50 text-red-700 border border-red-200' };
     if (activity.status === 'pending') return { label: 'Queued', cls: 'bg-amber-50 text-amber-700 border border-amber-200' };
@@ -883,6 +899,10 @@ function openPreview(file) {
                             <span>Created: <span class="text-gray-700">{{ formatDateTime(viewingActivity.created_at) }}</span></span>
                             <span v-if="viewingActivity.scheduled_at">Scheduled: <span class="text-gray-700">{{ formatDateTime(viewingActivity.scheduled_at) }}</span></span>
                             <span v-if="viewingActivity.completed_at">Completed: <span class="text-gray-700">{{ formatDateTime(viewingActivity.completed_at) }}</span></span>
+                        </div>
+                        <div v-if="viewingActivity.type === 'email' && viewingActivity.delivery_error"
+                            class="border border-red-200 bg-red-50 rounded-lg px-3 py-2 text-xs text-red-700">
+                            <strong class="font-semibold">Delivery error:</strong> {{ viewingActivity.delivery_error }}
                         </div>
                         <div v-if="viewingActivity.description && viewingActivity.type === 'email'"
                             class="sponsorship-email-preview text-sm text-gray-700 break-words border-t border-gray-100 pt-3"

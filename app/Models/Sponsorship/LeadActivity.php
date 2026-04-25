@@ -22,12 +22,17 @@ class LeadActivity extends Model
         'edited_at',
         'status',
         'is_contract',
+        'mailgun_message_id',
+        'delivery_status',
+        'delivery_error',
+        'delivered_at',
     ];
 
     protected $casts = [
         'scheduled_at' => 'datetime',
         'completed_at' => 'datetime',
         'edited_at'    => 'datetime',
+        'delivered_at' => 'datetime',
         'is_contract'  => 'boolean',
     ];
 

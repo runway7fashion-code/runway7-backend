@@ -6,16 +6,20 @@ use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Storage;
 
 class LeadOutreachMail extends Mailable
 {
     use Queueable, SerializesModels;
 
+    /**
+     * @param array<int, array{path:string,name:string,mime:?string,size:?int}> $fileAttachments
+     */
     public function __construct(
         public User $sender,
         public string $subjectLine,
         public string $bodyText,
-        public array $attachmentPaths = [],
+        public array $fileAttachments = [],
     ) {}
 
     public function build()
@@ -24,14 +28,18 @@ class LeadOutreachMail extends Mailable
             ->replyTo($this->sender->email, 'Runway 7 Fashion')
             ->subject($this->subjectLine)
             ->view('emails.sponsorship.lead-outreach', [
-                'sender' => $this->sender,
+                'sender'   => $this->sender,
                 'bodyText' => $this->bodyText,
             ]);
 
-        foreach ($this->attachmentPaths as $path) {
-            $full = storage_path('app/' . $path);
+        foreach ($this->fileAttachments as $att) {
+            $full = Storage::disk('public')->path($att['path']);
             if (is_file($full)) {
-                $mail->attach($full, ['as' => basename($path)]);
+                $options = ['as' => $att['name']];
+                if (!empty($att['mime'])) {
+                    $options['mime'] = $att['mime'];
+                }
+                $mail->attach($full, $options);
             }
         }
 

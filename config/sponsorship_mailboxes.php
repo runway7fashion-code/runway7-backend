@@ -23,7 +23,7 @@ return [
     'accounts' => [
         'sponsorsrelations@runway7fashion.com' => env('ZOHO_IMAP_PASS_SPONSORSRELATIONS'),
         'sponsors@runway7fashion.com'          => env('ZOHO_IMAP_PASS_SPONSORS'),
-        'partenrships@runway7fashion.com'      => env('ZOHO_IMAP_PASS_PARTENRSHIPS'),
+        'partnerships@runway7fashion.com'      => env('ZOHO_IMAP_PASS_PARTNERSHIPS'),
         'sponsorships@runway7fashion.com'      => env('ZOHO_IMAP_PASS_SPONSORSHIPS'),
         'partners@runway7fashion.com'          => env('ZOHO_IMAP_PASS_PARTNERS'),
     ],

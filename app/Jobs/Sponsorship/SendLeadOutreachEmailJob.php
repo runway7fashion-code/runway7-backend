@@ -5,6 +5,7 @@ namespace App\Jobs\Sponsorship;
 use App\Mail\Sponsorship\LeadOutreachMail;
 use App\Models\Sponsorship\Lead;
 use App\Models\Sponsorship\LeadActivity;
+use App\Models\Sponsorship\LeadActivityFile;
 use App\Models\User;
 use App\Services\Sponsorship\ZohoSentFolderAppender;
 use Illuminate\Bus\Queueable;
@@ -22,13 +23,16 @@ class SendLeadOutreachEmailJob implements ShouldQueue
     public int $tries = 3;
     public int $backoff = 60;
 
+    /**
+     * @param array<int, array{path:string,name:string,mime:?string,size:?int}> $attachments
+     */
     public function __construct(
         public int $leadId,
         public int $senderUserId,
         public string $subjectLine,
         public string $bodyText,
         public bool $isContract = false,
-        public array $attachmentPaths = [],
+        public array $attachments = [],
     ) {}
 
     public function handle(): void
@@ -65,7 +69,7 @@ class SendLeadOutreachEmailJob implements ShouldQueue
                 sender: $sender,
                 subjectLine: $this->subjectLine,
                 bodyText: $this->bodyText,
-                attachmentPaths: $this->attachmentPaths,
+                fileAttachments: $this->attachments,
             ));
 
             // Best-effort: copiar el MIME a la carpeta Sent de Zoho del remitente,
@@ -86,6 +90,9 @@ class SendLeadOutreachEmailJob implements ShouldQueue
             ]);
 
             // Crear actividad en el timeline con status completed
+            // NOTE: cuando se reactive Mailgun webhook, capturar aquí el Message-Id vía
+            // $sentMessage->getSymfonySentMessage()->getMessageId() y persistirlo en
+            // 'mailgun_message_id' (requiere migration add_mailgun_tracking_to_sponsorship_lead_activities).
             $activity = LeadActivity::create([
                 'lead_id'             => $lead->id,
                 'created_by_user_id'  => $sender->id,
@@ -97,6 +104,17 @@ class SendLeadOutreachEmailJob implements ShouldQueue
                 'status'              => 'completed',
                 'is_contract'         => $this->isContract,
             ]);
+
+            // Persistir los adjuntos en el timeline para que sean previsualizables/descargables.
+            foreach ($this->attachments as $att) {
+                LeadActivityFile::create([
+                    'activity_id' => $activity->id,
+                    'file_path'   => $att['path'],
+                    'file_name'   => $att['name'],
+                    'mime_type'   => $att['mime'] ?? null,
+                    'size'        => $att['size'] ?? null,
+                ]);
+            }
 
             // Si el email es el contrato → status del lead = contrato
             if ($this->isContract && $lead->status !== 'cerrado') {

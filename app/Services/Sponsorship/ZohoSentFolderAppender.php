@@ -23,9 +23,12 @@ class ZohoSentFolderAppender
             return;
         }
 
-        $password = config('sponsorship_mailboxes.accounts.' . $emailKey);
+        // Usamos lookup directo sobre el array (no dot-notation) porque
+        // las claves contienen puntos (p.ej. "@runway7fashion.com").
+        $accounts = config('sponsorship_mailboxes.accounts', []);
+        $password = $accounts[$emailKey] ?? null;
         if (!$password) {
-            // Sender sin mailbox configurado — no hacemos nada.
+            Log::info("[Zoho APPEND] Skipped — no mailbox mapping for sender '{$emailKey}'.");
             return;
         }
 
