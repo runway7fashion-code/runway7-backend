@@ -45,6 +45,8 @@ class ChatController extends Controller
                 'is_archived'     => !is_null($c->my_archived_at ?? null),
                 'is_favorited'    => !is_null($c->my_favorited_at ?? null),
                 'is_pinned'       => !is_null($c->my_pinned_at ?? null),
+                'is_muted'        => !is_null($c->my_muted_until ?? null) && \Carbon\Carbon::parse($c->my_muted_until)->isFuture(),
+                'muted_until'     => $c->my_muted_until ? \Carbon\Carbon::parse($c->my_muted_until)->toISOString() : null,
             ];
 
             if ($c->is_group) {
@@ -499,6 +501,54 @@ class ChatController extends Controller
             'last_message_at' => $g->last_message_at?->toISOString(),
             'created_at'      => $g->created_at?->toISOString(),
         ];
+    }
+
+    /**
+     * Mute a conversation for the authenticated user. Body: { duration: '8h'|'1w'|'forever' }.
+     * While muted, the user does not receive push or in-app notifications for new
+     * messages in this conversation. The other participants are not affected.
+     */
+    public function mute(Request $request, Conversation $conversation): JsonResponse
+    {
+        $request->validate(['duration' => 'required|in:8h,1w,forever']);
+
+        $user = $request->user();
+        if (!$conversation->hasParticipant($user->id)) {
+            abort(403, 'You do not have access to this conversation.');
+        }
+
+        $until = match ($request->input('duration')) {
+            '8h'      => now()->addHours(8),
+            '1w'      => now()->addWeek(),
+            'forever' => \App\Models\ConversationUserState::MUTE_FOREVER,
+        };
+
+        $state = ConversationUserState::firstOrCreate(
+            ['conversation_id' => $conversation->id, 'user_id' => $user->id], []
+        );
+        $state->muted_until = $until;
+        $state->save();
+
+        return response()->json([
+            'is_muted'    => true,
+            'muted_until' => optional($state->muted_until)->toISOString(),
+        ]);
+    }
+
+    public function unmute(Request $request, Conversation $conversation): JsonResponse
+    {
+        $user = $request->user();
+        if (!$conversation->hasParticipant($user->id)) {
+            abort(403, 'You do not have access to this conversation.');
+        }
+
+        $state = ConversationUserState::firstOrCreate(
+            ['conversation_id' => $conversation->id, 'user_id' => $user->id], []
+        );
+        $state->muted_until = null;
+        $state->save();
+
+        return response()->json(['is_muted' => false, 'muted_until' => null]);
     }
 
     public function archive(Request $request, Conversation $conversation): JsonResponse   { return $this->setState($request, $conversation, 'archived', true); }

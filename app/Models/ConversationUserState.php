@@ -10,14 +10,17 @@ class ConversationUserState extends Model
 
     protected $fillable = [
         'conversation_id', 'user_id',
-        'archived_at', 'favorited_at', 'pinned_at',
+        'archived_at', 'favorited_at', 'pinned_at', 'muted_until',
     ];
 
     protected $casts = [
         'archived_at'  => 'datetime',
         'favorited_at' => 'datetime',
         'pinned_at'    => 'datetime',
+        'muted_until'  => 'datetime',
     ];
+
+    public const MUTE_FOREVER = '2099-12-31 23:59:59';
 
     public function conversation()
     {

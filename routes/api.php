@@ -81,6 +81,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::delete('conversations/{conversation}/favorite', [App\Http\Controllers\Api\V1\ChatController::class, 'unfavorite'])->name('unfavorite');
             Route::post('conversations/{conversation}/pin',        [App\Http\Controllers\Api\V1\ChatController::class, 'pin'])->name('pin');
             Route::delete('conversations/{conversation}/pin',      [App\Http\Controllers\Api\V1\ChatController::class, 'unpin'])->name('unpin');
+            Route::post('conversations/{conversation}/mute',       [App\Http\Controllers\Api\V1\ChatController::class, 'mute'])->name('mute');
+            Route::delete('conversations/{conversation}/mute',     [App\Http\Controllers\Api\V1\ChatController::class, 'unmute'])->name('unmute');
         });
 
         // Countries (for phone prefix picker)

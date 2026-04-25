@@ -190,7 +190,7 @@ class ChatService
                 $join->on('cus.conversation_id', '=', 'conversations.id')
                     ->where('cus.user_id', '=', $user->id);
             })
-            ->select('conversations.*', 'cus.archived_at as my_archived_at', 'cus.favorited_at as my_favorited_at', 'cus.pinned_at as my_pinned_at');
+            ->select('conversations.*', 'cus.archived_at as my_archived_at', 'cus.favorited_at as my_favorited_at', 'cus.pinned_at as my_pinned_at', 'cus.muted_until as my_muted_until');
 
         match ($filter) {
             'archived'  => $query->whereNotNull('cus.archived_at'),

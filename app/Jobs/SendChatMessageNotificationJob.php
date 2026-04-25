@@ -34,17 +34,39 @@ class SendChatMessageNotificationJob implements ShouldQueue
         $conversation = $message->conversation;
         if (!$conversation) return;
 
-        // Identify the recipient (the other participant)
-        $recipientId = $conversation->user_a_id === $message->sender_id
-            ? $conversation->user_b_id
-            : $conversation->user_a_id;
+        $sender = $message->sender;
+        $senderName = $conversation->is_group && $conversation->name
+            ? "{$conversation->name} · ".trim("{$sender->first_name} {$sender->last_name}")
+            : trim("{$sender->first_name} {$sender->last_name}");
 
+        // Build notification body (truncate long messages)
+        $body = match ($message->type) {
+            'image'  => '📷 Sent an image',
+            'system' => $message->body,
+            default  => Str::limit($message->body, 100),
+        };
+
+        // Recipients: everyone in the conversation except the sender.
+        $recipientIds = array_values(array_diff($conversation->participantIds(), [$message->sender_id]));
+
+        foreach ($recipientIds as $recipientId) {
+            $this->notifyRecipient($firebase, $conversation, $message, $sender, $senderName, $body, (int) $recipientId);
+        }
+    }
+
+    private function notifyRecipient(
+        FirebaseNotificationService $firebase,
+        Conversation $conversation,
+        Message $message,
+        User $sender,
+        string $senderName,
+        string $body,
+        int $recipientId,
+    ): void {
         $recipient = User::find($recipientId);
         if (!$recipient) return;
 
-        // Skip notification if the recipient is currently viewing this conversation.
-        // active_conversation_at acts as a heartbeat — clients refresh it via
-        // focus / markAsRead. If older than 60s we assume they've left the chat.
+        // Skip if the recipient is currently viewing this conversation.
         if (
             $recipient->active_conversation_id === $conversation->id
             && $recipient->active_conversation_at
@@ -53,20 +75,16 @@ class SendChatMessageNotificationJob implements ShouldQueue
             return;
         }
 
-        $sender = $message->sender;
-        $senderName = trim("{$sender->first_name} {$sender->last_name}");
+        // Skip if the recipient muted this conversation.
+        $mutedUntil = DB::table('conversation_user_state')
+            ->where('conversation_id', $conversation->id)
+            ->where('user_id', $recipientId)
+            ->value('muted_until');
+        if ($mutedUntil && \Carbon\Carbon::parse($mutedUntil)->isFuture()) {
+            return;
+        }
 
-        // Build notification body (truncate long messages)
-        $body = match ($message->type) {
-            'image' => '📷 Sent an image',
-            'system' => $message->body,
-            default => Str::limit($message->body, 100),
-        };
-
-        // Store in-app notification — group by (recipient, conversation) while unread:
-        // if a previous notification for the same conversation hasn't been read yet,
-        // update it with the latest message + increment message_count instead of
-        // creating a new row. Matches WhatsApp / iOS grouping behavior.
+        // Aggregate in-app notification per (recipient, conversation) while unread.
         $existing = DB::table('notifications')
             ->where('notifiable_type', 'App\\Models\\User')
             ->where('notifiable_id', $recipientId)
@@ -75,47 +93,37 @@ class SendChatMessageNotificationJob implements ShouldQueue
             ->orderByDesc('created_at')
             ->first();
 
+        $payload = [
+            'title'           => $senderName,
+            'body'            => $body,
+            'screen'          => 'chat',
+            'conversation_id' => $conversation->id,
+            'message_id'      => $message->id,
+            'sender_id'       => $sender->id,
+        ];
+
         if ($existing) {
             $existingData = json_decode($existing->data, true) ?: [];
-            $count = (int) ($existingData['message_count'] ?? 1) + 1;
-
+            $payload['message_count'] = (int) ($existingData['message_count'] ?? 1) + 1;
             DB::table('notifications')->where('id', $existing->id)->update([
-                'data' => json_encode([
-                    'title'           => $senderName,
-                    'body'            => $body,
-                    'screen'          => 'chat',
-                    'conversation_id' => $conversation->id,
-                    'message_id'      => $message->id,
-                    'sender_id'       => $sender->id,
-                    'message_count'   => $count,
-                ]),
+                'data'       => json_encode($payload),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
         } else {
+            $payload['message_count'] = 1;
             DB::table('notifications')->insert([
                 'id'              => (string) Str::uuid(),
                 'type'            => 'App\\Notifications\\ChatMessageNotification',
                 'notifiable_type' => 'App\\Models\\User',
                 'notifiable_id'   => $recipientId,
-                'data'            => json_encode([
-                    'title'           => $senderName,
-                    'body'            => $body,
-                    'screen'          => 'chat',
-                    'conversation_id' => $conversation->id,
-                    'message_id'      => $message->id,
-                    'sender_id'       => $sender->id,
-                    'message_count'   => 1,
-                ]),
-                'read_at'    => null,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'data'            => json_encode($payload),
+                'read_at'         => null,
+                'created_at'      => now(),
+                'updated_at'      => now(),
             ]);
         }
 
-        // Send push notification — OS-level grouping via thread_id (FCM collapse_key
-        // + iOS thread-id) so multiple pushes from the same chat collapse into one
-        // system notification.
         $firebase->sendToUser($recipient, $senderName, $body, [
             'screen'          => 'chat',
             'conversation_id' => (string) $conversation->id,
