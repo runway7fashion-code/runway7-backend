@@ -388,7 +388,7 @@ class ChatController extends Controller
         $shows = Show::with('eventDay.event:id,name')
             ->whereHas('designers', fn ($q) => $q->where('users.id', $user->id))
             ->whereHas('models', fn ($q) => $q->where('show_model.designer_id', $user->id)
-                ->wherePivot('status', 'confirmed'))
+                ->where('show_model.status', 'confirmed'))
             ->whereNotIn('id', $existingShowIds)
             ->get(['id', 'name', 'event_day_id']);
 
