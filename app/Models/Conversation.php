@@ -34,6 +34,13 @@ class Conversation extends Model
     public function messages()     { return $this->hasMany(Message::class)->orderBy('created_at'); }
     public function lastMessage()  { return $this->hasOne(Message::class)->latestOfMany(); }
 
+    public function userStates() { return $this->hasMany(ConversationUserState::class); }
+
+    public function stateFor(int $userId): ?ConversationUserState
+    {
+        return $this->userStates()->where('user_id', $userId)->first();
+    }
+
     public function unreadCountFor(int $userId): int
     {
         return $this->messages()

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Events\UserTyping;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
+use App\Models\ConversationUserState;
 use App\Models\User;
 use App\Services\ChatService;
 use Illuminate\Http\JsonResponse;
@@ -20,7 +21,10 @@ class ChatController extends Controller
     public function conversations(Request $request): JsonResponse
     {
         $user = $request->user();
-        $conversations = $this->chatService->getConversationsForUser($user);
+        $filter = $request->input('filter', 'all');
+        $search = $request->input('search');
+
+        $conversations = $this->chatService->getConversationsForUser($user, $filter, $search);
 
         $data = $conversations->map(function (Conversation $c) use ($user) {
             $other = $c->getOtherParticipant($user->id);
@@ -46,6 +50,9 @@ class ChatController extends Controller
                 ] : null,
                 'unread_count'    => $c->unreadCountFor($user->id),
                 'last_message_at' => $c->last_message_at?->toISOString(),
+                'is_archived'     => !is_null($c->my_archived_at ?? null),
+                'is_favorited'    => !is_null($c->my_favorited_at ?? null),
+                'is_pinned'       => !is_null($c->my_pinned_at ?? null),
             ];
 
             // Include show info for casting conversations
@@ -248,6 +255,39 @@ class ChatController extends Controller
         }
 
         return response()->json(['ok' => true]);
+    }
+
+    public function archive(Request $request, Conversation $conversation): JsonResponse   { return $this->setState($request, $conversation, 'archived', true); }
+    public function unarchive(Request $request, Conversation $conversation): JsonResponse { return $this->setState($request, $conversation, 'archived', false); }
+    public function favorite(Request $request, Conversation $conversation): JsonResponse  { return $this->setState($request, $conversation, 'favorited', true); }
+    public function unfavorite(Request $request, Conversation $conversation): JsonResponse{ return $this->setState($request, $conversation, 'favorited', false); }
+    public function pin(Request $request, Conversation $conversation): JsonResponse       { return $this->setState($request, $conversation, 'pinned', true); }
+    public function unpin(Request $request, Conversation $conversation): JsonResponse     { return $this->setState($request, $conversation, 'pinned', false); }
+
+    /**
+     * Toggle the per-user state of a conversation: archived/favorited/pinned.
+     */
+    private function setState(Request $request, Conversation $conversation, string $flag, bool $set): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$conversation->hasParticipant($user->id)) {
+            abort(403, 'You do not have access to this conversation.');
+        }
+
+        $column = $flag . '_at';
+        $state = ConversationUserState::firstOrCreate(
+            ['conversation_id' => $conversation->id, 'user_id' => $user->id],
+            []
+        );
+        $state->{$column} = $set ? now() : null;
+        $state->save();
+
+        return response()->json([
+            'is_archived'  => !is_null($state->archived_at),
+            'is_favorited' => !is_null($state->favorited_at),
+            'is_pinned'    => !is_null($state->pinned_at),
+        ]);
     }
 
     /**

@@ -3,6 +3,10 @@
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function () {
+    // Mailgun webhook — no auth, no rate-limit (firma HMAC + anti-replay en el controller).
+    Route::post('mailgun/webhook', [App\Http\Controllers\Api\V1\MailgunWebhookController::class, 'handle'])
+        ->name('mailgun.webhook');
+
     // Password reset — strict rate limiting since both endpoints are public
     Route::post('auth/forgot-password', [App\Http\Controllers\Api\V1\AuthController::class, 'forgotPassword'])
         ->middleware('throttle:3,15')
@@ -59,6 +63,14 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('conversations/{conversation}/typing', [App\Http\Controllers\Api\V1\ChatController::class, 'typing'])->name('typing');
             Route::post('conversations/{conversation}/delivered', [App\Http\Controllers\Api\V1\ChatController::class, 'markAsDelivered'])->name('mark-delivered');
             Route::post('conversations/{conversation}/read', [App\Http\Controllers\Api\V1\ChatController::class, 'markAsRead'])->name('mark-read');
+
+            // Per-user state (archive / favorite / pin)
+            Route::post('conversations/{conversation}/archive',    [App\Http\Controllers\Api\V1\ChatController::class, 'archive'])->name('archive');
+            Route::delete('conversations/{conversation}/archive',  [App\Http\Controllers\Api\V1\ChatController::class, 'unarchive'])->name('unarchive');
+            Route::post('conversations/{conversation}/favorite',   [App\Http\Controllers\Api\V1\ChatController::class, 'favorite'])->name('favorite');
+            Route::delete('conversations/{conversation}/favorite', [App\Http\Controllers\Api\V1\ChatController::class, 'unfavorite'])->name('unfavorite');
+            Route::post('conversations/{conversation}/pin',        [App\Http\Controllers\Api\V1\ChatController::class, 'pin'])->name('pin');
+            Route::delete('conversations/{conversation}/pin',      [App\Http\Controllers\Api\V1\ChatController::class, 'unpin'])->name('unpin');
         });
 
         // Countries (for phone prefix picker)

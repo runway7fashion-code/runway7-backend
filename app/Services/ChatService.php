@@ -165,14 +165,71 @@ class ChatService
     }
 
     /**
-     * Get conversations for a user (all types: casting, general, material).
+     * Get conversations for a user, with optional search + filter.
+     *
+     *   filter:
+     *     all       — everything except archived (default)
+     *     unread    — only conversations with unread messages from the other side
+     *     favorites — favorited
+     *     archived  — archived
+     *     groups    — group conversations (Phase B; placeholder for now)
+     *   search: matches against the other participant's first/last name
+     *           or last message body (case-insensitive).
+     *
+     * Sort order: pinned conversations first (by pinned_at desc), then everything
+     * else by last_message_at desc.
      */
-    public function getConversationsForUser(User $user): \Illuminate\Database\Eloquent\Collection
+    public function getConversationsForUser(User $user, ?string $filter = 'all', ?string $search = null): \Illuminate\Database\Eloquent\Collection
     {
-        return Conversation::with(['userA', 'userB', 'show.eventDay', 'lastMessage'])
+        $query = Conversation::with(['userA', 'userB', 'show.eventDay', 'lastMessage'])
             ->forUser($user->id)
             ->active()
-            ->orderByDesc('last_message_at')
+            ->leftJoin('conversation_user_state as cus', function ($join) use ($user) {
+                $join->on('cus.conversation_id', '=', 'conversations.id')
+                    ->where('cus.user_id', '=', $user->id);
+            })
+            ->select('conversations.*', 'cus.archived_at as my_archived_at', 'cus.favorited_at as my_favorited_at', 'cus.pinned_at as my_pinned_at');
+
+        match ($filter) {
+            'archived'  => $query->whereNotNull('cus.archived_at'),
+            'favorites' => $query->whereNotNull('cus.favorited_at')->whereNull('cus.archived_at'),
+            'unread'    => $query->whereExists(function ($q) use ($user) {
+                $q->select(\Illuminate\Support\Facades\DB::raw(1))
+                  ->from('messages')
+                  ->whereColumn('messages.conversation_id', 'conversations.id')
+                  ->where('messages.sender_id', '!=', $user->id)
+                  ->where('messages.is_read', false);
+            })->whereNull('cus.archived_at'),
+            'groups'    => $query->whereRaw('FALSE')->whereNull('cus.archived_at'), // Phase B will replace with is_group filter
+
+            default     => $query->whereNull('cus.archived_at'),
+        };
+
+        if ($search) {
+            $like = '%' . str_replace(['%', '_'], ['\%', '\_'], $search) . '%';
+            $otherIdExpr = \Illuminate\Support\Facades\DB::raw('CASE WHEN user_a_id = ' . (int) $user->id . ' THEN user_b_id ELSE user_a_id END');
+            $query->where(function ($q) use ($like, $otherIdExpr) {
+                $q->whereExists(function ($sub) use ($like, $otherIdExpr) {
+                    $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                        ->from('users as u')
+                        ->whereColumn('u.id', $otherIdExpr)
+                        ->where(function ($n) use ($like) {
+                            $n->where('u.first_name', 'ilike', $like)
+                              ->orWhere('u.last_name', 'ilike', $like)
+                              ->orWhereRaw("(u.first_name || ' ' || u.last_name) ilike ?", [$like]);
+                        });
+                })->orWhereExists(function ($sub) use ($like) {
+                    $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                        ->from('messages')
+                        ->whereColumn('messages.conversation_id', 'conversations.id')
+                        ->where('messages.body', 'ilike', $like);
+                });
+            });
+        }
+
+        return $query
+            ->orderByRaw('cus.pinned_at IS NULL, cus.pinned_at DESC NULLS LAST')
+            ->orderByDesc('conversations.last_message_at')
             ->get();
     }
 
