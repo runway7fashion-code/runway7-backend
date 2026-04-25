@@ -13,6 +13,7 @@ use App\Models\Sponsorship\LeadEmail;
 use App\Models\Sponsorship\Package;
 use App\Models\Sponsorship\Tag;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -100,7 +101,6 @@ class LeadController extends Controller
             'assignedTo:id,first_name,last_name',
             'registeredBy:id,first_name,last_name',
             'primaryEmail',
-            'tags:id,name,color',
         ]);
 
         // Visibilidad
@@ -122,10 +122,6 @@ class LeadController extends Controller
             $eventId = $request->event_id;
             $query->whereHas('events', fn($q) => $q->where('events.id', $eventId));
         }
-        if ($request->filled('tag_id')) {
-            $tagId = $request->tag_id;
-            $query->whereHas('tags', fn($q) => $q->where('sponsorship_tags.id', $tagId));
-        }
         if ($request->filled('source')) {
             $query->where('source', $request->source);
         }
@@ -133,6 +129,31 @@ class LeadController extends Controller
             if ($request->email_send === 'none')    $query->whereNull('last_email_sent_at');
             if ($request->email_send === 'sent')    $query->where('last_email_status', 'sent');
             if ($request->email_send === 'failed')  $query->where('last_email_status', 'failed');
+        }
+        if ($request->filled('date_filter')) {
+            $now = Carbon::now();
+            switch ($request->date_filter) {
+                case 'today':
+                    $query->whereDate('created_at', $now->toDateString());
+                    break;
+                case 'week':
+                    $query->where('created_at', '>=', $now->copy()->startOfWeek());
+                    break;
+                case 'month':
+                    $query->where('created_at', '>=', $now->copy()->startOfMonth());
+                    break;
+                case 'year':
+                    $query->where('created_at', '>=', $now->copy()->startOfYear());
+                    break;
+                case 'custom':
+                    if ($request->filled('date_from')) {
+                        $query->where('created_at', '>=', Carbon::parse($request->date_from)->startOfDay());
+                    }
+                    if ($request->filled('date_to')) {
+                        $query->where('created_at', '<=', Carbon::parse($request->date_to)->endOfDay());
+                    }
+                    break;
+            }
         }
         if ($request->filled('search')) {
             $s = $request->search;
@@ -168,11 +189,10 @@ class LeadController extends Controller
             'counts'    => $counts,
             'statuses'  => Lead::STATUSES,
             'sources'   => Lead::SOURCES,
-            'filters'   => $request->only(['search', 'status', 'assigned_to', 'category_id', 'event_id', 'tag_id', 'source', 'email_send']),
+            'filters'   => $request->only(['search', 'status', 'assigned_to', 'category_id', 'event_id', 'source', 'email_send', 'date_filter', 'date_from', 'date_to']),
             'advisors'  => $advisors,
             'categories'=> Category::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'events'    => Event::whereNull('deleted_at')->orderBy('start_date', 'desc')->get(['id', 'name']),
-            'tags'      => Tag::orderBy('name')->get(['id', 'name', 'color']),
             'isLider'   => $this->isLider(),
         ]);
     }
@@ -507,10 +527,18 @@ class LeadController extends Controller
             return back()->withErrors(['email' => 'The lead has no primary email.']);
         }
 
-        $paths = [];
+        // Guardamos los adjuntos en el disco "public" (mismo patrón que las notas),
+        // así el timeline los puede previsualizar/descargar con /storage/{path}.
+        $attachments = [];
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                $paths[] = $file->store('sponsorship/outreach');
+                $path = $file->store("sponsorship/lead-files/{$lead->id}", 'public');
+                $attachments[] = [
+                    'path' => $path,
+                    'name' => $file->getClientOriginalName(),
+                    'mime' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
             }
         }
 
@@ -520,7 +548,7 @@ class LeadController extends Controller
             subjectLine: $validated['subject'],
             bodyText: $validated['body'],
             isContract: (bool) ($validated['is_contract'] ?? false),
-            attachmentPaths: $paths,
+            attachments: $attachments,
         );
 
         return back()->with('success', 'Email queued for sending.');

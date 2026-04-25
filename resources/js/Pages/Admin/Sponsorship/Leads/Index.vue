@@ -14,7 +14,6 @@ const props = defineProps({
     advisors: Array,
     categories: Array,
     events: Array,
-    tags: Array,
     isLider: Boolean,
 });
 
@@ -23,9 +22,11 @@ const status = ref(props.filters?.status || '');
 const assignedTo = ref(props.filters?.assigned_to || '');
 const categoryId = ref(props.filters?.category_id || '');
 const eventId = ref(props.filters?.event_id || '');
-const tagId = ref(props.filters?.tag_id || '');
 const source = ref(props.filters?.source || '');
 const emailSend = ref(props.filters?.email_send || '');
+const dateFilter = ref(props.filters?.date_filter || '');
+const dateFrom   = ref(props.filters?.date_from || '');
+const dateTo     = ref(props.filters?.date_to || '');
 
 let searchTimeout;
 watch(search, () => {
@@ -33,7 +34,7 @@ watch(search, () => {
     searchTimeout = setTimeout(() => applyFilters(), 400);
 });
 
-watch([status, assignedTo, categoryId, eventId, tagId, source, emailSend], () => applyFilters());
+watch([status, assignedTo, categoryId, eventId, source, emailSend, dateFilter, dateFrom, dateTo], () => applyFilters());
 
 function applyFilters() {
     router.get('/admin/sponsorship/leads', {
@@ -42,9 +43,11 @@ function applyFilters() {
         assigned_to: assignedTo.value || undefined,
         category_id: categoryId.value || undefined,
         event_id: eventId.value || undefined,
-        tag_id: tagId.value || undefined,
         source: source.value || undefined,
         email_send: emailSend.value || undefined,
+        date_filter: dateFilter.value || undefined,
+        date_from: dateFilter.value === 'custom' ? (dateFrom.value || undefined) : undefined,
+        date_to:   dateFilter.value === 'custom' ? (dateTo.value || undefined)   : undefined,
     }, { preserveState: true, replace: true });
 }
 
@@ -57,6 +60,15 @@ const totalCount = computed(() => Object.values(props.counts || {}).reduce((a, b
 function formatDate(d) {
     if (!d) return '—';
     return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatDateLine(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
+}
+function formatTimeLine(d) {
+    if (!d) return '';
+    return new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
 function instagramHandle(v) {
@@ -73,7 +85,6 @@ function instagramUrl(v) {
     return h ? `https://instagram.com/${h}` : null;
 }
 
-const tagsModalLead = ref(null);
 </script>
 
 <template>
@@ -131,10 +142,6 @@ const tagsModalLead = ref(null);
                         <option value="">All categories</option>
                         <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
                     </select>
-                    <select v-model="tagId" class="input-sm flex-1 min-w-[100px]">
-                        <option value="">All tags</option>
-                        <option v-for="t in tags" :key="t.id" :value="t.id">{{ t.name }}</option>
-                    </select>
                     <select v-model="source" class="input-sm flex-1 min-w-[110px]">
                         <option value="">All sources</option>
                         <option v-for="s in sources" :key="s" :value="s">{{ s }}</option>
@@ -145,6 +152,20 @@ const tagsModalLead = ref(null);
                         <option value="sent">Email sent</option>
                         <option value="failed">Email failed</option>
                     </select>
+                    <select v-model="dateFilter" class="input-sm flex-1 min-w-[120px]">
+                        <option value="">All dates</option>
+                        <option value="today">Today</option>
+                        <option value="week">This week</option>
+                        <option value="month">This month</option>
+                        <option value="year">This year</option>
+                        <option value="custom">Custom range…</option>
+                    </select>
+                </div>
+                <div v-if="dateFilter === 'custom'" class="flex flex-wrap items-center gap-2 mt-2">
+                    <label class="text-xs text-gray-500 ml-1">From</label>
+                    <input v-model="dateFrom" type="date" class="input-sm max-w-[160px]" />
+                    <label class="text-xs text-gray-500">To</label>
+                    <input v-model="dateTo" type="date" class="input-sm max-w-[160px]" />
                 </div>
             </div>
 
@@ -160,7 +181,7 @@ const tagsModalLead = ref(null);
                             <th class="px-4 py-3 font-medium">Instagram</th>
                             <th class="px-4 py-3 font-medium">Lead Owner</th>
                             <th class="px-4 py-3 font-medium">Status</th>
-                            <th class="px-4 py-3 font-medium">Tags</th>
+                            <th class="px-4 py-3 font-medium">Registered</th>
                             <th class="px-4 py-3 font-medium">Last email</th>
                             <th class="px-4 py-3 font-medium text-right">Actions</th>
                         </tr>
@@ -197,20 +218,12 @@ const tagsModalLead = ref(null);
                                     {{ statuses[l.status]?.label || l.status }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3" @click.stop>
-                                <div v-if="l.tags?.length === 1">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium"
-                                        :style="{ backgroundColor: l.tags[0].color + '30', color: '#1f2937' }">
-                                        {{ l.tags[0].name }}
-                                    </span>
+                            <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                                <div v-if="l.created_at">
+                                    <p class="text-gray-700">{{ formatDateLine(l.created_at) }}</p>
+                                    <p class="text-gray-400">{{ formatTimeLine(l.created_at) }}</p>
                                 </div>
-                                <div v-else-if="l.tags?.length > 1">
-                                    <button @click="tagsModalLead = l"
-                                        class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
-                                        Multiple ({{ l.tags.length }})
-                                    </button>
-                                </div>
-                                <span v-else class="text-gray-400 text-xs">—</span>
+                                <span v-else class="text-gray-400">—</span>
                             </td>
                             <td class="px-4 py-3 text-xs text-gray-500">
                                 <div v-if="l.last_email_sent_at">
@@ -254,34 +267,6 @@ const tagsModalLead = ref(null);
             </div>
         </div>
 
-        <!-- Tags Modal -->
-        <Teleport to="body">
-            <div v-if="tagsModalLead" class="fixed inset-0 z-50 flex items-center justify-center">
-                <div class="absolute inset-0 bg-black/50" @click="tagsModalLead = null"></div>
-                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-                    <div class="bg-gray-50 px-6 py-4 flex items-center justify-between border-b">
-                        <div>
-                            <h3 class="font-semibold text-gray-900">Tags for {{ tagsModalLead.first_name }} {{ tagsModalLead.last_name }}</h3>
-                            <p class="text-xs text-gray-500">{{ tagsModalLead.tags?.length }} assigned tags</p>
-                        </div>
-                        <button @click="tagsModalLead = null" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
-                    </div>
-                    <div class="px-6 py-4">
-                        <div class="flex flex-wrap gap-2">
-                            <span v-for="t in tagsModalLead.tags" :key="t.id"
-                                class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium"
-                                :style="{ backgroundColor: t.color + '30', color: '#1f2937' }">
-                                {{ t.name }}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="border-t px-6 py-3 flex justify-between">
-                        <Link :href="`/admin/sponsorship/leads/${tagsModalLead.id}`" class="text-sm font-medium text-gray-700 hover:text-black">View profile →</Link>
-                        <button @click="tagsModalLead = null" class="text-sm text-gray-500 hover:text-gray-700">Close</button>
-                    </div>
-                </div>
-            </div>
-        </Teleport>
     </AdminLayout>
 </template>
 
