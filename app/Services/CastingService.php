@@ -109,6 +109,10 @@ class CastingService
             throw new \Exception('Ya existe una solicitud para esta modelo con este diseñador en este show.');
         }
 
+        if ($conflict = $this->hasTimeConflict($show, $model)) {
+            throw new \Exception("La modelo ya tiene otro show confirmado a las {$conflict}.");
+        }
+
         if ($this->hasConsecutiveShowConflict($show, $model)) {
             throw new \Exception('La modelo ya tiene un show consecutivo asignado. No puede tener dos shows seguidos.');
         }
@@ -193,6 +197,34 @@ class CastingService
                 showId: $show->id,
                 senderId: $model->id,
             );
+        }
+    }
+
+    /**
+     * Returns the conflicting time string (e.g. "1:00 PM") when the model is
+     * already confirmed/reserved for another show in the same event_day at
+     * the exact same scheduled_time. Null when there is no conflict.
+     *
+     * Two designers running shows at the same time cannot share the model.
+     */
+    public function hasTimeConflict(Show $show, User $model): ?string
+    {
+        if (!$show->scheduled_time) return null;
+
+        $conflict = Show::where('event_day_id', $show->event_day_id)
+            ->where('id', '!=', $show->id)
+            ->where('scheduled_time', $show->scheduled_time)
+            ->whereHas('models', fn ($q) => $q->where('users.id', $model->id)
+                ->whereIn('show_model.status', ['confirmed', 'reserved']))
+            ->first();
+
+        if (!$conflict) return null;
+
+        // Format scheduled_time (HH:MM:SS) → "1:00 PM"
+        try {
+            return \Carbon\Carbon::createFromFormat('H:i:s', $show->scheduled_time)->format('g:i A');
+        } catch (\Exception $e) {
+            return $show->scheduled_time;
         }
     }
 
