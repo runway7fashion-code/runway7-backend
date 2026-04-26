@@ -89,10 +89,19 @@ class SendLeadOutreachEmailJob implements ShouldQueue
                 'last_contacted_at'  => now(),
             ]);
 
+            // Capturar Message-Id de Mailgun para correlacionar los webhooks
+            // (Permanent Failure / Spam Complaints / Delivered / Temporary Failure).
+            $messageId = null;
+            if ($sentMessage) {
+                try {
+                    $messageId = trim((string) $sentMessage->getSymfonySentMessage()->getMessageId(), '<> ');
+                    if ($messageId === '') $messageId = null;
+                } catch (\Throwable $e) {
+                    Log::warning("Could not extract Message-Id: " . $e->getMessage());
+                }
+            }
+
             // Crear actividad en el timeline con status completed
-            // NOTE: cuando se reactive Mailgun webhook, capturar aquí el Message-Id vía
-            // $sentMessage->getSymfonySentMessage()->getMessageId() y persistirlo en
-            // 'mailgun_message_id' (requiere migration add_mailgun_tracking_to_sponsorship_lead_activities).
             $activity = LeadActivity::create([
                 'lead_id'             => $lead->id,
                 'created_by_user_id'  => $sender->id,
@@ -103,6 +112,7 @@ class SendLeadOutreachEmailJob implements ShouldQueue
                 'completed_at'        => now(),
                 'status'              => 'completed',
                 'is_contract'         => $this->isContract,
+                'mailgun_message_id'  => $messageId,
             ]);
 
             // Persistir los adjuntos en el timeline para que sean previsualizables/descargables.
