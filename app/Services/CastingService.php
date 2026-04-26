@@ -15,7 +15,7 @@ class CastingService
     {
         DB::transaction(function () use ($event, $model, $slot) {
             if (!$slot->isAvailable()) {
-                throw new \Exception('Este horario de casting está lleno.');
+                throw new \Exception('This casting slot is full.');
             }
 
             $event->models()->syncWithoutDetaching([
@@ -34,11 +34,11 @@ class CastingService
         $pivot = $event->models()->where('model_id', $model->id)->first()?->pivot;
 
         if (!$pivot || !$pivot->casting_time) {
-            throw new \Exception('La modelo no tiene un horario de casting asignado.');
+            throw new \Exception('This model does not have a casting slot assigned.');
         }
 
         if ($pivot->status !== 'invited') {
-            throw new \Exception('La modelo ya respondió a esta invitación.');
+            throw new \Exception('This model has already responded to this invitation.');
         }
 
         $event->models()->updateExistingPivot($model->id, [
@@ -51,11 +51,11 @@ class CastingService
         $pivot = $event->models()->where('model_id', $model->id)->first()?->pivot;
 
         if (!$pivot || !$pivot->casting_time) {
-            throw new \Exception('La modelo no tiene un horario de casting asignado.');
+            throw new \Exception('This model does not have a casting slot assigned.');
         }
 
         if ($pivot->status !== 'invited') {
-            throw new \Exception('La modelo ya respondió a esta invitación.');
+            throw new \Exception('This model has already responded to this invitation.');
         }
 
         // Liberar el slot
@@ -79,7 +79,7 @@ class CastingService
         $pivot = $event->models()->where('model_id', $model->id)->first()?->pivot;
 
         if ($pivot?->status !== 'confirmed') {
-            throw new \Exception('La modelo debe confirmar su horario de casting antes del check-in.');
+            throw new \Exception('The model must confirm their casting slot before checking in.');
         }
 
         $event->models()->updateExistingPivot($model->id, [
@@ -93,10 +93,10 @@ class CastingService
     {
         // Verify designer is assigned to this show
         if (!$show->designers()->where('designer_id', $designer->id)->exists()) {
-            throw new \Exception('Este diseñador no está asignado a este show.');
+            throw new \Exception('You are not assigned to this show.');
         }
 
-        // Verificar si la modelo ya rechazó a este diseñador en este show
+        // Reject re-sends and duplicate requests
         $existingRequest = $show->models()
             ->where('model_id', $model->id)
             ->wherePivot('designer_id', $designer->id)
@@ -104,17 +104,17 @@ class CastingService
 
         if ($existingRequest) {
             if ($existingRequest->pivot->status === 'rejected') {
-                throw new \Exception('La modelo ya rechazó esta solicitud. No se puede reenviar.');
+                throw new \Exception('This model already rejected this request. You cannot send it again.');
             }
-            throw new \Exception('Ya existe una solicitud para esta modelo con este diseñador en este show.');
+            throw new \Exception('A request for this model already exists for this show.');
         }
 
         if ($conflict = $this->hasTimeConflict($show, $model)) {
-            throw new \Exception("La modelo ya tiene otro show confirmado a las {$conflict}.");
+            throw new \Exception("This model is already confirmed for another show at {$conflict}.");
         }
 
         if ($this->hasConsecutiveShowConflict($show, $model)) {
-            throw new \Exception('La modelo ya tiene un show consecutivo asignado. No puede tener dos shows seguidos.');
+            throw new \Exception('This model is already booked for a consecutive show. Models cannot take two back-to-back shows.');
         }
 
         $show->models()->attach($model->id, [
@@ -143,7 +143,7 @@ class CastingService
     public function respondToRequest(Show $show, User $model, User $designer, bool $accept, ?string $rejectionReason = null): void
     {
         if ($accept && $this->hasConsecutiveShowConflict($show, $model)) {
-            throw new \Exception('Conflicto de horario: la modelo tiene un show consecutivo.');
+            throw new \Exception('Schedule conflict: the model has a consecutive show.');
         }
 
         $pivotData = [
