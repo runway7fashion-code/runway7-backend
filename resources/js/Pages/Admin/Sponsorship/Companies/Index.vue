@@ -1,22 +1,38 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { PencilSquareIcon, PlusIcon, MagnifyingGlassIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     companies: Object,
+    totalCount: Number,
+    industries: Array,
+    countries: Array,
     filters: Object,
 });
 
-const search = ref(props.filters?.search || '');
-let searchTimeout = null;
-function onSearch() {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-        router.get('/admin/sponsorship/companies', { search: search.value }, { preserveState: true, preserveScroll: true, replace: true });
-    }, 350);
+const search   = ref(props.filters?.search   ?? '');
+const industry = ref(props.filters?.industry ?? '');
+const country  = ref(props.filters?.country  ?? '');
+const dateFrom = ref(props.filters?.date_from ?? '');
+const dateTo   = ref(props.filters?.date_to   ?? '');
+
+let debounceTimer;
+function applyFilters() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        router.get('/admin/sponsorship/companies', {
+            search:    search.value   || undefined,
+            industry:  industry.value || undefined,
+            country:   country.value  || undefined,
+            date_from: dateFrom.value || undefined,
+            date_to:   dateTo.value   || undefined,
+        }, { preserveState: true, preserveScroll: true, replace: true });
+    }, 300);
 }
+
+watch([search, industry, country, dateFrom, dateTo], applyFilters);
 
 const showCreate = ref(false);
 const createForm = useForm({ name: '' });
@@ -27,6 +43,14 @@ function submitCreate() {
     });
 }
 
+function formatDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
+}
+function formatTime(d) {
+    if (!d) return '';
+    return new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
 </script>
 
 <template>
@@ -35,67 +59,117 @@ function submitCreate() {
             <h2 class="text-lg font-semibold text-gray-900">Companies</h2>
         </template>
 
-        <div class="max-w-6xl mx-auto space-y-4">
-            <div class="flex items-center gap-3">
-                <div class="relative flex-1">
-                    <MagnifyingGlassIcon class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
-                    <input v-model="search" @input="onSearch" type="text" placeholder="Search by name, industry or country..."
-                        class="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+        <div>
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-900">Companies</h3>
+                    <p class="text-gray-500 text-sm mt-1">{{ totalCount }} companies</p>
                 </div>
-                <button @click="showCreate = true"
-                    class="px-4 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 flex items-center gap-1.5">
-                    <PlusIcon class="w-4 h-4" /> New Company
-                </button>
+                <div class="flex items-center gap-2">
+                    <button @click="showCreate = true"
+                        class="inline-flex items-center gap-1.5 px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
+                        <PlusIcon class="h-4 w-4" /> New Company
+                    </button>
+                </div>
             </div>
 
-            <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">
+            <!-- Filters -->
+            <div class="bg-white rounded-2xl border border-gray-200 p-4 mb-6">
+                <div class="flex flex-wrap items-end gap-3">
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Search</label>
+                        <div class="relative">
+                            <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <input v-model="search" type="text" placeholder="Name, industry or country..."
+                                class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-black/10 focus:outline-none" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Industry</label>
+                        <select v-model="industry" class="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:ring-2 focus:ring-black/10 focus:outline-none bg-white">
+                            <option value="">All industries</option>
+                            <option v-for="i in industries" :key="i" :value="i">{{ i }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Country</label>
+                        <select v-model="country" class="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:ring-2 focus:ring-black/10 focus:outline-none bg-white">
+                            <option value="">All countries</option>
+                            <option v-for="c in countries" :key="c" :value="c">{{ c }}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">From</label>
+                        <input v-model="dateFrom" type="date" class="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:ring-2 focus:ring-black/10 focus:outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">To</label>
+                        <input v-model="dateTo" type="date" class="border border-gray-300 rounded-lg text-sm px-3 py-2 focus:ring-2 focus:ring-black/10 focus:outline-none" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div v-if="!companies.data.length" class="p-12 text-center text-gray-400">
+                    No companies found.
+                </div>
+                <table v-else class="w-full text-sm">
+                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-widest">
                         <tr>
-                            <th class="px-6 py-3 font-medium">Name</th>
-                            <th class="px-6 py-3 font-medium">Industry</th>
-                            <th class="px-6 py-3 font-medium">Country</th>
-                            <th class="px-6 py-3 font-medium">Website</th>
-                            <th class="px-6 py-3 font-medium">Created by</th>
-                            <th class="px-6 py-3 font-medium text-right">Actions</th>
+                            <th class="px-4 py-3 text-left">Name</th>
+                            <th class="px-4 py-3 text-left">Industry</th>
+                            <th class="px-4 py-3 text-left">Country</th>
+                            <th class="px-4 py-3 text-left">Website</th>
+                            <th class="px-4 py-3 text-center">Leads</th>
+                            <th class="px-4 py-3 text-left">Created by</th>
+                            <th class="px-4 py-3 text-left">Created</th>
+                            <th class="px-4 py-3 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         <tr v-for="c in companies.data" :key="c.id" class="hover:bg-gray-50">
-                            <td class="px-6 py-3 font-medium text-gray-900">{{ c.name }}</td>
-                            <td class="px-6 py-3 text-gray-600">{{ c.industry || '—' }}</td>
-                            <td class="px-6 py-3 text-gray-600">{{ c.country || '—' }}</td>
-                            <td class="px-6 py-3">
+                            <td class="px-4 py-3 font-medium text-gray-900">{{ c.name }}</td>
+                            <td class="px-4 py-3 text-gray-600">{{ c.industry || '—' }}</td>
+                            <td class="px-4 py-3 text-gray-600">{{ c.country || '—' }}</td>
+                            <td class="px-4 py-3">
                                 <a v-if="c.website" :href="c.website" target="_blank" class="text-blue-600 hover:underline truncate block max-w-xs">{{ c.website }}</a>
                                 <span v-else class="text-gray-400">—</span>
                             </td>
-                            <td class="px-6 py-3 text-gray-500 text-xs">
+                            <td class="px-4 py-3 text-center">
+                                <span class="inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-xs font-medium">
+                                    {{ c.leads_count ?? 0 }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-gray-500 text-xs">
                                 {{ c.creator ? `${c.creator.first_name} ${c.creator.last_name}` : '—' }}
                             </td>
-                            <td class="px-6 py-3 text-right">
+                            <td class="px-4 py-3 text-xs whitespace-nowrap">
+                                <p class="text-gray-700">{{ formatDate(c.created_at) }}</p>
+                                <p class="text-gray-400">{{ formatTime(c.created_at) }}</p>
+                            </td>
+                            <td class="px-4 py-3 text-right">
                                 <Link :href="`/admin/sponsorship/companies/${c.id}/edit`" class="inline-flex p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600">
                                     <PencilSquareIcon class="w-4 h-4" />
                                 </Link>
                             </td>
                         </tr>
-                        <tr v-if="!companies.data.length">
-                            <td colspan="6" class="px-6 py-12 text-center text-gray-400 text-sm">
-                                No companies yet.
-                            </td>
-                        </tr>
                     </tbody>
                 </table>
-            </div>
 
-            <div v-if="companies.links && companies.last_page > 1" class="flex justify-center gap-1">
-                <Link v-for="link in companies.links" :key="link.label" :href="link.url ?? '#'"
-                    class="px-3 py-1.5 text-sm rounded-lg border"
-                    :class="[
-                        link.active ? 'bg-black text-white border-black' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50',
-                        !link.url ? 'opacity-40 pointer-events-none' : ''
-                    ]"
-                    v-html="link.label">
-                </Link>
+                <!-- Pagination -->
+                <div v-if="companies.last_page > 1" class="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+                    <p class="text-xs text-gray-500">Showing {{ companies.from }}-{{ companies.to }} of {{ companies.total }}</p>
+                    <div class="flex gap-1">
+                        <Link v-for="link in companies.links" :key="link.label"
+                            :href="link.url || ''"
+                            class="px-3 py-1 text-xs rounded-lg border transition-colors"
+                            :class="link.active ? 'bg-black text-white border-black' : link.url ? 'border-gray-300 text-gray-600 hover:bg-gray-50' : 'border-gray-200 text-gray-300 pointer-events-none'"
+                            v-html="link.label"
+                            preserve-state />
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -122,7 +196,6 @@ function submitCreate() {
                     </form>
                 </div>
             </div>
-
         </Teleport>
     </AdminLayout>
 </template>

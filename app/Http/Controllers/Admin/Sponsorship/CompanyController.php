@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Sponsorship;
 
 use App\Http\Controllers\Controller;
 use App\Models\Sponsorship\Company;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -12,7 +13,9 @@ class CompanyController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Company::query()->with('creator:id,first_name,last_name');
+        $query = Company::query()
+            ->with('creator:id,first_name,last_name')
+            ->withCount('leads');
 
         if ($request->filled('search')) {
             $s = $request->search;
@@ -23,11 +26,33 @@ class CompanyController extends Controller
             });
         }
 
+        if ($request->filled('industry')) {
+            $query->where('industry', $request->industry);
+        }
+        if ($request->filled('country')) {
+            $query->where('country', $request->country);
+        }
+        if ($request->filled('date_from')) {
+            $query->where('created_at', '>=', Carbon::parse($request->date_from)->startOfDay());
+        }
+        if ($request->filled('date_to')) {
+            $query->where('created_at', '<=', Carbon::parse($request->date_to)->endOfDay());
+        }
+
         $companies = $query->orderBy('name')->paginate(30)->withQueryString();
 
+        // Distinct industries y countries para los selects de filtro
+        $industries = Company::whereNotNull('industry')->where('industry', '!=', '')
+            ->distinct()->orderBy('industry')->pluck('industry')->values();
+        $countries  = Company::whereNotNull('country')->where('country', '!=', '')
+            ->distinct()->orderBy('country')->pluck('country')->values();
+
         return Inertia::render('Admin/Sponsorship/Companies/Index', [
-            'companies' => $companies,
-            'filters'   => $request->only(['search']),
+            'companies'  => $companies,
+            'totalCount' => Company::count(),
+            'industries' => $industries,
+            'countries'  => $countries,
+            'filters'    => $request->only(['search', 'industry', 'country', 'date_from', 'date_to']),
         ]);
     }
 
@@ -59,7 +84,10 @@ class CompanyController extends Controller
     public function edit(Company $company)
     {
         return Inertia::render('Admin/Sponsorship/Companies/Edit', [
-            'company' => $company->load('creator:id,first_name,last_name'),
+            'company'   => $company->load('creator:id,first_name,last_name'),
+            'countries' => \App\Models\Country::where('is_active', true)
+                ->orderBy('order')->orderBy('name')
+                ->get(['name', 'code', 'flag']),
         ]);
     }
 

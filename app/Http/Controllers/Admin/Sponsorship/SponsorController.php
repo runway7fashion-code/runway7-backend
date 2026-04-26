@@ -10,6 +10,7 @@ use App\Models\EventDay;
 use App\Models\Show;
 use App\Models\Sponsorship\Registration;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -37,6 +38,22 @@ class SponsorController extends Controller
             });
         }
 
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('onboarding')) {
+            if ($request->onboarding === 'sent')     $query->whereNotNull('welcome_email_sent_at');
+            if ($request->onboarding === 'not_sent') $query->whereNull('welcome_email_sent_at');
+        }
+
+        if ($request->filled('date_from')) {
+            $query->where('created_at', '>=', Carbon::parse($request->date_from)->startOfDay());
+        }
+        if ($request->filled('date_to')) {
+            $query->where('created_at', '<=', Carbon::parse($request->date_to)->endOfDay());
+        }
+
         $sponsors = $query->orderBy('created_at', 'desc')->paginate(25)->withQueryString();
 
         // Counts de registrations por sponsor
@@ -51,8 +68,9 @@ class SponsorController extends Controller
         });
 
         return Inertia::render('Admin/Sponsorship/Sponsors/Index', [
-            'sponsors' => $sponsors,
-            'filters'  => $request->only(['search']),
+            'sponsors'   => $sponsors,
+            'totalCount' => User::where('role', 'sponsor')->count(),
+            'filters'    => $request->only(['search', 'status', 'onboarding', 'date_from', 'date_to']),
         ]);
     }
 

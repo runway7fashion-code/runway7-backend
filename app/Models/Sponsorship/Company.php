@@ -27,4 +27,9 @@ class Company extends Model
     {
         return $this->belongsTo(User::class, 'created_by_user_id');
     }
+
+    public function leads()
+    {
+        return $this->hasMany(Lead::class, 'company_id');
+    }
 }

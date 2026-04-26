@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, useForm } from '@inertiajs/vue3';
 
-const props = defineProps({ company: Object });
+const props = defineProps({ company: Object, countries: Array });
 
 const form = useForm({
     name: props.company.name,
@@ -47,7 +47,12 @@ function submit() {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1.5">Country</label>
-                            <input v-model="form.country" type="text" class="input" />
+                            <select v-model="form.country" class="input bg-white">
+                                <option value="">— Select country —</option>
+                                <option v-for="c in (countries || [])" :key="c.code" :value="c.name">
+                                    {{ c.flag ? c.flag + ' ' : '' }}{{ c.name }}
+                                </option>
+                            </select>
                         </div>
                     </div>
 
