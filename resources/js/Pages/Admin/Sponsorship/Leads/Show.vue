@@ -1,8 +1,9 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import EmailComposer from '@/Components/EmailComposer.vue';
-import { Link, router, useForm } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { Link, router, useForm, usePage } from '@inertiajs/vue3';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { initEcho } from '@/echo.js';
 import {
     ArrowLeftIcon, EnvelopeIcon, PhoneIcon, GlobeAltIcon, LinkIcon,
     PencilSquareIcon, CheckCircleIcon, ClockIcon, UserIcon, PlusIcon,
@@ -343,6 +344,34 @@ function openPreview(file) {
     }
     previewDoc.value = { url, viewerUrl, name: file.file_name, isImage };
 }
+
+// ───────────── Realtime: Mailgun delivery webhook → activity badge ─────────────
+const page = usePage();
+let echo = null;
+let leadChannel = null;
+
+onMounted(() => {
+    echo = initEcho(page.props.reverb);
+    if (!echo) return;
+
+    leadChannel = echo.private(`sponsorship-lead.${props.lead.id}`);
+    leadChannel.listen('.LeadActivityDeliveryUpdated', (e) => {
+        if (!e?.id) return;
+        const a = (props.lead.activities || []).find(x => x.id === e.id);
+        if (!a) return;
+        // Mutación directa — Vue reactividad propaga al template y a viewingActivity si está abierto.
+        a.status           = e.status;
+        a.delivery_status  = e.delivery_status;
+        a.delivery_error   = e.delivery_error;
+        a.delivered_at     = e.delivered_at;
+    });
+});
+
+onBeforeUnmount(() => {
+    if (leadChannel && echo) {
+        echo.leave(`sponsorship-lead.${props.lead.id}`);
+    }
+});
 
 </script>
 

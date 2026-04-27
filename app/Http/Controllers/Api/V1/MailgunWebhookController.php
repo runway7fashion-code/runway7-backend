@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\Sponsorship\LeadActivityDeliveryUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Sponsorship\LeadActivity;
 use Illuminate\Http\JsonResponse;
@@ -57,6 +58,7 @@ class MailgunWebhookController extends Controller
         }
 
         // 3. Aplicar el evento al activity.
+        $changed = false;
         switch ($event) {
             case 'delivered':
                 $activity->update([
@@ -64,6 +66,7 @@ class MailgunWebhookController extends Controller
                     'delivered_at'    => now(),
                     // No tocamos status aquí — sigue siendo 'completed'.
                 ]);
+                $changed = true;
                 break;
 
             case 'failed':
@@ -81,6 +84,7 @@ class MailgunWebhookController extends Controller
                         'delivery_error'  => $reason,
                     ]);
                 }
+                $changed = true;
                 break;
 
             case 'complained':
@@ -89,6 +93,7 @@ class MailgunWebhookController extends Controller
                     'delivery_error'  => $reason ?? 'User marked as spam',
                     'status'          => 'not_completed',
                 ]);
+                $changed = true;
                 break;
 
             case 'rejected':
@@ -98,11 +103,17 @@ class MailgunWebhookController extends Controller
                     'delivery_error'  => $reason,
                     'status'          => 'not_completed',
                 ]);
+                $changed = true;
                 break;
 
             default:
                 // Otros eventos (opened, clicked, unsubscribed) — por ahora los ignoramos.
                 break;
+        }
+
+        // Notificar a la pantalla del lead vía Reverb para refrescar sin reload.
+        if ($changed) {
+            broadcast(new LeadActivityDeliveryUpdated($activity->fresh()));
         }
 
         return response()->json(['ok' => true, 'event' => $event, 'activity_id' => $activity->id]);

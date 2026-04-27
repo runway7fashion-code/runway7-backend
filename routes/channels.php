@@ -22,6 +22,21 @@ Broadcast::channel('user.{userId}', function ($user, int $userId) {
     return (int) $user->id === $userId;
 });
 
+// Sponsorship lead detail page — listens to delivery-status updates from Mailgun webhook.
+// Cualquier usuario interno del área sponsorship o admin puede suscribirse al lead que esté viendo.
+Broadcast::channel('sponsorship-lead.{leadId}', function ($user, int $leadId) {
+    if (!$user) return false;
+    if ($user->role === 'admin') return true;
+    if ($user->role === 'sponsorship') {
+        $lead = \App\Models\Sponsorship\Lead::find($leadId);
+        if (!$lead) return false;
+        // Líder ve todo; asesor solo si el lead está asignado a él.
+        if ($user->sponsorship_type === 'lider') return true;
+        return (int) $lead->assigned_to_user_id === (int) $user->id;
+    }
+    return false;
+});
+
 Broadcast::channel('conversation.{conversationId}', function ($user, int $conversationId) {
     $conversation = Conversation::find($conversationId);
     if (!$conversation) return false;
