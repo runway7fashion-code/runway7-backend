@@ -369,6 +369,15 @@ const showEmailModal = ref(false);
 const emailProcessing = ref(false);
 const emailIsContract = ref(false);
 
+const leadVariables = [
+    { label: 'First name',   value: '{{first_name}}' },
+    { label: 'Last name',    value: '{{last_name}}' },
+    { label: 'Full name',    value: '{{full_name}}' },
+    { label: 'Company',      value: '{{company}}' },
+    { label: 'Email',        value: '{{email}}' },
+    { label: 'Advisor name', value: '{{advisor_name}}' },
+];
+
 function handleEmailSend({ subject, body, attachments }) {
     const formData = new FormData();
     formData.append('subject', subject);
@@ -934,6 +943,7 @@ onBeforeUnmount(() => {
                     :hide-schedule="true"
                     :hide-bcc-note="true"
                     send-label="Send email"
+                    :variables="leadVariables"
                     @send="handleEmailSend"
                     @close="showEmailModal = false"
                 >

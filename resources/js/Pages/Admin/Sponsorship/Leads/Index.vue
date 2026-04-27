@@ -91,6 +91,17 @@ const selectedLeads = ref([]);
 const showEmailModal = ref(false);
 const emailProcessing = ref(false);
 
+// Merge tags disponibles para personalización por destinatario.
+// El backend reemplaza estos placeholders con los datos reales de cada lead antes de enviar.
+const leadVariables = [
+    { label: 'First name',   value: '{{first_name}}' },
+    { label: 'Last name',    value: '{{last_name}}' },
+    { label: 'Full name',    value: '{{full_name}}' },
+    { label: 'Company',      value: '{{company}}' },
+    { label: 'Email',        value: '{{email}}' },
+    { label: 'Advisor name', value: '{{advisor_name}}' },
+];
+
 const allSelected = computed({
     get: () => (props.leads.data || []).length > 0 && selectedLeads.value.length === props.leads.data.length,
     set: (val) => { selectedLeads.value = val ? props.leads.data.map(l => l.id) : []; },
@@ -322,6 +333,7 @@ function handleBulkEmailSend({ subject, body, attachments }) {
                     :hide-schedule="true"
                     :hide-bcc-note="true"
                     send-label="Send to selected"
+                    :variables="leadVariables"
                     @send="handleBulkEmailSend"
                     @close="showEmailModal = false"
                 />

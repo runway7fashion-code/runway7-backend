@@ -37,7 +37,7 @@ class SendLeadOutreachEmailJob implements ShouldQueue
 
     public function handle(): void
     {
-        $lead = Lead::with(['primaryEmail', 'emails'])->find($this->leadId);
+        $lead = Lead::with(['primaryEmail', 'emails', 'company:id,name'])->find($this->leadId);
         $sender = User::find($this->senderUserId);
 
         if (!$lead || !$sender) {
@@ -60,6 +60,10 @@ class SendLeadOutreachEmailJob implements ShouldQueue
             ->values()
             ->all();
 
+        // Sustituir merge tags ({{first_name}}, {{company}}, etc.) con datos del lead.
+        $personalizedSubject = $this->renderTemplate($this->subjectLine, $lead, $sender, $primary->email);
+        $personalizedBody    = $this->renderTemplate($this->bodyText,    $lead, $sender, $primary->email);
+
         try {
             $pending = Mail::to($primary->email, "{$lead->first_name} {$lead->last_name}");
             if (!empty($ccEmails)) {
@@ -67,8 +71,8 @@ class SendLeadOutreachEmailJob implements ShouldQueue
             }
             $sentMessage = $pending->send(new LeadOutreachMail(
                 sender: $sender,
-                subjectLine: $this->subjectLine,
-                bodyText: $this->bodyText,
+                subjectLine: $personalizedSubject,
+                bodyText: $personalizedBody,
                 fileAttachments: $this->attachments,
             ));
 
@@ -102,13 +106,15 @@ class SendLeadOutreachEmailJob implements ShouldQueue
             }
 
             // Crear actividad en el timeline con status completed
+            // Guardamos el contenido YA personalizado para que el timeline refleje exactamente
+            // lo que recibió el destinatario.
             $activity = LeadActivity::create([
                 'lead_id'             => $lead->id,
                 'created_by_user_id'  => $sender->id,
                 'assigned_to_user_id' => $sender->id,
                 'type'                => 'email',
-                'title'               => $this->subjectLine,
-                'description'         => $this->bodyText,
+                'title'               => $personalizedSubject,
+                'description'         => $personalizedBody,
                 'completed_at'        => now(),
                 'status'              => 'completed',
                 'is_contract'         => $this->isContract,
@@ -148,5 +154,23 @@ class SendLeadOutreachEmailJob implements ShouldQueue
 
             throw $e;
         }
+    }
+
+    /**
+     * Sustituye placeholders {{var}} con los datos del lead/sender.
+     * Tags soportados: first_name, last_name, full_name, company, email, advisor_name.
+     */
+    private function renderTemplate(string $template, Lead $lead, User $sender, string $recipientEmail): string
+    {
+        $companyName = $lead->company?->name ?? '';
+        $vars = [
+            '{{first_name}}'   => $lead->first_name ?? '',
+            '{{last_name}}'    => $lead->last_name ?? '',
+            '{{full_name}}'    => trim(($lead->first_name ?? '') . ' ' . ($lead->last_name ?? '')),
+            '{{company}}'      => $companyName,
+            '{{email}}'        => $recipientEmail,
+            '{{advisor_name}}' => trim(($sender->first_name ?? '') . ' ' . ($sender->last_name ?? '')),
+        ];
+        return str_replace(array_keys($vars), array_values($vars), $template);
     }
 }

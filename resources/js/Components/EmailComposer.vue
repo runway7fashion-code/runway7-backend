@@ -16,6 +16,13 @@ const props = defineProps({
     hideSchedule: { type: Boolean, default: false },
     hideBccNote: { type: Boolean, default: false },
     sendLabel: { type: String, default: 'Send' },
+    /**
+     * Optional merge-tag variables to expose in the toolbar.
+     * Each item: { label: string, value: string } — value is the placeholder inserted
+     * (e.g. "{{first_name}}"), label is the human-readable name in the dropdown.
+     * The backend is responsible for substituting placeholders per recipient before sending.
+     */
+    variables: { type: Array, default: () => [] },
 });
 
 const emit = defineEmits(['send', 'close']);
@@ -74,6 +81,13 @@ function addImage() {
     if (url) {
         editor.value.chain().focus().setImage({ src: url }).run();
     }
+}
+
+const showVariables = ref(false);
+function insertVariable(value) {
+    if (!editor.value) return;
+    editor.value.chain().focus().insertContent(value).run();
+    showVariables.value = false;
 }
 
 function getScheduledAt() {
@@ -146,6 +160,25 @@ const formatSize = (bytes) => {
                     <button @click="addImage" class="p-1.5 rounded hover:bg-gray-200 text-xs" title="Add Image">Img</button>
                     <span class="w-px bg-gray-300 mx-1"></span>
                     <button @click="editor.chain().focus().setHorizontalRule().run()" class="p-1.5 rounded hover:bg-gray-200 text-xs" title="Horizontal Rule">&#8212;</button>
+                    <template v-if="variables.length">
+                        <span class="w-px bg-gray-300 mx-1"></span>
+                        <div class="relative">
+                            <button @click.stop="showVariables = !showVariables"
+                                class="px-2 py-1 rounded hover:bg-gray-200 text-xs font-medium text-[#D4AF37] flex items-center gap-1"
+                                title="Insert variable">
+                                {{ '{{' }} Variable
+                            </button>
+                            <div v-if="showVariables"
+                                class="absolute z-30 mt-1 left-0 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-44 max-h-64 overflow-y-auto">
+                                <button v-for="v in variables" :key="v.value"
+                                    @click="insertVariable(v.value)"
+                                    class="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center justify-between gap-3">
+                                    <span class="font-medium text-gray-700">{{ v.label }}</span>
+                                    <span class="font-mono text-[10px] text-gray-400">{{ v.value }}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
                 </div>
 
                 <!-- Editor -->
@@ -195,11 +228,17 @@ const formatSize = (bytes) => {
         <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between flex-shrink-0">
             <div class="flex items-center gap-2">
                 <input ref="fileInput" type="file" multiple class="hidden" @change="addAttachment" />
-                <button @click="fileInput.click()" class="p-2 rounded-lg hover:bg-gray-100 text-gray-500" title="Attach File">
-                    <PaperClipIcon class="w-4 h-4" />
+                <button @click="fileInput.click()"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium transition-colors"
+                    title="Attach File">
+                    <PaperClipIcon class="w-3.5 h-3.5" /> Attach
+                    <span v-if="attachments.length" class="ml-0.5 px-1.5 py-0 bg-black text-white rounded-full text-[10px]">{{ attachments.length }}</span>
                 </button>
-                <button v-if="!hideSchedule" @click="showSchedule = !showSchedule" :class="showSchedule ? 'bg-gray-200' : ''" class="p-2 rounded-lg hover:bg-gray-100 text-gray-500" title="Schedule">
-                    <ClockIcon class="w-4 h-4" />
+                <button v-if="!hideSchedule" @click="showSchedule = !showSchedule"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                    :class="showSchedule ? 'bg-gray-300 text-gray-800' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'"
+                    title="Schedule">
+                    <ClockIcon class="w-3.5 h-3.5" /> Schedule
                 </button>
                 <p v-if="!hideBccNote" class="text-xs text-gray-400 ml-2">You'll receive a BCC copy.</p>
             </div>
