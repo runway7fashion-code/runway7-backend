@@ -176,35 +176,91 @@ class ChatController extends Controller
      */
     public function sendMessage(Request $request, Conversation $conversation): JsonResponse
     {
+        // Mime allow-list and per-type size limits (KB).
+        $audioMimes = ['audio/mpeg', 'audio/mp4', 'audio/aac', 'audio/wav', 'audio/x-wav', 'audio/ogg', 'audio/webm', 'audio/x-m4a', 'audio/m4a'];
+        $imageMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        $docMimes   = ['application/pdf', 'application/msword',
+                       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                       'application/vnd.ms-excel',
+                       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                       'text/plain'];
+
         $request->validate([
-            'body'      => 'required_without:image_url|string|max:2000',
-            'type'      => 'in:text,image',
-            'image_url' => 'nullable|string|max:500',
+            'body'                => 'nullable|string|max:2000',
+            'type'                => 'nullable|in:text,image,audio,document',
+            'image_url'           => 'nullable|string|max:500',
+            'attachment'          => 'nullable|file|max:25600', // 25 MB hard cap; per-type cap below
+            'attachment_duration' => 'nullable|integer|min:0|max:3600',
         ]);
 
+        if (!$request->filled('body') && !$request->hasFile('attachment') && !$request->filled('image_url')) {
+            return response()->json(['message' => 'Either body, image_url or attachment is required.'], 422);
+        }
+
         $user = $request->user();
+
+        $attachment = null;
+        $type = $request->input('type', 'text');
+
+        if ($request->hasFile('attachment')) {
+            $file = $request->file('attachment');
+            $mime = $file->getMimeType();
+            $sizeKB = (int) ($file->getSize() / 1024);
+
+            // Per-type validation
+            if (in_array($mime, $audioMimes, true)) {
+                if ($sizeKB > 5120) return response()->json(['message' => 'Audio file too large (max 5 MB).'], 422);
+                $type = 'audio';
+            } elseif (in_array($mime, $imageMimes, true)) {
+                if ($sizeKB > 10240) return response()->json(['message' => 'Image too large (max 10 MB).'], 422);
+                $type = 'image';
+            } elseif (in_array($mime, $docMimes, true)) {
+                if ($sizeKB > 25600) return response()->json(['message' => 'Document too large (max 25 MB).'], 422);
+                $type = 'document';
+            } else {
+                return response()->json(['message' => 'Unsupported attachment type.'], 422);
+            }
+
+            // Store under storage/app/public/chat/attachments/{conversation_id}
+            $path = $file->store("chat/attachments/{$conversation->id}", 'public');
+            $url = \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+
+            $attachment = [
+                'url'      => $url,
+                'mime'     => $mime,
+                'size'     => $file->getSize(),
+                'duration' => $request->input('attachment_duration'),
+                'name'     => $file->getClientOriginalName(),
+            ];
+        }
 
         try {
             $message = $this->chatService->sendMessage(
                 $conversation,
                 $user,
                 $request->input('body', ''),
-                $request->input('type', 'text'),
+                $type,
                 $request->input('image_url'),
+                $attachment,
             );
 
             return response()->json([
                 'data' => [
-                    'id'              => $message->id,
-                    'conversation_id' => $message->conversation_id,
-                    'sender_id'       => $message->sender_id,
-                    'body'            => $message->body,
-                    'type'            => $message->type,
-                    'image_url'       => $message->image_url,
-                    'is_read'         => false,
-                    'read_at'         => null,
-                    'delivered_at'    => null,
-                    'created_at'      => $message->created_at->toISOString(),
+                    'id'                  => $message->id,
+                    'conversation_id'     => $message->conversation_id,
+                    'sender_id'           => $message->sender_id,
+                    'body'                => $message->body,
+                    'type'                => $message->type,
+                    'image_url'           => $message->image_url,
+                    'attachment_url'      => $message->attachment_url,
+                    'attachment_mime'     => $message->attachment_mime,
+                    'attachment_size'     => $message->attachment_size,
+                    'attachment_duration' => $message->attachment_duration,
+                    'attachment_name'     => $message->attachment_name,
+                    'is_read'             => false,
+                    'read_at'             => null,
+                    'delivered_at'        => null,
+                    'created_at'          => $message->created_at->toISOString(),
                 ],
             ], 201);
         } catch (\Exception $e) {

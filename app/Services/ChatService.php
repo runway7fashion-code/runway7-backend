@@ -50,10 +50,19 @@ class ChatService
     }
 
     /**
-     * Send a message in a conversation.
+     * Send a message in a conversation. The attachment payload is optional and
+     * applies for type=audio | image | document.
+     *
+     * @param array{url:string,mime:string,size:int,duration?:?int,name?:?string}|null $attachment
      */
-    public function sendMessage(Conversation $conversation, User $sender, string $body, string $type = 'text', ?string $imageUrl = null): Message
-    {
+    public function sendMessage(
+        Conversation $conversation,
+        User $sender,
+        string $body,
+        string $type = 'text',
+        ?string $imageUrl = null,
+        ?array $attachment = null,
+    ): Message {
         if (!$conversation->hasParticipant($sender->id)) {
             throw new \Exception('You are not a participant of this conversation.');
         }
@@ -69,10 +78,15 @@ class ChatService
         }
 
         $message = $conversation->messages()->create([
-            'sender_id' => $sender->id,
-            'body'      => $body,
-            'type'      => $type,
-            'image_url' => $imageUrl,
+            'sender_id'           => $sender->id,
+            'body'                => $body,
+            'type'                => $type,
+            'image_url'           => $imageUrl,
+            'attachment_url'      => $attachment['url']      ?? null,
+            'attachment_mime'     => $attachment['mime']     ?? null,
+            'attachment_size'     => $attachment['size']     ?? null,
+            'attachment_duration' => $attachment['duration'] ?? null,
+            'attachment_name'     => $attachment['name']     ?? null,
         ]);
 
         $conversation->update(['last_message_at' => now()]);

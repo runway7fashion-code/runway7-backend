@@ -11,15 +11,20 @@ class Message extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'conversation_id', 'sender_id', 'body', 'type', 'image_url', 'is_read', 'read_at', 'delivered_at',
+        'conversation_id', 'sender_id', 'body', 'type',
+        'image_url',
+        'attachment_url', 'attachment_mime', 'attachment_size', 'attachment_duration', 'attachment_name',
+        'is_read', 'read_at', 'delivered_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'is_read'      => 'boolean',
-            'read_at'      => 'datetime',
-            'delivered_at' => 'datetime',
+            'is_read'             => 'boolean',
+            'read_at'             => 'datetime',
+            'delivered_at'        => 'datetime',
+            'attachment_size'     => 'integer',
+            'attachment_duration' => 'integer',
         ];
     }
 

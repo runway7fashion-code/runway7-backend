@@ -41,9 +41,11 @@ class SendChatMessageNotificationJob implements ShouldQueue
 
         // Build notification body (truncate long messages)
         $body = match ($message->type) {
-            'image'  => '📷 Sent an image',
-            'system' => $message->body,
-            default  => Str::limit($message->body, 100),
+            'image'    => '📷 Sent an image',
+            'audio'    => '🎤 Voice message',
+            'document' => '📎 ' . ($message->attachment_name ?: 'Sent a document'),
+            'system'   => $message->body,
+            default    => Str::limit($message->body, 100),
         };
 
         // Recipients: everyone in the conversation except the sender.
