@@ -35,6 +35,24 @@ function formatDateTime(date) {
     if (isNaN(d)) return date;
     return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
+// ──────── Datetime-local helpers (TZ-safe) ────────
+// El <input type="datetime-local"> trabaja en hora LOCAL del navegador. El backend
+// guarda en UTC. Estos helpers hacen el round-trip: UTC ISO → "YYYY-MM-DDTHH:mm" local
+// para precargar, y "YYYY-MM-DDTHH:mm" local → UTC ISO para enviar.
+function toLocalDatetimeInput(utcStr) {
+    if (!utcStr) return '';
+    const d = new Date(utcStr);
+    if (isNaN(d)) return '';
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function localDatetimeToUtcIso(localStr) {
+    if (!localStr) return null;
+    const d = new Date(localStr); // se interpreta como hora local
+    if (isNaN(d)) return null;
+    return d.toISOString();
+}
+
 function formatNoteDate(dateStr) {
     if (!dateStr) return '';
     const d = new Date(dateStr);
@@ -272,7 +290,7 @@ function openEditActivity(activity) {
     activityForm.type                = activity.type;
     activityForm.title               = activity.title || '';
     activityForm.description         = activity.description || '';
-    activityForm.scheduled_at        = activity.scheduled_at ? new Date(activity.scheduled_at).toISOString().slice(0, 16) : '';
+    activityForm.scheduled_at        = toLocalDatetimeInput(activity.scheduled_at);
     activityForm.assigned_to_user_id = activity.assigned_to?.id ?? null;
     activityForm.is_contract         = !!activity.is_contract;
     activityForm.files               = [];
@@ -285,15 +303,22 @@ function addActivityFile(e) {
 function removeActivityFile(i) { activityForm.files.splice(i, 1); }
 function submitActivity() {
     if (editingActivityId.value) {
-        // PATCH via _method spoofing porque el endpoint es PATCH y enviamos FormData (multipart)
-        activityForm.transform(data => ({ ...data, _method: 'PATCH' }))
-            .post(`/admin/sponsorship/activities/${editingActivityId.value}`, {
-                forceFormData: true,
-                preserveScroll: true,
-                onSuccess: () => { showActivityModal.value = false; editingActivityId.value = null; activityForm.reset(); activityForm.type = 'call'; },
-            });
+        // PATCH via _method spoofing porque el endpoint es PATCH y enviamos FormData (multipart).
+        // Convertimos scheduled_at de local → UTC antes de enviar.
+        activityForm.transform(data => ({
+            ...data,
+            scheduled_at: localDatetimeToUtcIso(data.scheduled_at),
+            _method: 'PATCH',
+        })).post(`/admin/sponsorship/activities/${editingActivityId.value}`, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => { showActivityModal.value = false; editingActivityId.value = null; activityForm.reset(); activityForm.type = 'call'; },
+        });
     } else {
-        activityForm.post(`/admin/sponsorship/leads/${props.lead.id}/activities`, {
+        activityForm.transform(data => ({
+            ...data,
+            scheduled_at: localDatetimeToUtcIso(data.scheduled_at),
+        })).post(`/admin/sponsorship/leads/${props.lead.id}/activities`, {
             forceFormData: true,
             preserveScroll: true,
             onSuccess: () => { activityForm.reset(); activityForm.type = 'call'; showActivityModal.value = false; },

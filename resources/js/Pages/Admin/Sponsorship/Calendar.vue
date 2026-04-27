@@ -157,27 +157,43 @@ function completeActivity(id) {
 const isEditing = ref(false);
 const editForm = useForm({ title: '', description: '', scheduled_at: '' });
 
+// Datetime-local helpers (TZ-safe). Mismo patrón que Leads/Show.vue.
+function toLocalDatetimeInput(utcStr) {
+    if (!utcStr) return '';
+    const d = new Date(utcStr);
+    if (isNaN(d)) return '';
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function localDatetimeToUtcIso(localStr) {
+    if (!localStr) return null;
+    const d = new Date(localStr);
+    if (isNaN(d)) return null;
+    return d.toISOString();
+}
+
 function startEdit() {
     if (!selectedEvent.value) return;
     editForm.title        = selectedEvent.value.title || '';
     editForm.description  = selectedEvent.value.description || '';
-    editForm.scheduled_at = selectedEvent.value.start
-        ? new Date(selectedEvent.value.start).toISOString().slice(0, 16)
-        : '';
+    editForm.scheduled_at = toLocalDatetimeInput(selectedEvent.value.start);
     isEditing.value = true;
 }
 
 function saveEdit() {
     if (!selectedEvent.value) return;
-    editForm.transform(d => ({ ...d, _method: 'PATCH' }))
-        .post(`/admin/sponsorship/activities/${selectedEvent.value.id}`, {
-            preserveScroll: true,
-            onSuccess: () => {
-                isEditing.value = false;
-                showModal.value = false;
-                fetchEvents();
-            },
-        });
+    editForm.transform(d => ({
+        ...d,
+        scheduled_at: localDatetimeToUtcIso(d.scheduled_at),
+        _method: 'PATCH',
+    })).post(`/admin/sponsorship/activities/${selectedEvent.value.id}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            isEditing.value = false;
+            showModal.value = false;
+            fetchEvents();
+        },
+    });
 }
 
 const dayHours = Array.from({ length: 24 }, (_, i) => i);
