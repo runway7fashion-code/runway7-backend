@@ -601,7 +601,7 @@ class SalesController extends Controller
         if ($designer->designerProfile) {
             $designer->designerProfile->delete();
         }
-        $designer->forceDelete();
+        $designer->delete();
 
         return redirect()->route('admin.sales.designers.index')
             ->with('success', 'Conversion undone successfully. The lead has been reverted to its previous state.');

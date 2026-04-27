@@ -180,7 +180,7 @@ class ImportZohoLeads extends Command
 
         DB::transaction(function () use ($hasEmail, $email, $firstName, $lastName, $company, $finalPhone, $country, $instagram, $tag, $assignedTo, $parsedCreatedAt) {
             if ($hasEmail) {
-                $existing = DesignerLead::withTrashed()->where('email', $email)->first();
+                $existing = DesignerLead::where('email', $email)->first();
 
                 if ($existing) {
                     // Update only empty fields

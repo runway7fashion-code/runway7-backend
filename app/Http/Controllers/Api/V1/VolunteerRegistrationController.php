@@ -59,13 +59,8 @@ class VolunteerRegistrationController extends Controller
             'instagram' => InstagramSanitizer::sanitize($request->input('instagram')),
         ]);
 
-        // Verificar si ya existe (incluir soft-deleted)
-        $existingUser = User::withTrashed()->where('email', $request->input('email'))->first();
-
-        // Si está soft-deleted, restaurar
-        if ($existingUser && $existingUser->trashed()) {
-            $existingUser->restore();
-        }
+        // Verificar si ya existe
+        $existingUser = User::where('email', $request->input('email'))->first();
 
         $validated = $request->validate([
             'first_name'              => 'required|string|max:255',

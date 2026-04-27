@@ -31,10 +31,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('sponsorship-leads/register', [App\Http\Controllers\Api\V1\SponsorshipLeadRegistrationController::class, 'register']);
         Route::post('check-email', function (\Illuminate\Http\Request $request) {
             $request->validate(['email' => 'required|email', 'role' => 'required|string']);
-            $user = \App\Models\User::withTrashed()->where('email', $request->email)->first();
-            if ($user && $user->trashed()) {
-                return response()->json(['available' => true]);
-            }
+            $user = \App\Models\User::where('email', $request->email)->first();
             if (!$user) {
                 return response()->json(['available' => true]);
             }

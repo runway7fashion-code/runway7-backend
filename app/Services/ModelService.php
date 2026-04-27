@@ -408,7 +408,7 @@ class ModelService
             Storage::disk('public')->deleteDirectory("models/{$user->id}");
 
             // Hard delete: cascade borra model_profile, event_model, show_model, device_tokens
-            $user->forceDelete();
+            $user->delete();
         });
     }
 

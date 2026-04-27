@@ -58,11 +58,7 @@ class MediaRegistrationController extends Controller
             $request->merge(['instagram' => $ig]);
         }
 
-        $existingUser = User::withTrashed()->where('email', $request->input('email'))->first();
-
-        if ($existingUser && $existingUser->trashed()) {
-            $existingUser->restore();
-        }
+        $existingUser = User::where('email', $request->input('email'))->first();
 
         $validated = $request->validate([
             'first_name'    => 'required|string|max:255',

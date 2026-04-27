@@ -68,13 +68,8 @@ class ModelRegistrationController extends Controller
             $request->merge(['instagram' => $ig]);
         }
 
-        // Determinar si es re-registro (email ya existe, incluir soft-deleted)
-        $existingUser = User::withTrashed()->where('email', $request->input('email'))->first();
-
-        // Si está soft-deleted, restaurar
-        if ($existingUser && $existingUser->trashed()) {
-            $existingUser->restore();
-        }
+        // Determinar si es re-registro (email ya existe)
+        $existingUser = User::where('email', $request->input('email'))->first();
 
         // Fotos: profile_picture y photo_1 obligatorias para nuevos registros, el resto siempre opcional
         $requiredPhotoRule = $existingUser ? 'nullable|image|max:1536' : 'required|image|max:1536';
