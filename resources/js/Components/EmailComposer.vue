@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onBeforeUnmount } from 'vue';
+import { ref, computed, onBeforeUnmount, nextTick } from 'vue';
 import { useEditor, EditorContent } from '@tiptap/vue-3';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -90,6 +90,26 @@ function insertVariable(value) {
     showVariables.value = false;
 }
 
+// Variables en el campo Subject: dropdown propio + inserción en la posición del cursor.
+const subjectInput = ref(null);
+const showSubjectVariables = ref(false);
+function insertSubjectVariable(value) {
+    const el = subjectInput.value;
+    if (!el) {
+        subject.value = (subject.value || '') + value;
+    } else {
+        const start = el.selectionStart ?? subject.value.length;
+        const end   = el.selectionEnd   ?? subject.value.length;
+        subject.value = subject.value.slice(0, start) + value + subject.value.slice(end);
+        nextTick(() => {
+            el.focus();
+            const pos = start + value.length;
+            el.setSelectionRange(pos, pos);
+        });
+    }
+    showSubjectVariables.value = false;
+}
+
 function getScheduledAt() {
     if (scheduleOption.value === 'now') return null;
     if (scheduleOption.value === '1hour') {
@@ -140,8 +160,26 @@ const formatSize = (bytes) => {
                 <p v-if="recipientLabel" class="text-xs text-gray-400">To: {{ recipientLabel }}</p>
 
                 <!-- Subject -->
-                <input v-model="subject" type="text" placeholder="Subject..."
-                    class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                <div class="relative">
+                    <input v-model="subject" ref="subjectInput" type="text" placeholder="Subject..."
+                        :class="variables.length ? 'pr-12' : 'pr-3'"
+                        class="w-full border border-gray-300 rounded-lg pl-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                    <button v-if="variables.length" type="button"
+                        @click.stop="showSubjectVariables = !showSubjectVariables"
+                        class="absolute right-1.5 top-1/2 -translate-y-1/2 px-2 py-1 rounded text-xs font-medium text-[#D4AF37] hover:bg-gray-100"
+                        title="Insert variable">
+                        {{ '{{' }}
+                    </button>
+                    <div v-if="showSubjectVariables"
+                        class="absolute z-30 right-0 mt-1 top-full bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-44 max-h-64 overflow-y-auto">
+                        <button v-for="v in variables" :key="v.value"
+                            @click="insertSubjectVariable(v.value)"
+                            class="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center justify-between gap-3">
+                            <span class="font-medium text-gray-700">{{ v.label }}</span>
+                            <span class="font-mono text-[10px] text-gray-400">{{ v.value }}</span>
+                        </button>
+                    </div>
+                </div>
 
                 <!-- Toolbar -->
                 <div v-if="editor" class="flex flex-wrap gap-0.5 border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50">
