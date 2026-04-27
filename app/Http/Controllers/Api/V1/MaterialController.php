@@ -63,6 +63,65 @@ class MaterialController extends Controller
     }
 
     /**
+     * GET /api/v1/my-materials/summary
+     * Aggregated progress per event for the authenticated designer's home screen.
+     * One entry per event the designer participates in, with materials counts
+     * + deadline so the mobile app can render the "Materials Onboarding" carousel
+     * with a single request instead of N (one per event).
+     */
+    public function summary(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'designer') {
+            return response()->json(['message' => 'Only designers can access materials.'], 403);
+        }
+
+        $rows = \DB::table('event_designer as ed')
+            ->join('events as e', 'e.id', '=', 'ed.event_id')
+            ->where('ed.designer_id', $user->id)
+            ->orderByDesc('e.start_date')
+            ->get([
+                'ed.event_id',
+                'ed.materials_deadline',
+                'ed.drive_root_folder_url',
+                'e.name as event_name',
+                'e.start_date',
+            ]);
+
+        $eventIds = $rows->pluck('event_id')->all();
+
+        // Counts per event in one query: total + how many are 'done'.
+        // 'done' = status in ('completed', 'confirmed') for both flows. 'observed'
+        // means it needs rework so it does NOT count as completed.
+        $counts = \DB::table('designer_materials')
+            ->where('designer_id', $user->id)
+            ->whereIn('event_id', $eventIds)
+            ->selectRaw('event_id,
+                count(*) as total,
+                count(*) filter (where status in (?, ?)) as completed',
+                [DesignerMaterial::STATUS_COMPLETED, DesignerMaterial::STATUS_CONFIRMED])
+            ->groupBy('event_id')
+            ->get()
+            ->keyBy('event_id');
+
+        $data = $rows->map(function ($r) use ($counts) {
+            $c = $counts->get($r->event_id);
+            return [
+                'event_id'    => (int) $r->event_id,
+                'event_name'  => $r->event_name,
+                'deadline'    => $r->materials_deadline,
+                'drive_url'   => $r->drive_root_folder_url,
+                'total'       => $c ? (int) $c->total : 0,
+                'completed'   => $c ? (int) $c->completed : 0,
+                'start_date'  => $r->start_date,
+            ];
+        });
+
+        return response()->json(['data' => $data->values()]);
+    }
+
+    /**
      * POST /api/v1/materials/{material}/upload-url
      * Generate a resumable upload URL for direct upload to Google Drive.
      */

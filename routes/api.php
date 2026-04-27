@@ -124,6 +124,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
         // Materials (designers)
         Route::get('my-materials', [App\Http\Controllers\Api\V1\MaterialController::class, 'index'])->name('materials.index');
+        Route::get('my-materials/summary', [App\Http\Controllers\Api\V1\MaterialController::class, 'summary'])->name('materials.summary');
         Route::post('materials/{material}/upload-url', [App\Http\Controllers\Api\V1\MaterialController::class, 'uploadUrl'])->name('materials.upload-url');
         Route::post('materials/{material}/upload-complete', [App\Http\Controllers\Api\V1\MaterialController::class, 'uploadComplete'])->name('materials.upload-complete');
         Route::post('materials/{material}/confirm', [App\Http\Controllers\Api\V1\MaterialController::class, 'confirm'])->name('materials.confirm');
