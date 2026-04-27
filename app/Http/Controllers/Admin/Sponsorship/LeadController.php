@@ -554,6 +554,69 @@ class LeadController extends Controller
         return back()->with('success', 'Email queued for sending.');
     }
 
+    // ─────────────────────────── Bulk email ───────────────────────────
+
+    public function bulkSendEmail(Request $request)
+    {
+        $validated = $request->validate([
+            'lead_ids'      => 'required|array|min:1',
+            'lead_ids.*'    => 'exists:sponsorship_leads,id',
+            'subject'       => 'required|string|max:255',
+            'body'          => 'required|string',
+            'attachments'   => 'nullable|array',
+            'attachments.*' => 'file|max:10240',
+        ]);
+
+        // Visibilidad: asesor (no líder) solo puede enviar a sus leads asignados.
+        $leadIds = $validated['lead_ids'];
+        if (!$this->isLider()) {
+            $leadIds = Lead::whereIn('id', $leadIds)
+                ->where('assigned_to_user_id', auth()->id())
+                ->pluck('id')->all();
+        }
+        if (empty($leadIds)) {
+            return back()->withErrors(['lead_ids' => 'No accessible leads selected.']);
+        }
+
+        // Adjuntos compartidos: se almacenan UNA vez en disco "public" y se referencian
+        // desde la actividad creada por cada job.
+        $attachments = [];
+        if ($request->hasFile('attachments')) {
+            $folder = 'sponsorship/outreach-bulk/' . now()->format('Ymd_His') . '_' . substr(uniqid(), -6);
+            foreach ($request->file('attachments') as $file) {
+                $path = $file->store($folder, 'public');
+                $attachments[] = [
+                    'path' => $path,
+                    'name' => $file->getClientOriginalName(),
+                    'mime' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ];
+            }
+        }
+
+        $queued = 0;
+        $skipped = 0;
+        foreach ($leadIds as $leadId) {
+            $lead = Lead::with('primaryEmail')->find($leadId);
+            if (!$lead || !$lead->primaryEmail) { $skipped++; continue; }
+
+            \App\Jobs\Sponsorship\SendLeadOutreachEmailJob::dispatch(
+                leadId: $lead->id,
+                senderUserId: auth()->id(),
+                subjectLine: $validated['subject'],
+                bodyText: $validated['body'],
+                isContract: false,
+                attachments: $attachments,
+            );
+            $queued++;
+        }
+
+        $msg = "{$queued} email(s) queued for delivery.";
+        if ($skipped > 0) $msg .= " {$skipped} skipped (no primary email).";
+
+        return back()->with('success', $msg);
+    }
+
     // ─────────────────────────── Activities / Timeline ───────────────────────────
 
     public function addActivity(Request $request, Lead $lead)

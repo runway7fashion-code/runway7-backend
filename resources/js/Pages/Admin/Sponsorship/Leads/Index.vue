@@ -1,8 +1,9 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import EmailComposer from '@/Components/EmailComposer.vue';
 import { Link, router } from '@inertiajs/vue3';
 import { ref, watch, computed } from 'vue';
-import { EyeIcon, PencilSquareIcon, MagnifyingGlassIcon, PlusIcon, StarIcon } from '@heroicons/vue/24/outline';
+import { EyeIcon, PencilSquareIcon, MagnifyingGlassIcon, PlusIcon, StarIcon, EnvelopeIcon } from '@heroicons/vue/24/outline';
 import { StarIcon as StarSolid } from '@heroicons/vue/24/solid';
 
 const props = defineProps({
@@ -83,6 +84,37 @@ function instagramHandle(v) {
 function instagramUrl(v) {
     const h = instagramHandle(v);
     return h ? `https://instagram.com/${h}` : null;
+}
+
+// ───────────── Bulk email selection ─────────────
+const selectedLeads = ref([]);
+const showEmailModal = ref(false);
+const emailProcessing = ref(false);
+
+const allSelected = computed({
+    get: () => (props.leads.data || []).length > 0 && selectedLeads.value.length === props.leads.data.length,
+    set: (val) => { selectedLeads.value = val ? props.leads.data.map(l => l.id) : []; },
+});
+
+function openBulkEmail() {
+    if (selectedLeads.value.length === 0) return;
+    showEmailModal.value = true;
+}
+
+function handleBulkEmailSend({ subject, body, attachments }) {
+    const formData = new FormData();
+    formData.append('subject', subject);
+    formData.append('body', body);
+    selectedLeads.value.forEach(id => formData.append('lead_ids[]', id));
+    attachments.forEach(file => formData.append('attachments[]', file));
+
+    emailProcessing.value = true;
+    router.post('/admin/sponsorship/leads/bulk-send-email', formData, {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => { showEmailModal.value = false; selectedLeads.value = []; },
+        onFinish: () => { emailProcessing.value = false; },
+    });
 }
 
 </script>
@@ -169,11 +201,22 @@ function instagramUrl(v) {
                 </div>
             </div>
 
+            <!-- Bulk actions bar -->
+            <div v-if="selectedLeads.length > 0" class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5">
+                <span class="text-sm font-medium text-amber-800">{{ selectedLeads.length }} selected</span>
+                <button @click="openBulkEmail"
+                    class="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors flex items-center gap-1">
+                    <EnvelopeIcon class="w-3.5 h-3.5" /> Send Email
+                </button>
+                <button @click="selectedLeads = []" class="text-xs text-gray-500 hover:text-gray-700">Clear</button>
+            </div>
+
             <!-- Tabla -->
             <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">
                         <tr>
+                            <th class="px-3 py-3 w-10"><input type="checkbox" v-model="allSelected" class="accent-black w-4 h-4 cursor-pointer" /></th>
                             <th class="px-4 py-3 font-medium">Name</th>
                             <th class="px-4 py-3 font-medium">Company</th>
                             <th class="px-4 py-3 font-medium">Category</th>
@@ -190,6 +233,9 @@ function instagramUrl(v) {
                         <tr v-for="l in leads.data" :key="l.id"
                             class="hover:bg-gray-50 cursor-pointer transition-colors"
                             @click="router.visit(`/admin/sponsorship/leads/${l.id}`)">
+                            <td class="px-3 py-3" @click.stop>
+                                <input type="checkbox" :value="l.id" v-model="selectedLeads" class="accent-black w-4 h-4 cursor-pointer" />
+                            </td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-2">
                                     <StarSolid v-if="l.is_contract_winner" class="w-4 h-4 text-[#D4AF37]" title="Contract winner" />
@@ -247,7 +293,7 @@ function instagramUrl(v) {
                             </td>
                         </tr>
                         <tr v-if="!leads.data.length">
-                            <td colspan="10" class="px-6 py-12 text-center text-gray-400 text-sm">
+                            <td colspan="11" class="px-6 py-12 text-center text-gray-400 text-sm">
                                 No leads found with current filters.
                             </td>
                         </tr>
@@ -267,6 +313,20 @@ function instagramUrl(v) {
             </div>
         </div>
 
+        <!-- Bulk Send Email Modal -->
+        <Teleport to="body">
+            <div v-if="showEmailModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showEmailModal = false">
+                <EmailComposer
+                    :recipient-label="`${selectedLeads.length} lead${selectedLeads.length > 1 ? 's' : ''}`"
+                    :processing="emailProcessing"
+                    :hide-schedule="true"
+                    :hide-bcc-note="true"
+                    send-label="Send to selected"
+                    @send="handleBulkEmailSend"
+                    @close="showEmailModal = false"
+                />
+            </div>
+        </Teleport>
     </AdminLayout>
 </template>
 

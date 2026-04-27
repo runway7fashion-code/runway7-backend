@@ -490,6 +490,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::delete('leads/{lead}/remove-event', [SponsorshipLeadController::class, 'removeEvent'])->name('leads.remove-event');
 
                 Route::post('leads/{lead}/send-email', [SponsorshipLeadController::class, 'sendEmail'])->name('leads.send-email');
+                Route::post('leads/bulk-send-email',   [SponsorshipLeadController::class, 'bulkSendEmail'])->name('leads.bulk-send-email');
 
                 // Conversion lead → sponsor
                 Route::get('leads/{lead}/convert', [SponsorshipConversionController::class, 'show'])->name('leads.convert.show');
