@@ -246,22 +246,59 @@ function saveEditNote(noteId) {
 
 // ───────────── Activities ─────────────
 const showActivityModal = ref(false);
+const editingActivityId = ref(null); // null = create mode, otherwise editing this id
 const activityForm = useForm({
     type: 'call', title: '', description: '', scheduled_at: '',
     assigned_to_user_id: null, is_contract: false,
     files: [],
 });
+
+// Tipos manuales — los demás (status_change/assignment/system) son auto-generados.
+const manualActivityTypes = computed(() => {
+    const allowed = ['call', 'email', 'meeting', 'note'];
+    return Object.fromEntries(
+        Object.entries(props.activityTypes || {}).filter(([k]) => allowed.includes(k))
+    );
+});
+
+function openCreateActivity() {
+    editingActivityId.value = null;
+    activityForm.reset();
+    activityForm.type = 'call';
+    showActivityModal.value = true;
+}
+function openEditActivity(activity) {
+    editingActivityId.value = activity.id;
+    activityForm.type                = activity.type;
+    activityForm.title               = activity.title || '';
+    activityForm.description         = activity.description || '';
+    activityForm.scheduled_at        = activity.scheduled_at ? new Date(activity.scheduled_at).toISOString().slice(0, 16) : '';
+    activityForm.assigned_to_user_id = activity.assigned_to?.id ?? null;
+    activityForm.is_contract         = !!activity.is_contract;
+    activityForm.files               = [];
+    showActivityModal.value = true;
+}
 function addActivityFile(e) {
     activityForm.files = [...activityForm.files, ...Array.from(e.target.files || [])];
     e.target.value = '';
 }
 function removeActivityFile(i) { activityForm.files.splice(i, 1); }
 function submitActivity() {
-    activityForm.post(`/admin/sponsorship/leads/${props.lead.id}/activities`, {
-        forceFormData: true,
-        preserveScroll: true,
-        onSuccess: () => { activityForm.reset(); activityForm.type = 'call'; showActivityModal.value = false; },
-    });
+    if (editingActivityId.value) {
+        // PATCH via _method spoofing porque el endpoint es PATCH y enviamos FormData (multipart)
+        activityForm.transform(data => ({ ...data, _method: 'PATCH' }))
+            .post(`/admin/sponsorship/activities/${editingActivityId.value}`, {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => { showActivityModal.value = false; editingActivityId.value = null; activityForm.reset(); activityForm.type = 'call'; },
+            });
+    } else {
+        activityForm.post(`/admin/sponsorship/leads/${props.lead.id}/activities`, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => { activityForm.reset(); activityForm.type = 'call'; showActivityModal.value = false; },
+        });
+    }
 }
 function changeActivityStatus(activityId, status) {
     if (status === 'completed') return router.patch(`/admin/sponsorship/activities/${activityId}/complete`, {}, { preserveScroll: true });
@@ -429,7 +466,7 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
                     <div class="flex items-center gap-2 flex-wrap">
-                        <button @click="showActivityModal = true"
+                        <button @click="openCreateActivity"
                             class="px-4 py-1.5 bg-[#D4AF37] text-white rounded-lg text-xs font-medium hover:bg-[#b8962f] transition-colors flex items-center gap-1">
                             <PlusIcon class="w-3.5 h-3.5" /> Activity
                         </button>
@@ -776,6 +813,11 @@ onBeforeUnmount(() => {
                                                 class="inline-flex items-center gap-1 text-[10px] font-medium text-gray-500 hover:text-black px-2 py-0.5 rounded border border-gray-200 hover:border-gray-400 transition-colors">
                                                 View
                                             </button>
+                                            <button v-if="activity.type === 'call' || activity.type === 'meeting'"
+                                                @click="openEditActivity(activity)"
+                                                class="inline-flex items-center gap-1 text-[10px] font-medium text-gray-500 hover:text-black px-2 py-0.5 rounded border border-gray-200 hover:border-gray-400 transition-colors">
+                                                <PencilSquareIcon class="w-3 h-3" /> Edit
+                                            </button>
                                         </div>
                                     </div>
 
@@ -803,15 +845,15 @@ onBeforeUnmount(() => {
             <div v-if="showActivityModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                 <div class="bg-white rounded-2xl w-full max-w-lg p-6">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">New Activity</h3>
+                        <h3 class="text-lg font-semibold text-gray-900">{{ editingActivityId ? 'Edit Activity' : 'New Activity' }}</h3>
                         <button @click="showActivityModal = false" class="text-gray-400 hover:text-gray-600"><XMarkIcon class="w-5 h-5" /></button>
                     </div>
                     <div class="space-y-3">
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Type *</label>
-                                <select v-model="activityForm.type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
-                                    <option v-for="(meta, key) in activityTypes" :key="key" :value="key">{{ meta.label }}</option>
+                                <select v-model="activityForm.type" :disabled="!!editingActivityId" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white disabled:bg-gray-100 disabled:text-gray-500">
+                                    <option v-for="(meta, key) in manualActivityTypes" :key="key" :value="key">{{ meta.label }}</option>
                                 </select>
                             </div>
                             <div>

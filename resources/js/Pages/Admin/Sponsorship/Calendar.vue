@@ -3,7 +3,7 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
-import { ChevronLeftIcon, ChevronRightIcon, CalendarDaysIcon, EyeIcon, CheckCircleIcon, XMarkIcon } from '@heroicons/vue/24/outline';
+import { ChevronLeftIcon, ChevronRightIcon, CalendarDaysIcon, EyeIcon, CheckCircleIcon, XMarkIcon, PencilSquareIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     advisors: Array,
@@ -142,6 +142,7 @@ function formatTime(d) {
 
 function openEvent(e) {
     selectedEvent.value = e;
+    isEditing.value = false;
     showModal.value = true;
 }
 
@@ -150,6 +151,33 @@ function completeActivity(id) {
         preserveScroll: true,
         onSuccess: () => { showModal.value = false; fetchEvents(); },
     });
+}
+
+// ──────────── Edit (only for call/meeting) ────────────
+const isEditing = ref(false);
+const editForm = useForm({ title: '', description: '', scheduled_at: '' });
+
+function startEdit() {
+    if (!selectedEvent.value) return;
+    editForm.title        = selectedEvent.value.title || '';
+    editForm.description  = selectedEvent.value.description || '';
+    editForm.scheduled_at = selectedEvent.value.start
+        ? new Date(selectedEvent.value.start).toISOString().slice(0, 16)
+        : '';
+    isEditing.value = true;
+}
+
+function saveEdit() {
+    if (!selectedEvent.value) return;
+    editForm.transform(d => ({ ...d, _method: 'PATCH' }))
+        .post(`/admin/sponsorship/activities/${selectedEvent.value.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                isEditing.value = false;
+                showModal.value = false;
+                fetchEvents();
+            },
+        });
 }
 
 const dayHours = Array.from({ length: 24 }, (_, i) => i);
@@ -298,23 +326,58 @@ function eventsAtHour(date, hour) {
                         <span class="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700 capitalize">{{ selectedEvent.status }}</span>
                         <span v-if="selectedEvent.is_contract" class="text-xs px-2 py-0.5 rounded bg-[#D4AF37] text-white">Contract</span>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ selectedEvent.title }}</h3>
-                    <p v-if="selectedEvent.description" class="text-sm text-gray-600 mb-3 whitespace-pre-wrap">{{ selectedEvent.description }}</p>
-                    <div class="space-y-1 text-sm text-gray-600 mb-5">
-                        <p>⏰ {{ new Date(selectedEvent.start).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}</p>
-                        <p v-if="selectedEvent.lead_name">👤 {{ selectedEvent.lead_name }} <span v-if="selectedEvent.company">— {{ selectedEvent.company }}</span></p>
-                        <p v-if="selectedEvent.advisor">→ {{ selectedEvent.advisor }}</p>
-                    </div>
-                    <div class="flex gap-2">
-                        <Link :href="`/admin/sponsorship/leads/${selectedEvent.lead_id}`"
-                            class="flex-1 px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-1.5">
-                            <EyeIcon class="w-4 h-4" /> View lead
-                        </Link>
-                        <button v-if="selectedEvent.status === 'pending'" @click="completeActivity(selectedEvent.id)"
-                            class="flex-1 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 flex items-center justify-center gap-1.5">
-                            <CheckCircleIcon class="w-4 h-4" /> Complete
-                        </button>
-                    </div>
+                    <!-- View mode -->
+                    <template v-if="!isEditing">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ selectedEvent.title }}</h3>
+                        <p v-if="selectedEvent.description" class="text-sm text-gray-600 mb-3 whitespace-pre-wrap">{{ selectedEvent.description }}</p>
+                        <div class="space-y-1 text-sm text-gray-600 mb-5">
+                            <p>⏰ {{ new Date(selectedEvent.start).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}</p>
+                            <p v-if="selectedEvent.lead_name">👤 {{ selectedEvent.lead_name }} <span v-if="selectedEvent.company">— {{ selectedEvent.company }}</span></p>
+                            <p v-if="selectedEvent.advisor">→ {{ selectedEvent.advisor }}</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <Link :href="`/admin/sponsorship/leads/${selectedEvent.lead_id}`"
+                                class="flex-1 min-w-[120px] px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-1.5">
+                                <EyeIcon class="w-4 h-4" /> View lead
+                            </Link>
+                            <button v-if="selectedEvent.type === 'call' || selectedEvent.type === 'meeting'"
+                                @click="startEdit"
+                                class="flex-1 min-w-[120px] px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-1.5">
+                                <PencilSquareIcon class="w-4 h-4" /> Edit
+                            </button>
+                            <button v-if="selectedEvent.status === 'pending'" @click="completeActivity(selectedEvent.id)"
+                                class="flex-1 min-w-[120px] px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 flex items-center justify-center gap-1.5">
+                                <CheckCircleIcon class="w-4 h-4" /> Complete
+                            </button>
+                        </div>
+                    </template>
+
+                    <!-- Edit mode (call / meeting) -->
+                    <template v-else>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3">Edit {{ activityTypes[selectedEvent.type]?.label }}</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Title *</label>
+                                <input v-model="editForm.title" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                                <p v-if="editForm.errors.title" class="text-xs text-red-500 mt-1">{{ editForm.errors.title }}</p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                                <textarea v-model="editForm.description" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Scheduled at</label>
+                                <input v-model="editForm.scheduled_at" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                            </div>
+                            <div class="flex justify-end gap-2 pt-1">
+                                <button @click="isEditing = false" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                                <button @click="saveEdit" :disabled="editForm.processing || !editForm.title"
+                                    class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
+                                    {{ editForm.processing ? 'Saving…' : 'Save' }}
+                                </button>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
         </Teleport>

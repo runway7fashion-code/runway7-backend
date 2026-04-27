@@ -654,24 +654,45 @@ class LeadController extends Controller
     {
         $this->authorizeSee($activity->lead);
 
-        // Only notes can be freely edited for now.
-        if ($activity->type !== 'note') {
-            abort(403, 'Only notes can be edited.');
+        // Tipos editables manualmente. Email + auto-types (status_change/assignment/system) no son editables aquí.
+        $editableTypes = ['note', 'call', 'meeting'];
+        if (!in_array($activity->type, $editableTypes, true)) {
+            abort(403, 'This activity type cannot be edited.');
         }
 
         $validated = $request->validate([
-            'title'       => 'nullable|string|max:255',
-            'description' => 'required|string',
-            'files'       => 'nullable|array',
-            'files.*'     => 'file|max:20480',
+            'title'               => 'nullable|string|max:255',
+            'description'         => 'nullable|string',
+            'scheduled_at'        => 'nullable|date',
+            'assigned_to_user_id' => 'nullable|exists:users,id',
+            'files'               => 'nullable|array',
+            'files.*'             => 'file|max:20480',
         ]);
 
-        $activity->update([
-            'title'             => $validated['title'] ?: 'Note',
-            'description'       => $validated['description'],
+        $updates = [
             'edited_by_user_id' => auth()->id(),
             'edited_at'         => now(),
-        ]);
+        ];
+
+        if ($activity->type === 'note') {
+            // Las notas exigen description (mantenemos el contrato anterior).
+            if (empty(trim($validated['description'] ?? ''))) {
+                throw ValidationException::withMessages(['description' => 'Description is required for notes.']);
+            }
+            $updates['title']       = $validated['title'] ?: 'Note';
+            $updates['description'] = $validated['description'];
+        } else {
+            // call / meeting
+            if (empty(trim($validated['title'] ?? ''))) {
+                throw ValidationException::withMessages(['title' => 'Title is required.']);
+            }
+            $updates['title']               = $validated['title'];
+            $updates['description']         = $validated['description'] ?? null;
+            $updates['scheduled_at']        = $validated['scheduled_at'] ?? null;
+            $updates['assigned_to_user_id'] = $validated['assigned_to_user_id'] ?? $activity->assigned_to_user_id;
+        }
+
+        $activity->update($updates);
 
         if ($request->hasFile('files')) {
             foreach ($request->file('files') as $file) {
@@ -686,7 +707,7 @@ class LeadController extends Controller
             }
         }
 
-        return back()->with('success', 'Note updated.');
+        return back()->with('success', 'Activity updated.');
     }
 
     /**
