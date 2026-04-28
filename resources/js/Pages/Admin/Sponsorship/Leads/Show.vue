@@ -527,10 +527,6 @@ onBeforeUnmount(() => {
                             class="px-4 py-1.5 bg-gray-700 text-white rounded-lg text-xs font-medium hover:bg-gray-600 transition-colors flex items-center gap-1">
                             <EnvelopeIcon class="w-3.5 h-3.5" /> Send Email
                         </button>
-                        <Link :href="`/admin/sponsorship/leads/${lead.id}/edit`"
-                            class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors flex items-center gap-1">
-                            <PencilSquareIcon class="w-3.5 h-3.5" /> Edit
-                        </Link>
                         <Link v-if="canConvert" :href="`/admin/sponsorship/leads/${lead.id}/convert`"
                             class="px-4 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600 transition-colors flex items-center gap-1">
                             <StarIcon class="w-3.5 h-3.5" /> Close contract & Convert
@@ -540,14 +536,21 @@ onBeforeUnmount(() => {
                             class="px-4 py-1.5 bg-gray-200 text-gray-400 rounded-lg text-xs font-medium flex items-center gap-1 cursor-not-allowed">
                             <StarIcon class="w-3.5 h-3.5" /> Close contract & Convert
                         </span>
+                        <Link :href="`/admin/sponsorship/leads/${lead.id}/edit`"
+                            class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors flex items-center gap-1">
+                            <PencilSquareIcon class="w-3.5 h-3.5" /> Edit
+                        </Link>
                     </div>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
-                <!-- Contact + Tags · col 1, row 1 -->
-                <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-5 lg:col-start-1 lg:row-start-1">
+                <!-- Col 1 · 3 cards apiladas, spans rows 1-2 (= alto de Notes), self-start para no estirarse -->
+                <div class="space-y-6 lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:self-start">
+
+                    <!-- Contact + Tags -->
+                    <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-5">
                         <div>
                             <h4 class="font-semibold text-gray-800 mb-3">Contact Info</h4>
                             <div class="grid grid-cols-1 gap-3 text-sm">
@@ -633,8 +636,8 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
 
-                <!-- Business Information · col 1, row 2 -->
-                <div class="bg-white rounded-2xl border border-gray-200 p-4 lg:col-start-1 lg:row-start-2">
+                    <!-- Business Information -->
+                    <div class="bg-white rounded-2xl border border-gray-200 p-4">
                     <h4 class="font-semibold text-gray-800 mb-4">Business Information</h4>
                         <dl class="space-y-2 text-sm">
                             <div class="flex items-center gap-2 mb-3">
@@ -660,8 +663,8 @@ onBeforeUnmount(() => {
                         </dl>
                     </div>
 
-                <!-- Status & Assignment · col 1, row 3 -->
-                <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-4 lg:col-start-1 lg:row-start-3">
+                    <!-- Status & Assignment -->
+                    <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-4">
                     <h4 class="font-semibold text-gray-800">Status & Assignment</h4>
 
                         <div>
@@ -688,6 +691,8 @@ onBeforeUnmount(() => {
                             <p v-else class="text-xs text-gray-400 italic">No events assigned.</p>
                         </div>
                     </div>
+
+                </div>
 
                 <!-- Notes CRM · cols 2-3 spanning rows 1-2 (matches Contact + Business) -->
                 <div class="bg-white rounded-2xl border border-gray-200 p-4 md:col-span-2 lg:col-span-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:min-h-0 lg:h-[calc(100vh-160px)] flex flex-col overflow-hidden">
