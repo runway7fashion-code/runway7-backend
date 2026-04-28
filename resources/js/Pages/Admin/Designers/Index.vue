@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
-import { XMarkIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, DevicePhoneMobileIcon, EnvelopeIcon, PencilSquareIcon, InformationCircleIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline';
+import { XMarkIcon, ArrowUpTrayIcon, ArrowDownTrayIcon, DevicePhoneMobileIcon, EnvelopeIcon, PencilSquareIcon, InformationCircleIcon, ExclamationTriangleIcon, DocumentTextIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     designers:         Object,
@@ -375,6 +375,13 @@ function submitImport() {
                         class="flex items-center gap-2 px-4 py-2 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors text-red-600">
                         <ExclamationTriangleIcon class="w-4 h-4" />
                         Overdue Materials
+                    </Link>
+
+                    <!-- Material instructions -->
+                    <Link href="/admin/operations/designers/material-instructions"
+                        class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
+                        <DocumentTextIcon class="w-4 h-4 text-gray-500" />
+                        Material Instructions
                     </Link>
 
                     <!-- Exportar Excel -->

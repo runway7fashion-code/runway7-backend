@@ -28,9 +28,18 @@ class MaterialController extends Controller
      */
     public function show(User $designer, int $eventId)
     {
-        $pivot = DB::table('event_designer')
-            ->where('designer_id', $designer->id)
-            ->where('event_id', $eventId)
+        $pivot = DB::table('event_designer as ed')
+            ->join('events as e', 'e.id', '=', 'ed.event_id')
+            ->where('ed.designer_id', $designer->id)
+            ->where('ed.event_id', $eventId)
+            ->selectRaw('
+                ed.id,
+                ed.materials_deadline as materials_deadline_custom,
+                COALESCE(ed.materials_deadline, e.materials_deadline_default) as materials_deadline,
+                e.materials_deadline_default,
+                ed.drive_root_folder_id,
+                ed.drive_root_folder_url
+            ')
             ->first();
 
         if (!$pivot) {
@@ -43,6 +52,14 @@ class MaterialController extends Controller
             ->orderBy('order')
             ->get();
 
+        // Attach the global instruction text per material name (set by operations)
+        $instructionsMap = \App\Models\MaterialInstruction::map();
+        $materials = $materials->map(function ($m) use ($instructionsMap) {
+            $arr = $m->toArray();
+            $arr['instructions'] = $instructionsMap[$m->name] ?? null;
+            return $arr;
+        });
+
         $event = \App\Models\Event::find($eventId, ['id', 'name']);
 
         return Inertia::render('Admin/Designers/Materials', [
@@ -50,9 +67,11 @@ class MaterialController extends Controller
             'event'     => $event,
             'materials' => $materials,
             'pivot'     => [
-                'materials_deadline'    => $pivot->materials_deadline,
-                'drive_root_folder_id'  => $pivot->drive_root_folder_id,
-                'drive_root_folder_url' => $pivot->drive_root_folder_url,
+                'materials_deadline'         => $pivot->materials_deadline,           // effective (custom or default)
+                'materials_deadline_custom'  => $pivot->materials_deadline_custom,    // null if inheriting
+                'materials_deadline_default' => $pivot->materials_deadline_default,   // event default
+                'drive_root_folder_id'       => $pivot->drive_root_folder_id,
+                'drive_root_folder_url'      => $pivot->drive_root_folder_url,
             ],
         ]);
     }

@@ -31,6 +31,7 @@ use App\Http\Controllers\Admin\IncomingLeadController;
 use App\Http\Controllers\Admin\LeadEmailController;
 use App\Http\Controllers\Admin\CommunicationController;
 use App\Http\Controllers\Admin\MaterialController;
+use App\Http\Controllers\Admin\MaterialInstructionsController;
 use App\Http\Controllers\Admin\ArtworkController;
 use App\Http\Controllers\Admin\Sponsorship\CompanyController as SponsorshipCompanyController;
 use App\Http\Controllers\Admin\Sponsorship\CategoryController as SponsorshipCategoryController;
@@ -102,6 +103,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('designers/import', [DesignerController::class, 'importDesigners'])->name('designers.import');
                 Route::get('designers/overdue-materials', [DesignerController::class, 'overdueMaterials'])->name('designers.overdue-materials');
                 Route::post('designers/{designer}/events/{event}/send-deadline-reminder', [DesignerController::class, 'sendDeadlineReminder'])->name('designers.send-deadline-reminder');
+                Route::get('designers/material-instructions', [MaterialInstructionsController::class, 'index'])->name('designers.material-instructions.index');
+                Route::patch('designers/material-instructions/{instruction}', [MaterialInstructionsController::class, 'update'])->name('designers.material-instructions.update');
+                Route::patch('designers/material-instructions/events/{event}/deadline', [MaterialInstructionsController::class, 'updateEventDeadline'])->name('designers.material-instructions.update-event-deadline');
                 Route::resource('designers', DesignerController::class)->except(['destroy']);
                 Route::patch('designers/{designer}/status', [DesignerController::class, 'updateStatus'])->name('designers.update-status');
                 Route::post('designers/{designer}/assign-event', [DesignerController::class, 'assignEvent'])->name('designers.assign-event');

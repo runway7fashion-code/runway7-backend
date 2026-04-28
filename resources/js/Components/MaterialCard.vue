@@ -145,6 +145,12 @@ function formatSize(bytes) {
         <div v-show="expanded" class="border-t border-gray-100 px-5 py-4 space-y-4">
             <p v-if="material.description" class="text-xs text-gray-500">{{ material.description }}</p>
 
+            <!-- Global instructions for this material (set from operations panel) -->
+            <div v-if="material.instructions" class="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2.5 text-xs text-amber-900 leading-relaxed whitespace-pre-line">
+                <p class="font-semibold uppercase tracking-wider text-[10px] text-amber-700 mb-1">Instructions</p>
+                {{ material.instructions }}
+            </div>
+
             <!-- Status controls for collaborative materials -->
             <div v-if="material.status_flow === 'collaborative'" class="flex flex-wrap gap-2">
                 <button v-for="s in ['pending', 'in_progress', 'completed']" :key="s"

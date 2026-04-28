@@ -44,22 +44,22 @@ class SendMaterialsDeadlineReminders extends Command
 
         $today = Carbon::today();
 
-        // event_designer pivot rows with a deadline set
+        // event_designer pivot rows with an effective deadline (per-designer override OR event default)
         $query = DB::table('event_designer as ed')
             ->join('users as u', 'u.id', '=', 'ed.designer_id')
             ->join('events as e', 'e.id', '=', 'ed.event_id')
-            ->whereNotNull('ed.materials_deadline')
+            ->whereRaw('COALESCE(ed.materials_deadline, e.materials_deadline_default) IS NOT NULL')
             ->where('u.role', 'designer')
             ->whereIn('u.status', ['active', 'registered', 'pending'])
-            ->select([
-                'ed.designer_id',
-                'ed.event_id',
-                'ed.materials_deadline',
-                'u.first_name',
-                'u.last_name',
-                'u.email',
-                'e.name as event_name',
-            ]);
+            ->selectRaw('
+                ed.designer_id,
+                ed.event_id,
+                COALESCE(ed.materials_deadline, e.materials_deadline_default) as materials_deadline,
+                u.first_name,
+                u.last_name,
+                u.email,
+                e.name as event_name
+            ');
 
         if ($designerFilter) $query->where('ed.designer_id', $designerFilter);
         if ($eventFilter)    $query->where('ed.event_id', $eventFilter);

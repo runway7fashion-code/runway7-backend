@@ -456,14 +456,14 @@ class DesignerController extends Controller
     {
         $today = now()->startOfDay();
 
-        // Pull pivot rows with deadline in the past, limited to active/registered designers
+        // Pull pivot rows with effective deadline in the past
         $pivotQuery = DB::table('event_designer as ed')
             ->join('users as u', 'u.id', '=', 'ed.designer_id')
             ->join('events as e', 'e.id', '=', 'ed.event_id')
             ->leftJoin('designer_profiles as dp', 'dp.user_id', '=', 'u.id')
             ->leftJoin('users as rep', 'rep.id', '=', 'dp.sales_rep_id')
-            ->whereNotNull('ed.materials_deadline')
-            ->where('ed.materials_deadline', '<', $today->toDateString())
+            ->whereRaw('COALESCE(ed.materials_deadline, e.materials_deadline_default) IS NOT NULL')
+            ->whereRaw('COALESCE(ed.materials_deadline, e.materials_deadline_default) < ?', [$today->toDateString()])
             ->where('u.role', 'designer')
             ->whereIn('u.status', ['active', 'registered', 'pending']);
 
@@ -481,21 +481,21 @@ class DesignerController extends Controller
             });
         }
 
-        $pivotQuery->select([
-            'ed.id as pivot_id',
-            'ed.designer_id',
-            'ed.event_id',
-            'ed.materials_deadline',
-            'u.first_name',
-            'u.last_name',
-            'u.email',
-            'u.profile_picture',
-            'dp.brand_name',
-            'e.name as event_name',
-            'rep.id as sales_rep_id',
-            'rep.first_name as sales_rep_first_name',
-            'rep.last_name as sales_rep_last_name',
-        ])->orderBy('ed.materials_deadline', 'asc');
+        $pivotQuery->selectRaw('
+            ed.id as pivot_id,
+            ed.designer_id,
+            ed.event_id,
+            COALESCE(ed.materials_deadline, e.materials_deadline_default) as materials_deadline,
+            u.first_name,
+            u.last_name,
+            u.email,
+            u.profile_picture,
+            dp.brand_name,
+            e.name as event_name,
+            rep.id as sales_rep_id,
+            rep.first_name as sales_rep_first_name,
+            rep.last_name as sales_rep_last_name
+        ')->orderByRaw('COALESCE(ed.materials_deadline, e.materials_deadline_default) asc');
 
         $rows = $pivotQuery->get();
 
@@ -547,12 +547,8 @@ class DesignerController extends Controller
     {
         $this->authorizeDesigner($designer);
 
-        $pivot = DB::table('event_designer')
-            ->where('designer_id', $designer->id)
-            ->where('event_id', $event->id)
-            ->first(['materials_deadline']);
-
-        if (!$pivot || !$pivot->materials_deadline) {
+        $effective = Event::effectiveMaterialsDeadline($designer->id, $event->id);
+        if (!$effective) {
             return back()->withErrors(['deadline' => 'This designer has no deadline set for this event.']);
         }
 
@@ -561,7 +557,7 @@ class DesignerController extends Controller
             return back()->with('success', 'This designer has no pending materials — nothing to send.');
         }
 
-        $deadline = \Carbon\Carbon::parse($pivot->materials_deadline);
+        $deadline = \Carbon\Carbon::parse($effective);
         $daysRemaining = (int) now()->startOfDay()->diffInDays($deadline, false);
         $stage = $daysRemaining < 0 ? 'overdue' : ($daysRemaining === 0 ? 'today' : ($daysRemaining <= 1 ? 'tomorrow' : ($daysRemaining <= 3 ? 'soon' : ($daysRemaining <= 7 ? 'upcoming' : 'early'))));
 

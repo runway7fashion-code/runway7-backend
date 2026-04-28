@@ -44,15 +44,18 @@ class MaterialController extends Controller
             $query->where('event_id', $eventId);
         }
 
-        $materials = $query->get()->map(fn($m) => $this->formatMaterial($m));
+        $instructionsMap = \App\Models\MaterialInstruction::map();
+        $materials = $query->get()->map(fn($m) => $this->formatMaterial($m, $instructionsMap));
 
-        // Get deadline
+        // Get deadline (effective: per-designer override OR event default)
         $pivot = null;
         if ($eventId) {
-            $pivot = \DB::table('event_designer')
-                ->where('designer_id', $user->id)
-                ->where('event_id', $eventId)
-                ->first(['materials_deadline', 'drive_root_folder_url']);
+            $pivot = \DB::table('event_designer as ed')
+                ->join('events as e', 'e.id', '=', 'ed.event_id')
+                ->where('ed.designer_id', $user->id)
+                ->where('ed.event_id', $eventId)
+                ->selectRaw('COALESCE(ed.materials_deadline, e.materials_deadline_default) as materials_deadline, ed.drive_root_folder_url')
+                ->first();
         }
 
         return response()->json([
@@ -81,13 +84,14 @@ class MaterialController extends Controller
             ->join('events as e', 'e.id', '=', 'ed.event_id')
             ->where('ed.designer_id', $user->id)
             ->orderByDesc('e.start_date')
-            ->get([
-                'ed.event_id',
-                'ed.materials_deadline',
-                'ed.drive_root_folder_url',
-                'e.name as event_name',
-                'e.start_date',
-            ]);
+            ->selectRaw('
+                ed.event_id,
+                COALESCE(ed.materials_deadline, e.materials_deadline_default) as materials_deadline,
+                ed.drive_root_folder_url,
+                e.name as event_name,
+                e.start_date
+            ')
+            ->get();
 
         $eventIds = $rows->pluck('event_id')->all();
 
@@ -343,22 +347,18 @@ class MaterialController extends Controller
 
     private function isDeadlinePassed(DesignerMaterial $material): bool
     {
-        $pivot = \DB::table('event_designer')
-            ->where('designer_id', $material->designer_id)
-            ->where('event_id', $material->event_id)
-            ->first(['materials_deadline']);
-
-        if (!$pivot || !$pivot->materials_deadline) return false;
-
-        return now()->startOfDay()->greaterThan($pivot->materials_deadline);
+        $deadline = \App\Models\Event::effectiveMaterialsDeadline($material->designer_id, $material->event_id);
+        if (!$deadline) return false;
+        return now()->startOfDay()->greaterThan($deadline);
     }
 
-    private function formatMaterial(DesignerMaterial $m): array
+    private function formatMaterial(DesignerMaterial $m, array $instructionsMap = []): array
     {
         $data = [
             'id'               => $m->id,
             'name'             => $m->name,
             'description'      => $m->description,
+            'instructions'     => $instructionsMap[$m->name] ?? null,
             'status'           => $m->status,
             'status_flow'      => $m->status_flow,
             'upload_by'        => $m->upload_by,

@@ -14,15 +14,33 @@ class Event extends Model
     protected $fillable = [
         'name', 'slug', 'city', 'venue', 'venue_address', 'venue_latitude', 'venue_longitude',
         'timezone', 'start_date', 'end_date', 'status', 'settings', 'description',
-        'model_number_start', 'call_time', 'hmua_address',
+        'model_number_start', 'call_time', 'hmua_address', 'materials_deadline_default',
     ];
+
+    /**
+     * Effective materials deadline for a (designer, event) pair.
+     * Returns the per-designer override if set, otherwise the event default.
+     * Date string (Y-m-d) or null.
+     */
+    public static function effectiveMaterialsDeadline(int $designerId, int $eventId): ?string
+    {
+        $row = \DB::table('event_designer as ed')
+            ->join('events as e', 'e.id', '=', 'ed.event_id')
+            ->where('ed.designer_id', $designerId)
+            ->where('ed.event_id', $eventId)
+            ->selectRaw('COALESCE(ed.materials_deadline, e.materials_deadline_default) as deadline')
+            ->value('deadline');
+
+        return $row ?: null;
+    }
 
     protected function casts(): array
     {
         return [
-            'start_date' => 'date',
-            'end_date'   => 'date',
-            'settings'   => 'array',
+            'start_date'                 => 'date',
+            'end_date'                   => 'date',
+            'materials_deadline_default' => 'date',
+            'settings'                   => 'array',
         ];
     }
 
