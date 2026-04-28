@@ -2,7 +2,7 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import EmailComposer from '@/Components/EmailComposer.vue';
 import { Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { initEcho } from '@/echo.js';
 import {
     ArrowLeftIcon, EnvelopeIcon, PhoneIcon, GlobeAltIcon, LinkIcon,
@@ -192,6 +192,14 @@ const leadNotes = computed(() =>
     (props.lead.activities || []).filter(a => a.type === 'note').sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 );
 
+// Auto-grow textareas — el alto se ajusta al contenido y nunca aparece scroll interno.
+function autoGrowTextarea(el) {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+}
+function onNoteInput(e) { autoGrowTextarea(e.target); }
+
 function handleNoteFileSelect(e) {
     for (const file of e.target.files) {
         noteFiles.value.push({ file, name: file.name });
@@ -234,6 +242,11 @@ function startEditNote(note) {
     editingNoteDescription.value = note.description || '';
     editingNoteFiles.value = [];
     editingNoteShowTitle.value = !!editingNoteTitle.value;
+    // Tras render, ajustar el alto del textarea al contenido cargado.
+    nextTick(() => {
+        const ta = document.querySelector(`#edit-note-${note.id} textarea[data-note-edit]`);
+        autoGrowTextarea(ta);
+    });
 }
 
 function cancelEditNote() {
@@ -533,10 +546,8 @@ onBeforeUnmount(() => {
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
-                <!-- Col 1: Contact + Tags + Business + Documents -->
-                <div class="space-y-6">
-                    <!-- Contact + Tags -->
-                    <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-5">
+                <!-- Contact + Tags · col 1, row 1 -->
+                <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-5 lg:col-start-1 lg:row-start-1">
                         <div>
                             <h4 class="font-semibold text-gray-800 mb-3">Contact Info</h4>
                             <div class="grid grid-cols-1 gap-3 text-sm">
@@ -622,9 +633,9 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
 
-                    <!-- Business Information -->
-                    <div class="bg-white rounded-2xl border border-gray-200 p-4">
-                        <h4 class="font-semibold text-gray-800 mb-4">Business Information</h4>
+                <!-- Business Information · col 1, row 2 -->
+                <div class="bg-white rounded-2xl border border-gray-200 p-4 lg:col-start-1 lg:row-start-2">
+                    <h4 class="font-semibold text-gray-800 mb-4">Business Information</h4>
                         <dl class="space-y-2 text-sm">
                             <div class="flex items-center gap-2 mb-3">
                                 <dt class="text-gray-500">Company:</dt>
@@ -649,9 +660,9 @@ onBeforeUnmount(() => {
                         </dl>
                     </div>
 
-                    <!-- Status & Assignment (movido aquí: debajo de Business Information) -->
-                    <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-4">
-                        <h4 class="font-semibold text-gray-800">Status & Assignment</h4>
+                <!-- Status & Assignment · col 1, row 3 -->
+                <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-4 lg:col-start-1 lg:row-start-3">
+                    <h4 class="font-semibold text-gray-800">Status & Assignment</h4>
 
                         <div>
                             <label class="block text-xs text-gray-400 mb-1">Lead Status</label>
@@ -678,13 +689,11 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
 
-                </div>
+                <!-- Notes CRM · cols 2-3 spanning rows 1-2 (matches Contact + Business) -->
+                <div class="bg-white rounded-2xl border border-gray-200 p-4 md:col-span-2 lg:col-span-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 flex flex-col overflow-hidden">
+                    <h4 class="font-semibold text-gray-800 mb-4 flex-shrink-0">Notes</h4>
 
-                <!-- Col 2-3: Notes CRM (centro, ocupa 2 columnas en lg) -->
-                <div class="md:col-span-2 lg:col-span-2 space-y-6">
-                    <!-- Notes CRM -->
-                    <div class="bg-white rounded-2xl border border-gray-200 p-4">
-                        <h4 class="font-semibold text-gray-800 mb-4">Notes</h4>
+                    <div class="flex-1 overflow-y-auto pr-1 -mr-1">
 
                         <div class="mb-5">
                             <div v-if="!noteExpanded" @click="noteExpanded = true"
@@ -696,7 +705,9 @@ onBeforeUnmount(() => {
                                     <input v-model="noteTitle" type="text" placeholder="Title (optional)"
                                         class="w-full border-0 p-0 text-sm font-semibold text-gray-900 focus:ring-0 placeholder-gray-400" />
                                 </div>
-                                <textarea v-model="noteContent" rows="3" placeholder="What's this note about?"
+                                <textarea v-model="noteContent" rows="2" placeholder="What's this note about?"
+                                    @input="onNoteInput"
+                                    style="overflow: hidden;"
                                     class="w-full border-0 px-4 py-3 text-sm text-gray-700 focus:ring-0 placeholder-gray-400 resize-none"></textarea>
                                 <div v-if="noteFiles.length" class="px-4 py-2 border-t border-gray-100 space-y-1">
                                     <div v-for="(f, idx) in noteFiles" :key="idx" class="flex items-center justify-between bg-blue-50 rounded-lg px-3 py-1.5">
@@ -759,12 +770,15 @@ onBeforeUnmount(() => {
                                         </template>
 
                                         <!-- Edit mode -->
-                                        <div v-else class="border-2 border-black rounded-xl overflow-hidden mt-1">
+                                        <div v-else :id="`edit-note-${note.id}`" class="border-2 border-black rounded-xl overflow-hidden mt-1">
                                             <div v-if="editingNoteShowTitle" class="px-4 pt-3">
                                                 <input v-model="editingNoteTitle" type="text" placeholder="Title (optional)"
                                                     class="w-full border-0 p-0 text-sm font-semibold text-gray-900 focus:ring-0 placeholder-gray-400" />
                                             </div>
-                                            <textarea v-model="editingNoteDescription" rows="3"
+                                            <textarea v-model="editingNoteDescription" rows="2"
+                                                data-note-edit
+                                                @input="onNoteInput"
+                                                style="overflow: hidden;"
                                                 class="w-full border-0 px-4 py-3 text-sm text-gray-700 focus:ring-0 placeholder-gray-400 resize-none"></textarea>
                                             <div v-if="editingNoteFiles.length" class="px-4 py-2 border-t border-gray-100 space-y-1">
                                                 <div v-for="(f, idx) in editingNoteFiles" :key="idx" class="flex items-center justify-between bg-blue-50 rounded-lg px-3 py-1.5">
@@ -794,10 +808,9 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <!-- Col 4: Activity Timeline (altura fija + scroll propio, sticky para que acompañe el scroll de la página) -->
-                <div class="space-y-6">
-                    <div class="bg-white rounded-2xl border border-gray-200 p-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-160px)] flex flex-col">
-                        <h4 class="font-semibold text-gray-800 mb-4 flex-shrink-0">Activity History</h4>
+                <!-- Activity Timeline · col 4, spans rows 1-3 (sticky con scroll interno) -->
+                <div class="bg-white rounded-2xl border border-gray-200 p-4 lg:col-start-4 lg:row-start-1 lg:row-span-3 lg:sticky lg:top-6 lg:max-h-[calc(100vh-160px)] flex flex-col">
+                    <h4 class="font-semibold text-gray-800 mb-4 flex-shrink-0">Activity History</h4>
 
                         <div v-if="sortedActivities.length" class="space-y-4 flex-1 overflow-y-auto pr-1 -mr-1">
                             <div v-for="activity in sortedActivities" :key="activity.id" class="relative pl-7">
@@ -875,7 +888,6 @@ onBeforeUnmount(() => {
 
                         <p v-else class="text-sm text-gray-400 italic text-center py-4">No activities recorded.</p>
                     </div>
-                </div>
             </div>
         </div>
 
