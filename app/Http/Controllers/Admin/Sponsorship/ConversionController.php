@@ -19,8 +19,7 @@ class ConversionController extends Controller
     private function authorizeLead(Lead $lead): void
     {
         $u = auth()->user();
-        $isLider = $u->role === 'admin' || ($u->role === 'sponsorship' && $u->sponsorship_type === 'lider');
-        if (!$isLider && $lead->assigned_to_user_id !== $u->id) {
+        if (!$u->isLeaderOf('sponsorship') && $lead->assigned_to_user_id !== $u->id) {
             abort(403, 'This lead is not assigned to you.');
         }
     }

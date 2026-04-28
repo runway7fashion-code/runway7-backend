@@ -57,10 +57,7 @@ class PackageBenefitController extends Controller
 
     private function authorizeLider(): void
     {
-        $user = auth()->user();
-        $isAdmin = $user && $user->role === 'admin';
-        $isSponsorshipLider = $user && $user->role === 'sponsorship' && $user->sponsorship_type === 'lider';
-        if (!$isAdmin && !$isSponsorshipLider) {
+        if (!auth()->user()?->isLeaderOf('sponsorship')) {
             abort(403, 'Only leaders or admins can manage benefits.');
         }
     }

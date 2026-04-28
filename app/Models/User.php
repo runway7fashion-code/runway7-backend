@@ -18,7 +18,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'first_name', 'last_name', 'email', 'phone', 'password',
-        'role', 'status', 'sales_type', 'sponsorship_type', 'complementary_type', 'is_available', 'last_login_at', 'welcome_email_sent_at', 'sms_sent_at', 'profile_picture', 'last_seen_at',
+        'role', 'status', 'sales_type', 'sponsorship_type', 'extra_areas', 'complementary_type', 'is_available', 'last_login_at', 'welcome_email_sent_at', 'sms_sent_at', 'profile_picture', 'last_seen_at',
         'active_conversation_id', 'active_conversation_at',
     ];
 
@@ -35,6 +35,7 @@ class User extends Authenticatable
             'sms_sent_at'             => 'datetime',
             'last_seen_at'            => 'datetime',
             'active_conversation_at'  => 'datetime',
+            'extra_areas'             => 'array',
             'password' => 'hashed',
         ];
     }
@@ -77,6 +78,31 @@ class User extends Authenticatable
     public function isSponsorshipLider(): bool { return $this->role === 'sponsorship' && $this->sponsorship_type === 'lider'; }
     public function isSponsorshipAsesor(): bool { return $this->role === 'sponsorship' && $this->sponsorship_type === 'asesor'; }
     public function isInternalTeam(): bool { return in_array($this->role, self::ROLES_INTERNAL); }
+
+    /**
+     * ¿El usuario tiene acceso de gestión a un área específica (sales / sponsorship)?
+     * - admin: siempre.
+     * - role === $area: depende del type (lider/asesor — ambos pueden gestionar lo suyo).
+     * - extra_areas contiene $area: acceso secundario cross-area (Christina, etc.).
+     */
+    public function canManageArea(string $area): bool
+    {
+        if ($this->role === 'admin') return true;
+        if ($this->role === $area) return true;
+        return in_array($area, (array) ($this->extra_areas ?? []));
+    }
+
+    /**
+     * ¿Es líder de un área? (admin, role+type=lider, o cross-area via extra_areas).
+     * Criterio de diseño: el acceso secundario via extra_areas se trata como líder
+     * (si te dieron acceso secundario, sos manager del área, no asesor).
+     */
+    public function isLeaderOf(string $area): bool
+    {
+        if ($this->role === 'admin') return true;
+        if ($this->role === $area && $this->{$area.'_type'} === 'lider') return true;
+        return in_array($area, (array) ($this->extra_areas ?? []));
+    }
 
     // --- Role checks: Participants ---
     public function isModel(): bool { return $this->role === 'model'; }

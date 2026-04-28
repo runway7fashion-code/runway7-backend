@@ -27,10 +27,7 @@ class LeadController extends Controller
 
     private function isLider(): bool
     {
-        $u = auth()->user();
-        if (!$u) return false;
-        if ($u->role === 'admin') return true;
-        return $u->role === 'sponsorship' && $u->sponsorship_type === 'lider';
+        return auth()->user()?->isLeaderOf('sponsorship') ?? false;
     }
 
     private function authorizeSee(Lead $lead): void

@@ -17,8 +17,7 @@ class DashboardController extends Controller
 {
     private function isLider(): bool
     {
-        $u = auth()->user();
-        return $u && ($u->role === 'admin' || ($u->role === 'sponsorship' && $u->sponsorship_type === 'lider'));
+        return auth()->user()?->isLeaderOf('sponsorship') ?? false;
     }
 
     public function index(Request $request)
