@@ -690,7 +690,7 @@ onBeforeUnmount(() => {
                     </div>
 
                 <!-- Notes CRM · cols 2-3 spanning rows 1-2 (matches Contact + Business) -->
-                <div class="bg-white rounded-2xl border border-gray-200 p-4 md:col-span-2 lg:col-span-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:min-h-0 flex flex-col overflow-hidden">
+                <div class="bg-white rounded-2xl border border-gray-200 p-4 md:col-span-2 lg:col-span-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:min-h-0 lg:h-[calc(100vh-160px)] flex flex-col overflow-hidden">
                     <h4 class="font-semibold text-gray-800 mb-4 flex-shrink-0">Notes</h4>
 
                     <div class="flex-1 overflow-y-auto pr-1 -mr-1">
