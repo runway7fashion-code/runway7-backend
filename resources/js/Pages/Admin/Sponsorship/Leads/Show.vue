@@ -1,8 +1,9 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import EmailComposer from '@/Components/EmailComposer.vue';
+import RichTextEditor from '@/Components/RichTextEditor.vue';
 import { Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { initEcho } from '@/echo.js';
 import {
     ArrowLeftIcon, EnvelopeIcon, PhoneIcon, GlobeAltIcon, LinkIcon,
@@ -192,14 +193,6 @@ const leadNotes = computed(() =>
     (props.lead.activities || []).filter(a => a.type === 'note').sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 );
 
-// Auto-grow textareas — el alto se ajusta al contenido y nunca aparece scroll interno.
-function autoGrowTextarea(el) {
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = el.scrollHeight + 'px';
-}
-function onNoteInput(e) { autoGrowTextarea(e.target); }
-
 function handleNoteFileSelect(e) {
     for (const file of e.target.files) {
         noteFiles.value.push({ file, name: file.name });
@@ -242,11 +235,6 @@ function startEditNote(note) {
     editingNoteDescription.value = note.description || '';
     editingNoteFiles.value = [];
     editingNoteShowTitle.value = !!editingNoteTitle.value;
-    // Tras render, ajustar el alto del textarea al contenido cargado.
-    nextTick(() => {
-        const ta = document.querySelector(`#edit-note-${note.id} textarea[data-note-edit]`);
-        autoGrowTextarea(ta);
-    });
 }
 
 function cancelEditNote() {
@@ -289,9 +277,10 @@ const activityForm = useForm({
     files: [],
 });
 
-// Tipos manuales — los demás (status_change/assignment/system) son auto-generados.
+// Tipos manuales — Note va por su propio bloque (CRM Notes).
+// Los demás (status_change/assignment/system) son auto-generados.
 const manualActivityTypes = computed(() => {
-    const allowed = ['call', 'email', 'meeting', 'note'];
+    const allowed = ['call', 'email', 'meeting'];
     return Object.fromEntries(
         Object.entries(props.activityTypes || {}).filter(([k]) => allowed.includes(k))
     );
@@ -710,10 +699,9 @@ onBeforeUnmount(() => {
                                     <input v-model="noteTitle" type="text" placeholder="Title (optional)"
                                         class="w-full border-0 p-0 text-sm font-semibold text-gray-900 focus:ring-0 placeholder-gray-400" />
                                 </div>
-                                <textarea v-model="noteContent" rows="2" placeholder="What's this note about?"
-                                    @input="onNoteInput"
-                                    style="overflow: hidden;"
-                                    class="w-full border-0 px-4 py-3 text-sm text-gray-700 focus:ring-0 placeholder-gray-400 resize-none"></textarea>
+                                <div class="px-2 pt-2">
+                                    <RichTextEditor v-model="noteContent" placeholder="What's this note about?" min-height="100px" />
+                                </div>
                                 <div v-if="noteFiles.length" class="px-4 py-2 border-t border-gray-100 space-y-1">
                                     <div v-for="(f, idx) in noteFiles" :key="idx" class="flex items-center justify-between bg-blue-50 rounded-lg px-3 py-1.5">
                                         <div class="flex items-center gap-2 text-xs text-blue-700">
@@ -761,7 +749,7 @@ onBeforeUnmount(() => {
                                         <!-- View mode -->
                                         <template v-if="editingNoteId !== note.id">
                                             <p v-if="note.title && note.title !== 'Note' && note.title !== 'Nota'" class="text-sm font-semibold text-gray-800 mb-0.5">{{ note.title }}</p>
-                                            <p class="text-sm text-gray-600 whitespace-pre-line">{{ note.description }}</p>
+                                            <div class="sponsorship-note-content text-sm text-gray-600 break-words" v-html="note.description"></div>
                                             <div v-if="note.files?.length" class="flex flex-wrap gap-1.5 mt-2">
                                                 <button v-for="f in note.files" :key="f.id" @click="openPreview(f)"
                                                     class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer">
@@ -780,11 +768,9 @@ onBeforeUnmount(() => {
                                                 <input v-model="editingNoteTitle" type="text" placeholder="Title (optional)"
                                                     class="w-full border-0 p-0 text-sm font-semibold text-gray-900 focus:ring-0 placeholder-gray-400" />
                                             </div>
-                                            <textarea v-model="editingNoteDescription" rows="2"
-                                                data-note-edit
-                                                @input="onNoteInput"
-                                                style="overflow: hidden;"
-                                                class="w-full border-0 px-4 py-3 text-sm text-gray-700 focus:ring-0 placeholder-gray-400 resize-none"></textarea>
+                                            <div class="px-2 pt-2">
+                                                <RichTextEditor v-model="editingNoteDescription" min-height="100px" />
+                                            </div>
                                             <div v-if="editingNoteFiles.length" class="px-4 py-2 border-t border-gray-100 space-y-1">
                                                 <div v-for="(f, idx) in editingNoteFiles" :key="idx" class="flex items-center justify-between bg-blue-50 rounded-lg px-3 py-1.5">
                                                     <span class="text-xs text-blue-700 truncate max-w-48">{{ f.name }}</span>
@@ -840,7 +826,7 @@ onBeforeUnmount(() => {
                                                     :class="emailDelivery(activity).cls">{{ emailDelivery(activity).label }}</span>
                                                 <span class="text-sm font-medium text-gray-900 line-clamp-2 break-words">{{ activity.title }}</span>
                                             </div>
-                                            <div v-if="activity.description && activity.type === 'email'"
+                                            <div v-if="activity.description && (activity.type === 'email' || activity.type === 'note')"
                                                 class="sponsorship-email-preview text-xs text-gray-500 mt-1 line-clamp-3 break-words"
                                                 v-html="activity.description"></div>
                                             <p v-else-if="activity.description" class="text-xs text-gray-500 mt-1 whitespace-pre-line line-clamp-3 break-words">{{ activity.description }}</p>
@@ -1034,7 +1020,7 @@ onBeforeUnmount(() => {
                             class="border border-red-200 bg-red-50 rounded-lg px-3 py-2 text-xs text-red-700">
                             <strong class="font-semibold">Delivery error:</strong> {{ viewingActivity.delivery_error }}
                         </div>
-                        <div v-if="viewingActivity.description && viewingActivity.type === 'email'"
+                        <div v-if="viewingActivity.description && (viewingActivity.type === 'email' || viewingActivity.type === 'note')"
                             class="sponsorship-email-preview text-sm text-gray-700 break-words border-t border-gray-100 pt-3"
                             v-html="viewingActivity.description"></div>
                         <div v-else-if="viewingActivity.description" class="text-sm text-gray-700 whitespace-pre-line break-words border-t border-gray-100 pt-3">{{ viewingActivity.description }}</div>
@@ -1083,9 +1069,20 @@ onBeforeUnmount(() => {
 <style>
 .sponsorship-email-preview p { margin: 0 0 0.5em 0; }
 .sponsorship-email-preview p:last-child { margin-bottom: 0; }
-.sponsorship-email-preview ul, .sponsorship-email-preview ol { padding-left: 1.25em; margin: 0 0 0.5em 0; }
+.sponsorship-email-preview ul, .sponsorship-email-preview ol { padding-left: 1.5em; margin: 0 0 0.5em 0; }
+.sponsorship-email-preview ul { list-style-type: disc; }
+.sponsorship-email-preview ol { list-style-type: decimal; }
 .sponsorship-email-preview a { color: #D4AF37; text-decoration: underline; }
 .sponsorship-email-preview img { max-width: 100%; height: auto; border-radius: 6px; margin: 6px 0; }
 .sponsorship-email-preview hr { border: 0; border-top: 1px solid #e5e7eb; margin: 10px 0; }
 .sponsorship-email-preview strong { font-weight: 600; color: #111827; }
+
+.sponsorship-note-content p { margin: 0 0 0.5em 0; }
+.sponsorship-note-content p:last-child { margin-bottom: 0; }
+.sponsorship-note-content ul, .sponsorship-note-content ol { padding-left: 1.5em; margin: 0 0 0.5em 0; }
+.sponsorship-note-content ul { list-style-type: disc; }
+.sponsorship-note-content ol { list-style-type: decimal; }
+.sponsorship-note-content li > p { margin: 0; }
+.sponsorship-note-content a { color: #D4AF37; text-decoration: underline; }
+.sponsorship-note-content strong { font-weight: 600; color: #111827; }
 </style>
