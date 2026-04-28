@@ -16,11 +16,16 @@ const props = defineProps({
     lead: Object,
     statuses: Object,
     activityTypes: Object,
+    emailTypes: Object,
     tags: Array,
     events: Array,
     advisors: Array,
     isLider: Boolean,
 });
+
+const emailTypeOptions = computed(() =>
+    Object.entries(props.emailTypes || {}).map(([value, label]) => ({ value, label }))
+);
 
 // ───────────── Helpers ─────────────
 function formatDate(date) {
@@ -378,11 +383,12 @@ const leadVariables = [
     { label: 'Advisor name', value: '{{advisor_name}}' },
 ];
 
-function handleEmailSend({ subject, body, attachments }) {
+function handleEmailSend({ subject, body, attachments, email_type }) {
     const formData = new FormData();
     formData.append('subject', subject);
     formData.append('body', body);
     formData.append('is_contract', emailIsContract.value ? '1' : '0');
+    if (email_type) formData.append('email_type', email_type);
     attachments.forEach((f) => formData.append('attachments[]', f));
 
     emailProcessing.value = true;
@@ -944,6 +950,7 @@ onBeforeUnmount(() => {
                     :hide-bcc-note="true"
                     send-label="Send email"
                     :variables="leadVariables"
+                    :email-types="emailTypeOptions"
                     @send="handleEmailSend"
                     @close="showEmailModal = false"
                 >

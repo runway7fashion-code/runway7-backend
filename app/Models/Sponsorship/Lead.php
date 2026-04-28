@@ -20,7 +20,7 @@ class Lead extends Model
         'registered_by_user_id', 'assigned_to_user_id',
         'is_contract_winner', 'converted_user_id',
         'notes',
-        'last_contacted_at', 'last_email_sent_at', 'last_email_status',
+        'last_contacted_at', 'last_email_sent_at', 'last_email_status', 'last_email_type',
     ];
 
     protected $casts = [
@@ -46,6 +46,21 @@ class Lead extends Model
     ];
 
     public const EMAIL_STATUSES = ['sent', 'failed'];
+
+    /**
+     * Tipos de email para outreach (single-send y bulk).
+     * Se persisten en sponsorship_lead_activities.email_type y se cachea
+     * el último en sponsorship_leads.last_email_type para mostrarlo en la tabla.
+     */
+    public const EMAIL_TYPES = [
+        'intro_email' => 'Intro Email',
+        'reminder_1'  => 'Reminder 1',
+        'reminder_2'  => 'Reminder 2',
+        'reminder_3'  => 'Reminder 3',
+        'reminder_4'  => 'Reminder 4',
+        'reminder_5'  => 'Reminder 5',
+        'follow_up'   => 'Follow up',
+    ];
 
     // --- Relaciones ---
     public function company()        { return $this->belongsTo(Company::class, 'company_id'); }

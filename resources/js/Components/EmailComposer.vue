@@ -23,11 +23,18 @@ const props = defineProps({
      * The backend is responsible for substituting placeholders per recipient before sending.
      */
     variables: { type: Array, default: () => [] },
+    /**
+     * Optional Email Type selector. Each item: { value: string, label: string }.
+     * When populated, a required select shows up between subject and body and the
+     * chosen value is included in the emitted send payload as `email_type`.
+     */
+    emailTypes: { type: Array, default: () => [] },
 });
 
 const emit = defineEmits(['send', 'close']);
 
 const subject = ref('');
+const emailType = ref('');
 const attachments = ref([]);
 const fileInput = ref(null);
 const showSchedule = ref(false);
@@ -130,12 +137,15 @@ function getScheduledAt() {
 function handleSend() {
     const body = editor.value?.getHTML() || '';
     if (!subject.value.trim() || !body.trim() || body === '<p></p>') return;
+    // Si hay emailTypes definidos, exigir que el usuario haya elegido uno.
+    if (props.emailTypes.length && !emailType.value) return;
 
     emit('send', {
         subject: subject.value,
         body: body,
         attachments: attachments.value,
         scheduled_at: getScheduledAt(),
+        email_type: emailType.value || null,
     });
 }
 
@@ -179,6 +189,16 @@ const formatSize = (bytes) => {
                             <span class="font-mono text-[10px] text-gray-400">{{ v.value }}</span>
                         </button>
                     </div>
+                </div>
+
+                <!-- Email Type select -->
+                <div v-if="emailTypes.length">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Email Type *</label>
+                    <select v-model="emailType"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black/10">
+                        <option value="" disabled>— Select email type —</option>
+                        <option v-for="t in emailTypes" :key="t.value" :value="t.value">{{ t.label }}</option>
+                    </select>
                 </div>
 
                 <!-- Toolbar -->
@@ -282,8 +302,9 @@ const formatSize = (bytes) => {
             </div>
             <div class="flex gap-3">
                 <button @click="emit('close')" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg">Cancel</button>
-                <button @click="handleSend" :disabled="processing"
-                    class="px-5 py-2 text-sm font-semibold text-white bg-black hover:bg-gray-800 rounded-lg disabled:opacity-50">
+                <button @click="handleSend"
+                    :disabled="processing || (emailTypes.length && !emailType)"
+                    class="px-5 py-2 text-sm font-semibold text-white bg-black hover:bg-gray-800 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
                     {{ processing ? 'Sending...' : (scheduleOption !== 'now' && showSchedule && !hideSchedule ? 'Schedule' : sendLabel) }}
                 </button>
             </div>

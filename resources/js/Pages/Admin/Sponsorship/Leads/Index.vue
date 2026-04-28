@@ -10,6 +10,7 @@ const props = defineProps({
     leads: Object,
     counts: Object,
     statuses: Object,
+    emailTypes: Object,
     sources: Array,
     filters: Object,
     advisors: Array,
@@ -17,6 +18,10 @@ const props = defineProps({
     events: Array,
     isLider: Boolean,
 });
+
+const emailTypeOptions = computed(() =>
+    Object.entries(props.emailTypes || {}).map(([value, label]) => ({ value, label }))
+);
 
 const search = ref(props.filters?.search || '');
 const status = ref(props.filters?.status || '');
@@ -112,10 +117,11 @@ function openBulkEmail() {
     showEmailModal.value = true;
 }
 
-function handleBulkEmailSend({ subject, body, attachments }) {
+function handleBulkEmailSend({ subject, body, attachments, email_type }) {
     const formData = new FormData();
     formData.append('subject', subject);
     formData.append('body', body);
+    if (email_type) formData.append('email_type', email_type);
     selectedLeads.value.forEach(id => formData.append('lead_ids[]', id));
     attachments.forEach(file => formData.append('attachments[]', file));
 
@@ -228,14 +234,13 @@ function handleBulkEmailSend({ subject, body, attachments }) {
                     <thead class="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">
                         <tr>
                             <th class="px-3 py-3 w-10"><input type="checkbox" v-model="allSelected" class="accent-black w-4 h-4 cursor-pointer" /></th>
+                            <th class="px-4 py-3 font-medium">Registered</th>
                             <th class="px-4 py-3 font-medium">Name</th>
                             <th class="px-4 py-3 font-medium">Company</th>
                             <th class="px-4 py-3 font-medium">Category</th>
                             <th class="px-4 py-3 font-medium">Email</th>
-                            <th class="px-4 py-3 font-medium">Instagram</th>
-                            <th class="px-4 py-3 font-medium">Lead Owner</th>
                             <th class="px-4 py-3 font-medium">Status</th>
-                            <th class="px-4 py-3 font-medium">Registered</th>
+                            <th class="px-4 py-3 font-medium">Email Type</th>
                             <th class="px-4 py-3 font-medium">Last email</th>
                             <th class="px-4 py-3 font-medium text-right">Actions</th>
                         </tr>
@@ -246,6 +251,13 @@ function handleBulkEmailSend({ subject, body, attachments }) {
                             @click="router.visit(`/admin/sponsorship/leads/${l.id}`)">
                             <td class="px-3 py-3" @click.stop>
                                 <input type="checkbox" :value="l.id" v-model="selectedLeads" class="accent-black w-4 h-4 cursor-pointer" />
+                            </td>
+                            <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                                <div v-if="l.created_at">
+                                    <p class="text-gray-700">{{ formatDateLine(l.created_at) }}</p>
+                                    <p class="text-gray-400">{{ formatTimeLine(l.created_at) }}</p>
+                                </div>
+                                <span v-else class="text-gray-400">—</span>
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-2">
@@ -259,27 +271,16 @@ function handleBulkEmailSend({ subject, body, attachments }) {
                             <td class="px-4 py-3 text-gray-700">{{ l.company?.name || '—' }}</td>
                             <td class="px-4 py-3 text-gray-600 text-xs">{{ l.category?.name || '—' }}</td>
                             <td class="px-4 py-3 text-gray-600 text-xs">{{ l.primary_email?.email || '—' }}</td>
-                            <td class="px-4 py-3 text-xs" @click.stop>
-                                <a v-if="instagramUrl(l.instagram)" :href="instagramUrl(l.instagram)" target="_blank" rel="noopener"
-                                    class="text-blue-600 hover:underline">
-                                    @{{ instagramHandle(l.instagram) }}
-                                </a>
-                                <span v-else class="text-gray-400">—</span>
-                            </td>
-                            <td class="px-4 py-3 text-gray-600">
-                                {{ l.assigned_to ? `${l.assigned_to.first_name} ${l.assigned_to.last_name}` : '—' }}
-                            </td>
                             <td class="px-4 py-3">
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white"
                                     :style="{ backgroundColor: statuses[l.status]?.color }">
                                     {{ statuses[l.status]?.label || l.status }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
-                                <div v-if="l.created_at">
-                                    <p class="text-gray-700">{{ formatDateLine(l.created_at) }}</p>
-                                    <p class="text-gray-400">{{ formatTimeLine(l.created_at) }}</p>
-                                </div>
+                            <td class="px-4 py-3 text-xs text-gray-600">
+                                <span v-if="l.last_email_type" class="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-medium">
+                                    {{ emailTypes[l.last_email_type] || l.last_email_type }}
+                                </span>
                                 <span v-else class="text-gray-400">—</span>
                             </td>
                             <td class="px-4 py-3 text-xs text-gray-500">
@@ -304,7 +305,7 @@ function handleBulkEmailSend({ subject, body, attachments }) {
                             </td>
                         </tr>
                         <tr v-if="!leads.data.length">
-                            <td colspan="11" class="px-6 py-12 text-center text-gray-400 text-sm">
+                            <td colspan="10" class="px-6 py-12 text-center text-gray-400 text-sm">
                                 No leads found with current filters.
                             </td>
                         </tr>
@@ -334,6 +335,7 @@ function handleBulkEmailSend({ subject, body, attachments }) {
                     :hide-bcc-note="true"
                     send-label="Send to selected"
                     :variables="leadVariables"
+                    :email-types="emailTypeOptions"
                     @send="handleBulkEmailSend"
                     @close="showEmailModal = false"
                 />

@@ -22,6 +22,7 @@ class LeadActivity extends Model
         'edited_at',
         'status',
         'is_contract',
+        'email_type',
         'mailgun_message_id',
         'delivery_status',
         'delivery_error',

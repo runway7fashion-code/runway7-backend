@@ -200,15 +200,16 @@ class LeadController extends Controller
             : [];
 
         return Inertia::render('Admin/Sponsorship/Leads/Index', [
-            'leads'     => $leads,
-            'counts'    => $counts,
-            'statuses'  => Lead::STATUSES,
-            'sources'   => Lead::SOURCES,
-            'filters'   => $request->only(['search', 'status', 'assigned_to', 'category_id', 'event_id', 'source', 'email_send', 'date_filter', 'date_from', 'date_to']),
-            'advisors'  => $advisors,
-            'categories'=> Category::where('is_active', true)->orderBy('name')->get(['id', 'name']),
-            'events'    => Event::whereNull('deleted_at')->orderBy('start_date', 'desc')->get(['id', 'name']),
-            'isLider'   => $this->isLider(),
+            'leads'      => $leads,
+            'counts'     => $counts,
+            'statuses'   => Lead::STATUSES,
+            'emailTypes' => Lead::EMAIL_TYPES,
+            'sources'    => Lead::SOURCES,
+            'filters'    => $request->only(['search', 'status', 'assigned_to', 'category_id', 'event_id', 'source', 'email_send', 'date_filter', 'date_from', 'date_to']),
+            'advisors'   => $advisors,
+            'categories' => Category::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'events'     => Event::whereNull('deleted_at')->orderBy('start_date', 'desc')->get(['id', 'name']),
+            'isLider'    => $this->isLider(),
         ]);
     }
 
@@ -326,6 +327,7 @@ class LeadController extends Controller
             'lead'          => $lead,
             'statuses'      => Lead::STATUSES,
             'activityTypes' => LeadActivity::TYPES,
+            'emailTypes'    => Lead::EMAIL_TYPES,
             'tags'          => Tag::orderBy('name')->get(['id', 'name', 'color']),
             'events'        => Event::whereNull('deleted_at')->orderBy('start_date', 'desc')->get(['id', 'name']),
             'advisors'      => $this->isLider()
@@ -533,6 +535,7 @@ class LeadController extends Controller
             'subject'       => 'required|string|max:255',
             'body'          => 'required|string',
             'is_contract'   => 'nullable|boolean',
+            'email_type'    => ['nullable', Rule::in(array_keys(Lead::EMAIL_TYPES))],
             'attachments'   => 'nullable|array',
             'attachments.*' => 'file|max:10240',
         ]);
@@ -564,6 +567,7 @@ class LeadController extends Controller
             bodyText: $validated['body'],
             isContract: (bool) ($validated['is_contract'] ?? false),
             attachments: $attachments,
+            emailType: $validated['email_type'] ?? null,
         );
 
         return back()->with('success', 'Email queued for sending.');
@@ -578,6 +582,7 @@ class LeadController extends Controller
             'lead_ids.*'    => 'exists:sponsorship_leads,id',
             'subject'       => 'required|string|max:255',
             'body'          => 'required|string',
+            'email_type'    => ['nullable', Rule::in(array_keys(Lead::EMAIL_TYPES))],
             'attachments'   => 'nullable|array',
             'attachments.*' => 'file|max:10240',
         ]);
@@ -622,6 +627,7 @@ class LeadController extends Controller
                 bodyText: $validated['body'],
                 isContract: false,
                 attachments: $attachments,
+                emailType: $validated['email_type'] ?? null,
             );
             $queued++;
         }

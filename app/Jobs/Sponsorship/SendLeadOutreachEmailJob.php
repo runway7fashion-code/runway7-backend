@@ -33,6 +33,7 @@ class SendLeadOutreachEmailJob implements ShouldQueue
         public string $bodyText,
         public bool $isContract = false,
         public array $attachments = [],
+        public ?string $emailType = null,
     ) {}
 
     public function handle(): void
@@ -101,6 +102,7 @@ class SendLeadOutreachEmailJob implements ShouldQueue
                 'completed_at'        => now(),
                 'status'              => 'completed',
                 'is_contract'         => $this->isContract,
+                'email_type'          => $this->emailType,
                 'mailgun_message_id'  => $messageId,
             ]);
 
@@ -108,6 +110,7 @@ class SendLeadOutreachEmailJob implements ShouldQueue
                 'last_email_sent_at' => now(),
                 'last_email_status'  => 'sent',
                 'last_contacted_at'  => now(),
+                'last_email_type'    => $this->emailType ?? $lead->last_email_type,
             ]);
 
             // Persistir los adjuntos en el timeline para que sean previsualizables/descargables.
