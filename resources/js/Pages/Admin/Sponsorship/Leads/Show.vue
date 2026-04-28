@@ -524,7 +524,7 @@ onBeforeUnmount(() => {
                             <PlusIcon class="w-3.5 h-3.5" /> Activity
                         </button>
                         <button @click="showEmailModal = true"
-                            class="px-4 py-1.5 bg-gray-700 text-white rounded-lg text-xs font-medium hover:bg-gray-600 transition-colors flex items-center gap-1">
+                            class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-600 transition-colors flex items-center gap-1">
                             <EnvelopeIcon class="w-3.5 h-3.5" /> Send Email
                         </button>
                         <Link v-if="canConvert" :href="`/admin/sponsorship/leads/${lead.id}/convert`"
@@ -537,7 +537,7 @@ onBeforeUnmount(() => {
                             <StarIcon class="w-3.5 h-3.5" /> Close contract & Convert
                         </span>
                         <Link :href="`/admin/sponsorship/leads/${lead.id}/edit`"
-                            class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors flex items-center gap-1">
+                            class="px-4 py-1.5 bg-gray-500 text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors flex items-center gap-1">
                             <PencilSquareIcon class="w-3.5 h-3.5" /> Edit
                         </Link>
                     </div>
