@@ -217,13 +217,44 @@ function saveEdit() {
 // ──────────── New Personal Activity (calendar_activities) ────────────
 const showCreateModal = ref(false);
 const createForm = useForm({ user_id: '', type: 'call', title: '', description: '', scheduled_at: '' });
+const availabilityConflicts = ref([]);
 
 function openCreateModal() {
     createForm.reset();
     createForm.type = 'call';
     createForm.user_id = '';
+    availabilityConflicts.value = [];
     showCreateModal.value = true;
 }
+
+// Soft availability check — debounced when user_id + scheduled_at are present.
+let availabilityTimer = null;
+async function checkAvailability() {
+    clearTimeout(availabilityTimer);
+    availabilityTimer = setTimeout(async () => {
+        const userId = createForm.user_id;
+        const scheduled = createForm.scheduled_at;
+        if (!userId || !scheduled) {
+            availabilityConflicts.value = [];
+            return;
+        }
+        // Window: ±30 min around scheduled time.
+        const center = new Date(scheduled);
+        if (isNaN(center)) return;
+        const from = new Date(center.getTime() - 30 * 60 * 1000).toISOString();
+        const to   = new Date(center.getTime() + 30 * 60 * 1000).toISOString();
+        try {
+            const res = await axios.get('/admin/sponsorship/calendar/availability', {
+                params: { user_id: userId, from, to },
+            });
+            availabilityConflicts.value = res.data?.conflicts ?? [];
+        } catch (e) {
+            availabilityConflicts.value = [];
+        }
+    }, 350);
+}
+
+watch([() => createForm.user_id, () => createForm.scheduled_at], checkAvailability);
 
 function submitCreate() {
     createForm.transform(d => ({
@@ -495,6 +526,14 @@ function eventsAtHour(date, hour) {
                                     {{ a.first_name }} {{ a.last_name }} {{ (a.sponsorship_type === 'lider' || a.extra_areas?.includes('sponsorship')) ? '(L)' : '' }}
                                 </option>
                             </select>
+                        </div>
+                        <div v-if="availabilityConflicts.length" class="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs">
+                            <p class="font-medium text-amber-800 mb-1">⚠ {{ availabilityConflicts.length }} conflict{{ availabilityConflicts.length > 1 ? 's' : '' }} in ±30 min:</p>
+                            <ul class="space-y-0.5 text-amber-700">
+                                <li v-for="c in availabilityConflicts" :key="`${c.source}-${c.id}`" class="truncate">
+                                    • {{ new Date(c.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) }} — {{ c.title }} <span class="text-amber-500">({{ c.type }})</span>
+                                </li>
+                            </ul>
                         </div>
                         <div class="flex justify-end gap-2 pt-2">
                             <button @click="showCreateModal = false" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>

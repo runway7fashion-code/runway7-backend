@@ -107,6 +107,64 @@ class CalendarActivityController extends Controller
         return back()->with('success', 'Activity deleted.');
     }
 
+    /**
+     * GET /admin/{area}/calendar/availability?user_id=X&from=ISO&to=ISO[&exclude=id|sponsorship|personal]
+     *
+     * Returns activities (lead + personal) overlapping the given window for the
+     * given user. Used by the New/Edit Activity modals to warn about conflicts.
+     * Soft signal — backend does not block creation.
+     */
+    public function availability(Request $request, string $area)
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'from'    => 'required|date',
+            'to'      => 'required|date',
+            'exclude_lead'     => 'nullable|integer',
+            'exclude_personal' => 'nullable|integer',
+        ]);
+
+        if (!in_array($area, ['sponsorship', 'sales'], true)) abort(404);
+        $this->authorizeArea($area);
+
+        $userId = (int) $validated['user_id'];
+        $from   = $validated['from'];
+        $to     = $validated['to'];
+
+        // Lead activities (table differs per area).
+        $leadConflicts = collect();
+        if ($area === 'sponsorship') {
+            $q = \App\Models\Sponsorship\LeadActivity::query()
+                ->where('assigned_to_user_id', $userId)
+                ->where('status', 'pending')
+                ->whereBetween('scheduled_at', [$from, $to]);
+            if (!empty($validated['exclude_lead'])) $q->where('id', '!=', $validated['exclude_lead']);
+            $leadConflicts = $q->get(['id', 'title', 'type', 'scheduled_at'])
+                ->map(fn($a) => ['id' => $a->id, 'source' => 'lead', 'title' => $a->title, 'type' => $a->type, 'start' => $a->scheduled_at?->toIso8601String()]);
+        } else {
+            $q = \App\Models\LeadActivity::query()
+                ->where('user_id', $userId)
+                ->where('status', 'pending')
+                ->whereBetween('scheduled_at', [$from, $to]);
+            if (!empty($validated['exclude_lead'])) $q->where('id', '!=', $validated['exclude_lead']);
+            $leadConflicts = $q->get(['id', 'title', 'type', 'scheduled_at'])
+                ->map(fn($a) => ['id' => $a->id, 'source' => 'lead', 'title' => $a->title, 'type' => $a->type, 'start' => $a->scheduled_at?->toIso8601String()]);
+        }
+
+        // Personal calendar entries.
+        $personalQ = CalendarActivity::query()
+            ->where('user_id', $userId)
+            ->where('status', 'pending')
+            ->whereBetween('scheduled_at', [$from, $to]);
+        if (!empty($validated['exclude_personal'])) $personalQ->where('id', '!=', $validated['exclude_personal']);
+        $personalConflicts = $personalQ->get(['id', 'title', 'type', 'scheduled_at'])
+            ->map(fn($a) => ['id' => $a->id, 'source' => 'personal', 'title' => $a->title, 'type' => $a->type, 'start' => $a->scheduled_at?->toIso8601String()]);
+
+        return response()->json([
+            'conflicts' => $leadConflicts->concat($personalConflicts)->values(),
+        ]);
+    }
+
     // ─────────────────────────── Helpers ───────────────────────────
 
     private function validatePayload(Request $request, bool $creating): array
