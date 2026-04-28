@@ -27,6 +27,7 @@ const form = useForm({
     role: props.user.role,
     sales_type: props.user.sales_type || '',
     sponsorship_type: props.user.sponsorship_type || '',
+    extra_areas: Array.isArray(props.user.extra_areas) ? [...props.user.extra_areas] : [],
     status: props.user.status,
     password: '',
     password_confirmation: '',
@@ -137,6 +138,22 @@ function submit() {
                                 <option value="lider">Líder</option>
                                 <option value="asesor">Asesor</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <!-- Acceso cross-area: solo aplica a usuarios de sales o sponsorship -->
+                    <div v-if="isSales || isSponsorship" class="mt-4 pt-4 border-t border-gray-100">
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Acceso adicional a otras áreas</label>
+                        <p class="text-xs text-gray-500 mb-2">El usuario puede gestionar leads y calendario de las áreas seleccionadas como líder.</p>
+                        <div class="flex flex-wrap gap-3">
+                            <label v-if="!isSales" class="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                                <input type="checkbox" :value="'sales'" v-model="form.extra_areas" class="accent-black" />
+                                <span class="text-sm">Sales</span>
+                            </label>
+                            <label v-if="!isSponsorship" class="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                                <input type="checkbox" :value="'sponsorship'" v-model="form.extra_areas" class="accent-black" />
+                                <span class="text-sm">Sponsorship</span>
+                            </label>
                         </div>
                     </div>
                 </div>

@@ -99,6 +99,8 @@ class UserController extends Controller
         $request->validate([
             'sales_type' => 'nullable|required_if:role,sales|in:lider,asesor',
             'sponsorship_type' => 'nullable|required_if:role,sponsorship|in:lider,asesor',
+            'extra_areas'   => 'nullable|array',
+            'extra_areas.*' => 'in:sales,sponsorship',
         ]);
 
         DB::transaction(function () use ($request) {
@@ -111,6 +113,7 @@ class UserController extends Controller
                 'role' => $request->role,
                 'sales_type' => $request->role === 'sales' ? $request->sales_type : null,
                 'sponsorship_type' => $request->role === 'sponsorship' ? $request->sponsorship_type : null,
+                'extra_areas' => $this->normalizeExtraAreas($request),
                 'status' => $request->status,
             ]);
 
@@ -184,6 +187,8 @@ class UserController extends Controller
         $request->validate([
             'sales_type' => 'nullable|required_if:role,sales|in:lider,asesor',
             'sponsorship_type' => 'nullable|required_if:role,sponsorship|in:lider,asesor',
+            'extra_areas'   => 'nullable|array',
+            'extra_areas.*' => 'in:sales,sponsorship',
         ]);
 
         if ($request->filled('password')) {
@@ -199,6 +204,7 @@ class UserController extends Controller
                 'role' => $request->role,
                 'sales_type' => $request->role === 'sales' ? $request->sales_type : null,
                 'sponsorship_type' => $request->role === 'sponsorship' ? $request->sponsorship_type : null,
+                'extra_areas' => $this->normalizeExtraAreas($request),
                 'status' => $request->status,
             ];
 
@@ -212,6 +218,18 @@ class UserController extends Controller
 
         return redirect()->route('admin.users.index')
             ->with('success', 'Usuario actualizado exitosamente.');
+    }
+
+    /**
+     * Devuelve las áreas extra del request, filtrando la propia (un user de
+     * sales no debería tener "sales" en extra_areas — su rol primario ya cubre).
+     * Devuelve null si la lista queda vacía para no guardar [] innecesario.
+     */
+    private function normalizeExtraAreas($request): ?array
+    {
+        $areas = (array) $request->input('extra_areas', []);
+        $areas = array_values(array_filter($areas, fn($a) => in_array($a, ['sales', 'sponsorship'], true) && $a !== $request->role));
+        return empty($areas) ? null : $areas;
     }
 
     private function syncProfile(User $user, array $profile): void
