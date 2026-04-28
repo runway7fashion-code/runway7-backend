@@ -501,7 +501,7 @@ onBeforeUnmount(() => {
                                     class="text-xs font-medium text-gray-600 border border-gray-200 rounded px-1.5 py-0.5 bg-white focus:outline-none focus:ring-1 focus:ring-black/10">
                                     <option value="">— Unassigned —</option>
                                     <option v-for="a in advisors" :key="a.id" :value="a.id">
-                                        {{ a.first_name }} {{ a.last_name }}{{ a.sponsorship_type === 'lider' ? ' (L)' : '' }}
+                                        {{ a.first_name }} {{ a.last_name }}{{ (a.sponsorship_type === 'lider' || a.extra_areas?.includes('sponsorship')) ? ' (L)' : '' }}
                                     </option>
                                 </select>
                             </div>
@@ -921,7 +921,7 @@ onBeforeUnmount(() => {
                             <label class="block text-xs font-medium text-gray-600 mb-1">Assign to</label>
                             <select v-model="activityForm.assigned_to_user_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
                                 <option :value="null">— Me</option>
-                                <option v-for="a in advisors" :key="a.id" :value="a.id">{{ a.first_name }} {{ a.last_name }}{{ a.sponsorship_type === 'lider' ? ' (L)' : '' }}</option>
+                                <option v-for="a in advisors" :key="a.id" :value="a.id">{{ a.first_name }} {{ a.last_name }}{{ (a.sponsorship_type === 'lider' || a.extra_areas?.includes('sponsorship')) ? ' (L)' : '' }}</option>
                             </select>
                         </div>
                         <label v-if="activityForm.type === 'email'" class="flex items-center gap-2 text-sm bg-yellow-50 border border-[#D4AF37] rounded-lg px-3 py-2">

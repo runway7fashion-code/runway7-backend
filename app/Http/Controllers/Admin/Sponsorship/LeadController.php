@@ -193,7 +193,7 @@ class LeadController extends Controller
 
         // Opciones para filtros
         $advisors = $this->isLider()
-            ? User::where('role', 'sponsorship')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'sponsorship_type'])
+            ? $this->sponsorshipTeamMembers()
             : [];
 
         return Inertia::render('Admin/Sponsorship/Leads/Index', [
@@ -221,7 +221,7 @@ class LeadController extends Controller
             'sources'    => Lead::SOURCES,
             'countries'  => \App\Models\Country::where('is_active', true)->orderBy('order')->orderBy('name')->get(['name', 'code', 'phone', 'flag']),
             'advisors'   => $this->isLider()
-                ? User::where('role', 'sponsorship')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'sponsorship_type'])
+                ? $this->sponsorshipTeamMembers()
                 : [],
             'isLider'    => $this->isLider(),
         ]);
@@ -328,8 +328,8 @@ class LeadController extends Controller
             'tags'          => Tag::orderBy('name')->get(['id', 'name', 'color']),
             'events'        => Event::whereNull('deleted_at')->orderBy('start_date', 'desc')->get(['id', 'name']),
             'advisors'      => $this->isLider()
-                ? User::where('role', 'sponsorship')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'sponsorship_type'])
-                : User::where('role', 'sponsorship')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'sponsorship_type']),
+                ? $this->sponsorshipTeamMembers()
+                : $this->sponsorshipTeamMembers(),
             'isLider'       => $this->isLider(),
         ]);
     }
@@ -350,7 +350,7 @@ class LeadController extends Controller
             'sources'    => Lead::SOURCES,
             'countries'  => \App\Models\Country::where('is_active', true)->orderBy('order')->orderBy('name')->get(['name', 'code', 'phone', 'flag']),
             'advisors'   => $this->isLider()
-                ? User::where('role', 'sponsorship')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'sponsorship_type'])
+                ? $this->sponsorshipTeamMembers()
                 : [],
             'isLider'    => $this->isLider(),
         ]);
@@ -832,15 +832,41 @@ class LeadController extends Controller
 
     public function calendar()
     {
-        $advisors = User::where('role', 'sponsorship')
-            ->orderBy('first_name')
-            ->get(['id', 'first_name', 'last_name', 'sponsorship_type']);
+        $advisors = $this->sponsorshipTeamMembers();
 
         return Inertia::render('Admin/Sponsorship/Calendar', [
             'advisors'      => $advisors,
             'isLider'       => $this->isLider(),
             'activityTypes' => LeadActivity::TYPES,
         ]);
+    }
+
+    /**
+     * Miembros del equipo de sponsorship: role=sponsorship + cross-area
+     * (users con extra_areas @> '["sponsorship"]').
+     */
+    private function sponsorshipTeamMembers()
+    {
+        return User::where(function ($q) {
+                $q->where('role', 'sponsorship')
+                  ->orWhereJsonContains('extra_areas', 'sponsorship');
+            })
+            ->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name', 'sponsorship_type', 'role', 'sales_type', 'extra_areas']);
+    }
+
+    /**
+     * IDs de líderes del área (sponsorship_type=lider, admin, o cross-area).
+     * Usado en visibility para que asesores vean las actividades de los líderes.
+     */
+    private function sponsorshipLeaderIds(): array
+    {
+        return User::where(function ($q) {
+                $q->where('role', 'admin')
+                  ->orWhere(fn($qq) => $qq->where('role', 'sponsorship')->where('sponsorship_type', 'lider'))
+                  ->orWhereJsonContains('extra_areas', 'sponsorship');
+            })
+            ->pluck('id')->all();
     }
 
     public function calendarEvents(Request $request)
@@ -854,11 +880,14 @@ class LeadController extends Controller
             ]);
 
         if (!$this->isLider()) {
-            // Asesor: ve solo sus actividades (creadas por él o asignadas a él)
+            // Asesor: ve sus actividades + las de cualquier líder del área (incluye cross-area).
+            // Así puede coordinar con la agenda de los líderes (p.ej. Cristina).
             $uid = auth()->id();
-            $query->where(function ($q) use ($uid) {
+            $leaderIds = $this->sponsorshipLeaderIds();
+            $query->where(function ($q) use ($uid, $leaderIds) {
                 $q->where('assigned_to_user_id', $uid)
-                  ->orWhere('created_by_user_id', $uid);
+                  ->orWhere('created_by_user_id', $uid)
+                  ->orWhereIn('assigned_to_user_id', $leaderIds);
             });
         } elseif ($request->filled('advisor')) {
             $query->where('assigned_to_user_id', $request->advisor);

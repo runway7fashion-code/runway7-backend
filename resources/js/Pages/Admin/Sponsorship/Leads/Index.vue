@@ -180,7 +180,7 @@ function handleBulkEmailSend({ subject, body, attachments, email_type }) {
                     <select v-if="isLider" v-model="assignedTo" class="input-sm flex-1 min-w-[120px]">
                         <option value="">All advisors</option>
                         <option v-for="a in advisors" :key="a.id" :value="a.id">
-                            {{ a.first_name }} {{ a.last_name }} {{ a.sponsorship_type === 'lider' ? '(L)' : '' }}
+                            {{ a.first_name }} {{ a.last_name }} {{ (a.sponsorship_type === 'lider' || a.extra_areas?.includes('sponsorship')) ? '(L)' : '' }}
                         </option>
                     </select>
                     <select v-model="eventId" class="input-sm flex-1 min-w-[110px]">

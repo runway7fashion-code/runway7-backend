@@ -244,7 +244,7 @@ function eventsAtHour(date, hour) {
                     class="px-3 py-2 border border-gray-200 rounded-lg text-sm">
                     <option value="">All advisors</option>
                     <option v-for="a in advisors" :key="a.id" :value="a.id">
-                        {{ a.first_name }} {{ a.last_name }} {{ a.sponsorship_type === 'lider' ? '(L)' : '' }}
+                        {{ a.first_name }} {{ a.last_name }} {{ (a.sponsorship_type === 'lider' || a.extra_areas?.includes('sponsorship')) ? '(L)' : '' }}
                     </option>
                 </select>
             </div>
