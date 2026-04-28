@@ -826,7 +826,7 @@ onBeforeUnmount(() => {
                                                     :class="emailDelivery(activity).cls">{{ emailDelivery(activity).label }}</span>
                                                 <span class="text-sm font-medium text-gray-900 line-clamp-2 break-words">{{ activity.title }}</span>
                                             </div>
-                                            <div v-if="activity.description && (activity.type === 'email' || activity.type === 'note')"
+                                            <div v-if="activity.description && ['email','note','call','meeting'].includes(activity.type)"
                                                 class="sponsorship-email-preview text-xs text-gray-500 mt-1 line-clamp-3 break-words"
                                                 v-html="activity.description"></div>
                                             <p v-else-if="activity.description" class="text-xs text-gray-500 mt-1 whitespace-pre-line line-clamp-3 break-words">{{ activity.description }}</p>
@@ -910,7 +910,7 @@ onBeforeUnmount(() => {
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Description</label>
-                            <textarea v-model="activityForm.description" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"></textarea>
+                            <RichTextEditor v-model="activityForm.description" placeholder="Add details..." min-height="100px" />
                         </div>
                         <div v-if="activityForm.type === 'call' || activityForm.type === 'meeting'">
                             <label class="block text-xs font-medium text-gray-600 mb-1">Assign to</label>
@@ -1020,7 +1020,7 @@ onBeforeUnmount(() => {
                             class="border border-red-200 bg-red-50 rounded-lg px-3 py-2 text-xs text-red-700">
                             <strong class="font-semibold">Delivery error:</strong> {{ viewingActivity.delivery_error }}
                         </div>
-                        <div v-if="viewingActivity.description && (viewingActivity.type === 'email' || viewingActivity.type === 'note')"
+                        <div v-if="viewingActivity.description && ['email','note','call','meeting'].includes(viewingActivity.type)"
                             class="sponsorship-email-preview text-sm text-gray-700 break-words border-t border-gray-100 pt-3"
                             v-html="viewingActivity.description"></div>
                         <div v-else-if="viewingActivity.description" class="text-sm text-gray-700 whitespace-pre-line break-words border-t border-gray-100 pt-3">{{ viewingActivity.description }}</div>

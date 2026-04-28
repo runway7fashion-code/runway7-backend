@@ -1,5 +1,6 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import RichTextEditor from '@/Components/RichTextEditor.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
@@ -345,7 +346,7 @@ function eventsAtHour(date, hour) {
                     <!-- View mode -->
                     <template v-if="!isEditing">
                         <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ selectedEvent.title }}</h3>
-                        <p v-if="selectedEvent.description" class="text-sm text-gray-600 mb-3 whitespace-pre-wrap">{{ selectedEvent.description }}</p>
+                        <div v-if="selectedEvent.description" class="sponsorship-email-preview text-sm text-gray-600 mb-3 break-words" v-html="selectedEvent.description"></div>
                         <div class="space-y-1 text-sm text-gray-600 mb-5">
                             <p>⏰ {{ new Date(selectedEvent.start).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}</p>
                             <p v-if="selectedEvent.lead_name">👤 {{ selectedEvent.lead_name }} <span v-if="selectedEvent.company">— {{ selectedEvent.company }}</span></p>
@@ -379,7 +380,7 @@ function eventsAtHour(date, hour) {
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Description</label>
-                                <textarea v-model="editForm.description" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"></textarea>
+                                <RichTextEditor v-model="editForm.description" placeholder="Add details..." min-height="100px" />
                             </div>
                             <div>
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Scheduled at</label>
@@ -399,3 +400,13 @@ function eventsAtHour(date, hour) {
         </Teleport>
     </AdminLayout>
 </template>
+
+<style>
+.sponsorship-email-preview p { margin: 0 0 0.5em 0; }
+.sponsorship-email-preview p:last-child { margin-bottom: 0; }
+.sponsorship-email-preview ul, .sponsorship-email-preview ol { padding-left: 1.5em; margin: 0 0 0.5em 0; }
+.sponsorship-email-preview ul { list-style-type: disc; }
+.sponsorship-email-preview ol { list-style-type: decimal; }
+.sponsorship-email-preview a { color: #D4AF37; text-decoration: underline; }
+.sponsorship-email-preview strong { font-weight: 600; color: #111827; }
+</style>
