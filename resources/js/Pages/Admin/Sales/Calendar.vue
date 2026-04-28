@@ -1,5 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import RichTextEditor from '@/Components/RichTextEditor.vue';
+import { useForm } from '@inertiajs/vue3';
 import { ref, computed, watch, onMounted } from 'vue';
 import axios from 'axios';
 
@@ -220,19 +222,25 @@ function closeModal() {
     selectedEvent.value = null;
 }
 
+// ── Endpoint resolution by source (lead vs personal calendar entry) ────────
+function endpointBase(ev) {
+    return ev?.source === 'personal'
+        ? `/admin/sales/calendar-activities/${ev.id}`
+        : `/admin/sales/activities/${ev.id}`;
+}
+
 // ── Complete activity ──────────────────────────────────────────────
 async function completeActivity(evt) {
     if (!evt || !evt.id) return;
     try {
         const token = document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1];
-        await axios.patch(`/admin/sales/activities/${evt.id}/complete`, {}, {
+        await axios.patch(`${endpointBase(evt)}/complete`, {}, {
             headers: {
                 'X-XSRF-TOKEN': token ? decodeURIComponent(token) : '',
                 'Accept': 'application/json',
             }
         });
-        // Update reactively
-        const idx = events.value.findIndex(e => e.id === evt.id);
+        const idx = events.value.findIndex(e => e.id === evt.id && e.source === evt.source);
         if (idx !== -1) {
             events.value[idx] = { ...events.value[idx], status: 'completed' };
         }
@@ -243,6 +251,57 @@ async function completeActivity(evt) {
     } catch (e) {
         console.error('Error completing activity', e);
     }
+}
+
+async function deletePersonalActivity(evt) {
+    if (evt?.source !== 'personal') return;
+    if (!confirm('Delete this personal activity?')) return;
+    try {
+        const token = document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1];
+        await axios.delete(endpointBase(evt), {
+            headers: {
+                'X-XSRF-TOKEN': token ? decodeURIComponent(token) : '',
+                'Accept': 'application/json',
+            },
+        });
+        showModal.value = false;
+        fetchEvents();
+    } catch (e) {
+        console.error('Error deleting personal activity', e);
+    }
+}
+
+// ── New Personal Activity (calendar_activities) ───────────────────
+const showCreateModal = ref(false);
+const createForm = useForm({ user_id: '', type: 'call', title: '', description: '', scheduled_at: '' });
+
+function openCreateModal() {
+    createForm.reset();
+    createForm.type = 'call';
+    createForm.user_id = '';
+    showCreateModal.value = true;
+}
+
+function localDatetimeToUtcIso(s) {
+    if (!s) return null;
+    const d = new Date(s);
+    return isNaN(d) ? null : d.toISOString();
+}
+
+function submitCreate() {
+    createForm.transform(d => ({
+        ...d,
+        area: 'sales',
+        scheduled_at: localDatetimeToUtcIso(d.scheduled_at),
+        user_id: d.user_id || null,
+    })).post('/admin/sales/calendar-activities', {
+        preserveScroll: true,
+        onSuccess: () => {
+            showCreateModal.value = false;
+            createForm.reset();
+            fetchEvents();
+        },
+    });
 }
 </script>
 
@@ -287,6 +346,11 @@ async function completeActivity(evt) {
                         <option v-for="a in advisors" :key="a.id" :value="a.id">{{ a.first_name }} {{ a.last_name }}</option>
                     </select>
                 </div>
+
+                <button @click="openCreateModal"
+                    class="inline-flex items-center gap-1 px-3 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800">
+                    + New Activity
+                </button>
             </div>
 
             <!-- Loading overlay -->
@@ -529,6 +593,63 @@ async function completeActivity(evt) {
                         >
                             Complete
                         </button>
+                        <button v-if="selectedEvent.source === 'personal'" @click="deletePersonalActivity(selectedEvent)"
+                            class="px-3 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- Create Personal Activity Modal -->
+        <Teleport to="body">
+            <div v-if="showCreateModal" class="fixed inset-0 z-50 flex items-center justify-center">
+                <div class="absolute inset-0 bg-black/50" @click="showCreateModal = false"></div>
+                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">New Activity (calendar)</h3>
+                        <button @click="showCreateModal = false" class="text-gray-400 hover:text-gray-600">×</button>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4">This activity is independent of any lead. Useful for blocking time on someone's calendar.</p>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Type *</label>
+                                <select v-model="createForm.type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+                                    <option value="call">Call</option>
+                                    <option value="meeting">Meeting</option>
+                                    <option value="note">Note</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Scheduled at</label>
+                                <input v-model="createForm.scheduled_at" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Title *</label>
+                            <input v-model="createForm.title" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                            <p v-if="createForm.errors.title" class="text-xs text-red-500 mt-1">{{ createForm.errors.title }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                            <RichTextEditor v-model="createForm.description" placeholder="Add details..." min-height="100px" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Assign to</label>
+                            <select v-model="createForm.user_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+                                <option value="">— Me</option>
+                                <option v-for="a in advisors" :key="a.id" :value="a.id">{{ a.first_name }} {{ a.last_name }}</option>
+                            </select>
+                        </div>
+                        <div class="flex justify-end gap-2 pt-2">
+                            <button @click="showCreateModal = false" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                            <button @click="submitCreate" :disabled="createForm.processing || !createForm.title"
+                                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
+                                {{ createForm.processing ? 'Saving…' : 'Create' }}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

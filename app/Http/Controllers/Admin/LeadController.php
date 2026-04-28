@@ -796,13 +796,22 @@ class LeadController extends Controller
     public function calendarEvents(Request $request)
     {
         $user = auth()->user();
-        $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
+        $isLeader = $user->isLeaderOf('sales');
 
         $query = LeadActivity::whereNotNull('scheduled_at')
             ->with(['lead:id,first_name,last_name,company_name', 'user:id,first_name,last_name']);
 
         if (!$isLeader) {
-            $query->where('user_id', $user->id);
+            // Asesor: ve sus actividades + las de líderes del área (incluye cross-area).
+            $leaderIds = User::where(function ($q) {
+                    $q->where('role', 'admin')
+                      ->orWhere(fn($qq) => $qq->where('role', 'sales')->where('sales_type', 'lider'))
+                      ->orWhereJsonContains('extra_areas', 'sales');
+                })->pluck('id')->all();
+            $query->where(function ($q) use ($user, $leaderIds) {
+                $q->where('user_id', $user->id)
+                  ->orWhereIn('user_id', $leaderIds);
+            });
         }
 
         if ($request->filled('advisor')) {
