@@ -147,8 +147,25 @@ function openEvent(e) {
     showModal.value = true;
 }
 
-function completeActivity(id) {
-    useForm({}).patch(`/admin/sponsorship/activities/${id}/complete`, {
+// Endpoint base depends on source: lead activities vs personal calendar entries.
+function endpointBase(ev) {
+    if (!ev) return null;
+    return ev.source === 'personal'
+        ? `/admin/sponsorship/calendar-activities/${ev.id}`
+        : `/admin/sponsorship/activities/${ev.id}`;
+}
+
+function completeActivity(ev) {
+    useForm({}).patch(`${endpointBase(ev)}/complete`, {
+        preserveScroll: true,
+        onSuccess: () => { showModal.value = false; fetchEvents(); },
+    });
+}
+
+function deletePersonalActivity(ev) {
+    if (ev.source !== 'personal') return;
+    if (!confirm('Delete this personal activity?')) return;
+    useForm({}).delete(endpointBase(ev), {
         preserveScroll: true,
         onSuccess: () => { showModal.value = false; fetchEvents(); },
     });
@@ -187,11 +204,38 @@ function saveEdit() {
         ...d,
         scheduled_at: localDatetimeToUtcIso(d.scheduled_at),
         _method: 'PATCH',
-    })).post(`/admin/sponsorship/activities/${selectedEvent.value.id}`, {
+    })).post(endpointBase(selectedEvent.value), {
         preserveScroll: true,
         onSuccess: () => {
             isEditing.value = false;
             showModal.value = false;
+            fetchEvents();
+        },
+    });
+}
+
+// ──────────── New Personal Activity (calendar_activities) ────────────
+const showCreateModal = ref(false);
+const createForm = useForm({ user_id: '', type: 'call', title: '', description: '', scheduled_at: '' });
+
+function openCreateModal() {
+    createForm.reset();
+    createForm.type = 'call';
+    createForm.user_id = '';
+    showCreateModal.value = true;
+}
+
+function submitCreate() {
+    createForm.transform(d => ({
+        ...d,
+        area: 'sponsorship',
+        scheduled_at: localDatetimeToUtcIso(d.scheduled_at),
+        user_id: d.user_id || null,
+    })).post('/admin/sponsorship/calendar-activities', {
+        preserveScroll: true,
+        onSuccess: () => {
+            showCreateModal.value = false;
+            createForm.reset();
             fetchEvents();
         },
     });
@@ -247,6 +291,11 @@ function eventsAtHour(date, hour) {
                         {{ a.first_name }} {{ a.last_name }} {{ (a.sponsorship_type === 'lider' || a.extra_areas?.includes('sponsorship')) ? '(L)' : '' }}
                     </option>
                 </select>
+
+                <button @click="openCreateModal"
+                    class="ml-auto inline-flex items-center gap-1 px-3 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800">
+                    + New Activity
+                </button>
             </div>
 
             <!-- Loading -->
@@ -273,7 +322,7 @@ function eventsAtHour(date, hour) {
                                 @click="openEvent(ev)"
                                 class="w-full text-left text-xs truncate px-1.5 py-0.5 rounded text-white"
                                 :style="{ backgroundColor: activityTypes[ev.type]?.color }"
-                                :class="ev.status === 'completed' ? 'opacity-60 line-through' : ''">
+                                :class="[ev.status === 'completed' ? 'opacity-60 line-through' : '', ev.source === 'personal' ? 'ring-2 ring-white/50 ring-inset' : '']">
                                 {{ formatTime(ev.start) }} {{ ev.title }}
                             </button>
                             <p v-if="eventsOn(cell).length > 3" class="text-xs text-gray-400 px-1">+{{ eventsOn(cell).length - 3 }} more</p>
@@ -297,7 +346,7 @@ function eventsAtHour(date, hour) {
                                 @click="openEvent(ev)"
                                 class="w-full text-left text-xs p-1.5 rounded text-white"
                                 :style="{ backgroundColor: activityTypes[ev.type]?.color }"
-                                :class="ev.status === 'completed' ? 'opacity-60 line-through' : ''">
+                                :class="[ev.status === 'completed' ? 'opacity-60 line-through' : '', ev.source === 'personal' ? 'ring-2 ring-white/50 ring-inset' : '']">
                                 <p class="font-semibold">{{ formatTime(ev.start) }}</p>
                                 <p class="truncate">{{ ev.title }}</p>
                             </button>
@@ -316,7 +365,7 @@ function eventsAtHour(date, hour) {
                                 @click="openEvent(ev)"
                                 class="w-full text-left text-sm p-2 rounded text-white flex items-start gap-2"
                                 :style="{ backgroundColor: activityTypes[ev.type]?.color }"
-                                :class="ev.status === 'completed' ? 'opacity-60 line-through' : ''">
+                                :class="[ev.status === 'completed' ? 'opacity-60 line-through' : '', ev.source === 'personal' ? 'ring-2 ring-white/50 ring-inset' : '']">
                                 <span class="text-xs font-semibold">{{ formatTime(ev.start) }}</span>
                                 <span class="flex-1">{{ ev.title }}</span>
                                 <span v-if="ev.lead_name" class="text-xs opacity-80">{{ ev.lead_name }}</span>
@@ -353,18 +402,23 @@ function eventsAtHour(date, hour) {
                             <p v-if="selectedEvent.advisor">→ {{ selectedEvent.advisor }}</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
-                            <Link :href="`/admin/sponsorship/leads/${selectedEvent.lead_id}`"
+                            <Link v-if="selectedEvent.lead_id" :href="`/admin/sponsorship/leads/${selectedEvent.lead_id}`"
                                 class="flex-1 min-w-[120px] px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-1.5">
                                 <EyeIcon class="w-4 h-4" /> View lead
                             </Link>
+                            <span v-else class="flex-1 min-w-[120px] px-3 py-2 text-xs text-center text-gray-400 italic">Personal calendar entry</span>
                             <button v-if="selectedEvent.type === 'call' || selectedEvent.type === 'meeting'"
                                 @click="startEdit"
                                 class="flex-1 min-w-[120px] px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-1.5">
                                 <PencilSquareIcon class="w-4 h-4" /> Edit
                             </button>
-                            <button v-if="selectedEvent.status === 'pending'" @click="completeActivity(selectedEvent.id)"
+                            <button v-if="selectedEvent.status === 'pending'" @click="completeActivity(selectedEvent)"
                                 class="flex-1 min-w-[120px] px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 flex items-center justify-center gap-1.5">
                                 <CheckCircleIcon class="w-4 h-4" /> Complete
+                            </button>
+                            <button v-if="selectedEvent.source === 'personal'" @click="deletePersonalActivity(selectedEvent)"
+                                class="px-3 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50">
+                                Delete
                             </button>
                         </div>
                     </template>
@@ -395,6 +449,61 @@ function eventsAtHour(date, hour) {
                             </div>
                         </div>
                     </template>
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- Create Personal Activity Modal -->
+        <Teleport to="body">
+            <div v-if="showCreateModal" class="fixed inset-0 z-50 flex items-center justify-center">
+                <div class="absolute inset-0 bg-black/50" @click="showCreateModal = false"></div>
+                <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">New Activity (calendar)</h3>
+                        <button @click="showCreateModal = false" class="text-gray-400 hover:text-gray-600"><XMarkIcon class="w-5 h-5" /></button>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-4">This activity is independent of any lead. Useful for blocking time on someone's calendar.</p>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Type *</label>
+                                <select v-model="createForm.type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+                                    <option value="call">Call</option>
+                                    <option value="meeting">Meeting</option>
+                                    <option value="note">Note</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Scheduled at</label>
+                                <input v-model="createForm.scheduled_at" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Title *</label>
+                            <input v-model="createForm.title" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                            <p v-if="createForm.errors.title" class="text-xs text-red-500 mt-1">{{ createForm.errors.title }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                            <RichTextEditor v-model="createForm.description" placeholder="Add details..." min-height="100px" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Assign to</label>
+                            <select v-model="createForm.user_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
+                                <option value="">— Me</option>
+                                <option v-for="a in advisors" :key="a.id" :value="a.id">
+                                    {{ a.first_name }} {{ a.last_name }} {{ (a.sponsorship_type === 'lider' || a.extra_areas?.includes('sponsorship')) ? '(L)' : '' }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="flex justify-end gap-2 pt-2">
+                            <button @click="showCreateModal = false" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
+                            <button @click="submitCreate" :disabled="createForm.processing || !createForm.title"
+                                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
+                                {{ createForm.processing ? 'Saving…' : 'Create' }}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </Teleport>

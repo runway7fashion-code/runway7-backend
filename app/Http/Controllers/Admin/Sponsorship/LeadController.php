@@ -897,8 +897,9 @@ class LeadController extends Controller
             $query->whereBetween('scheduled_at', [$request->start, $request->end]);
         }
 
-        $events = $query->get()->map(fn($a) => [
+        $leadEvents = $query->get()->map(fn($a) => [
             'id'          => $a->id,
+            'source'      => 'lead',
             'title'       => $a->title,
             'start'       => $a->scheduled_at?->toIso8601String(),
             'type'        => $a->type,
@@ -908,10 +909,50 @@ class LeadController extends Controller
             'lead_name'   => $a->lead ? "{$a->lead->first_name} {$a->lead->last_name}" : null,
             'company'     => $a->lead?->company?->name,
             'advisor'     => $a->assignedTo ? "{$a->assignedTo->first_name} {$a->assignedTo->last_name}" : null,
+            'advisor_id'  => $a->assigned_to_user_id,
             'creator'     => $a->creator ? "{$a->creator->first_name} {$a->creator->last_name}" : null,
             'description' => $a->description,
         ]);
 
-        return response()->json($events);
+        // ── Personal calendar entries (calendar_activities) — area=sponsorship ──
+        $personalQuery = \App\Models\CalendarActivity::query()
+            ->where('area', 'sponsorship')
+            ->whereNotNull('scheduled_at')
+            ->with(['user:id,first_name,last_name', 'creator:id,first_name,last_name']);
+
+        if (!$this->isLider()) {
+            $uid = auth()->id();
+            $leaderIds = $this->sponsorshipLeaderIds();
+            $personalQuery->where(function ($q) use ($uid, $leaderIds) {
+                $q->where('user_id', $uid)
+                  ->orWhere('created_by_user_id', $uid)
+                  ->orWhereIn('user_id', $leaderIds);
+            });
+        } elseif ($request->filled('advisor')) {
+            $personalQuery->where('user_id', $request->advisor);
+        }
+
+        if ($request->filled('start') && $request->filled('end')) {
+            $personalQuery->whereBetween('scheduled_at', [$request->start, $request->end]);
+        }
+
+        $personalEvents = $personalQuery->get()->map(fn($a) => [
+            'id'          => $a->id,
+            'source'      => 'personal',
+            'title'       => $a->title,
+            'start'       => $a->scheduled_at?->toIso8601String(),
+            'type'        => $a->type,
+            'status'      => $a->status,
+            'is_contract' => false,
+            'lead_id'     => null,
+            'lead_name'   => null,
+            'company'     => null,
+            'advisor'     => $a->user ? "{$a->user->first_name} {$a->user->last_name}" : null,
+            'advisor_id'  => $a->user_id,
+            'creator'     => $a->creator ? "{$a->creator->first_name} {$a->creator->last_name}" : null,
+            'description' => $a->description,
+        ]);
+
+        return response()->json($leadEvents->concat($personalEvents)->values());
     }
 }

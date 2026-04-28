@@ -813,8 +813,9 @@ class LeadController extends Controller
             $query->whereBetween('scheduled_at', [$request->start, $request->end]);
         }
 
-        $events = $query->get()->map(fn($a) => [
+        $leadEvents = $query->get()->map(fn($a) => [
             'id'          => $a->id,
+            'source'      => 'lead',
             'title'       => $a->title,
             'start'       => $a->scheduled_at->toIso8601String(),
             'type'        => $a->type,
@@ -823,10 +824,45 @@ class LeadController extends Controller
             'lead_name'   => $a->lead?->full_name,
             'company'     => $a->lead?->company_name,
             'advisor'     => $a->user ? $a->user->first_name . ' ' . $a->user->last_name : null,
+            'advisor_id'  => $a->user_id,
             'description' => $a->description,
         ]);
 
-        return response()->json($events);
+        // ── Personal calendar entries (calendar_activities) — area=sales ──
+        $personalQuery = \App\Models\CalendarActivity::query()
+            ->where('area', 'sales')
+            ->whereNotNull('scheduled_at')
+            ->with(['user:id,first_name,last_name', 'creator:id,first_name,last_name']);
+
+        if (!$isLeader) {
+            $personalQuery->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->orWhere('created_by_user_id', $user->id);
+            });
+        }
+        if ($request->filled('advisor')) {
+            $personalQuery->where('user_id', $request->advisor);
+        }
+        if ($request->filled('start') && $request->filled('end')) {
+            $personalQuery->whereBetween('scheduled_at', [$request->start, $request->end]);
+        }
+
+        $personalEvents = $personalQuery->get()->map(fn($a) => [
+            'id'          => $a->id,
+            'source'      => 'personal',
+            'title'       => $a->title,
+            'start'       => $a->scheduled_at?->toIso8601String(),
+            'type'        => $a->type,
+            'status'      => $a->status,
+            'lead_id'     => null,
+            'lead_name'   => null,
+            'company'     => null,
+            'advisor'     => $a->user ? $a->user->first_name . ' ' . $a->user->last_name : null,
+            'advisor_id'  => $a->user_id,
+            'description' => $a->description,
+        ]);
+
+        return response()->json($leadEvents->concat($personalEvents)->values());
     }
 
     public function botAsk(Request $request)
