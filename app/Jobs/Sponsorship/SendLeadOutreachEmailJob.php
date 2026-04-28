@@ -76,25 +76,11 @@ class SendLeadOutreachEmailJob implements ShouldQueue
                 fileAttachments: $this->attachments,
             ));
 
-            // Best-effort: copiar el MIME a la carpeta Sent de Zoho del remitente,
-            // para que aparezca como enviado en su bandeja. No interrumpe el flujo.
-            if ($sentMessage) {
-                try {
-                    $raw = $sentMessage->getSymfonySentMessage()->toString();
-                    app(ZohoSentFolderAppender::class)->append($sender, $raw);
-                } catch (\Throwable $e) {
-                    Log::warning("[Zoho APPEND] Could not build MIME for sender {$sender->email}: " . $e->getMessage());
-                }
-            }
-
-            $lead->update([
-                'last_email_sent_at' => now(),
-                'last_email_status'  => 'sent',
-                'last_contacted_at'  => now(),
-            ]);
-
-            // Capturar Message-Id de Mailgun para correlacionar los webhooks
-            // (Permanent Failure / Spam Complaints / Delivered / Temporary Failure).
+            // ── Persistir el activity INMEDIATAMENTE ─────────────────────────────
+            // Mailgun puede disparar el webhook de bounce/complained en menos de 1 segundo
+            // (sobre todo para direcciones suprimidas). Si hacemos cualquier trabajo
+            // intermedio (IMAP APPEND, etc.) antes de guardar el activity con su
+            // mailgun_message_id, el webhook llega antes que el INSERT y el lookup falla.
             $messageId = null;
             if ($sentMessage) {
                 try {
@@ -105,9 +91,6 @@ class SendLeadOutreachEmailJob implements ShouldQueue
                 }
             }
 
-            // Crear actividad en el timeline con status completed
-            // Guardamos el contenido YA personalizado para que el timeline refleje exactamente
-            // lo que recibió el destinatario.
             $activity = LeadActivity::create([
                 'lead_id'             => $lead->id,
                 'created_by_user_id'  => $sender->id,
@@ -121,6 +104,12 @@ class SendLeadOutreachEmailJob implements ShouldQueue
                 'mailgun_message_id'  => $messageId,
             ]);
 
+            $lead->update([
+                'last_email_sent_at' => now(),
+                'last_email_status'  => 'sent',
+                'last_contacted_at'  => now(),
+            ]);
+
             // Persistir los adjuntos en el timeline para que sean previsualizables/descargables.
             foreach ($this->attachments as $att) {
                 LeadActivityFile::create([
@@ -130,6 +119,17 @@ class SendLeadOutreachEmailJob implements ShouldQueue
                     'mime_type'   => $att['mime'] ?? null,
                     'size'        => $att['size'] ?? null,
                 ]);
+            }
+
+            // ── Best-effort: copiar el MIME a la carpeta Sent de Zoho del remitente ─
+            // Hacemos esto DESPUÉS de crear el activity (puede tardar 1-3 seg de IMAP).
+            if ($sentMessage) {
+                try {
+                    $raw = $sentMessage->getSymfonySentMessage()->toString();
+                    app(ZohoSentFolderAppender::class)->append($sender, $raw);
+                } catch (\Throwable $e) {
+                    Log::warning("[Zoho APPEND] Could not build MIME for sender {$sender->email}: " . $e->getMessage());
+                }
             }
 
             // Si el email es el contrato → status del lead = contrato

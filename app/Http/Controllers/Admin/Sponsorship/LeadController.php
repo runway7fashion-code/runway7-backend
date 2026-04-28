@@ -75,41 +75,16 @@ class LeadController extends Controller
         ]);
     }
 
-    private function syncEmails(Lead $lead, string $primary, array $secondaries = []): void
+    /**
+     * Aplica los filtros del index a un query builder reutilizable.
+     * Compartido entre la query principal y la query de counts (cards de status).
+     * El parámetro $includeStatus permite excluir el filtro de status cuando
+     * estamos calculando los counts por status (caso contrario los demás cards
+     * mostrarían 0 al filtrar por uno).
+     */
+    private function applyLeadFilters($query, Request $request, bool $includeStatus = true): void
     {
-        $all = array_merge([$primary], $secondaries);
-        $normalized = array_unique(array_map(fn($e) => mb_strtolower(trim($e)), $all));
-
-        $lead->emails()->delete();
-        foreach ($normalized as $email) {
-            LeadEmail::create([
-                'lead_id'    => $lead->id,
-                'email'      => $email,
-                'is_primary' => $email === mb_strtolower(trim($primary)),
-            ]);
-        }
-    }
-
-    // ─────────────────────────── Index + filtros ───────────────────────────
-
-    public function index(Request $request)
-    {
-        $user = auth()->user();
-        $query = Lead::query()->with([
-            'company:id,name',
-            'category:id,name',
-            'assignedTo:id,first_name,last_name',
-            'registeredBy:id,first_name,last_name',
-            'primaryEmail',
-        ]);
-
-        // Visibilidad
-        if (!$this->isLider()) {
-            $query->where('assigned_to_user_id', $user->id);
-        }
-
-        // Filtros
-        if ($request->filled('status')) {
+        if ($includeStatus && $request->filled('status')) {
             $query->where('status', $request->status);
         }
         if ($request->filled('assigned_to')) {
@@ -165,14 +140,54 @@ class LeadController extends Controller
                   ->orWhereHas('company', fn($c) => $c->where('name', 'ilike', "%{$s}%"));
             });
         }
+    }
+
+    private function syncEmails(Lead $lead, string $primary, array $secondaries = []): void
+    {
+        $all = array_merge([$primary], $secondaries);
+        $normalized = array_unique(array_map(fn($e) => mb_strtolower(trim($e)), $all));
+
+        $lead->emails()->delete();
+        foreach ($normalized as $email) {
+            LeadEmail::create([
+                'lead_id'    => $lead->id,
+                'email'      => $email,
+                'is_primary' => $email === mb_strtolower(trim($primary)),
+            ]);
+        }
+    }
+
+    // ─────────────────────────── Index + filtros ───────────────────────────
+
+    public function index(Request $request)
+    {
+        $user = auth()->user();
+        $query = Lead::query()->with([
+            'company:id,name',
+            'category:id,name',
+            'assignedTo:id,first_name,last_name',
+            'registeredBy:id,first_name,last_name',
+            'primaryEmail',
+        ]);
+
+        // Visibilidad
+        if (!$this->isLider()) {
+            $query->where('assigned_to_user_id', $user->id);
+        }
+
+        // Aplicar todos los filtros EXCEPTO status (lo manejamos abajo).
+        $this->applyLeadFilters($query, $request, includeStatus: true);
 
         $leads = $query->orderBy('created_at', 'desc')->paginate(25)->withQueryString();
 
-        // Counts por status (respetando visibilidad)
+        // Counts por status — respetando visibilidad + TODOS los filtros activos
+        // EXCEPTO el de status (cada card representa un status, así que aplicarlo
+        // dejaría los otros en cero).
         $countsBase = Lead::query();
         if (!$this->isLider()) {
             $countsBase->where('assigned_to_user_id', $user->id);
         }
+        $this->applyLeadFilters($countsBase, $request, includeStatus: false);
         $counts = $countsBase
             ->selectRaw('status, COUNT(*) as total')
             ->groupBy('status')

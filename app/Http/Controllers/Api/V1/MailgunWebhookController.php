@@ -51,9 +51,19 @@ class MailgunWebhookController extends Controller
 
         $messageId = trim((string) $rawMsgId, '<> ');
 
+        // DIAGNOSTIC: log every incoming webhook so we can correlate with DB.
+        Log::info('[Mailgun Webhook] Received', [
+            'event'      => $event,
+            'severity'   => $severity,
+            'message_id' => $messageId,
+        ]);
+
         $activity = LeadActivity::where('mailgun_message_id', $messageId)->first();
         if (!$activity) {
-            // No es un email de sponsorship (otros módulos podrían usar Mailgun también) — ignorar.
+            Log::warning('[Mailgun Webhook] Unknown message-id (no matching activity)', [
+                'message_id' => $messageId,
+                'event'      => $event,
+            ]);
             return response()->json(['ok' => true, 'ignored' => 'unknown message-id']);
         }
 
@@ -114,6 +124,11 @@ class MailgunWebhookController extends Controller
         // Notificar a la pantalla del lead vía Reverb para refrescar sin reload.
         if ($changed) {
             broadcast(new LeadActivityDeliveryUpdated($activity->fresh()));
+            Log::info('[Mailgun Webhook] Activity updated', [
+                'activity_id'     => $activity->id,
+                'event'           => $event,
+                'delivery_status' => $activity->fresh()->delivery_status,
+            ]);
         }
 
         return response()->json(['ok' => true, 'event' => $event, 'activity_id' => $activity->id]);
