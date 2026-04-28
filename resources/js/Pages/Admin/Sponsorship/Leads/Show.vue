@@ -333,9 +333,10 @@ function submitActivity() {
     }
 }
 function changeActivityStatus(activityId, status) {
-    if (status === 'completed') return router.patch(`/admin/sponsorship/activities/${activityId}/complete`, {}, { preserveScroll: true });
-    if (status === 'cancelled') return router.patch(`/admin/sponsorship/activities/${activityId}/cancel`, {}, { preserveScroll: true });
+    if (status === 'completed')     return router.patch(`/admin/sponsorship/activities/${activityId}/complete`, {}, { preserveScroll: true });
+    if (status === 'cancelled')     return router.patch(`/admin/sponsorship/activities/${activityId}/cancel`, {}, { preserveScroll: true });
     if (status === 'not_completed') return router.patch(`/admin/sponsorship/activities/${activityId}/not-completed`, {}, { preserveScroll: true });
+    if (status === 'pending')       return router.patch(`/admin/sponsorship/activities/${activityId}/pending`, {}, { preserveScroll: true });
 }
 
 const sortedActivities = computed(() => {

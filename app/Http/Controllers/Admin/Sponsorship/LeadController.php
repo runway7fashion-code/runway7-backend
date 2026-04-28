@@ -727,6 +727,16 @@ class LeadController extends Controller
         return back()->with('success', 'Activity marked as not completed.');
     }
 
+    public function markPendingActivity(LeadActivity $activity)
+    {
+        $this->authorizeSee($activity->lead);
+        // Volver a pending limpia completed_at para que vuelva al calendario.
+        $activity->update(['status' => 'pending', 'completed_at' => null]);
+
+        if (request()->wantsJson()) return response()->json(['ok' => true]);
+        return back()->with('success', 'Activity moved back to pending.');
+    }
+
     public function destroyActivity(LeadActivity $activity)
     {
         $this->authorizeSee($activity->lead);
