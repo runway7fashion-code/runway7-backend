@@ -825,6 +825,10 @@ onBeforeUnmount(() => {
                                                 <span v-if="emailDelivery(activity)"
                                                     class="text-[10px] font-medium px-1.5 py-0.5 rounded"
                                                     :class="emailDelivery(activity).cls">{{ emailDelivery(activity).label }}</span>
+                                                <span v-if="activity.type === 'email' && activity.email_type"
+                                                    class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                                    {{ emailTypes?.[activity.email_type] || activity.email_type }}
+                                                </span>
                                                 <span class="text-sm font-medium text-gray-900 line-clamp-2 break-words">{{ activity.title }}</span>
                                             </div>
                                             <div v-if="activity.description && ['email','note','call','meeting'].includes(activity.type)"
@@ -997,6 +1001,10 @@ onBeforeUnmount(() => {
                             </span>
                             <span v-if="viewingActivity.is_contract" class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#D4AF37] text-white">Contract</span>
                             <span v-if="emailDelivery(viewingActivity)" class="text-[10px] font-medium px-1.5 py-0.5 rounded" :class="emailDelivery(viewingActivity).cls">{{ emailDelivery(viewingActivity).label }}</span>
+                            <span v-if="viewingActivity.type === 'email' && viewingActivity.email_type"
+                                class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                {{ emailTypes?.[viewingActivity.email_type] || viewingActivity.email_type }}
+                            </span>
                             <span class="text-[11px] font-medium px-2 py-0.5 rounded"
                                 :class="{
                                     'bg-amber-50 text-amber-700': viewingActivity.status === 'pending',
