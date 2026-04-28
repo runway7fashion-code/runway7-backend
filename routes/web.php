@@ -38,6 +38,7 @@ use App\Http\Controllers\Admin\Sponsorship\CategoryController as SponsorshipCate
 use App\Http\Controllers\Admin\Sponsorship\PackageController as SponsorshipPackageController;
 use App\Http\Controllers\Admin\Sponsorship\PackageBenefitController as SponsorshipPackageBenefitController;
 use App\Http\Controllers\Admin\Sponsorship\TagController as SponsorshipTagController;
+use App\Http\Controllers\Admin\CalendarActivityController;
 use App\Http\Controllers\Admin\Sponsorship\LeadController as SponsorshipLeadController;
 use App\Http\Controllers\Admin\Sponsorship\ConversionController as SponsorshipConversionController;
 use App\Http\Controllers\Admin\Sponsorship\SponsorController as SponsorshipSponsorController;
@@ -403,6 +404,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::middleware('section:sales_calendar')->group(function () {
                 Route::get('calendar', [LeadController::class, 'calendar'])->name('calendar');
                 Route::get('calendar/events', [LeadController::class, 'calendarEvents'])->name('calendar.events');
+
+                // Personal calendar entries (mirror of sponsorship)
+                Route::post('calendar-activities',                            [CalendarActivityController::class, 'store'])->name('calendar-activities.store');
+                Route::match(['put','patch'], 'calendar-activities/{calendar_activity}', [CalendarActivityController::class, 'update'])->name('calendar-activities.update');
+                Route::patch('calendar-activities/{calendar_activity}/complete',      [CalendarActivityController::class, 'complete'])->name('calendar-activities.complete');
+                Route::patch('calendar-activities/{calendar_activity}/cancel',        [CalendarActivityController::class, 'cancel'])->name('calendar-activities.cancel');
+                Route::patch('calendar-activities/{calendar_activity}/not-completed', [CalendarActivityController::class, 'notCompleted'])->name('calendar-activities.not-completed');
+                Route::patch('calendar-activities/{calendar_activity}/pending',       [CalendarActivityController::class, 'markPending'])->name('calendar-activities.pending');
+                Route::delete('calendar-activities/{calendar_activity}',              [CalendarActivityController::class, 'destroy'])->name('calendar-activities.destroy');
             });
             // Analytics - admin, sales lider
             Route::middleware('section:sales_leads')->group(function () {
@@ -514,6 +524,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::middleware('section:sponsorship_calendar')->group(function () {
                 Route::get('calendar', [SponsorshipLeadController::class, 'calendar'])->name('calendar');
                 Route::get('calendar/events', [SponsorshipLeadController::class, 'calendarEvents'])->name('calendar.events');
+
+                // Personal calendar entries (not tied to a lead). Same controller serves sales too.
+                Route::post('calendar-activities',                            [CalendarActivityController::class, 'store'])->name('calendar-activities.store');
+                Route::match(['put','patch'], 'calendar-activities/{calendar_activity}', [CalendarActivityController::class, 'update'])->name('calendar-activities.update');
+                Route::patch('calendar-activities/{calendar_activity}/complete',      [CalendarActivityController::class, 'complete'])->name('calendar-activities.complete');
+                Route::patch('calendar-activities/{calendar_activity}/cancel',        [CalendarActivityController::class, 'cancel'])->name('calendar-activities.cancel');
+                Route::patch('calendar-activities/{calendar_activity}/not-completed', [CalendarActivityController::class, 'notCompleted'])->name('calendar-activities.not-completed');
+                Route::patch('calendar-activities/{calendar_activity}/pending',       [CalendarActivityController::class, 'markPending'])->name('calendar-activities.pending');
+                Route::delete('calendar-activities/{calendar_activity}',              [CalendarActivityController::class, 'destroy'])->name('calendar-activities.destroy');
             });
 
             // Sponsors
