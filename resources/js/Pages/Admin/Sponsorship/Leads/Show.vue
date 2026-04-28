@@ -649,11 +649,7 @@ onBeforeUnmount(() => {
                         </dl>
                     </div>
 
-                </div>
-
-                <!-- Col 2-3: Status & Events + Notes -->
-                <div class="md:col-span-2 lg:col-span-2 space-y-6">
-                    <!-- Status & Events -->
+                    <!-- Status & Assignment (movido aquí: debajo de Business Information) -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-4">
                         <h4 class="font-semibold text-gray-800">Status & Assignment</h4>
 
@@ -670,7 +666,7 @@ onBeforeUnmount(() => {
                                 <label class="block text-xs text-gray-400">Events of interest</label>
                                 <button @click="showAddEventModal = true" class="text-xs text-blue-600 hover:text-blue-800 font-medium">+ Add Event</button>
                             </div>
-                            <div v-if="lead.events?.length" class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <div v-if="lead.events?.length" class="grid grid-cols-1 gap-2">
                                 <div v-for="ev in lead.events" :key="ev.id" class="border border-gray-100 rounded-lg px-3 py-2 flex items-center justify-between">
                                     <p class="text-xs font-medium text-gray-700 truncate">{{ ev.name }}</p>
                                     <button @click="removeEvent(ev.id)" class="text-gray-300 hover:text-red-500 transition-colors" title="Remove event">
@@ -682,6 +678,10 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
 
+                </div>
+
+                <!-- Col 2-3: Notes CRM (centro, ocupa 2 columnas en lg) -->
+                <div class="md:col-span-2 lg:col-span-2 space-y-6">
                     <!-- Notes CRM -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-4">
                         <h4 class="font-semibold text-gray-800 mb-4">Notes</h4>
@@ -794,12 +794,12 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <!-- Col 4: Activity Timeline -->
+                <!-- Col 4: Activity Timeline (altura fija + scroll propio, sticky para que acompañe el scroll de la página) -->
                 <div class="space-y-6">
-                    <div class="bg-white rounded-2xl border border-gray-200 p-4">
-                        <h4 class="font-semibold text-gray-800 mb-4">Activity History</h4>
+                    <div class="bg-white rounded-2xl border border-gray-200 p-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-160px)] flex flex-col">
+                        <h4 class="font-semibold text-gray-800 mb-4 flex-shrink-0">Activity History</h4>
 
-                        <div v-if="sortedActivities.length" class="space-y-4">
+                        <div v-if="sortedActivities.length" class="space-y-4 flex-1 overflow-y-auto pr-1 -mr-1">
                             <div v-for="activity in sortedActivities" :key="activity.id" class="relative pl-7">
                                 <div class="absolute left-2.5 top-6 bottom-0 w-px bg-gray-100"></div>
                                 <div class="absolute left-0 top-0.5 w-5 h-5 rounded-full flex items-center justify-center"
