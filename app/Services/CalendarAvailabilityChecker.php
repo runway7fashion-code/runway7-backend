@@ -102,7 +102,9 @@ class CalendarAvailabilityChecker
         if ($conflicts->isEmpty()) return;
 
         $first = $conflicts->first();
-        $startLabel = Carbon::parse($first['start'])->format('M j, g:i A');
+        // Mensaje al usuario: convertir UTC → hora Perú para que la pueda leer
+        // sin necesidad de hacer la cuenta. Storage sigue siendo UTC.
+        $startLabel = Carbon::parse($first['start'])->setTimezone('America/Lima')->format('M j, g:i A');
         throw ValidationException::withMessages([
             'scheduled_at' => "The user is already booked at {$startLabel} ({$first['title']}). Pick another time.",
         ]);

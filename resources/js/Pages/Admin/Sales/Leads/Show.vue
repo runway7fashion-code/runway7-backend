@@ -201,8 +201,21 @@ function openActivityModal() {
     showActivityModal.value = true;
 }
 
+// El input datetime-local trabaja en hora del navegador. Hay que convertirlo a UTC
+// antes de mandar al backend para que la persistencia y la disponibilidad sean
+// consistentes (sponsorship ya lo hace; este modal lo estaba mandando crudo y
+// generaba desfase de 5h respecto a Perú).
+function localDatetimeToUtcIso(localStr) {
+    if (!localStr) return null;
+    const d = new Date(localStr);
+    return isNaN(d) ? null : d.toISOString();
+}
+
 function submitActivity() {
-    activityForm.post(`/admin/sales/leads/${props.lead.id}/activity`, {
+    activityForm.transform(d => ({
+        ...d,
+        scheduled_at: localDatetimeToUtcIso(d.scheduled_at),
+    })).post(`/admin/sales/leads/${props.lead.id}/activity`, {
         preserveScroll: true,
         onSuccess: () => { activityForm.reset(); showActivityModal.value = false; },
     });
