@@ -157,9 +157,10 @@ class LeadRegistrationController extends Controller
 
         // Notify leader(s) only — no assignment yet, leader qualifies first
         try {
-            $leaders = User::where('role', 'sales')
-                ->where('sales_type', 'lider')
-                ->get();
+            $leaders = User::where(function ($q) {
+                    $q->where(fn($qq) => $qq->where('role', 'sales')->where('sales_type', 'lider'))
+                      ->orWhereJsonContains('extra_areas', 'sales');
+                })->get();
 
             foreach ($leaders as $leader) {
                 $leader->notify(new NewDesignerLead($lead));

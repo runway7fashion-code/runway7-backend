@@ -3,7 +3,8 @@ import AdminLayout from '@/Layouts/AdminLayout.vue';
 import EmailComposer from '@/Components/EmailComposer.vue';
 import RichTextEditor from '@/Components/RichTextEditor.vue';
 import { Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import axios from 'axios';
 import { initEcho } from '@/echo.js';
 import {
     ArrowLeftIcon, EnvelopeIcon, PhoneIcon, GlobeAltIcon, LinkIcon,
@@ -290,6 +291,7 @@ function openCreateActivity() {
     editingActivityId.value = null;
     activityForm.reset();
     activityForm.type = 'call';
+    availabilityConflicts.value = [];
     showActivityModal.value = true;
 }
 function openEditActivity(activity) {
@@ -332,6 +334,45 @@ function submitActivity() {
         });
     }
 }
+// ── Availability check (soft warning) ──
+// Cuando se agenda una call/meeting con scheduled_at + assigned_to_user_id,
+// avisamos si el assignee ya tiene otra actividad pendiente en ±30 min.
+const availabilityConflicts = ref([]);
+let availabilityTimer = null;
+function checkAvailability() {
+    clearTimeout(availabilityTimer);
+    availabilityTimer = setTimeout(async () => {
+        const userId = activityForm.assigned_to_user_id;
+        const scheduled = activityForm.scheduled_at;
+        const type = activityForm.type;
+        if (!['call', 'meeting'].includes(type) || !userId || !scheduled) {
+            availabilityConflicts.value = [];
+            return;
+        }
+        const center = new Date(scheduled);
+        if (isNaN(center)) return;
+        const from = new Date(center.getTime() - 30 * 60 * 1000).toISOString();
+        const to   = new Date(center.getTime() + 30 * 60 * 1000).toISOString();
+        try {
+            const res = await axios.get('/admin/sponsorship/calendar/availability', {
+                params: {
+                    user_id: userId,
+                    from, to,
+                    // Excluir la propia actividad cuando estamos editando.
+                    exclude_lead: editingActivityId.value || undefined,
+                },
+            });
+            availabilityConflicts.value = res.data?.conflicts ?? [];
+        } catch (e) {
+            availabilityConflicts.value = [];
+        }
+    }, 350);
+}
+watch(
+    [() => activityForm.assigned_to_user_id, () => activityForm.scheduled_at, () => activityForm.type],
+    checkAvailability,
+);
+
 function changeActivityStatus(activityId, status) {
     if (status === 'completed')     return router.patch(`/admin/sponsorship/activities/${activityId}/complete`, {}, { preserveScroll: true });
     if (status === 'cancelled')     return router.patch(`/admin/sponsorship/activities/${activityId}/cancel`, {}, { preserveScroll: true });
@@ -907,6 +948,7 @@ onBeforeUnmount(() => {
                             <div>
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Scheduled at</label>
                                 <input v-model="activityForm.scheduled_at" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                                <p v-if="activityForm.errors.scheduled_at" class="text-xs text-red-500 mt-1">{{ activityForm.errors.scheduled_at }}</p>
                             </div>
                         </div>
                         <div>
@@ -923,6 +965,15 @@ onBeforeUnmount(() => {
                                 <option :value="null">— Me</option>
                                 <option v-for="a in advisors" :key="a.id" :value="a.id">{{ a.first_name }} {{ a.last_name }}{{ (a.sponsorship_type === 'lider' || a.extra_areas?.includes('sponsorship')) ? ' (L)' : '' }}</option>
                             </select>
+                        </div>
+                        <div v-if="(activityForm.type === 'call' || activityForm.type === 'meeting') && availabilityConflicts.length"
+                            class="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs">
+                            <p class="font-medium text-red-800 mb-1">✕ {{ availabilityConflicts.length }} conflict{{ availabilityConflicts.length > 1 ? 's' : '' }} in ±30 min — pick another time:</p>
+                            <ul class="space-y-0.5 text-red-700">
+                                <li v-for="c in availabilityConflicts" :key="`${c.source}-${c.id}`" class="truncate">
+                                    • {{ new Date(c.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) }} — {{ c.title }} <span class="text-red-500">({{ c.type }})</span>
+                                </li>
+                            </ul>
                         </div>
                         <label v-if="activityForm.type === 'email'" class="flex items-center gap-2 text-sm bg-yellow-50 border border-[#D4AF37] rounded-lg px-3 py-2">
                             <input v-model="activityForm.is_contract" type="checkbox" class="rounded" />
@@ -942,8 +993,10 @@ onBeforeUnmount(() => {
                         </div>
                         <div class="flex justify-end gap-2 pt-2">
                             <button @click="showActivityModal = false" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
-                            <button @click="submitActivity" :disabled="activityForm.processing || !activityForm.title"
-                                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">Save</button>
+                            <button @click="submitActivity"
+                                :disabled="activityForm.processing || !activityForm.title || ((activityForm.type === 'call' || activityForm.type === 'meeting') && availabilityConflicts.length > 0)"
+                                :title="availabilityConflicts.length > 0 ? 'Hay conflictos de horario — elegí otra fecha/hora' : ''"
+                                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">Save</button>
                         </div>
                     </div>
                 </div>

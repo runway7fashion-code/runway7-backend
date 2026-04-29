@@ -853,6 +853,7 @@ function isActivityExpanded(id) {
                             <label class="block text-xs font-medium text-gray-500 mb-1">Schedule for <span class="text-gray-400">(optional)</span></label>
                             <input v-model="activityForm.scheduled_at" type="datetime-local"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black focus:border-black" />
+                            <p v-if="activityForm.errors.scheduled_at" class="text-xs text-red-500 mt-1">{{ activityForm.errors.scheduled_at }}</p>
                         </div>
                         <div class="flex gap-3 pt-2">
                             <button type="button" @click="showActivityModal = false"

@@ -9,8 +9,24 @@ import { ChevronLeftIcon, ChevronRightIcon, CalendarDaysIcon, EyeIcon, CheckCirc
 const props = defineProps({
     advisors: Array,
     isLider: Boolean,
+    crossArea: Boolean,
     activityTypes: Object,
 });
+
+// Color por área para distinguir cross-area en el calendar unificado.
+// Sponsorship usa el dorado de la marca; Sales un azul neutro.
+const AREA_STYLES = {
+    sponsorship: { ring: 'ring-2 ring-[#D4AF37]/70', label: 'SP', labelClass: 'bg-[#D4AF37]/10 text-[#A48420]' },
+    sales:       { ring: 'ring-2 ring-blue-400/70',  label: 'SA', labelClass: 'bg-blue-50 text-blue-700' },
+};
+function areaStyle(ev) { return AREA_STYLES[ev?.area] || AREA_STYLES.sponsorship; }
+
+// (L) si el advisor es líder en cualquier área (sales, sponsorship, o cross-area).
+function isAnyLeader(a) {
+    return a.sales_type === 'lider'
+        || a.sponsorship_type === 'lider'
+        || (a.extra_areas || []).length > 0;
+}
 
 const currentView = ref('month');
 const currentDate = ref(new Date());
@@ -147,11 +163,16 @@ function openEvent(e) {
     showModal.value = true;
 }
 
-// Endpoint base depends on source: lead activities vs personal calendar entries.
+// Endpoint base depends on (source, area). Cross-area: una actividad de sales
+// vista en el calendar de sponsorship debe pegarle a las rutas de sales.
 function endpointBase(ev) {
     if (!ev) return null;
-    return ev.source === 'personal'
-        ? `/admin/sponsorship/calendar-activities/${ev.id}`
+    const area = ev.area || 'sponsorship';
+    if (ev.source === 'personal') {
+        return `/admin/${area}/calendar-activities/${ev.id}`;
+    }
+    return area === 'sales'
+        ? `/admin/sales/activities/${ev.id}`
         : `/admin/sponsorship/activities/${ev.id}`;
 }
 
@@ -215,6 +236,9 @@ function saveEdit() {
 }
 
 // ──────────── New Personal Activity (calendar_activities) ────────────
+// Las personales son GLOBALES (sin área) — bloquean disponibilidad del user
+// para cualquier área. Solo aceptan call/meeting (las notas pertenecen al
+// timeline del lead, no al calendario).
 const showCreateModal = ref(false);
 const createForm = useForm({ user_id: '', type: 'call', title: '', description: '', scheduled_at: '' });
 const availabilityConflicts = ref([]);
@@ -228,6 +252,8 @@ function openCreateModal() {
 }
 
 // Soft availability check — debounced when user_id + scheduled_at are present.
+// Pegamos al availability de sponsorship (la URL del calendar actual); el endpoint
+// igual incluye las personales globales del user (cross-area).
 let availabilityTimer = null;
 async function checkAvailability() {
     clearTimeout(availabilityTimer);
@@ -238,7 +264,6 @@ async function checkAvailability() {
             availabilityConflicts.value = [];
             return;
         }
-        // Window: ±30 min around scheduled time.
         const center = new Date(scheduled);
         if (isNaN(center)) return;
         const from = new Date(center.getTime() - 30 * 60 * 1000).toISOString();
@@ -257,9 +282,9 @@ async function checkAvailability() {
 watch([() => createForm.user_id, () => createForm.scheduled_at], checkAvailability);
 
 function submitCreate() {
+    // Personal entry global: no enviamos `area` para que quede null.
     createForm.transform(d => ({
         ...d,
-        area: 'sponsorship',
         scheduled_at: localDatetimeToUtcIso(d.scheduled_at),
         user_id: d.user_id || null,
     })).post('/admin/sponsorship/calendar-activities', {
@@ -290,7 +315,7 @@ function eventsAtHour(date, hour) {
 <template>
     <AdminLayout>
         <template #header>
-            <h2 class="text-lg font-semibold text-gray-900">Sponsorship Calendar</h2>
+            <h2 class="text-lg font-semibold text-gray-900">{{ crossArea ? 'Calendar' : 'Sponsorship Calendar' }}</h2>
         </template>
 
         <div class="max-w-7xl mx-auto space-y-4">
@@ -354,7 +379,7 @@ function eventsAtHour(date, hour) {
                                 class="w-full text-left text-xs truncate px-1.5 py-0.5 rounded text-white"
                                 :style="{ backgroundColor: activityTypes[ev.type]?.color }"
                                 :class="[ev.status === 'completed' ? 'opacity-60 line-through' : '', ev.source === 'personal' ? 'ring-2 ring-white/50 ring-inset' : '']">
-                                {{ formatTime(ev.start) }} {{ ev.title }}
+                                <span v-if="crossArea" class="inline-block bg-white/30 px-1 mr-0.5 rounded text-[9px] font-bold align-middle">{{ areaStyle(ev).label }}</span>{{ formatTime(ev.start) }} {{ ev.title }}
                             </button>
                             <p v-if="eventsOn(cell).length > 3" class="text-xs text-gray-400 px-1">+{{ eventsOn(cell).length - 3 }} more</p>
                         </div>
@@ -378,7 +403,10 @@ function eventsAtHour(date, hour) {
                                 class="w-full text-left text-xs p-1.5 rounded text-white"
                                 :style="{ backgroundColor: activityTypes[ev.type]?.color }"
                                 :class="[ev.status === 'completed' ? 'opacity-60 line-through' : '', ev.source === 'personal' ? 'ring-2 ring-white/50 ring-inset' : '']">
-                                <p class="font-semibold">{{ formatTime(ev.start) }}</p>
+                                <p class="font-semibold flex items-center gap-1">
+                                    <span v-if="crossArea" class="bg-white/30 px-1 rounded text-[9px]">{{ areaStyle(ev).label }}</span>
+                                    {{ formatTime(ev.start) }}
+                                </p>
                                 <p class="truncate">{{ ev.title }}</p>
                             </button>
                         </div>
@@ -397,6 +425,7 @@ function eventsAtHour(date, hour) {
                                 class="w-full text-left text-sm p-2 rounded text-white flex items-start gap-2"
                                 :style="{ backgroundColor: activityTypes[ev.type]?.color }"
                                 :class="[ev.status === 'completed' ? 'opacity-60 line-through' : '', ev.source === 'personal' ? 'ring-2 ring-white/50 ring-inset' : '']">
+                                <span v-if="crossArea" class="bg-white/30 px-1 rounded text-[9px] font-bold">{{ areaStyle(ev).label }}</span>
                                 <span class="text-xs font-semibold">{{ formatTime(ev.start) }}</span>
                                 <span class="flex-1">{{ ev.title }}</span>
                                 <span v-if="ev.lead_name" class="text-xs opacity-80">{{ ev.lead_name }}</span>
@@ -433,7 +462,7 @@ function eventsAtHour(date, hour) {
                             <p v-if="selectedEvent.advisor">→ {{ selectedEvent.advisor }}</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
-                            <Link v-if="selectedEvent.lead_id" :href="`/admin/sponsorship/leads/${selectedEvent.lead_id}`"
+                            <Link v-if="selectedEvent.lead_id" :href="`/admin/${selectedEvent.area || 'sponsorship'}/leads/${selectedEvent.lead_id}`"
                                 class="flex-1 min-w-[120px] px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-1.5">
                                 <EyeIcon class="w-4 h-4" /> View lead
                             </Link>
@@ -470,6 +499,7 @@ function eventsAtHour(date, hour) {
                             <div>
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Scheduled at</label>
                                 <input v-model="editForm.scheduled_at" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                                <p v-if="editForm.errors.scheduled_at" class="text-xs text-red-500 mt-1">{{ editForm.errors.scheduled_at }}</p>
                             </div>
                             <div class="flex justify-end gap-2 pt-1">
                                 <button @click="isEditing = false" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
@@ -493,7 +523,7 @@ function eventsAtHour(date, hour) {
                         <h3 class="text-lg font-semibold text-gray-900">New Activity (calendar)</h3>
                         <button @click="showCreateModal = false" class="text-gray-400 hover:text-gray-600"><XMarkIcon class="w-5 h-5" /></button>
                     </div>
-                    <p class="text-xs text-gray-500 mb-4">This activity is independent of any lead. Useful for blocking time on someone's calendar.</p>
+                    <p class="text-xs text-gray-500 mb-4">This activity is independent of any lead. It blocks the user's calendar for both areas.</p>
                     <div class="space-y-3">
                         <div class="grid grid-cols-2 gap-3">
                             <div>
@@ -501,7 +531,6 @@ function eventsAtHour(date, hour) {
                                 <select v-model="createForm.type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
                                     <option value="call">Call</option>
                                     <option value="meeting">Meeting</option>
-                                    <option value="note">Note</option>
                                 </select>
                             </div>
                             <div>
@@ -523,22 +552,24 @@ function eventsAtHour(date, hour) {
                             <select v-model="createForm.user_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
                                 <option value="">— Me</option>
                                 <option v-for="a in advisors" :key="a.id" :value="a.id">
-                                    {{ a.first_name }} {{ a.last_name }} {{ (a.sponsorship_type === 'lider' || a.extra_areas?.includes('sponsorship')) ? '(L)' : '' }}
+                                    {{ a.first_name }} {{ a.last_name }} {{ isAnyLeader(a) ? '(L)' : '' }}
                                 </option>
                             </select>
                         </div>
-                        <div v-if="availabilityConflicts.length" class="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs">
-                            <p class="font-medium text-amber-800 mb-1">⚠ {{ availabilityConflicts.length }} conflict{{ availabilityConflicts.length > 1 ? 's' : '' }} in ±30 min:</p>
-                            <ul class="space-y-0.5 text-amber-700">
+                        <div v-if="availabilityConflicts.length" class="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs">
+                            <p class="font-medium text-red-800 mb-1">✕ {{ availabilityConflicts.length }} conflict{{ availabilityConflicts.length > 1 ? 's' : '' }} in ±30 min — pick another time:</p>
+                            <ul class="space-y-0.5 text-red-700">
                                 <li v-for="c in availabilityConflicts" :key="`${c.source}-${c.id}`" class="truncate">
-                                    • {{ new Date(c.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) }} — {{ c.title }} <span class="text-amber-500">({{ c.type }})</span>
+                                    • {{ new Date(c.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) }} — {{ c.title }} <span class="text-red-500">({{ c.type }})</span>
                                 </li>
                             </ul>
                         </div>
                         <div class="flex justify-end gap-2 pt-2">
                             <button @click="showCreateModal = false" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
-                            <button @click="submitCreate" :disabled="createForm.processing || !createForm.title"
-                                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
+                            <button @click="submitCreate"
+                                :disabled="createForm.processing || !createForm.title || availabilityConflicts.length > 0"
+                                :title="availabilityConflicts.length > 0 ? 'Hay conflictos de horario' : ''"
+                                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">
                                 {{ createForm.processing ? 'Saving…' : 'Create' }}
                             </button>
                         </div>

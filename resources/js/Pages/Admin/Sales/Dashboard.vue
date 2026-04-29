@@ -18,7 +18,9 @@ function formatMoney(val) {
 
 const page = usePage();
 const user = page.props.auth?.user;
-const isLider = user?.sales_type === 'lider' || user?.role === 'admin';
+const isLider = user?.role === 'admin'
+    || (user?.role === 'sales' && user?.sales_type === 'lider')
+    || !!user?.extra_areas?.includes('sales');
 
 const statusCards = [
     { label: 'Registered',  key: 'registered', color: 'text-blue-400',   bg: 'bg-gray-900' },
@@ -315,7 +317,7 @@ const podiumLabels  = ['2nd', '1st', '3rd'];
                             <tr v-for="rep in salesRepStats" :key="rep.id" class="hover:bg-gray-50">
                                 <td class="px-4 py-3 font-medium text-gray-900">{{ rep.name }}</td>
                                 <td class="px-4 py-3">
-                                    <span v-if="rep.sales_type === 'lider'" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">Leader</span>
+                                    <span v-if="rep.sales_type === 'lider' || rep.extra_areas?.includes('sales')" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">Leader</span>
                                     <span v-else class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Advisor</span>
                                 </td>
                                 <td class="px-4 py-3 text-center font-bold text-gray-900">{{ rep.total }}</td>

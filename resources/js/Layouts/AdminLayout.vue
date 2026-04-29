@@ -109,8 +109,28 @@ const accountingItems = computed(() => {
     return items;
 });
 
-const isSalesLider = computed(() => user.value?.role === 'sales' && user.value?.sales_type === 'lider');
-const isSponsorshipLider = computed(() => user.value?.role === 'sponsorship' && user.value?.sponsorship_type === 'lider');
+const isSalesLider = computed(() =>
+    (user.value?.role === 'sales' && user.value?.sales_type === 'lider')
+    || !!user.value?.extra_areas?.includes('sales')
+);
+const isSponsorshipLider = computed(() =>
+    (user.value?.role === 'sponsorship' && user.value?.sponsorship_type === 'lider')
+    || !!user.value?.extra_areas?.includes('sponsorship')
+);
+
+// Calendar es un nav item top-level. Cualquier user con acceso a sales_calendar
+// o sponsorship_calendar lo ve. La URL apunta al calendar de su área primaria
+// (su rol). Para users cross-area (Christina) ese mismo endpoint ya devuelve
+// los eventos de ambas áreas (UNION en backend).
+const showCalendar = computed(() => hasSection('sales_calendar') || hasSection('sponsorship_calendar'));
+const calendarHref = computed(() => {
+    // Admin → sales por convención (puede ver ambas igual). Sales primario → sales.
+    // Sponsorship primario → sponsorship. Cualquier otro con acceso → la primera que tenga.
+    if (user.value?.role === 'sales')       return '/admin/sales/calendar';
+    if (user.value?.role === 'sponsorship') return '/admin/sponsorship/calendar';
+    if (hasSection('sales_calendar'))       return '/admin/sales/calendar';
+    return '/admin/sponsorship/calendar';
+});
 
 const showSponsorship = computed(() =>
     hasSection('sponsorship_dashboard') ||
@@ -124,7 +144,6 @@ const sponsorshipItems = computed(() => {
     if (hasSection('sponsorship_dashboard')) items.push({ name: 'Dashboard',   href: '/admin/sponsorship/dashboard',  icon: PresentationChartBarIcon });
     if (hasSection('sponsorship_leads'))     items.push({ name: 'Leads',       href: '/admin/sponsorship/leads',      icon: UserPlusIcon });
     if (hasSection('sponsorship_sponsors'))  items.push({ name: 'Sponsors',    href: '/admin/sponsorship/sponsors',   icon: StarIcon });
-    if (hasSection('sponsorship_calendar'))  items.push({ name: 'Calendar',    href: '/admin/sponsorship/calendar',   icon: CalendarDaysIcon });
     if (hasSection('sponsorship_companies')) items.push({ name: 'Companies',   href: '/admin/sponsorship/companies',  icon: UsersIcon });
     if (hasSection('sponsorship_packages'))  items.push({ name: 'Packages',    href: '/admin/sponsorship/packages',   icon: CurrencyDollarIcon });
     if (hasSection('sponsorship_categories')) items.push({ name: 'Categories', href: '/admin/sponsorship/categories', icon: Cog6ToothIcon });
@@ -140,7 +159,6 @@ const salesItems = computed(() => {
     if (hasSection('sales_dashboard')) items.push({ name: 'Dashboard', href: '/admin/sales/dashboard', icon: PresentationChartBarIcon });
     if (hasSection('sales_designers')) items.push({ name: 'Designers', href: '/admin/sales/designers', icon: PaintBrushIcon });
     if (hasSection('sales_leads')) items.push({ name: 'Web Leads', href: '/admin/sales/leads', icon: UserPlusIcon });
-    if (hasSection('sales_calendar')) items.push({ name: 'Calendar', href: '/admin/sales/calendar', icon: CalendarDaysIcon });
     if (hasSection('sales_leads')) items.push({ name: 'Analytics', href: '/admin/sales/analytics', icon: ChartBarSquareIcon });
     if (hasSection('sales_dashboard') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Sales History', href: '/admin/sales/history', icon: ChartBarIcon });
     if (hasSection('sales_leads') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Tags', href: '/admin/sales/tags', icon: TagIcon });
@@ -426,6 +444,21 @@ function logout() {
                 >
                     <component :is="item.icon" :class="['h-5 w-5 flex-shrink-0', sidebarCollapsed ? '' : 'mr-3']" />
                     <span v-if="!sidebarCollapsed">{{ item.name }}</span>
+                </Link>
+
+                <!-- Calendar (top-level, unifica sales+sponsorship para users cross-area) -->
+                <Link v-if="showCalendar"
+                    :href="calendarHref"
+                    :title="sidebarCollapsed ? 'Calendar' : ''"
+                    class="flex items-center py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group"
+                    :class="[
+                        ($page.url.startsWith('/admin/sales/calendar') || $page.url.startsWith('/admin/sponsorship/calendar'))
+                            ? 'bg-yellow-900/30 text-yellow-400'
+                            : 'text-gray-400 hover:text-white hover:bg-gray-800',
+                        sidebarCollapsed ? 'justify-center px-0' : 'px-3'
+                    ]">
+                    <CalendarDaysIcon :class="['h-5 w-5 flex-shrink-0', sidebarCollapsed ? '' : 'mr-3']" />
+                    <span v-if="!sidebarCollapsed">Calendar</span>
                 </Link>
 
                 <!-- Operations -->

@@ -22,7 +22,7 @@ class LeadController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
+        $isLeader = $user->isLeaderOf('sales');
 
         $query = DesignerLead::with(['events:id,name', 'assignedTo:id,first_name,last_name', 'tags:id,name,color']);
 
@@ -126,7 +126,7 @@ class LeadController extends Controller
 
         // Advisors list for assignment filter/dropdown
         $advisors = $isLeader
-            ? User::where('role', 'sales')->select('id', 'first_name', 'last_name', 'sales_type', 'is_available')->get()
+            ? User::teamMembers('sales')
             : collect();
 
         $events = Event::whereNull('deleted_at')->select('id', 'name')->orderBy('start_date', 'desc')->get();
@@ -149,7 +149,7 @@ class LeadController extends Controller
     public function export(Request $request)
     {
         $user = auth()->user();
-        $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
+        $isLeader = $user->isLeaderOf('sales');
 
         $query = DesignerLead::with(['events:id,name', 'assignedTo:id,first_name,last_name', 'tags:id,name']);
         if (!$isLeader) $query->where('assigned_to', $user->id);
@@ -194,7 +194,7 @@ class LeadController extends Controller
     public function show(DesignerLead $lead)
     {
         $user = auth()->user();
-        $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
+        $isLeader = $user->isLeaderOf('sales');
 
         if (!$isLeader && $lead->assigned_to !== $user->id) {
             abort(403);
@@ -210,7 +210,7 @@ class LeadController extends Controller
         ]);
 
         $advisors = $isLeader
-            ? User::where('role', 'sales')->select('id', 'first_name', 'last_name', 'sales_type', 'is_available')->get()
+            ? User::teamMembers('sales')
             : collect();
 
         $events = Event::whereNull('deleted_at')->select('id', 'name')->orderBy('start_date', 'desc')->get();
@@ -231,10 +231,10 @@ class LeadController extends Controller
     public function create()
     {
         $user = auth()->user();
-        $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
+        $isLeader = $user->isLeaderOf('sales');
         $events = Event::whereNull('deleted_at')->select('id', 'name')->orderBy('start_date', 'desc')->get();
         $advisors = $isLeader
-            ? User::where('role', 'sales')->select('id', 'first_name', 'last_name')->get()
+            ? User::teamMembers('sales')
             : collect();
 
         return Inertia::render('Admin/Sales/Leads/Create', [
@@ -278,7 +278,7 @@ class LeadController extends Controller
 
         // Auto-assign to current user if not leader
         $user = auth()->user();
-        $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
+        $isLeader = $user->isLeaderOf('sales');
         if (!$isLeader) {
             $validated['assigned_to'] = $user->id;
         }
@@ -373,7 +373,7 @@ class LeadController extends Controller
     {
         $lead->load('events');
         $events = Event::whereNull('deleted_at')->select('id', 'name')->orderBy('start_date', 'desc')->get();
-        $advisors = User::where('role', 'sales')->select('id', 'first_name', 'last_name')->get();
+        $advisors = User::teamMembers('sales');
 
         return Inertia::render('Admin/Sales/Leads/Edit', [
             'lead'     => $lead,
@@ -627,7 +627,7 @@ class LeadController extends Controller
         return back()->with('success', 'Tags updated.');
     }
 
-    public function addActivity(Request $request, DesignerLead $lead)
+    public function addActivity(Request $request, DesignerLead $lead, \App\Services\CalendarAvailabilityChecker $checker)
     {
         $validated = $request->validate([
             'type'         => 'required|string|in:' . implode(',', array_keys(LeadActivity::TYPES)),
@@ -637,6 +637,12 @@ class LeadController extends Controller
             'files'        => 'nullable|array',
             'files.*'      => 'file|max:10240',
         ]);
+
+        // Hard-block doble agenda. Sales lead activities siempre van a auth()->id(),
+        // y solo bloqueamos para call/meeting agendados.
+        if (!empty($validated['scheduled_at']) && in_array($validated['type'], ['call', 'meeting'], true)) {
+            $checker->assertNoConflict(auth()->id(), $validated['scheduled_at']);
+        }
 
         $activity = LeadActivity::create(array_merge($validated, [
             'lead_id' => $lead->id,
@@ -780,98 +786,39 @@ class LeadController extends Controller
     public function calendar()
     {
         $user = auth()->user();
-        $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
+        $isLeader = $user->isLeaderOf('sales');
+        $crossArea = $user->canManageArea('sponsorship');
 
+        // Cross-area: incluir miembros de ambas áreas en el dropdown.
         $advisors = $isLeader
-            ? User::where('role', 'sales')->select('id', 'first_name', 'last_name')->get()
+            ? ($crossArea
+                ? User::teamMembers('sales')->concat(User::teamMembers('sponsorship'))->unique('id')->values()
+                : User::teamMembers('sales'))
             : collect();
 
         return Inertia::render('Admin/Sales/Calendar', [
-            'advisors' => $advisors,
-            'isLeader' => $isLeader,
+            'advisors'      => $advisors,
+            'isLeader'      => $isLeader,
+            'crossArea'     => $crossArea,
             'activityTypes' => LeadActivity::TYPES,
         ]);
     }
 
-    public function calendarEvents(Request $request)
+    public function calendarEvents(Request $request, \App\Services\CalendarEventAggregator $aggregator)
     {
         $user = auth()->user();
-        $isLeader = $user->isLeaderOf('sales');
+        $events = $aggregator->fetchForArea('sales', $request, $user);
 
-        $query = LeadActivity::whereNotNull('scheduled_at')
-            ->with(['lead:id,first_name,last_name,company_name', 'user:id,first_name,last_name']);
-
-        if (!$isLeader) {
-            // Asesor: ve sus actividades + las de líderes del área (incluye cross-area).
-            $leaderIds = User::where(function ($q) {
-                    $q->where('role', 'admin')
-                      ->orWhere(fn($qq) => $qq->where('role', 'sales')->where('sales_type', 'lider'))
-                      ->orWhereJsonContains('extra_areas', 'sales');
-                })->pluck('id')->all();
-            $query->where(function ($q) use ($user, $leaderIds) {
-                $q->where('user_id', $user->id)
-                  ->orWhereIn('user_id', $leaderIds);
-            });
+        // Cross-area: usuarios que también gestionan sponsorship ven una sola agenda
+        // unificada (Christina). El resto sigue viendo solo sales.
+        if ($user->canManageArea('sponsorship')) {
+            $events = $events->concat($aggregator->fetchForArea('sponsorship', $request, $user));
         }
 
-        if ($request->filled('advisor')) {
-            $query->where('user_id', $request->advisor);
-        }
+        // Las personales globales (area null) aparecen en ambas llamadas — dedupe.
+        $events = $events->unique(fn($e) => $e['source'] . '-' . $e['id']);
 
-        if ($request->filled('start') && $request->filled('end')) {
-            $query->whereBetween('scheduled_at', [$request->start, $request->end]);
-        }
-
-        $leadEvents = $query->get()->map(fn($a) => [
-            'id'          => $a->id,
-            'source'      => 'lead',
-            'title'       => $a->title,
-            'start'       => $a->scheduled_at->toIso8601String(),
-            'type'        => $a->type,
-            'status'      => $a->status,
-            'lead_id'     => $a->lead_id,
-            'lead_name'   => $a->lead?->full_name,
-            'company'     => $a->lead?->company_name,
-            'advisor'     => $a->user ? $a->user->first_name . ' ' . $a->user->last_name : null,
-            'advisor_id'  => $a->user_id,
-            'description' => $a->description,
-        ]);
-
-        // ── Personal calendar entries (calendar_activities) — area=sales ──
-        $personalQuery = \App\Models\CalendarActivity::query()
-            ->where('area', 'sales')
-            ->whereNotNull('scheduled_at')
-            ->with(['user:id,first_name,last_name', 'creator:id,first_name,last_name']);
-
-        if (!$isLeader) {
-            $personalQuery->where(function ($q) use ($user) {
-                $q->where('user_id', $user->id)
-                  ->orWhere('created_by_user_id', $user->id);
-            });
-        }
-        if ($request->filled('advisor')) {
-            $personalQuery->where('user_id', $request->advisor);
-        }
-        if ($request->filled('start') && $request->filled('end')) {
-            $personalQuery->whereBetween('scheduled_at', [$request->start, $request->end]);
-        }
-
-        $personalEvents = $personalQuery->get()->map(fn($a) => [
-            'id'          => $a->id,
-            'source'      => 'personal',
-            'title'       => $a->title,
-            'start'       => $a->scheduled_at?->toIso8601String(),
-            'type'        => $a->type,
-            'status'      => $a->status,
-            'lead_id'     => null,
-            'lead_name'   => null,
-            'company'     => null,
-            'advisor'     => $a->user ? $a->user->first_name . ' ' . $a->user->last_name : null,
-            'advisor_id'  => $a->user_id,
-            'description' => $a->description,
-        ]);
-
-        return response()->json($leadEvents->concat($personalEvents)->values());
+        return response()->json($events->values());
     }
 
     public function botAsk(Request $request)

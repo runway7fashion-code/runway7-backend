@@ -8,8 +8,19 @@ import axios from 'axios';
 const props = defineProps({
     advisors: Array,
     isLeader: Boolean,
+    crossArea: Boolean,
     activityTypes: Object,
 });
+
+// Etiqueta para distinguir el área de cada chip cuando el user es cross-area.
+const AREA_LABEL = { sales: 'SA', sponsorship: 'SP' };
+function areaLabel(ev) { return AREA_LABEL[ev?.area] || 'SA'; }
+// (L) si es líder en cualquier área (sales, sponsorship o cross-area).
+function isAnyLeader(a) {
+    return a.sales_type === 'lider'
+        || a.sponsorship_type === 'lider'
+        || (a.extra_areas || []).length > 0;
+}
 
 // ── State ──────────────────────────────────────────────────────────
 const currentView = ref('month');
@@ -222,10 +233,16 @@ function closeModal() {
     selectedEvent.value = null;
 }
 
-// ── Endpoint resolution by source (lead vs personal calendar entry) ────────
+// Endpoint base depends on (source, area). Cross-area: una actividad de
+// sponsorship vista en el calendar de sales debe pegarle a las rutas de sponsorship.
 function endpointBase(ev) {
-    return ev?.source === 'personal'
-        ? `/admin/sales/calendar-activities/${ev.id}`
+    if (!ev) return null;
+    const area = ev.area || 'sales';
+    if (ev.source === 'personal') {
+        return `/admin/${area}/calendar-activities/${ev.id}`;
+    }
+    return area === 'sponsorship'
+        ? `/admin/sponsorship/activities/${ev.id}`
         : `/admin/sales/activities/${ev.id}`;
 }
 
@@ -272,6 +289,9 @@ async function deletePersonalActivity(evt) {
 }
 
 // ── New Personal Activity (calendar_activities) ───────────────────
+// Las personales son GLOBALES (sin área) — bloquean disponibilidad del user
+// en ambos calendars. Solo se permiten call/meeting (las notas pertenecen al
+// timeline del lead, no al calendario).
 const showCreateModal = ref(false);
 const createForm = useForm({ user_id: '', type: 'call', title: '', description: '', scheduled_at: '' });
 
@@ -279,8 +299,37 @@ function openCreateModal() {
     createForm.reset();
     createForm.type = 'call';
     createForm.user_id = '';
+    availabilityConflicts.value = [];
     showCreateModal.value = true;
 }
+
+// ── Soft availability check (debounced) ──
+const availabilityConflicts = ref([]);
+let availabilityTimer = null;
+async function checkAvailability() {
+    clearTimeout(availabilityTimer);
+    availabilityTimer = setTimeout(async () => {
+        const userId = createForm.user_id;
+        const scheduled = createForm.scheduled_at;
+        if (!userId || !scheduled) {
+            availabilityConflicts.value = [];
+            return;
+        }
+        const center = new Date(scheduled);
+        if (isNaN(center)) return;
+        const from = new Date(center.getTime() - 30 * 60 * 1000).toISOString();
+        const to   = new Date(center.getTime() + 30 * 60 * 1000).toISOString();
+        try {
+            const res = await axios.get('/admin/sales/calendar/availability', {
+                params: { user_id: userId, from, to },
+            });
+            availabilityConflicts.value = res.data?.conflicts ?? [];
+        } catch (e) {
+            availabilityConflicts.value = [];
+        }
+    }, 350);
+}
+watch([() => createForm.user_id, () => createForm.scheduled_at], checkAvailability);
 
 function localDatetimeToUtcIso(s) {
     if (!s) return null;
@@ -289,9 +338,9 @@ function localDatetimeToUtcIso(s) {
 }
 
 function submitCreate() {
+    // Personal entry global: no enviamos `area` para que quede null.
     createForm.transform(d => ({
         ...d,
-        area: 'sales',
         scheduled_at: localDatetimeToUtcIso(d.scheduled_at),
         user_id: d.user_id || null,
     })).post('/admin/sales/calendar-activities', {
@@ -308,7 +357,7 @@ function submitCreate() {
 <template>
     <AdminLayout>
         <template #header>
-            <h2 class="text-lg font-semibold text-gray-900">Sales Calendar</h2>
+            <h2 class="text-lg font-semibold text-gray-900">{{ crossArea ? 'Calendar' : 'Sales Calendar' }}</h2>
         </template>
 
         <div>
@@ -343,7 +392,9 @@ function submitCreate() {
                 <div v-if="isLeader" class="flex items-center gap-2">
                     <select v-model="selectedAdvisor" class="border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-700 focus:ring-1 focus:ring-black focus:border-black">
                         <option value="">All advisors</option>
-                        <option v-for="a in advisors" :key="a.id" :value="a.id">{{ a.first_name }} {{ a.last_name }}</option>
+                        <option v-for="a in advisors" :key="a.id" :value="a.id">
+                            {{ a.first_name }} {{ a.last_name }} {{ (a.sales_type === 'lider' || a.sponsorship_type === 'lider' || a.extra_areas?.length) ? '(L)' : '' }}
+                        </option>
                     </select>
                 </div>
 
@@ -398,7 +449,7 @@ function submitCreate() {
                                 class="w-full text-left px-1.5 py-0.5 rounded text-[10px] font-medium truncate block border transition-opacity hover:opacity-80"
                                 :class="[typeStyle(evt.type).bg, typeStyle(evt.type).text, typeStyle(evt.type).border]"
                             >
-                                {{ evt.title || typeLabel(evt.type) }}
+                                <span v-if="crossArea" class="inline-block bg-white px-1 mr-0.5 rounded text-[9px] font-bold border" :class="typeStyle(evt.type).border">{{ areaLabel(evt) }}</span>{{ evt.title || typeLabel(evt.type) }}
                             </button>
                             <span
                                 v-if="eventsForDay(cell.date).length > 3"
@@ -448,7 +499,10 @@ function submitCreate() {
                                 class="w-full text-left px-2 py-1 rounded border mb-0.5 transition-opacity hover:opacity-80"
                                 :class="[typeStyle(evt.type).bg, typeStyle(evt.type).text, typeStyle(evt.type).border]"
                             >
-                                <div class="text-[11px] font-semibold truncate">{{ evt.title || typeLabel(evt.type) }}</div>
+                                <div class="text-[11px] font-semibold truncate flex items-center gap-1">
+                                    <span v-if="crossArea" class="bg-white px-1 rounded text-[9px] border" :class="typeStyle(evt.type).border">{{ areaLabel(evt) }}</span>
+                                    {{ evt.title || typeLabel(evt.type) }}
+                                </div>
                                 <div v-if="evt.lead_name" class="text-[10px] opacity-70 truncate">{{ evt.lead_name }}</div>
                             </button>
                         </div>
@@ -474,6 +528,7 @@ function submitCreate() {
                                 >
                                     <div class="flex items-center justify-between mb-1">
                                         <div class="flex items-center gap-2">
+                                            <span v-if="crossArea" class="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 text-gray-700">{{ areaLabel(evt) }}</span>
                                             <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full" :class="[typeStyle(evt.type).bg, typeStyle(evt.type).text]">
                                                 <span v-if="typeIcon(evt.type)" v-text="typeIcon(evt.type)"></span>
                                                 {{ typeLabel(evt.type) }}
@@ -581,7 +636,7 @@ function submitCreate() {
                     <div class="flex items-center gap-3 border-t border-gray-100 pt-4">
                         <a
                             v-if="selectedEvent.lead_id"
-                            :href="`/admin/sales/leads/${selectedEvent.lead_id}`"
+                            :href="`/admin/${selectedEvent.area || 'sales'}/leads/${selectedEvent.lead_id}`"
                             class="flex-1 text-center text-sm font-medium py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
                         >
                             View lead
@@ -611,7 +666,7 @@ function submitCreate() {
                         <h3 class="text-lg font-semibold text-gray-900">New Activity (calendar)</h3>
                         <button @click="showCreateModal = false" class="text-gray-400 hover:text-gray-600">×</button>
                     </div>
-                    <p class="text-xs text-gray-500 mb-4">This activity is independent of any lead. Useful for blocking time on someone's calendar.</p>
+                    <p class="text-xs text-gray-500 mb-4">This activity is independent of any lead. It blocks the user's calendar for both areas.</p>
                     <div class="space-y-3">
                         <div class="grid grid-cols-2 gap-3">
                             <div>
@@ -619,7 +674,6 @@ function submitCreate() {
                                 <select v-model="createForm.type" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
                                     <option value="call">Call</option>
                                     <option value="meeting">Meeting</option>
-                                    <option value="note">Note</option>
                                 </select>
                             </div>
                             <div>
@@ -640,13 +694,25 @@ function submitCreate() {
                             <label class="block text-xs font-medium text-gray-600 mb-1">Assign to</label>
                             <select v-model="createForm.user_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white">
                                 <option value="">— Me</option>
-                                <option v-for="a in advisors" :key="a.id" :value="a.id">{{ a.first_name }} {{ a.last_name }}</option>
+                                <option v-for="a in advisors" :key="a.id" :value="a.id">
+                                    {{ a.first_name }} {{ a.last_name }} {{ isAnyLeader(a) ? '(L)' : '' }}
+                                </option>
                             </select>
+                        </div>
+                        <div v-if="availabilityConflicts.length" class="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs">
+                            <p class="font-medium text-red-800 mb-1">✕ {{ availabilityConflicts.length }} conflict{{ availabilityConflicts.length > 1 ? 's' : '' }} in ±30 min — pick another time:</p>
+                            <ul class="space-y-0.5 text-red-700">
+                                <li v-for="c in availabilityConflicts" :key="`${c.source}-${c.id}`" class="truncate">
+                                    • {{ new Date(c.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) }} — {{ c.title }} <span class="text-red-500">({{ c.type }})</span>
+                                </li>
+                            </ul>
                         </div>
                         <div class="flex justify-end gap-2 pt-2">
                             <button @click="showCreateModal = false" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
-                            <button @click="submitCreate" :disabled="createForm.processing || !createForm.title"
-                                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
+                            <button @click="submitCreate"
+                                :disabled="createForm.processing || !createForm.title || availabilityConflicts.length > 0"
+                                :title="availabilityConflicts.length > 0 ? 'Hay conflictos de horario' : ''"
+                                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed">
                                 {{ createForm.processing ? 'Saving…' : 'Create' }}
                             </button>
                         </div>

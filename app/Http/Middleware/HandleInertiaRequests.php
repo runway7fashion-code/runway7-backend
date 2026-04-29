@@ -35,12 +35,24 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+        $allowedSections = [];
+        if ($user) {
+            $allowedSections = config("role_permissions.{$user->role}.sections", []);
+            // Cross-area access: merge sections of secondary areas (extra_areas).
+            // Christina (role=sales, extra_areas=[sponsorship]) must see sponsorship sidebar.
+            foreach ((array) ($user->extra_areas ?? []) as $extraRole) {
+                $allowedSections = array_merge($allowedSections, config("role_permissions.{$extraRole}.sections", []));
+            }
+            $allowedSections = array_values(array_unique($allowedSections));
+        }
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user() ? array_merge($request->user()->toArray(), [
-                    'allowed_sections' => config("role_permissions.{$request->user()->role}.sections", []),
-                    'role_label' => config("role_permissions.{$request->user()->role}.label", ''),
+                'user' => $user ? array_merge($user->toArray(), [
+                    'allowed_sections' => $allowedSections,
+                    'role_label' => config("role_permissions.{$user->role}.label", ''),
                 ]) : null,
             ],
             'csrf_token' => csrf_token(),

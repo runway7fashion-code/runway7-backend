@@ -25,17 +25,30 @@ use Illuminate\Validation\Rule;
  */
 class CalendarActivityController extends Controller
 {
-    public function store(Request $request)
+    public function store(Request $request, \App\Services\CalendarAvailabilityChecker $checker)
     {
         $validated = $this->validatePayload($request, true);
         $user = auth()->user();
 
-        $this->authorizeArea($validated['area']);
+        // Si viene area, validamos que el user pueda manejarla. Si no viene
+        // (caso normal a partir de ahora), la actividad personal queda global —
+        // bloquea disponibilidad sin asociarse a un área.
+        if (!empty($validated['area'])) {
+            $this->authorizeArea($validated['area']);
+        }
+
+        // Hard-block: no se puede agendar si el user destino ya tiene otra
+        // actividad pendiente en ±30 min. Atraviesa áreas — la disponibilidad
+        // del user es única.
+        $checker->assertNoConflict(
+            $validated['user_id'] ?? $user->id,
+            $validated['scheduled_at'] ?? null,
+        );
 
         $activity = CalendarActivity::create([
             'user_id'            => $validated['user_id'] ?? $user->id,
             'created_by_user_id' => $user->id,
-            'area'               => $validated['area'],
+            'area'               => $validated['area'] ?? null,
             'type'               => $validated['type'],
             'title'              => $validated['title'],
             'description'        => $validated['description'] ?? null,
@@ -49,11 +62,19 @@ class CalendarActivityController extends Controller
         return back()->with('success', 'Activity created.');
     }
 
-    public function update(Request $request, CalendarActivity $calendarActivity)
+    public function update(Request $request, CalendarActivity $calendarActivity, \App\Services\CalendarAvailabilityChecker $checker)
     {
         $this->authorizeEdit($calendarActivity);
 
         $validated = $this->validatePayload($request, false);
+
+        // Hard-block: si cambia el horario o el usuario destino, validar que el
+        // nuevo slot esté libre (excluyendo esta misma actividad).
+        $targetUserId  = $validated['user_id']      ?? $calendarActivity->user_id;
+        $targetSchedAt = array_key_exists('scheduled_at', $validated)
+            ? $validated['scheduled_at']
+            : $calendarActivity->scheduled_at?->toIso8601String();
+        $checker->assertNoConflict($targetUserId, $targetSchedAt, ['personal' => $calendarActivity->id]);
 
         $calendarActivity->update(array_filter([
             'user_id'      => $validated['user_id']      ?? $calendarActivity->user_id,
@@ -108,13 +129,13 @@ class CalendarActivityController extends Controller
     }
 
     /**
-     * GET /admin/{area}/calendar/availability?user_id=X&from=ISO&to=ISO[&exclude=id|sponsorship|personal]
+     * GET /admin/{area}/calendar/availability?user_id=X&from=ISO&to=ISO
      *
      * Returns activities (lead + personal) overlapping the given window for the
-     * given user. Used by the New/Edit Activity modals to warn about conflicts.
-     * Soft signal — backend does not block creation.
+     * given user. Used por los modales para advertir y deshabilitar el Save —
+     * el backend bloquea hard la creación cuando hay conflicto.
      */
-    public function availability(Request $request, string $area)
+    public function availability(Request $request, string $area, \App\Services\CalendarAvailabilityChecker $checker)
     {
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
@@ -127,42 +148,22 @@ class CalendarActivityController extends Controller
         if (!in_array($area, ['sponsorship', 'sales'], true)) abort(404);
         $this->authorizeArea($area);
 
-        $userId = (int) $validated['user_id'];
-        $from   = $validated['from'];
-        $to     = $validated['to'];
-
-        // Lead activities (table differs per area).
-        $leadConflicts = collect();
-        if ($area === 'sponsorship') {
-            $q = \App\Models\Sponsorship\LeadActivity::query()
-                ->where('assigned_to_user_id', $userId)
-                ->where('status', 'pending')
-                ->whereBetween('scheduled_at', [$from, $to]);
-            if (!empty($validated['exclude_lead'])) $q->where('id', '!=', $validated['exclude_lead']);
-            $leadConflicts = $q->get(['id', 'title', 'type', 'scheduled_at'])
-                ->map(fn($a) => ['id' => $a->id, 'source' => 'lead', 'title' => $a->title, 'type' => $a->type, 'start' => $a->scheduled_at?->toIso8601String()]);
-        } else {
-            $q = \App\Models\LeadActivity::query()
-                ->where('user_id', $userId)
-                ->where('status', 'pending')
-                ->whereBetween('scheduled_at', [$from, $to]);
-            if (!empty($validated['exclude_lead'])) $q->where('id', '!=', $validated['exclude_lead']);
-            $leadConflicts = $q->get(['id', 'title', 'type', 'scheduled_at'])
-                ->map(fn($a) => ['id' => $a->id, 'source' => 'lead', 'title' => $a->title, 'type' => $a->type, 'start' => $a->scheduled_at?->toIso8601String()]);
+        $excludes = [];
+        if (!empty($validated['exclude_lead'])) {
+            $excludes[$area === 'sponsorship' ? 'sponsorship_lead' : 'sales_lead'] = (int) $validated['exclude_lead'];
+        }
+        if (!empty($validated['exclude_personal'])) {
+            $excludes['personal'] = (int) $validated['exclude_personal'];
         }
 
-        // Personal calendar entries.
-        $personalQ = CalendarActivity::query()
-            ->where('user_id', $userId)
-            ->where('status', 'pending')
-            ->whereBetween('scheduled_at', [$from, $to]);
-        if (!empty($validated['exclude_personal'])) $personalQ->where('id', '!=', $validated['exclude_personal']);
-        $personalConflicts = $personalQ->get(['id', 'title', 'type', 'scheduled_at'])
-            ->map(fn($a) => ['id' => $a->id, 'source' => 'personal', 'title' => $a->title, 'type' => $a->type, 'start' => $a->scheduled_at?->toIso8601String()]);
+        $conflicts = $checker->getConflicts(
+            (int) $validated['user_id'],
+            \Carbon\Carbon::parse($validated['from']),
+            \Carbon\Carbon::parse($validated['to']),
+            $excludes
+        );
 
-        return response()->json([
-            'conflicts' => $leadConflicts->concat($personalConflicts)->values(),
-        ]);
+        return response()->json(['conflicts' => $conflicts]);
     }
 
     // ─────────────────────────── Helpers ───────────────────────────
@@ -181,7 +182,9 @@ class CalendarActivityController extends Controller
         if ($creating) {
             $rules['type']  = ['required', Rule::in(CalendarActivity::TYPES)];
             $rules['title'] = 'required|string|max:255';
-            $rules['area']  = ['required', Rule::in(['sales', 'sponsorship'])];
+            // area opcional: las personales nuevas son globales para no atar la
+            // disponibilidad del user a un área específica.
+            $rules['area']  = ['nullable', Rule::in(['sales', 'sponsorship'])];
         }
 
         return $request->validate($rules);
@@ -199,9 +202,11 @@ class CalendarActivityController extends Controller
     {
         $u = auth()->user();
         if (!$u) abort(403);
-        // Admin or leader of the area always.
+        if ($u->role === 'admin') return;
+        // Leader of the area (cuando la actividad tiene área asignada).
         if ($a->area && $u->isLeaderOf($a->area)) return;
-        // Owner (assigned) or creator can edit their own.
+        // Owner (assigned) or creator can edit their own — única regla cuando la
+        // actividad es global (area=null): es privada al user dueño.
         if ($a->user_id === $u->id || $a->created_by_user_id === $u->id) return;
         abort(403, 'You do not have access to this activity.');
     }

@@ -27,8 +27,8 @@ class SalesController extends Controller
     public function dashboard(Request $request): Response
     {
         $user = $request->user();
-        $isAsesor = $user->role === 'sales' && $user->sales_type !== 'lider';
-        $isLider  = $user->role === 'sales' && $user->sales_type === 'lider';
+        $isLider  = $user->isLeaderOf('sales');
+        $isAsesor = !$isLider;
 
         // Asesor solo ve lo suyo; líder y admin ven todo
         // whereHas('designer') excluye registrations de designers soft-deleted o huérfanos
@@ -94,15 +94,17 @@ class SalesController extends Controller
         // Stats por asesor (solo para líder y admin)
         $salesRepStats = null;
         if ($isLider || $user->role === 'admin') {
-            $salesRepStats = User::where('role', 'sales')
+            $salesRepStats = User::where(fn($q) => $q->where('role', 'sales')->orWhereJsonContains('extra_areas', 'sales'))
                 ->orderBy('first_name')
-                ->get(['id', 'first_name', 'last_name', 'sales_type'])
+                ->get(['id', 'first_name', 'last_name', 'role', 'sales_type', 'extra_areas'])
                 ->map(function ($rep) {
                     $q = fn() => SalesRegistration::whereHas('designer')->where('sales_rep_id', $rep->id);
                     return [
                         'id'         => $rep->id,
                         'name'       => "{$rep->first_name} {$rep->last_name}",
+                        'role'       => $rep->role,
                         'sales_type' => $rep->sales_type,
+                        'extra_areas' => $rep->extra_areas,
                         'total'      => $q()->count(),
                         'registered' => $q()->where('status', 'registered')->count(),
                         'onboarded'  => $q()->where('status', 'onboarded')->count(),
@@ -159,7 +161,7 @@ class SalesController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $isAsesor = $user->role === 'sales' && $user->sales_type !== 'lider';
+        $isAsesor = !$user->isLeaderOf('sales');
 
         $query = SalesRegistration::with([
             'designer:id,first_name,last_name,email,phone,status',
@@ -219,9 +221,9 @@ class SalesController extends Controller
 
         $packages = DesignerPackage::ordered()->get(['id', 'name']);
 
-        $isLider = $user->role === 'admin' || ($user->role === 'sales' && $user->sales_type === 'lider');
+        $isLider = $user->isLeaderOf('sales');
         $salesReps = $isLider
-            ? User::where('role', 'sales')->orderBy('first_name')->get(['id', 'first_name', 'last_name'])
+            ? User::teamMembers('sales')
             : collect();
 
         return Inertia::render('Admin/Sales/Designers', [
@@ -238,7 +240,7 @@ class SalesController extends Controller
     public function exportDesigners(Request $request)
     {
         $user = $request->user();
-        $isAsesor = $user->role === 'sales' && $user->sales_type !== 'lider';
+        $isAsesor = !$user->isLeaderOf('sales');
 
         $query = SalesRegistration::with(['designer:id,first_name,last_name,email,phone', 'designer.designerProfile:id,user_id,brand_name', 'event:id,name', 'package:id,name', 'salesRep:id,first_name,last_name'])
             ->whereHas('designer')
@@ -286,7 +288,7 @@ class SalesController extends Controller
     public function create(Request $request): Response
     {
         $user = $request->user();
-        $isLider = $user->role === 'admin' || $user->sales_type === 'lider';
+        $isLider = $user->isLeaderOf('sales');
 
         $events = Event::whereNotIn('status', ['draft'])
             ->orderBy('start_date', 'desc')
@@ -295,7 +297,8 @@ class SalesController extends Controller
         $packages = DesignerPackage::ordered()->get();
 
         $salesReps = $isLider
-            ? User::where('role', 'sales')->where('status', 'active')->orderBy('first_name')->get(['id', 'first_name', 'last_name'])
+            ? User::where(fn($q) => $q->where('role', 'sales')->orWhereJsonContains('extra_areas', 'sales'))
+                ->where('status', 'active')->orderBy('first_name')->get(['id', 'first_name', 'last_name'])
             : null;
 
         return Inertia::render('Admin/Sales/DesignerCreate', [
@@ -341,7 +344,7 @@ class SalesController extends Controller
         ]);
 
         $currentUser = $request->user();
-        $isLider = $currentUser->role === 'admin' || $currentUser->sales_type === 'lider';
+        $isLider = $currentUser->isLeaderOf('sales');
         $assignedRepId = ($isLider && $request->filled('sales_rep_id'))
             ? $request->sales_rep_id
             : $currentUser->id;
@@ -477,15 +480,15 @@ class SalesController extends Controller
             'documents.uploader:id,first_name,last_name',
         ]);
 
-        $salesReps = null;
-        if ($user->role === 'admin' || $user->sales_type === 'lider') {
-            $salesReps = User::where('role', 'sales')->where('status', 'active')->orderBy('first_name')->get(['id', 'first_name', 'last_name']);
-        }
+        $isLider = $user->isLeaderOf('sales');
+        $salesReps = $isLider
+            ? User::where(fn($q) => $q->where('role', 'sales')->orWhereJsonContains('extra_areas', 'sales'))
+                ->where('status', 'active')->orderBy('first_name')->get(['id', 'first_name', 'last_name'])
+            : null;
 
         // Check if undo conversion is safe
         $canUndo = false;
         $undoBlockReason = null;
-        $isLider = $user->role === 'admin' || $user->sales_type === 'lider';
 
         if ($isLider && $registration->designer) {
             $designerId = $registration->designer->id;
@@ -528,7 +531,7 @@ class SalesController extends Controller
     public function update(Request $request, SalesRegistration $registration)
     {
         $user = $request->user();
-        $isLider = $user->role === 'admin' || $user->sales_type === 'lider';
+        $isLider = $user->isLeaderOf('sales');
 
         if (!$isLider) {
             abort(403);
@@ -550,7 +553,7 @@ class SalesController extends Controller
     public function undoConversion(SalesRegistration $registration)
     {
         $user = request()->user();
-        $isLider = $user->role === 'admin' || ($user->role === 'sales' && $user->sales_type === 'lider');
+        $isLider = $user->isLeaderOf('sales');
         if (!$isLider) abort(403);
 
         $designer = $registration->designer;
@@ -655,7 +658,7 @@ class SalesController extends Controller
     public function history(Request $request): Response
     {
         $user = $request->user();
-        $isLider = $user->role === 'admin' || ($user->role === 'sales' && $user->sales_type === 'lider');
+        $isLider = $user->isLeaderOf('sales');
         if (!$isLider) abort(403);
 
         $year       = (int) ($request->year    ?? now()->year);
@@ -801,7 +804,7 @@ class SalesController extends Controller
             SalesRegistration::whereYear('created_at', $year)->select('event_id')->distinct()
         )->orderBy('start_date', 'desc')->get(['id', 'name']);
 
-        $availableReps = User::where('role', 'sales')
+        $availableReps = User::where(fn($q) => $q->where('role', 'sales')->orWhereJsonContains('extra_areas', 'sales'))
             ->orderBy('first_name')->get(['id', 'first_name', 'last_name']);
 
         return Inertia::render('Admin/Sales/History', [
@@ -834,7 +837,7 @@ class SalesController extends Controller
     public function historyExport(Request $request)
     {
         $user = $request->user();
-        $isLider = $user->role === 'admin' || ($user->role === 'sales' && $user->sales_type === 'lider');
+        $isLider = $user->isLeaderOf('sales');
         if (!$isLider) abort(403);
 
         $year    = (int) ($request->year ?? now()->year);

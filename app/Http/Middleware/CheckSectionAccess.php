@@ -17,6 +17,10 @@ class CheckSectionAccess
         }
 
         $permissions = config("role_permissions.{$user->role}.sections", []);
+        // Cross-area access: incluir secciones de áreas secundarias (extra_areas).
+        foreach ((array) ($user->extra_areas ?? []) as $extraRole) {
+            $permissions = array_merge($permissions, config("role_permissions.{$extraRole}.sections", []));
+        }
 
         if (!in_array($section, $permissions)) {
             if ($request->expectsJson()) {

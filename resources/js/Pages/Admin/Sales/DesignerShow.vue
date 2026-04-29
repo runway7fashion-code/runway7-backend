@@ -20,7 +20,9 @@ const isAdmin = computed(() => ['admin', 'operation'].includes(page.props.auth?.
 const isSales = computed(() => page.props.auth?.user?.role === 'sales');
 const isLider = computed(() => {
     const u = page.props.auth?.user;
-    return u?.role === 'admin' || u?.sales_type === 'lider';
+    return u?.role === 'admin'
+        || (u?.role === 'sales' && u?.sales_type === 'lider')
+        || !!u?.extra_areas?.includes('sales');
 });
 const r = computed(() => props.registration);
 const showUndoModal = ref(false);

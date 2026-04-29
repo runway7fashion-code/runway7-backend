@@ -19,7 +19,7 @@ class LeadAnalyticsController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
+        $isLeader = $user->isLeaderOf('sales');
 
         // Date range defaults: last 30 days
         $from = $request->input('from') ? Carbon::parse($request->input('from'))->startOfDay() : now()->subDays(30)->startOfDay();
@@ -161,7 +161,7 @@ class LeadAnalyticsController extends Controller
         // ──────────────────────────────────────
         $advisorPerformance = [];
         if ($isLeader) {
-            $advisors = User::where('role', 'sales')->get(['id', 'first_name', 'last_name']);
+            $advisors = User::teamMembers('sales');
             foreach ($advisors as $adv) {
                 $advLeads = DesignerLead::where('assigned_to', $adv->id);
                 $advLeadsPeriod = (clone $advLeads)->whereBetween('created_at', [$from, $to])->count();
@@ -283,7 +283,7 @@ class LeadAnalyticsController extends Controller
 
         // Filters data
         $events = Event::orderByDesc('start_date')->get(['id', 'name']);
-        $advisors = $isLeader ? User::where('role', 'sales')->get(['id', 'first_name', 'last_name']) : collect();
+        $advisors = $isLeader ? User::teamMembers('sales') : collect();
 
         return Inertia::render('Admin/Sales/Analytics', [
             'kpis' => $kpis,
@@ -311,7 +311,7 @@ class LeadAnalyticsController extends Controller
     public function export(Request $request)
     {
         $user = auth()->user();
-        $isLeader = $user->role === 'admin' || $user->sales_type === 'lider';
+        $isLeader = $user->isLeaderOf('sales');
 
         $from = $request->input('from') ? Carbon::parse($request->input('from'))->startOfDay() : now()->subDays(30)->startOfDay();
         $to = $request->input('to') ? Carbon::parse($request->input('to'))->endOfDay() : now()->endOfDay();

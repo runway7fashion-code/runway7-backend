@@ -27,11 +27,12 @@ Broadcast::channel('user.{userId}', function ($user, int $userId) {
 Broadcast::channel('sponsorship-lead.{leadId}', function ($user, int $leadId) {
     if (!$user) return false;
     if ($user->role === 'admin') return true;
+    // Cross-area: usuarios con extra_areas que incluyan sponsorship son tratados como líder.
+    if ($user->isLeaderOf('sponsorship')) return true;
     if ($user->role === 'sponsorship') {
         $lead = \App\Models\Sponsorship\Lead::find($leadId);
         if (!$lead) return false;
-        // Líder ve todo; asesor solo si el lead está asignado a él.
-        if ($user->sponsorship_type === 'lider') return true;
+        // Asesor: solo si el lead está asignado a él (líder ya cubierto arriba).
         return (int) $lead->assigned_to_user_id === (int) $user->id;
     }
     return false;

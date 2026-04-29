@@ -104,6 +104,48 @@ class User extends Authenticatable
         return in_array($area, (array) ($this->extra_areas ?? []));
     }
 
+    /**
+     * Miembros del equipo de un área (role=$area + cross-area via extra_areas).
+     * Usado por dropdowns de "Assign to" y filtros de calendar para que un user
+     * con extra_areas que incluyan el área aparezca como parte del equipo.
+     */
+    public static function teamMembers(string $area)
+    {
+        return self::where(function ($q) use ($area) {
+                $q->where('role', $area)
+                  ->orWhereJsonContains('extra_areas', $area);
+            })
+            ->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name', 'role', 'sales_type', 'sponsorship_type', 'extra_areas', 'is_available', 'status']);
+    }
+
+    /**
+     * IDs de líderes de un área (admin + role=$area+type=lider + cross-area).
+     */
+    public static function leaderIdsOf(string $area): array
+    {
+        return self::where(function ($q) use ($area) {
+                $q->where('role', 'admin')
+                  ->orWhere(fn($qq) => $qq->where('role', $area)->where($area.'_type', 'lider'))
+                  ->orWhereJsonContains('extra_areas', $area);
+            })
+            ->pluck('id')->all();
+    }
+
+    /**
+     * IDs de users multi-área: aquellos con `extra_areas` no vacío. Son los que
+     * tienen agenda en más de un área (Christina hoy). Los asesores deben ver
+     * SUS actividades para no doble-bookear, aunque no estén en su misma área.
+     */
+    public static function crossAreaIds(): array
+    {
+        return self::whereNotNull('extra_areas')
+            ->get(['id', 'extra_areas'])
+            ->filter(fn($u) => is_array($u->extra_areas) && count($u->extra_areas) > 0)
+            ->pluck('id')
+            ->all();
+    }
+
     // --- Role checks: Participants ---
     public function isModel(): bool { return $this->role === 'model'; }
     public function isDesigner(): bool { return $this->role === 'designer'; }
