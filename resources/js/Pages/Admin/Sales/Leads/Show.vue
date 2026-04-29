@@ -2,7 +2,8 @@
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import EmailComposer from '@/Components/EmailComposer.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
+import axios from 'axios';
 import {
     ArrowLeftIcon, EnvelopeIcon, PhoneIcon, GlobeAltIcon, TrashIcon,
     PencilSquareIcon, CheckCircleIcon, ClockIcon, UserIcon, PlusIcon,
@@ -189,13 +190,62 @@ const activityForm = useForm({
     title: '',
     description: '',
     scheduled_at: '',
+    user_id: null,  // assignee — null = me
 });
+
+function openActivityModal() {
+    activityForm.reset();
+    activityForm.type = 'note';
+    activityForm.user_id = null;
+    availabilityConflicts.value = [];
+    showActivityModal.value = true;
+}
 
 function submitActivity() {
     activityForm.post(`/admin/sales/leads/${props.lead.id}/activity`, {
         preserveScroll: true,
         onSuccess: () => { activityForm.reset(); showActivityModal.value = false; },
     });
+}
+
+// ── Availability check (debounced) — solo aplica a call/meeting agendados.
+// Hard-block: si hay conflicto, el botón Save queda deshabilitado y backend rechaza.
+const availabilityConflicts = ref([]);
+let availabilityTimer = null;
+function checkAvailability() {
+    clearTimeout(availabilityTimer);
+    availabilityTimer = setTimeout(async () => {
+        const userId = activityForm.user_id;
+        const scheduled = activityForm.scheduled_at;
+        const type = activityForm.type;
+        if (!['call', 'meeting'].includes(type) || !userId || !scheduled) {
+            availabilityConflicts.value = [];
+            return;
+        }
+        const center = new Date(scheduled);
+        if (isNaN(center)) return;
+        const from = new Date(center.getTime() - 30 * 60 * 1000).toISOString();
+        const to   = new Date(center.getTime() + 30 * 60 * 1000).toISOString();
+        try {
+            const res = await axios.get('/admin/sales/calendar/availability', {
+                params: { user_id: userId, from, to },
+            });
+            availabilityConflicts.value = res.data?.conflicts ?? [];
+        } catch (e) {
+            availabilityConflicts.value = [];
+        }
+    }, 350);
+}
+watch(
+    [() => activityForm.user_id, () => activityForm.scheduled_at, () => activityForm.type],
+    checkAvailability,
+);
+
+// (L) si es líder en cualquier área (incluye cross-area como Christina).
+function isAnyLeader(a) {
+    return a.sales_type === 'lider'
+        || a.sponsorship_type === 'lider'
+        || (a.extra_areas || []).length > 0;
 }
 
 // Complete activity
@@ -378,7 +428,7 @@ function isActivityExpanded(id) {
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button @click="showActivityModal = true"
+                        <button @click="openActivityModal"
                             class="px-4 py-1.5 bg-[#D4AF37] text-white rounded-lg text-xs font-medium hover:bg-[#b8962f] transition-colors flex items-center gap-1">
                             <PlusIcon class="w-3.5 h-3.5" /> Activity
                         </button>
@@ -855,11 +905,32 @@ function isActivityExpanded(id) {
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black focus:border-black" />
                             <p v-if="activityForm.errors.scheduled_at" class="text-xs text-red-500 mt-1">{{ activityForm.errors.scheduled_at }}</p>
                         </div>
+                        <div v-if="activityForm.type === 'call' || activityForm.type === 'meeting'">
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Assign to</label>
+                            <select v-model="activityForm.user_id"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-1 focus:ring-black focus:border-black">
+                                <option :value="null">— Me</option>
+                                <option v-for="a in advisors" :key="a.id" :value="a.id">
+                                    {{ a.first_name }} {{ a.last_name }} {{ isAnyLeader(a) ? '(L)' : '' }}
+                                </option>
+                            </select>
+                        </div>
+                        <div v-if="(activityForm.type === 'call' || activityForm.type === 'meeting') && availabilityConflicts.length"
+                            class="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs">
+                            <p class="font-medium text-red-800 mb-1">✕ {{ availabilityConflicts.length }} conflict{{ availabilityConflicts.length > 1 ? 's' : '' }} in ±30 min — pick another time:</p>
+                            <ul class="space-y-0.5 text-red-700">
+                                <li v-for="c in availabilityConflicts" :key="`${c.source}-${c.id}`" class="truncate">
+                                    • {{ new Date(c.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) }} — {{ c.title }} <span class="text-red-500">({{ c.type }})</span>
+                                </li>
+                            </ul>
+                        </div>
                         <div class="flex gap-3 pt-2">
                             <button type="button" @click="showActivityModal = false"
                                 class="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
-                            <button type="submit" :disabled="activityForm.processing || !activityForm.title"
-                                class="flex-1 px-4 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-40">
+                            <button type="submit"
+                                :disabled="activityForm.processing || !activityForm.title || ((activityForm.type === 'call' || activityForm.type === 'meeting') && availabilityConflicts.length > 0)"
+                                :title="availabilityConflicts.length > 0 ? 'Hay conflictos de horario' : ''"
+                                class="flex-1 px-4 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                                 Register
                             </button>
                         </div>

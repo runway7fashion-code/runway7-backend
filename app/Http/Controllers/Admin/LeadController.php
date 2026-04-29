@@ -209,9 +209,12 @@ class LeadController extends Controller
             'activities.files',
         ]);
 
+        // Líder ve a todo el equipo. Asesor solo ve users cross-area (Christina) —
+        // suficiente para poder agendarle calls a la persona que toca ambas áreas.
         $advisors = $isLeader
             ? User::teamMembers('sales')
-            : collect();
+            : User::whereIn('id', User::crossAreaIds())->orderBy('first_name')
+                ->get(['id', 'first_name', 'last_name', 'role', 'sales_type', 'sponsorship_type', 'extra_areas']);
 
         $events = Event::whereNull('deleted_at')->select('id', 'name')->orderBy('start_date', 'desc')->get();
 
@@ -634,22 +637,29 @@ class LeadController extends Controller
             'title'        => 'required|string|max:255',
             'description'  => 'nullable|string',
             'scheduled_at' => 'nullable|date',
+            'user_id'      => 'nullable|exists:users,id',
             'files'        => 'nullable|array',
             'files.*'      => 'file|max:10240',
         ]);
 
-        // Hard-block doble agenda. Sales lead activities siempre van a auth()->id(),
-        // y solo bloqueamos para call/meeting agendados.
+        $assigneeId = $validated['user_id'] ?? auth()->id();
+
+        // Hard-block doble agenda — solo para call/meeting agendados.
+        // Valida contra la disponibilidad del assignee (puede ser otro user, p.ej. Christina).
         if (!empty($validated['scheduled_at']) && in_array($validated['type'], ['call', 'meeting'], true)) {
-            $checker->assertNoConflict(auth()->id(), $validated['scheduled_at']);
+            $checker->assertNoConflict($assigneeId, $validated['scheduled_at']);
         }
 
-        $activity = LeadActivity::create(array_merge($validated, [
-            'lead_id' => $lead->id,
-            'user_id' => auth()->id(),
-            'status'  => ($validated['scheduled_at'] ?? null) ? 'pending' : 'completed',
+        $activity = LeadActivity::create([
+            'lead_id'      => $lead->id,
+            'user_id'      => $assigneeId,
+            'type'         => $validated['type'],
+            'title'        => $validated['title'],
+            'description'  => $validated['description'] ?? null,
+            'scheduled_at' => $validated['scheduled_at'] ?? null,
+            'status'       => ($validated['scheduled_at'] ?? null) ? 'pending' : 'completed',
             'completed_at' => ($validated['scheduled_at'] ?? null) ? null : now(),
-        ]));
+        ]);
 
         // Save attached files
         if ($request->hasFile('files')) {
