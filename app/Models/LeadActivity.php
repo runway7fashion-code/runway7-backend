@@ -23,20 +23,9 @@ class LeadActivity extends Model
     ];
 
     protected $casts = [
+        'scheduled_at' => 'datetime',
         'completed_at' => 'datetime',
     ];
-
-    // scheduled_at se maneja en hora de Perú (America/Lima), no UTC
-    public function getScheduledAtAttribute($value)
-    {
-        if (!$value) return null;
-        return \Carbon\Carbon::parse($value, 'America/Lima');
-    }
-
-    public function setScheduledAtAttribute($value)
-    {
-        $this->attributes['scheduled_at'] = $value;
-    }
 
     const TYPES = [
         'call'          => ['label' => 'Call',           'icon' => 'phone',    'color' => '#3B82F6'],
