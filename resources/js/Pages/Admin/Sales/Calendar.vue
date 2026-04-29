@@ -549,7 +549,7 @@ function submitCreate() {
                                         {{ evt.lead_name }}
                                         <span v-if="evt.company" class="text-gray-400"> · {{ evt.company }}</span>
                                     </div>
-                                    <p v-if="evt.description" class="text-xs text-gray-500 mt-1 line-clamp-2">{{ evt.description }}</p>
+                                    <div v-if="evt.description" class="rich-text-preview text-xs text-gray-500 mt-1 line-clamp-2 break-words" v-html="evt.description"></div>
                                     <div class="flex items-center justify-end mt-2" v-if="evt.status === 'pending'">
                                         <button
                                             @click.stop="completeActivity(evt)"
@@ -611,7 +611,7 @@ function submitCreate() {
 
                     <!-- Details -->
                     <div class="space-y-2 text-sm mb-5">
-                        <div v-if="selectedEvent.description" class="text-gray-600">{{ selectedEvent.description }}</div>
+                        <div v-if="selectedEvent.description" class="rich-text-preview text-gray-600 break-words" v-html="selectedEvent.description"></div>
 
                         <div class="flex items-center gap-2 text-gray-500">
                             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -722,3 +722,18 @@ function submitCreate() {
         </Teleport>
     </AdminLayout>
 </template>
+
+<style>
+/* Render TipTap-stored descriptions as proper HTML — listas, links, formato.
+   Misma intención que .sponsorship-email-preview en el otro panel. */
+.rich-text-preview p { margin: 0 0 0.5em 0; }
+.rich-text-preview p:last-child { margin-bottom: 0; }
+.rich-text-preview ul, .rich-text-preview ol { padding-left: 1.5em; margin: 0 0 0.5em 0; }
+.rich-text-preview ul { list-style-type: disc; }
+.rich-text-preview ol { list-style-type: decimal; }
+.rich-text-preview a { color: #2563eb; text-decoration: underline; word-break: break-all; }
+.rich-text-preview strong { font-weight: 600; color: #111827; }
+.rich-text-preview em { font-style: italic; }
+.rich-text-preview u { text-decoration: underline; }
+.rich-text-preview s { text-decoration: line-through; }
+</style>

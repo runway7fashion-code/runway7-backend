@@ -697,7 +697,7 @@ function isActivityExpanded(id) {
                                             <span class="text-xs text-gray-400">{{ formatNoteDate(note.created_at) }}</span>
                                         </div>
                                         <p v-if="note.title && note.title !== 'Note' && note.title !== 'Nota'" class="text-sm font-semibold text-gray-800 mb-0.5">{{ note.title }}</p>
-                                        <p class="text-sm text-gray-600 whitespace-pre-line">{{ note.description }}</p>
+                                        <div class="rich-text-preview text-sm text-gray-600 break-words" v-html="note.description"></div>
                                         <div v-if="note.files?.length" class="flex flex-wrap gap-1.5 mt-2">
                                             <button v-for="f in note.files" :key="f.id" @click="openPreview(f)"
                                                 class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer">
@@ -745,7 +745,9 @@ function isActivityExpanded(id) {
                                                     {{ activity.title }}
                                                 </span>
                                             </div>
-                                            <p v-if="activity.description" class="text-xs text-gray-500 mt-1 whitespace-pre-line">{{ activity.description }}</p>
+                                            <div v-if="activity.description" class="rich-text-preview text-xs text-gray-500 mt-1 break-words"
+                                                :class="isActivityExpanded(activity.id) ? '' : 'line-clamp-3'"
+                                                v-html="activity.description"></div>
                                         </div>
 
                                         <div class="flex flex-col items-end gap-1 flex-shrink-0">
@@ -1014,3 +1016,17 @@ function isActivityExpanded(id) {
 
     </AdminLayout>
 </template>
+
+<style>
+/* Render TipTap-stored descriptions as proper HTML — listas, links, formato. */
+.rich-text-preview p { margin: 0 0 0.5em 0; }
+.rich-text-preview p:last-child { margin-bottom: 0; }
+.rich-text-preview ul, .rich-text-preview ol { padding-left: 1.5em; margin: 0 0 0.5em 0; }
+.rich-text-preview ul { list-style-type: disc; }
+.rich-text-preview ol { list-style-type: decimal; }
+.rich-text-preview a { color: #2563eb; text-decoration: underline; word-break: break-all; }
+.rich-text-preview strong { font-weight: 600; color: #111827; }
+.rich-text-preview em { font-style: italic; }
+.rich-text-preview u { text-decoration: underline; }
+.rich-text-preview s { text-decoration: line-through; }
+</style>
