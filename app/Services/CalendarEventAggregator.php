@@ -42,7 +42,30 @@ class CalendarEventAggregator
 
         $personalEvents = $this->fetchPersonalEvents($area, $request, $user, $visibleUserIds);
 
-        return $leadEvents->concat($personalEvents)->values();
+        // Visibilidad cross-area de los multi-área (Christina): aunque el viewer
+        // no tenga acceso a la otra área, ve las actividades de los multi-área
+        // para coordinar disponibilidad. El backend además sigue chequeando
+        // disponibilidad cruzada al agendar (CalendarAvailabilityChecker), pero
+        // este merge da visibilidad transparente en el calendario.
+        $crossLeadEvents = $this->fetchCrossAreaLeadEvents($area, $request, $user);
+
+        return $leadEvents->concat($personalEvents)->concat($crossLeadEvents)->values();
+    }
+
+    /**
+     * Trae actividades de la OTRA área pero solo para users con extra_areas no
+     * vacío (multi-área, p.ej. Christina). Si no hay multi-área, devuelve vacío.
+     */
+    private function fetchCrossAreaLeadEvents(string $area, Request $request, User $user): Collection
+    {
+        $crossAreaIds = User::crossAreaIds();
+        if (empty($crossAreaIds)) return collect();
+
+        $otherArea = $area === 'sales' ? 'sponsorship' : 'sales';
+
+        return $otherArea === 'sales'
+            ? $this->fetchSalesLeadEvents($request, $user, $crossAreaIds)
+            : $this->fetchSponsorshipLeadEvents($request, $user, $crossAreaIds);
     }
 
     /**
