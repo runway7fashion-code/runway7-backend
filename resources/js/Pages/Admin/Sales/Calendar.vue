@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import RichTextEditor from '@/Components/RichTextEditor.vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
 import { ref, computed, watch, onMounted } from 'vue';
 import axios from 'axios';
 
@@ -12,9 +12,25 @@ const props = defineProps({
     activityTypes: Object,
 });
 
+const currentUserId = computed(() => usePage().props.auth?.user?.id);
+
 // Etiqueta para distinguir el área de cada chip cuando el user es cross-area.
 const AREA_LABEL = { sales: 'SA', sponsorship: 'SP' };
 function areaLabel(ev) { return AREA_LABEL[ev?.area] || 'SA'; }
+
+// El user puede ACTUAR (editar/completar/borrar/ir al lead) sobre un evento si:
+//  - es cross-area, o
+//  - el evento pertenece a su home area (sales aquí), o
+//  - es una actividad personal global y él la creó/le pertenece.
+function canActOnEvent(ev) {
+    if (!ev) return false;
+    if (props.crossArea) return true;
+    if (ev.area === 'sales') return true;
+    if (!ev.area && ev.source === 'personal') {
+        return ev.advisor_id === currentUserId.value;
+    }
+    return false;
+}
 // (L) si es líder en cualquier área (sales, sponsorship o cross-area).
 function isAnyLeader(a) {
     return a.sales_type === 'lider'
@@ -559,7 +575,7 @@ function submitCreate() {
                                         <span v-if="evt.company" class="text-gray-400"> · {{ evt.company }}</span>
                                     </div>
                                     <div v-if="evt.description" class="rich-text-preview text-xs text-gray-500 mt-1 line-clamp-2 break-words" v-html="evt.description"></div>
-                                    <div class="flex items-center justify-end mt-2" v-if="evt.status === 'pending'">
+                                    <div class="flex items-center justify-end mt-2" v-if="evt.status === 'pending' && canActOnEvent(evt)">
                                         <button
                                             @click.stop="completeActivity(evt)"
                                             class="text-xs font-medium bg-black text-white px-3 py-1 rounded-lg hover:bg-gray-800 transition-colors"
@@ -641,8 +657,12 @@ function submitCreate() {
                         </div>
                     </div>
 
+                    <!-- Read-only banner para eventos cross-area -->
+                    <div v-if="!canActOnEvent(selectedEvent)" class="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-800 mb-3">
+                        Read-only: this activity belongs to the <strong class="capitalize">{{ selectedEvent.area }}</strong> team.
+                    </div>
                     <!-- Actions -->
-                    <div class="flex items-center gap-3 border-t border-gray-100 pt-4">
+                    <div v-if="canActOnEvent(selectedEvent)" class="flex items-center gap-3 border-t border-gray-100 pt-4">
                         <a
                             v-if="selectedEvent.lead_id"
                             :href="`/admin/${selectedEvent.area || 'sales'}/leads/${selectedEvent.lead_id}`"

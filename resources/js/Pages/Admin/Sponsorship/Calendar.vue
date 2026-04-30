@@ -1,9 +1,11 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import RichTextEditor from '@/Components/RichTextEditor.vue';
-import { Link, router, useForm } from '@inertiajs/vue3';
+import { Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
+
+const currentUserId = computed(() => usePage().props.auth?.user?.id);
 import { ChevronLeftIcon, ChevronRightIcon, CalendarDaysIcon, EyeIcon, CheckCircleIcon, XMarkIcon, PencilSquareIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -20,6 +22,21 @@ const AREA_STYLES = {
     sales:       { ring: 'ring-2 ring-blue-400/70',  label: 'SA', labelClass: 'bg-blue-50 text-blue-700' },
 };
 function areaStyle(ev) { return AREA_STYLES[ev?.area] || AREA_STYLES.sponsorship; }
+
+// El user puede ACTUAR (editar/completar/borrar/ir al lead) sobre un evento si:
+//  - es cross-area (acceso a las dos áreas), o
+//  - el evento pertenece a su home area (sponsorship aquí), o
+//  - es una actividad personal global (area=null) y él la creó/le pertenece.
+// En cualquier otro caso el modal queda read-only para evitar 403s.
+function canActOnEvent(ev) {
+    if (!ev) return false;
+    if (props.crossArea) return true;
+    if (ev.area === 'sponsorship') return true;
+    if (!ev.area && ev.source === 'personal') {
+        return ev.advisor_id === currentUserId.value;
+    }
+    return false;
+}
 
 // (L) si el advisor es líder en cualquier área (sales, sponsorship, o cross-area).
 function isAnyLeader(a) {
@@ -478,7 +495,10 @@ function eventsAtHour(date, hour) {
                             <p v-if="selectedEvent.lead_name">👤 {{ selectedEvent.lead_name }} <span v-if="selectedEvent.company">— {{ selectedEvent.company }}</span></p>
                             <p v-if="selectedEvent.advisor">→ {{ selectedEvent.advisor }}</p>
                         </div>
-                        <div class="flex flex-wrap gap-2">
+                        <div v-if="!canActOnEvent(selectedEvent)" class="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-800 mb-3">
+                            Read-only: this activity belongs to the <strong class="capitalize">{{ selectedEvent.area }}</strong> team.
+                        </div>
+                        <div v-if="canActOnEvent(selectedEvent)" class="flex flex-wrap gap-2">
                             <Link v-if="selectedEvent.lead_id" :href="`/admin/${selectedEvent.area || 'sponsorship'}/leads/${selectedEvent.lead_id}`"
                                 class="flex-1 min-w-[120px] px-3 py-2 text-sm font-medium border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-1.5">
                                 <EyeIcon class="w-4 h-4" /> View lead
