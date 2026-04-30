@@ -2,17 +2,17 @@
 
 namespace App\Console\Commands;
 
-use App\Services\SalesBotService;
+use App\Services\SponsorshipBotService;
 use Illuminate\Console\Command;
 
-class SalesBotCheck extends Command
+class SponsorshipBotCheck extends Command
 {
-    protected $signature = 'sales:bot-check';
-    protected $description = 'Run sales bot checks: in-app overdue, upcoming reminders, stale leads. Email is handled by sales:bot-digest.';
+    protected $signature = 'sponsorship:bot-check';
+    protected $description = 'Run sponsorship bot checks: in-app overdue, upcoming reminders, stale leads. Email is handled by sponsorship:bot-digest.';
 
     public function handle(): void
     {
-        $bot = new SalesBotService();
+        $bot = new SponsorshipBotService();
 
         $overdue = $bot->checkOverdueActivities();
         $this->info("In-app overdue notifications: {$overdue}");

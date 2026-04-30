@@ -689,7 +689,7 @@ class LeadController extends Controller
                     'user_id'      => auth()->id(),
                     'type'         => 'reminder',
                     'title'        => "Activity in {$minutesUntil} min: {$activity->title}",
-                    'message'      => "Tienes programado a las {$scheduledTime->format('g:i A')}: {$activity->title} — {$lead->full_name} ({$lead->company_name})",
+                    'message'      => "Scheduled at {$scheduledTime->format('g:i A')}: {$activity->title} — {$lead->full_name} ({$lead->company_name})",
                     'action_url'   => "/admin/sales/leads/{$lead->id}",
                     'action_label' => 'View prospect',
                 ]);
@@ -701,7 +701,7 @@ class LeadController extends Controller
                     'user_id'      => auth()->id(),
                     'type'         => 'overdue',
                     'title'        => "Overdue activity: {$activity->title}",
-                    'message'      => "Esta actividad ya pasó su hora programada ({$scheduledTime->format('g:i A')}): {$activity->title} — {$lead->full_name}",
+                    'message'      => "This activity is past its scheduled time ({$scheduledTime->format('g:i A')}): {$activity->title} — {$lead->full_name}",
                     'action_url'   => "/admin/sales/leads/{$lead->id}",
                     'action_label' => 'View prospect',
                 ]);

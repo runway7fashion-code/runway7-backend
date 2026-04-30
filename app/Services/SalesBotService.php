@@ -11,22 +11,23 @@ use Illuminate\Support\Facades\Mail;
 class SalesBotService
 {
     /**
-     * Notify advisor about a new lead assignment.
+     * In-app notification when a new lead is assigned to an advisor.
      */
     public function notifyNewLead(DesignerLead $lead, User $advisor): void
     {
         SalesBotMessage::create([
             'user_id'      => $advisor->id,
             'type'         => 'new_lead',
-            'title'        => 'Nuevo prospecto asignado',
-            'message'      => "Se te asignó a {$lead->full_name} ({$lead->company_name}). Presupuesto: {$lead->budget}.",
+            'title'        => 'New prospect assigned',
+            'message'      => "You were assigned {$lead->full_name} ({$lead->company_name}). Budget: {$lead->budget}.",
             'action_url'   => "/admin/sales/leads/{$lead->id}",
-            'action_label' => 'Ver prospecto',
+            'action_label' => 'View prospect',
         ]);
     }
 
     /**
-     * Check for overdue activities and send reminders.
+     * Look at overdue activities and create in-app overdue messages (no email).
+     * Email is handled separately by sendDailyOverdueDigest at 9 AM weekdays.
      */
     public function checkOverdueActivities(): int
     {
@@ -45,7 +46,7 @@ class SalesBotService
             $user = $activities->first()->user;
             if (!$user) continue;
 
-            // Check if we already sent a reminder in the last 4 hours
+            // Throttle in-app notification: avoid spamming the bell within 4 hours.
             $recentReminder = SalesBotMessage::where('user_id', $userId)
                 ->where('type', 'overdue')
                 ->where('created_at', '>', now()->subHours(4))
@@ -58,21 +59,11 @@ class SalesBotService
             SalesBotMessage::create([
                 'user_id'      => $userId,
                 'type'         => 'overdue',
-                'title'        => "{$activities->count()} actividades vencidas",
-                'message'      => "Tienes actividades pendientes que ya pasaron su fecha:\n{$activityList}",
+                'title'        => "{$activities->count()} overdue activities",
+                'message'      => "You have pending activities past their scheduled date:\n{$activityList}",
                 'action_url'   => '/admin/sales/leads',
-                'action_label' => 'Ver prospectos',
+                'action_label' => 'View prospects',
             ]);
-
-            // Send email notification
-            Mail::raw(
-                "Hola {$user->first_name},\n\nTienes {$activities->count()} actividades vencidas en el CRM de Runway 7:\n\n{$activityList}\n\nPor favor revisa tu panel de ventas.",
-                function ($message) use ($user) {
-                    $message->to($user->email)
-                        ->from('designers@runway7fashion.com', 'Runway 7 Sales Bot')
-                        ->subject('⏰ Tienes actividades pendientes vencidas');
-                }
-            );
 
             $count += $activities->count();
         }
@@ -81,7 +72,60 @@ class SalesBotService
     }
 
     /**
-     * Check for upcoming activities (in the next hour) and send reminders.
+     * Send a single consolidated email per advisor with all their overdue activities.
+     * Runs once per day on weekdays only (scheduled at 9 AM Lima time).
+     */
+    public function sendDailyOverdueDigest(): int
+    {
+        $nowLima = now('America/Lima');
+
+        $overdueActivities = LeadActivity::where('status', 'pending')
+            ->whereNotNull('scheduled_at')
+            ->where('scheduled_at', '<', $nowLima->format('Y-m-d H:i:s'))
+            ->whereNotNull('user_id')
+            ->with(['lead:id,first_name,last_name,company_name', 'user:id,first_name,last_name,email'])
+            ->get();
+
+        $sent = 0;
+        $groupedByUser = $overdueActivities->groupBy('user_id');
+
+        foreach ($groupedByUser as $userId => $activities) {
+            $user = $activities->first()->user;
+            if (!$user || !$user->email) continue;
+
+            // Build the body with one line per overdue activity, oldest first.
+            $lines = $activities
+                ->sortBy(fn($a) => $a->scheduled_at)
+                ->map(function ($a) {
+                    $when = $a->scheduled_at?->format('M j, Y g:i A');
+                    $lead = $a->lead?->full_name ?? '—';
+                    $company = $a->lead?->company_name ? " ({$a->lead->company_name})" : '';
+                    return "• {$a->title} — {$lead}{$company} — was due {$when}";
+                })
+                ->join("\n");
+
+            $count = $activities->count();
+            $body = "Hi {$user->first_name},\n\n"
+                . "You have {$count} overdue " . ($count === 1 ? 'activity' : 'activities') . " in the Runway 7 sales CRM:\n\n"
+                . $lines
+                . "\n\nPlease review your sales panel and update the status of each activity (complete, cancelled or not completed).\n\n"
+                . url('/admin/sales/leads')
+                . "\n\n— Runway 7 Sales Bot";
+
+            Mail::raw($body, function ($message) use ($user, $count) {
+                $message->to($user->email)
+                    ->from('designers@runway7fashion.com', 'Runway 7 Sales Bot')
+                    ->subject("Daily digest: {$count} overdue " . ($count === 1 ? 'activity' : 'activities'));
+            });
+
+            $sent++;
+        }
+
+        return $sent;
+    }
+
+    /**
+     * In-app reminder for activities scheduled in the next hour.
      */
     public function checkUpcomingActivities(): int
     {
@@ -96,7 +140,7 @@ class SalesBotService
         $count = 0;
 
         foreach ($upcoming as $activity) {
-            // Don't send duplicate reminders
+            // Don't send duplicate reminders for the same activity within 2 hours.
             $alreadyReminded = SalesBotMessage::where('user_id', $activity->user_id)
                 ->where('type', 'reminder')
                 ->where('message', 'like', "%{$activity->id}%")
@@ -110,12 +154,12 @@ class SalesBotService
             SalesBotMessage::create([
                 'user_id'      => $activity->user_id,
                 'type'         => 'reminder',
-                'title'        => "Recordatorio: {$activity->title}",
-                'message'      => "Tienes programado a las {$time}: {$activity->title}" .
+                'title'        => "Reminder: {$activity->title}",
+                'message'      => "Scheduled at {$time}: {$activity->title}" .
                     ($activity->lead ? " — {$activity->lead->full_name} ({$activity->lead->company_name})" : '') .
                     " [ID:{$activity->id}]",
                 'action_url'   => $activity->lead ? "/admin/sales/leads/{$activity->lead_id}" : '/admin/sales/calendar',
-                'action_label' => 'Ver detalle',
+                'action_label' => 'View detail',
             ]);
 
             $count++;
@@ -125,7 +169,7 @@ class SalesBotService
     }
 
     /**
-     * Check for leads without any contact in 48+ hours.
+     * In-app alert for leads without contact in the last 48 hours.
      */
     public function checkStaleLeads(): int
     {
@@ -163,10 +207,10 @@ class SalesBotService
             SalesBotMessage::create([
                 'user_id'      => $advisorId,
                 'type'         => 'alert',
-                'title'        => "{$leads->count()} prospectos sin contactar en 48h+",
-                'message'      => "Estos prospectos necesitan seguimiento:\n{$leadList}",
+                'title'        => "{$leads->count()} prospects without contact in 48h+",
+                'message'      => "These prospects need follow-up:\n{$leadList}",
                 'action_url'   => '/admin/sales/leads?status=follow_up',
-                'action_label' => 'Ver prospectos',
+                'action_label' => 'View prospects',
             ]);
 
             $count += $leads->count();

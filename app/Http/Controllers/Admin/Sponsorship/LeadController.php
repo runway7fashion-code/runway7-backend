@@ -295,6 +295,14 @@ class LeadController extends Controller
             return $lead;
         });
 
+        // Notify the assigned advisor via the in-app bot feed
+        if ($lead->assigned_to_user_id && $lead->assigned_to_user_id !== auth()->id()) {
+            $advisor = User::find($lead->assigned_to_user_id);
+            if ($advisor) {
+                (new \App\Services\SponsorshipBotService())->notifyNewLead($lead, $advisor);
+            }
+        }
+
         return redirect()->route('admin.sponsorship.leads.show', $lead)
             ->with('success', 'Lead created.');
     }
@@ -469,6 +477,11 @@ class LeadController extends Controller
             ? "Manually assigned to {$newUser->first_name} {$newUser->last_name}"
             : 'Lead unassigned';
         $this->logActivity($lead, 'assignment', $title);
+
+        // Notify the new advisor (skip if reassigning to themselves)
+        if ($newUser && $newUser->id !== auth()->id()) {
+            (new \App\Services\SponsorshipBotService())->notifyNewLead($lead, $newUser);
+        }
 
         return back()->with('success', 'Assignment updated.');
     }

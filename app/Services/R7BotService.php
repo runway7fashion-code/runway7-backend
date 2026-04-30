@@ -28,30 +28,30 @@ class R7BotService
         $leadsListContext = $this->buildLeadsList($user);
 
         $systemPrompt = <<<PROMPT
-Eres R7, el asistente virtual del equipo de ventas de Runway 7 Fashion Week.
-Respondes en español, de forma breve y directa.
-No uses markdown ni formato especial, solo texto plano.
+You are R7, the virtual assistant for the Runway 7 Fashion Week sales team.
+Reply in English, briefly and directly.
+Do not use markdown or special formatting, only plain text.
 
-Datos del asesor:
-- Nombre: {$user->first_name} {$user->last_name}
-- Rol: {$user->sales_type}
+Advisor info:
+- Name: {$user->first_name} {$user->last_name}
+- Role: {$user->sales_type}
 
 {$context}
 
 {$leadsListContext}
 
-INSTRUCCIONES IMPORTANTES:
-1. Si el asesor quiere CREAR una actividad (agendar llamada, reunion, email) o una nota, responde EXACTAMENTE con este formato JSON:
-{"action":"create_activity","type":"call","lead_name":"nombre del lead","title":"titulo de la actividad","scheduled_at":"YYYY-MM-DD HH:mm","description":"descripcion opcional"}
+IMPORTANT INSTRUCTIONS:
+1. If the advisor wants to CREATE an activity (schedule a call, meeting, email) or a note, reply EXACTLY with this JSON format:
+{"action":"create_activity","type":"call","lead_name":"lead name","title":"activity title","scheduled_at":"YYYY-MM-DD HH:mm","description":"optional description"}
 
-Los tipos validos son: call, email, meeting, note
-Para call, email y meeting: si no menciona hora, usa 10:00. Si dice "manana", calcula la fecha.
-Para note: NUNCA pongas scheduled_at. Las notas son registros inmediatos, no se programan. El titulo debe resumir el contenido y la descripcion es el contenido completo de la nota.
-La descripcion debe ser breve (maximo 150 caracteres).
+Valid types are: call, email, meeting, note
+For call, email and meeting: if no time is mentioned, use 10:00. If they say "tomorrow", compute the date.
+For note: NEVER include scheduled_at. Notes are immediate records, not scheduled. The title must summarize the content and the description is the full note text.
+Keep the description short (max 150 characters).
 
-2. Si el asesor pide informacion o hace una pregunta, responde normalmente en texto plano.
+2. If the advisor asks for information or a question, reply normally in plain text.
 
-3. NUNCA mezcles JSON con texto. Si es una accion, responde SOLO el JSON.
+3. NEVER mix JSON with text. If it is an action, reply with ONLY the JSON.
 PROMPT;
 
         try {
@@ -69,7 +69,7 @@ PROMPT;
             );
 
             if (!$response->successful()) {
-                return 'Error al conectar con el servicio de IA. Intenta de nuevo.';
+                return 'Could not reach the AI service. Please try again.';
             }
 
             $data = $response->json();
@@ -96,10 +96,10 @@ PROMPT;
                 }
             }
 
-            return $text ?: 'No pude procesar tu consulta.';
+            return $text ?: 'I could not process your request.';
         } catch (\Exception $e) {
             \Log::warning('R7 Bot AI error: ' . $e->getMessage());
-            return 'El servicio de IA no está disponible en este momento.';
+            return 'The AI service is not available right now.';
         }
     }
 
@@ -111,7 +111,7 @@ PROMPT;
         $scheduledAt = $data['scheduled_at'] ?? '';
         $description = $data['description'] ?? '';
 
-        $typeLabels = ['call' => 'Llamada', 'email' => 'Email', 'meeting' => 'Reunión', 'note' => 'Nota'];
+        $typeLabels = ['call' => 'Call', 'email' => 'Email', 'meeting' => 'Meeting', 'note' => 'Note'];
         $typeLabel = $typeLabels[$type] ?? $type;
 
         // Search for matching leads
@@ -129,7 +129,7 @@ PROMPT;
         })->limit(5)->get();
 
         if ($leads->isEmpty()) {
-            return "No encontré ningún lead con el nombre \"{$leadName}\". Verifica el nombre e intenta de nuevo.";
+            return "I could not find any lead named \"{$leadName}\". Double-check the name and try again.";
         }
 
         if ($leads->count() === 1) {
@@ -137,22 +137,22 @@ PROMPT;
             $actionData = [
                 'lead_id'      => $lead->id,
                 'type'         => $type,
-                'title'        => $title ?: "{$typeLabel} con {$lead->first_name} {$lead->last_name}",
+                'title'        => $title ?: "{$typeLabel} with {$lead->first_name} {$lead->last_name}",
                 'scheduled_at' => $scheduledAt,
                 'description'  => $description,
             ];
 
             Cache::put("bot_pending_{$user->id}", $actionData, now()->addMinutes(5));
 
-            $confirmation = "Encontré a {$lead->first_name} {$lead->last_name} ({$lead->company_name} - {$lead->email}).\n\n¿Confirmas crear esta actividad?\n- Tipo: {$typeLabel}\n- Lead: {$lead->first_name} {$lead->last_name}";
+            $confirmation = "Found {$lead->first_name} {$lead->last_name} ({$lead->company_name} - {$lead->email}).\n\nDo you want to create this activity?\n- Type: {$typeLabel}\n- Lead: {$lead->first_name} {$lead->last_name}";
             if ($scheduledAt) {
-                $dateFormatted = \Carbon\Carbon::parse($scheduledAt, 'America/Lima')->format('d M Y, g:i A');
-                $confirmation .= "\n- Fecha: {$dateFormatted}";
+                $dateFormatted = \Carbon\Carbon::parse($scheduledAt, 'America/Lima')->format('M d, Y g:i A');
+                $confirmation .= "\n- Date: {$dateFormatted}";
             }
             if ($description) {
-                $confirmation .= "\n- Contenido: {$description}";
+                $confirmation .= "\n- Content: {$description}";
             }
-            $confirmation .= "\n\nResponde 'sí' para confirmar o 'no' para cancelar.";
+            $confirmation .= "\n\nReply 'yes' to confirm or 'no' to cancel.";
 
             return $confirmation;
         }
@@ -170,7 +170,7 @@ PROMPT;
             'description' => $description,
         ], now()->addMinutes(5));
 
-        return "Encontré {$leads->count()} leads con ese nombre:\n{$options}\n\n¿A cuál te refieres? Responde con el número.";
+        return "Found {$leads->count()} leads with that name:\n{$options}\n\nWhich one? Reply with the number.";
     }
 
     private function handleSelection(User $user, string $message, array $selection): string
@@ -179,39 +179,39 @@ PROMPT;
 
         $message = strtolower(trim($message));
 
-        if (in_array($message, ['no', 'cancelar', 'ninguno'])) {
-            return 'Entendido, operación cancelada.';
+        if (in_array($message, ['no', 'cancel', 'none'])) {
+            return 'Got it, operation cancelled.';
         }
 
         $num = intval($message);
         if ($num < 1 || $num > count($selection['leads'])) {
-            return 'Número no válido. Operación cancelada. Intenta de nuevo.';
+            return 'Invalid number. Operation cancelled. Please try again.';
         }
 
         $lead = $selection['leads'][$num - 1];
         $type = $selection['type'];
-        $typeLabels = ['call' => 'Llamada', 'email' => 'Email', 'meeting' => 'Reunión', 'note' => 'Nota'];
+        $typeLabels = ['call' => 'Call', 'email' => 'Email', 'meeting' => 'Meeting', 'note' => 'Note'];
         $typeLabel = $typeLabels[$type] ?? $type;
 
         $actionData = [
             'lead_id'      => $lead['id'],
             'type'         => $type,
-            'title'        => $selection['title'] ?: "{$typeLabel} con {$lead['name']}",
+            'title'        => $selection['title'] ?: "{$typeLabel} with {$lead['name']}",
             'scheduled_at' => $selection['scheduled_at'],
             'description'  => $selection['description'],
         ];
 
         Cache::put("bot_pending_{$user->id}", $actionData, now()->addMinutes(5));
 
-        $confirmation = "Seleccionaste a {$lead['name']} ({$lead['company']} - {$lead['email']}).\n\n¿Confirmas crear esta actividad?\n- Tipo: {$typeLabel}\n- Lead: {$lead['name']}";
+        $confirmation = "You picked {$lead['name']} ({$lead['company']} - {$lead['email']}).\n\nDo you want to create this activity?\n- Type: {$typeLabel}\n- Lead: {$lead['name']}";
         if ($selection['scheduled_at']) {
-            $dateFormatted = \Carbon\Carbon::parse($selection['scheduled_at'], 'America/Lima')->format('d M Y, g:i A');
-            $confirmation .= "\n- Fecha: {$dateFormatted}";
+            $dateFormatted = \Carbon\Carbon::parse($selection['scheduled_at'], 'America/Lima')->format('M d, Y g:i A');
+            $confirmation .= "\n- Date: {$dateFormatted}";
         }
         if ($selection['description']) {
-            $confirmation .= "\n- Contenido: {$selection['description']}";
+            $confirmation .= "\n- Content: {$selection['description']}";
         }
-        $confirmation .= "\n\nResponde 'sí' para confirmar o 'no' para cancelar.";
+        $confirmation .= "\n\nReply 'yes' to confirm or 'no' to cancel.";
 
         return $confirmation;
     }
@@ -222,7 +222,7 @@ PROMPT;
 
         $message = strtolower(trim($message));
 
-        if (in_array($message, ['sí', 'si', 'yes', 'confirmar', 'ok', 'dale', 'claro'])) {
+        if (in_array($message, ['yes', 'y', 'confirm', 'ok', 'sure', 'sí', 'si'])) {
             try {
                 LeadActivity::create([
                     'lead_id'      => $action['lead_id'],
@@ -236,21 +236,21 @@ PROMPT;
                 ]);
 
                 $lead = DesignerLead::find($action['lead_id']);
-                $typeLabels = ['call' => 'Llamada', 'email' => 'Email', 'meeting' => 'Reunión', 'note' => 'Nota'];
+                $typeLabels = ['call' => 'Call', 'email' => 'Email', 'meeting' => 'Meeting', 'note' => 'Note'];
 
-                $typeName = $typeLabels[$action['type']] ?? 'Actividad';
-                $msg = "Listo. {$typeName} creada para {$lead->first_name} {$lead->last_name}.";
+                $typeName = $typeLabels[$action['type']] ?? 'Activity';
+                $msg = "Done. {$typeName} created for {$lead->first_name} {$lead->last_name}.";
                 if ($action['scheduled_at']) {
-                    $msg .= " Programada para el " . \Carbon\Carbon::parse($action['scheduled_at'], 'America/Lima')->format('d M Y, g:i A') . ".";
+                    $msg .= " Scheduled for " . \Carbon\Carbon::parse($action['scheduled_at'], 'America/Lima')->format('M d, Y g:i A') . ".";
                 }
                 return $msg;
             } catch (\Exception $e) {
                 \Log::warning('R7 Bot create activity error: ' . $e->getMessage());
-                return 'Error al crear la actividad. Intenta de nuevo.';
+                return 'Error creating the activity. Please try again.';
             }
         }
 
-        return 'Entendido, no se creó la actividad.';
+        return 'Got it, the activity was not created.';
     }
 
     private function buildLeadsList(User $user): string
@@ -268,9 +268,9 @@ PROMPT;
 
         if ($leads->isEmpty()) return '';
 
-        $list = $leads->map(fn($l) => "- {$l->first_name} {$l->last_name} ({$l->company_name}) - Estado: {$l->status}")->join("\n");
+        $list = $leads->map(fn($l) => "- {$l->first_name} {$l->last_name} ({$l->company_name}) - Status: {$l->status}")->join("\n");
 
-        return "LEADS DEL ASESOR:\n{$list}\n";
+        return "ADVISOR LEADS:\n{$list}\n";
     }
 
     private function buildContext(User $user): string
@@ -317,15 +317,15 @@ PROMPT;
 
         $negotiatingCount = \DB::table('lead_events')->where('status', 'negotiating')->count();
 
-        $context = "Fecha y hora actual: {$now->format('d/m/Y g:i A')} (Lima, Peru)\n\n";
-        $context .= "RESUMEN DE LEADS:\n";
-        $context .= "- Total: {$totalLeads}, Nuevos: {$newLeads}, Calificados: {$qualifiedLeads}, Clientes: {$clientLeads}, Perdidos: {$lostLeads}\n";
-        $context .= "- Oportunidades en negociacion: {$negotiatingCount}\n\n";
-        $context .= "ACTIVIDADES HOY:\n";
-        $context .= "- Pendientes: {$pendingToday}, Completadas: {$completedToday}, Vencidas: {$overdueCount}\n\n";
+        $context = "Current date and time: {$now->format('M d, Y g:i A')} (Lima, Peru)\n\n";
+        $context .= "LEADS SUMMARY:\n";
+        $context .= "- Total: {$totalLeads}, New: {$newLeads}, Qualified: {$qualifiedLeads}, Clients: {$clientLeads}, Lost: {$lostLeads}\n";
+        $context .= "- Opportunities in negotiation: {$negotiatingCount}\n\n";
+        $context .= "TODAY'S ACTIVITIES:\n";
+        $context .= "- Pending: {$pendingToday}, Completed: {$completedToday}, Overdue: {$overdueCount}\n\n";
 
         if ($upcomingList) {
-            $context .= "PROXIMAS ACTIVIDADES HOY:\n{$upcomingList}\n\n";
+            $context .= "UPCOMING ACTIVITIES TODAY:\n{$upcomingList}\n\n";
         }
 
         return $context;

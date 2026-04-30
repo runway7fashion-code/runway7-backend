@@ -258,7 +258,7 @@ async function sendBotMessage() {
             }
         }
     } catch(e) {
-        botMessages.value.push({ id: 'err-' + Date.now(), type: 'bot_response', title: 'R7', message: 'Error al procesar tu consulta.', is_read: true, created_at: new Date().toISOString() });
+        botMessages.value.push({ id: 'err-' + Date.now(), type: 'bot_response', title: 'R7', message: 'Could not process your request.', is_read: true, created_at: new Date().toISOString() });
         scrollBotToBottom();
     } finally {
         botLoading.value = false;
