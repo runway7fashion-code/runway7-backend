@@ -274,9 +274,27 @@ const showActivityModal = ref(false);
 const editingActivityId = ref(null); // null = create mode, otherwise editing this id
 const activityForm = useForm({
     type: 'call', title: '', description: '', scheduled_at: '',
+    has_end_time: false, ends_at_time: '',  // ends_at_time: "HH:MM" del mismo día
     assigned_to_user_id: null, is_contract: false,
     files: [],
 });
+
+// Combina la fecha de scheduled_at + el time string en UTC ISO para mandar.
+function combineEndTimeIso(scheduledLocal, endTimeStr) {
+    if (!endTimeStr || !scheduledLocal) return null;
+    const datePart = scheduledLocal.split('T')[0];
+    const d = new Date(`${datePart}T${endTimeStr}`);
+    return isNaN(d) ? null : d.toISOString();
+}
+
+// UTC ISO → "HH:MM" local para precargar.
+function utcToLocalTimeInput(utc) {
+    if (!utc) return '';
+    const d = new Date(utc);
+    if (isNaN(d)) return '';
+    const pad = n => String(n).padStart(2, '0');
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 // Tipos manuales — Note va por su propio bloque (CRM Notes).
 // Los demás (status_change/assignment/system) son auto-generados.
@@ -291,6 +309,8 @@ function openCreateActivity() {
     editingActivityId.value = null;
     activityForm.reset();
     activityForm.type = 'call';
+    activityForm.has_end_time = false;
+    activityForm.ends_at_time = '';
     availabilityConflicts.value = [];
     showActivityModal.value = true;
 }
@@ -300,6 +320,8 @@ function openEditActivity(activity) {
     activityForm.title               = activity.title || '';
     activityForm.description         = activity.description || '';
     activityForm.scheduled_at        = toLocalDatetimeInput(activity.scheduled_at);
+    activityForm.has_end_time        = !!activity.ends_at;
+    activityForm.ends_at_time        = utcToLocalTimeInput(activity.ends_at);
     activityForm.assigned_to_user_id = activity.assigned_to?.id ?? null;
     activityForm.is_contract         = !!activity.is_contract;
     activityForm.files               = [];
@@ -311,32 +333,30 @@ function addActivityFile(e) {
 }
 function removeActivityFile(i) { activityForm.files.splice(i, 1); }
 function submitActivity() {
+    const transform = data => ({
+        ...data,
+        scheduled_at: localDatetimeToUtcIso(data.scheduled_at),
+        ends_at: data.has_end_time ? combineEndTimeIso(data.scheduled_at, data.ends_at_time) : null,
+    });
     if (editingActivityId.value) {
         // PATCH via _method spoofing porque el endpoint es PATCH y enviamos FormData (multipart).
-        // Convertimos scheduled_at de local → UTC antes de enviar.
-        activityForm.transform(data => ({
-            ...data,
-            scheduled_at: localDatetimeToUtcIso(data.scheduled_at),
-            _method: 'PATCH',
-        })).post(`/admin/sponsorship/activities/${editingActivityId.value}`, {
-            forceFormData: true,
-            preserveScroll: true,
-            onSuccess: () => { showActivityModal.value = false; editingActivityId.value = null; activityForm.reset(); activityForm.type = 'call'; },
-        });
+        activityForm.transform(d => ({ ...transform(d), _method: 'PATCH' }))
+            .post(`/admin/sponsorship/activities/${editingActivityId.value}`, {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => { showActivityModal.value = false; editingActivityId.value = null; activityForm.reset(); activityForm.type = 'call'; },
+            });
     } else {
-        activityForm.transform(data => ({
-            ...data,
-            scheduled_at: localDatetimeToUtcIso(data.scheduled_at),
-        })).post(`/admin/sponsorship/leads/${props.lead.id}/activities`, {
+        activityForm.transform(transform).post(`/admin/sponsorship/leads/${props.lead.id}/activities`, {
             forceFormData: true,
             preserveScroll: true,
             onSuccess: () => { activityForm.reset(); activityForm.type = 'call'; showActivityModal.value = false; },
         });
     }
 }
-// ── Availability check (soft warning) ──
-// Cuando se agenda una call/meeting con scheduled_at + assigned_to_user_id,
-// avisamos si el assignee ya tiene otra actividad pendiente en ±30 min.
+// ── Availability check (rangos de overlap) ──
+// Solo bloquea si el assignee ya tiene una actividad CON RANGO solapando, o
+// si la nueva tiene rango y solapa con un punto/rango existente.
 const availabilityConflicts = ref([]);
 let availabilityTimer = null;
 function checkAvailability() {
@@ -349,16 +369,17 @@ function checkAvailability() {
             availabilityConflicts.value = [];
             return;
         }
-        const center = new Date(scheduled);
-        if (isNaN(center)) return;
-        const from = new Date(center.getTime() - 30 * 60 * 1000).toISOString();
-        const to   = new Date(center.getTime() + 30 * 60 * 1000).toISOString();
+        const startIso = localDatetimeToUtcIso(scheduled);
+        if (!startIso) return;
+        const endIso = activityForm.has_end_time
+            ? combineEndTimeIso(scheduled, activityForm.ends_at_time)
+            : null;
         try {
             const res = await axios.get('/admin/sponsorship/calendar/availability', {
                 params: {
                     user_id: userId,
-                    from, to,
-                    // Excluir la propia actividad cuando estamos editando.
+                    scheduled_at: startIso,
+                    ends_at: endIso || undefined,
                     exclude_lead: editingActivityId.value || undefined,
                 },
             });
@@ -369,7 +390,7 @@ function checkAvailability() {
     }, 350);
 }
 watch(
-    [() => activityForm.assigned_to_user_id, () => activityForm.scheduled_at, () => activityForm.type],
+    [() => activityForm.assigned_to_user_id, () => activityForm.scheduled_at, () => activityForm.type, () => activityForm.has_end_time, () => activityForm.ends_at_time],
     checkAvailability,
 );
 
@@ -916,7 +937,7 @@ onBeforeUnmount(() => {
                                         <span>{{ relativeTime(activity.created_at) }}</span>
                                         <span v-if="activity.scheduled_at" class="flex items-center gap-0.5">
                                             <ClockIcon class="w-3 h-3" />
-                                            {{ formatDateTime(activity.scheduled_at) }}
+                                            {{ formatDateTime(activity.scheduled_at) }}<template v-if="activity.ends_at"> – {{ new Date(activity.ends_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) }}</template>
                                         </span>
                                     </div>
                                 </div>
@@ -950,6 +971,15 @@ onBeforeUnmount(() => {
                                 <input v-model="activityForm.scheduled_at" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
                                 <p v-if="activityForm.errors.scheduled_at" class="text-xs text-red-500 mt-1">{{ activityForm.errors.scheduled_at }}</p>
                             </div>
+                        </div>
+                        <div v-if="activityForm.type === 'call' || activityForm.type === 'meeting'" class="flex items-center gap-2">
+                            <label class="inline-flex items-center gap-2 text-xs text-gray-600">
+                                <input v-model="activityForm.has_end_time" type="checkbox" class="rounded" />
+                                Specify end time
+                            </label>
+                            <input v-if="activityForm.has_end_time" v-model="activityForm.ends_at_time" type="time"
+                                class="border border-gray-300 rounded-lg px-2 py-1 text-sm" />
+                            <p v-if="activityForm.errors.ends_at" class="text-xs text-red-500">{{ activityForm.errors.ends_at }}</p>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Title *</label>
@@ -1075,7 +1105,7 @@ onBeforeUnmount(() => {
                         <div class="flex flex-wrap gap-3 text-[11px] text-gray-500">
                             <span v-if="viewingActivity.creator">By: <span class="text-gray-700 font-medium">{{ viewingActivity.creator.first_name }} {{ viewingActivity.creator.last_name }}</span></span>
                             <span>Created: <span class="text-gray-700">{{ formatDateTime(viewingActivity.created_at) }}</span></span>
-                            <span v-if="viewingActivity.scheduled_at">Scheduled: <span class="text-gray-700">{{ formatDateTime(viewingActivity.scheduled_at) }}</span></span>
+                            <span v-if="viewingActivity.scheduled_at">Scheduled: <span class="text-gray-700">{{ formatDateTime(viewingActivity.scheduled_at) }}<template v-if="viewingActivity.ends_at"> – {{ new Date(viewingActivity.ends_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) }}</template></span></span>
                             <span v-if="viewingActivity.completed_at">Completed: <span class="text-gray-700">{{ formatDateTime(viewingActivity.completed_at) }}</span></span>
                         </div>
                         <div v-if="viewingActivity.type === 'email' && viewingActivity.delivery_error"

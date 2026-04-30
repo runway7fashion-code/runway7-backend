@@ -637,6 +637,7 @@ class LeadController extends Controller
             'title'        => 'required|string|max:255',
             'description'  => 'nullable|string',
             'scheduled_at' => 'nullable|date',
+            'ends_at'      => 'nullable|date|after:scheduled_at',
             'user_id'      => 'nullable|exists:users,id',
             'files'        => 'nullable|array',
             'files.*'      => 'file|max:10240',
@@ -644,10 +645,9 @@ class LeadController extends Controller
 
         $assigneeId = $validated['user_id'] ?? auth()->id();
 
-        // Hard-block doble agenda — solo para call/meeting agendados.
-        // Valida contra la disponibilidad del assignee (puede ser otro user, p.ej. Christina).
+        // Hard-block por overlap real. Sin ends_at → no bloquea.
         if (!empty($validated['scheduled_at']) && in_array($validated['type'], ['call', 'meeting'], true)) {
-            $checker->assertNoConflict($assigneeId, $validated['scheduled_at']);
+            $checker->assertNoConflict($assigneeId, $validated['scheduled_at'], $validated['ends_at'] ?? null);
         }
 
         $activity = LeadActivity::create([
@@ -657,6 +657,7 @@ class LeadController extends Controller
             'title'        => $validated['title'],
             'description'  => $validated['description'] ?? null,
             'scheduled_at' => $validated['scheduled_at'] ?? null,
+            'ends_at'      => $validated['ends_at'] ?? null,
             'status'       => ($validated['scheduled_at'] ?? null) ? 'pending' : 'completed',
             'completed_at' => ($validated['scheduled_at'] ?? null) ? null : now(),
         ]);

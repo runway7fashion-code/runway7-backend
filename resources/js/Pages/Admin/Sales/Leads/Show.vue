@@ -190,6 +190,8 @@ const activityForm = useForm({
     title: '',
     description: '',
     scheduled_at: '',
+    has_end_time: false,
+    ends_at_time: '',  // "HH:MM" del mismo día que scheduled_at
     user_id: null,  // assignee — null = me
 });
 
@@ -197,17 +199,22 @@ function openActivityModal() {
     activityForm.reset();
     activityForm.type = 'note';
     activityForm.user_id = null;
+    activityForm.has_end_time = false;
+    activityForm.ends_at_time = '';
     availabilityConflicts.value = [];
     showActivityModal.value = true;
 }
 
-// El input datetime-local trabaja en hora del navegador. Hay que convertirlo a UTC
-// antes de mandar al backend para que la persistencia y la disponibilidad sean
-// consistentes (sponsorship ya lo hace; este modal lo estaba mandando crudo y
-// generaba desfase de 5h respecto a Perú).
 function localDatetimeToUtcIso(localStr) {
     if (!localStr) return null;
     const d = new Date(localStr);
+    return isNaN(d) ? null : d.toISOString();
+}
+
+function combineEndTimeIso(scheduledLocal, endTimeStr) {
+    if (!endTimeStr || !scheduledLocal) return null;
+    const datePart = scheduledLocal.split('T')[0];
+    const d = new Date(`${datePart}T${endTimeStr}`);
     return isNaN(d) ? null : d.toISOString();
 }
 
@@ -215,6 +222,7 @@ function submitActivity() {
     activityForm.transform(d => ({
         ...d,
         scheduled_at: localDatetimeToUtcIso(d.scheduled_at),
+        ends_at: d.has_end_time ? combineEndTimeIso(d.scheduled_at, d.ends_at_time) : null,
     })).post(`/admin/sales/leads/${props.lead.id}/activity`, {
         preserveScroll: true,
         onSuccess: () => { activityForm.reset(); showActivityModal.value = false; },
@@ -235,13 +243,12 @@ function checkAvailability() {
             availabilityConflicts.value = [];
             return;
         }
-        const center = new Date(scheduled);
-        if (isNaN(center)) return;
-        const from = new Date(center.getTime() - 30 * 60 * 1000).toISOString();
-        const to   = new Date(center.getTime() + 30 * 60 * 1000).toISOString();
+        const startIso = localDatetimeToUtcIso(scheduled);
+        if (!startIso) return;
+        const endIso = activityForm.has_end_time ? combineEndTimeIso(scheduled, activityForm.ends_at_time) : null;
         try {
             const res = await axios.get('/admin/sales/calendar/availability', {
-                params: { user_id: userId, from, to },
+                params: { user_id: userId, scheduled_at: startIso, ends_at: endIso || undefined },
             });
             availabilityConflicts.value = res.data?.conflicts ?? [];
         } catch (e) {
@@ -250,7 +257,7 @@ function checkAvailability() {
     }, 350);
 }
 watch(
-    [() => activityForm.user_id, () => activityForm.scheduled_at, () => activityForm.type],
+    [() => activityForm.user_id, () => activityForm.scheduled_at, () => activityForm.type, () => activityForm.has_end_time, () => activityForm.ends_at_time],
     checkAvailability,
 );
 
@@ -919,6 +926,15 @@ function isActivityExpanded(id) {
                             <input v-model="activityForm.scheduled_at" type="datetime-local"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black focus:border-black" />
                             <p v-if="activityForm.errors.scheduled_at" class="text-xs text-red-500 mt-1">{{ activityForm.errors.scheduled_at }}</p>
+                        </div>
+                        <div v-if="(activityForm.type === 'call' || activityForm.type === 'meeting') && activityForm.scheduled_at" class="flex items-center gap-2">
+                            <label class="inline-flex items-center gap-2 text-xs text-gray-600">
+                                <input v-model="activityForm.has_end_time" type="checkbox" class="rounded" />
+                                Specify end time
+                            </label>
+                            <input v-if="activityForm.has_end_time" v-model="activityForm.ends_at_time" type="time"
+                                class="border border-gray-300 rounded-lg px-2 py-1 text-sm" />
+                            <p v-if="activityForm.errors.ends_at" class="text-xs text-red-500">{{ activityForm.errors.ends_at }}</p>
                         </div>
                         <div v-if="activityForm.type === 'call' || activityForm.type === 'meeting'">
                             <label class="block text-xs font-medium text-gray-500 mb-1">Assign to</label>

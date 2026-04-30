@@ -9,11 +9,12 @@ class CalendarActivity extends Model
     protected $fillable = [
         'user_id', 'created_by_user_id',
         'area', 'type', 'title', 'description',
-        'scheduled_at', 'completed_at', 'status',
+        'scheduled_at', 'ends_at', 'completed_at', 'status',
     ];
 
     protected $casts = [
         'scheduled_at' => 'datetime',
+        'ends_at'      => 'datetime',
         'completed_at' => 'datetime',
     ];
 

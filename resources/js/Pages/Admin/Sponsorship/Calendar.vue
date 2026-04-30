@@ -194,7 +194,15 @@ function deletePersonalActivity(ev) {
 
 // ──────────── Edit (only for call/meeting) ────────────
 const isEditing = ref(false);
-const editForm = useForm({ title: '', description: '', scheduled_at: '' });
+const editForm = useForm({ title: '', description: '', scheduled_at: '', has_end_time: false, ends_at_time: '' });
+
+function utcToLocalTimeInput(utc) {
+    if (!utc) return '';
+    const d = new Date(utc);
+    if (isNaN(d)) return '';
+    const pad = n => String(n).padStart(2, '0');
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 // Datetime-local helpers (TZ-safe). Mismo patrón que Leads/Show.vue.
 function toLocalDatetimeInput(utcStr) {
@@ -216,6 +224,8 @@ function startEdit() {
     editForm.title        = selectedEvent.value.title || '';
     editForm.description  = selectedEvent.value.description || '';
     editForm.scheduled_at = toLocalDatetimeInput(selectedEvent.value.start);
+    editForm.has_end_time = !!selectedEvent.value.ends_at;
+    editForm.ends_at_time = utcToLocalTimeInput(selectedEvent.value.ends_at);
     isEditing.value = true;
 }
 
@@ -224,6 +234,7 @@ function saveEdit() {
     editForm.transform(d => ({
         ...d,
         scheduled_at: localDatetimeToUtcIso(d.scheduled_at),
+        ends_at: d.has_end_time ? combineEndTimeIso(d.scheduled_at, d.ends_at_time) : null,
         _method: 'PATCH',
     })).post(endpointBase(selectedEvent.value), {
         preserveScroll: true,
@@ -240,20 +251,26 @@ function saveEdit() {
 // para cualquier área. Solo aceptan call/meeting (las notas pertenecen al
 // timeline del lead, no al calendario).
 const showCreateModal = ref(false);
-const createForm = useForm({ user_id: '', type: 'call', title: '', description: '', scheduled_at: '' });
+const createForm = useForm({ user_id: '', type: 'call', title: '', description: '', scheduled_at: '', has_end_time: false, ends_at_time: '' });
 const availabilityConflicts = ref([]);
 
 function openCreateModal() {
     createForm.reset();
     createForm.type = 'call';
     createForm.user_id = '';
+    createForm.has_end_time = false;
+    createForm.ends_at_time = '';
     availabilityConflicts.value = [];
     showCreateModal.value = true;
 }
 
-// Soft availability check — debounced when user_id + scheduled_at are present.
-// Pegamos al availability de sponsorship (la URL del calendar actual); el endpoint
-// igual incluye las personales globales del user (cross-area).
+function combineEndTimeIso(scheduledLocal, endTimeStr) {
+    if (!endTimeStr || !scheduledLocal) return null;
+    const datePart = scheduledLocal.split('T')[0];
+    const d = new Date(`${datePart}T${endTimeStr}`);
+    return isNaN(d) ? null : d.toISOString();
+}
+
 let availabilityTimer = null;
 async function checkAvailability() {
     clearTimeout(availabilityTimer);
@@ -264,13 +281,12 @@ async function checkAvailability() {
             availabilityConflicts.value = [];
             return;
         }
-        const center = new Date(scheduled);
-        if (isNaN(center)) return;
-        const from = new Date(center.getTime() - 30 * 60 * 1000).toISOString();
-        const to   = new Date(center.getTime() + 30 * 60 * 1000).toISOString();
+        const startIso = localDatetimeToUtcIso(scheduled);
+        if (!startIso) return;
+        const endIso = createForm.has_end_time ? combineEndTimeIso(scheduled, createForm.ends_at_time) : null;
         try {
             const res = await axios.get('/admin/sponsorship/calendar/availability', {
-                params: { user_id: userId, from, to },
+                params: { user_id: userId, scheduled_at: startIso, ends_at: endIso || undefined },
             });
             availabilityConflicts.value = res.data?.conflicts ?? [];
         } catch (e) {
@@ -279,13 +295,14 @@ async function checkAvailability() {
     }, 350);
 }
 
-watch([() => createForm.user_id, () => createForm.scheduled_at], checkAvailability);
+watch([() => createForm.user_id, () => createForm.scheduled_at, () => createForm.has_end_time, () => createForm.ends_at_time], checkAvailability);
 
 function submitCreate() {
     // Personal entry global: no enviamos `area` para que quede null.
     createForm.transform(d => ({
         ...d,
         scheduled_at: localDatetimeToUtcIso(d.scheduled_at),
+        ends_at: d.has_end_time ? combineEndTimeIso(d.scheduled_at, d.ends_at_time) : null,
         user_id: d.user_id || null,
     })).post('/admin/sponsorship/calendar-activities', {
         preserveScroll: true,
@@ -457,7 +474,7 @@ function eventsAtHour(date, hour) {
                         <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ selectedEvent.title }}</h3>
                         <div v-if="selectedEvent.description" class="sponsorship-email-preview text-sm text-gray-600 mb-3 break-words" v-html="selectedEvent.description"></div>
                         <div class="space-y-1 text-sm text-gray-600 mb-5">
-                            <p>⏰ {{ new Date(selectedEvent.start).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}</p>
+                            <p>⏰ {{ new Date(selectedEvent.start).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}<template v-if="selectedEvent.ends_at"> – {{ new Date(selectedEvent.ends_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) }}</template></p>
                             <p v-if="selectedEvent.lead_name">👤 {{ selectedEvent.lead_name }} <span v-if="selectedEvent.company">— {{ selectedEvent.company }}</span></p>
                             <p v-if="selectedEvent.advisor">→ {{ selectedEvent.advisor }}</p>
                         </div>
@@ -501,6 +518,15 @@ function eventsAtHour(date, hour) {
                                 <input v-model="editForm.scheduled_at" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
                                 <p v-if="editForm.errors.scheduled_at" class="text-xs text-red-500 mt-1">{{ editForm.errors.scheduled_at }}</p>
                             </div>
+                            <div v-if="editForm.scheduled_at" class="flex items-center gap-2">
+                                <label class="inline-flex items-center gap-2 text-xs text-gray-600">
+                                    <input v-model="editForm.has_end_time" type="checkbox" class="rounded" />
+                                    Specify end time
+                                </label>
+                                <input v-if="editForm.has_end_time" v-model="editForm.ends_at_time" type="time"
+                                    class="border border-gray-300 rounded-lg px-2 py-1 text-sm" />
+                                <p v-if="editForm.errors.ends_at" class="text-xs text-red-500">{{ editForm.errors.ends_at }}</p>
+                            </div>
                             <div class="flex justify-end gap-2 pt-1">
                                 <button @click="isEditing = false" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
                                 <button @click="saveEdit" :disabled="editForm.processing || !editForm.title"
@@ -537,6 +563,15 @@ function eventsAtHour(date, hour) {
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Scheduled at</label>
                                 <input v-model="createForm.scheduled_at" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
                             </div>
+                        </div>
+                        <div v-if="createForm.scheduled_at" class="flex items-center gap-2">
+                            <label class="inline-flex items-center gap-2 text-xs text-gray-600">
+                                <input v-model="createForm.has_end_time" type="checkbox" class="rounded" />
+                                Specify end time
+                            </label>
+                            <input v-if="createForm.has_end_time" v-model="createForm.ends_at_time" type="time"
+                                class="border border-gray-300 rounded-lg px-2 py-1 text-sm" />
+                            <p v-if="createForm.errors.ends_at" class="text-xs text-red-500">{{ createForm.errors.ends_at }}</p>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Title *</label>

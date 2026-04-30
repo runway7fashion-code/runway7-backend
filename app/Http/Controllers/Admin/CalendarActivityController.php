@@ -37,12 +37,11 @@ class CalendarActivityController extends Controller
             $this->authorizeArea($validated['area']);
         }
 
-        // Hard-block: no se puede agendar si el user destino ya tiene otra
-        // actividad pendiente en ±30 min. Atraviesa áreas — la disponibilidad
-        // del user es única.
+        // Hard-block por overlap real (rangos). Sin ends_at NO bloquea.
         $checker->assertNoConflict(
             $validated['user_id'] ?? $user->id,
             $validated['scheduled_at'] ?? null,
+            $validated['ends_at'] ?? null,
         );
 
         $activity = CalendarActivity::create([
@@ -53,6 +52,7 @@ class CalendarActivityController extends Controller
             'title'              => $validated['title'],
             'description'        => $validated['description'] ?? null,
             'scheduled_at'       => $validated['scheduled_at'] ?? null,
+            'ends_at'            => $validated['ends_at'] ?? null,
             'status'             => 'pending',
         ]);
 
@@ -74,7 +74,10 @@ class CalendarActivityController extends Controller
         $targetSchedAt = array_key_exists('scheduled_at', $validated)
             ? $validated['scheduled_at']
             : $calendarActivity->scheduled_at?->toIso8601String();
-        $checker->assertNoConflict($targetUserId, $targetSchedAt, ['personal' => $calendarActivity->id]);
+        $targetEndsAt = array_key_exists('ends_at', $validated)
+            ? $validated['ends_at']
+            : $calendarActivity->ends_at?->toIso8601String();
+        $checker->assertNoConflict($targetUserId, $targetSchedAt, $targetEndsAt, ['personal' => $calendarActivity->id]);
 
         $calendarActivity->update(array_filter([
             'user_id'      => $validated['user_id']      ?? $calendarActivity->user_id,
@@ -82,6 +85,7 @@ class CalendarActivityController extends Controller
             'title'        => $validated['title']        ?? $calendarActivity->title,
             'description'  => array_key_exists('description', $validated) ? $validated['description'] : $calendarActivity->description,
             'scheduled_at' => array_key_exists('scheduled_at', $validated) ? $validated['scheduled_at'] : $calendarActivity->scheduled_at,
+            'ends_at'      => array_key_exists('ends_at', $validated) ? $validated['ends_at'] : $calendarActivity->ends_at,
         ], fn($v) => $v !== null || true));
 
         if ($request->wantsJson()) return response()->json(['ok' => true]);
@@ -129,18 +133,20 @@ class CalendarActivityController extends Controller
     }
 
     /**
-     * GET /admin/{area}/calendar/availability?user_id=X&from=ISO&to=ISO
+     * GET /admin/{area}/calendar/availability
+     *   ?user_id=X&scheduled_at=ISO[&ends_at=ISO][&exclude_lead=id][&exclude_personal=id]
      *
-     * Returns activities (lead + personal) overlapping the given window for the
-     * given user. Used por los modales para advertir y deshabilitar el Save —
-     * el backend bloquea hard la creación cuando hay conflicto.
+     * Devuelve las actividades pendientes del user que se solapan con el rango
+     * [scheduled_at, ends_at] (donde end = start si no se manda ends_at).
+     * Misma regla de overlap que assertNoConflict — los modales muestran
+     * warning rojo + deshabilitan Save. Backend bloquea hard al persistir.
      */
     public function availability(Request $request, string $area, \App\Services\CalendarAvailabilityChecker $checker)
     {
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'from'    => 'required|date',
-            'to'      => 'required|date',
+            'user_id'      => 'required|exists:users,id',
+            'scheduled_at' => 'required|date',
+            'ends_at'      => 'nullable|date',
             'exclude_lead'     => 'nullable|integer',
             'exclude_personal' => 'nullable|integer',
         ]);
@@ -156,12 +162,15 @@ class CalendarActivityController extends Controller
             $excludes['personal'] = (int) $validated['exclude_personal'];
         }
 
-        $conflicts = $checker->getConflicts(
-            (int) $validated['user_id'],
-            \Carbon\Carbon::parse($validated['from']),
-            \Carbon\Carbon::parse($validated['to']),
-            $excludes
-        );
+        $start = \Carbon\Carbon::parse($validated['scheduled_at']);
+        $end = !empty($validated['ends_at']) ? \Carbon\Carbon::parse($validated['ends_at']) : $start->copy();
+
+        $conflicts = $checker->getConflicts((int) $validated['user_id'], $start, $end, $excludes);
+
+        // Mismo filtro que assertNoConflict: si nueva y existente son ambas
+        // punto-en-el-tiempo, NO se considera conflicto.
+        $newHasRange = !empty($validated['ends_at']);
+        $conflicts = $conflicts->filter(fn($c) => !empty($c['ends_at']) || $newHasRange)->values();
 
         return response()->json(['conflicts' => $conflicts]);
     }
@@ -176,6 +185,7 @@ class CalendarActivityController extends Controller
             'title'        => 'nullable|string|max:255',
             'description'  => 'nullable|string',
             'scheduled_at' => 'nullable|date',
+            'ends_at'      => 'nullable|date|after:scheduled_at',
             'area'         => ['nullable', Rule::in(['sales', 'sponsorship'])],
         ];
 

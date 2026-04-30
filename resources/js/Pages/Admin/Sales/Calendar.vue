@@ -293,17 +293,32 @@ async function deletePersonalActivity(evt) {
 // en ambos calendars. Solo se permiten call/meeting (las notas pertenecen al
 // timeline del lead, no al calendario).
 const showCreateModal = ref(false);
-const createForm = useForm({ user_id: '', type: 'call', title: '', description: '', scheduled_at: '' });
+const createForm = useForm({ user_id: '', type: 'call', title: '', description: '', scheduled_at: '', has_end_time: false, ends_at_time: '' });
 
 function openCreateModal() {
     createForm.reset();
     createForm.type = 'call';
     createForm.user_id = '';
+    createForm.has_end_time = false;
+    createForm.ends_at_time = '';
     availabilityConflicts.value = [];
     showCreateModal.value = true;
 }
 
-// ── Soft availability check (debounced) ──
+function localDatetimeToUtcIso(s) {
+    if (!s) return null;
+    const d = new Date(s);
+    return isNaN(d) ? null : d.toISOString();
+}
+
+function combineEndTimeIso(scheduledLocal, endTimeStr) {
+    if (!endTimeStr || !scheduledLocal) return null;
+    const datePart = scheduledLocal.split('T')[0];
+    const d = new Date(`${datePart}T${endTimeStr}`);
+    return isNaN(d) ? null : d.toISOString();
+}
+
+// ── Availability check (overlap real) ──
 const availabilityConflicts = ref([]);
 let availabilityTimer = null;
 async function checkAvailability() {
@@ -315,13 +330,12 @@ async function checkAvailability() {
             availabilityConflicts.value = [];
             return;
         }
-        const center = new Date(scheduled);
-        if (isNaN(center)) return;
-        const from = new Date(center.getTime() - 30 * 60 * 1000).toISOString();
-        const to   = new Date(center.getTime() + 30 * 60 * 1000).toISOString();
+        const startIso = localDatetimeToUtcIso(scheduled);
+        if (!startIso) return;
+        const endIso = createForm.has_end_time ? combineEndTimeIso(scheduled, createForm.ends_at_time) : null;
         try {
             const res = await axios.get('/admin/sales/calendar/availability', {
-                params: { user_id: userId, from, to },
+                params: { user_id: userId, scheduled_at: startIso, ends_at: endIso || undefined },
             });
             availabilityConflicts.value = res.data?.conflicts ?? [];
         } catch (e) {
@@ -329,19 +343,14 @@ async function checkAvailability() {
         }
     }, 350);
 }
-watch([() => createForm.user_id, () => createForm.scheduled_at], checkAvailability);
-
-function localDatetimeToUtcIso(s) {
-    if (!s) return null;
-    const d = new Date(s);
-    return isNaN(d) ? null : d.toISOString();
-}
+watch([() => createForm.user_id, () => createForm.scheduled_at, () => createForm.has_end_time, () => createForm.ends_at_time], checkAvailability);
 
 function submitCreate() {
     // Personal entry global: no enviamos `area` para que quede null.
     createForm.transform(d => ({
         ...d,
         scheduled_at: localDatetimeToUtcIso(d.scheduled_at),
+        ends_at: d.has_end_time ? combineEndTimeIso(d.scheduled_at, d.ends_at_time) : null,
         user_id: d.user_id || null,
     })).post('/admin/sales/calendar-activities', {
         preserveScroll: true,
@@ -615,7 +624,7 @@ function submitCreate() {
 
                         <div class="flex items-center gap-2 text-gray-500">
                             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            {{ formatDateTime(selectedEvent.start) }}
+                            {{ formatDateTime(selectedEvent.start) }}<template v-if="selectedEvent.ends_at"> – {{ new Date(selectedEvent.ends_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) }}</template>
                         </div>
 
                         <div v-if="selectedEvent.lead_name" class="flex items-center gap-2 text-gray-500">
@@ -680,6 +689,15 @@ function submitCreate() {
                                 <label class="block text-xs font-medium text-gray-600 mb-1">Scheduled at</label>
                                 <input v-model="createForm.scheduled_at" type="datetime-local" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
                             </div>
+                        </div>
+                        <div v-if="createForm.scheduled_at" class="flex items-center gap-2">
+                            <label class="inline-flex items-center gap-2 text-xs text-gray-600">
+                                <input v-model="createForm.has_end_time" type="checkbox" class="rounded" />
+                                Specify end time
+                            </label>
+                            <input v-if="createForm.has_end_time" v-model="createForm.ends_at_time" type="time"
+                                class="border border-gray-300 rounded-lg px-2 py-1 text-sm" />
+                            <p v-if="createForm.errors.ends_at" class="text-xs text-red-500">{{ createForm.errors.ends_at }}</p>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">Title *</label>

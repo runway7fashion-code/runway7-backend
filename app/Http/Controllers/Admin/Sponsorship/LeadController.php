@@ -646,6 +646,7 @@ class LeadController extends Controller
             'title'               => 'required|string|max:255',
             'description'         => 'nullable|string',
             'scheduled_at'        => 'nullable|date',
+            'ends_at'             => 'nullable|date|after:scheduled_at',
             'assigned_to_user_id' => 'nullable|exists:users,id',
             'is_contract'         => 'nullable|boolean',
             'files'               => 'nullable|array',
@@ -654,12 +655,12 @@ class LeadController extends Controller
 
         $isScheduled = !empty($validated['scheduled_at']);
 
-        // Hard-block de doble agendamiento (solo aplica a tipos calendar — call/meeting —
-        // que están agendados; emails/notas no bloquean).
+        // Hard-block por overlap real (rangos). Solo aplica a call/meeting agendados.
         if ($isScheduled && in_array($validated['type'], ['call', 'meeting'], true)) {
             $checker->assertNoConflict(
                 $validated['assigned_to_user_id'] ?? auth()->id(),
                 $validated['scheduled_at'],
+                $validated['ends_at'] ?? null,
             );
         }
 
@@ -671,6 +672,7 @@ class LeadController extends Controller
             'title'               => $validated['title'],
             'description'         => $validated['description'] ?? null,
             'scheduled_at'        => $validated['scheduled_at'] ?? null,
+            'ends_at'             => $validated['ends_at'] ?? null,
             'completed_at'        => $isScheduled ? null : now(),
             'status'              => $isScheduled ? 'pending' : 'completed',
             'is_contract'         => ($validated['type'] === 'email' && !empty($validated['is_contract'])),
@@ -764,6 +766,7 @@ class LeadController extends Controller
             'title'               => 'nullable|string|max:255',
             'description'         => 'nullable|string',
             'scheduled_at'        => 'nullable|date',
+            'ends_at'             => 'nullable|date|after:scheduled_at',
             'assigned_to_user_id' => 'nullable|exists:users,id',
             'files'               => 'nullable|array',
             'files.*'             => 'file|max:20480',
@@ -791,11 +794,13 @@ class LeadController extends Controller
             $checker->assertNoConflict(
                 $validated['assigned_to_user_id'] ?? $activity->assigned_to_user_id,
                 $validated['scheduled_at'] ?? null,
+                $validated['ends_at'] ?? null,
                 ['sponsorship_lead' => $activity->id],
             );
             $updates['title']               = $validated['title'];
             $updates['description']         = $validated['description'] ?? null;
             $updates['scheduled_at']        = $validated['scheduled_at'] ?? null;
+            $updates['ends_at']             = $validated['ends_at'] ?? null;
             $updates['assigned_to_user_id'] = $validated['assigned_to_user_id'] ?? $activity->assigned_to_user_id;
         }
 

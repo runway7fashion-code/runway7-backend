@@ -18,6 +18,7 @@ class LeadActivity extends Model
         'title',
         'description',
         'scheduled_at',
+        'ends_at',
         'completed_at',
         'edited_at',
         'status',
@@ -31,6 +32,7 @@ class LeadActivity extends Model
 
     protected $casts = [
         'scheduled_at' => 'datetime',
+        'ends_at'      => 'datetime',
         'completed_at' => 'datetime',
         'edited_at'    => 'datetime',
         'delivered_at' => 'datetime',
