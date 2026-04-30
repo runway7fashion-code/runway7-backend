@@ -396,7 +396,7 @@ function eventsAtHour(date, hour) {
                                 class="w-full text-left text-xs truncate px-1.5 py-0.5 rounded text-white"
                                 :style="{ backgroundColor: activityTypes[ev.type]?.color }"
                                 :class="[ev.status === 'completed' ? 'opacity-60 line-through' : '', ev.source === 'personal' ? 'ring-2 ring-white/50 ring-inset' : '']">
-                                <span v-if="crossArea" class="inline-block bg-white/30 px-1 mr-0.5 rounded text-[9px] font-bold align-middle">{{ areaStyle(ev).label }}</span>{{ formatTime(ev.start) }} {{ ev.title }}
+                                <span v-if="ev.area === 'sales'" class="inline-block bg-white/30 px-1 mr-0.5 rounded text-[9px] font-bold align-middle">{{ areaStyle(ev).label }}</span>{{ formatTime(ev.start) }} {{ ev.title }}
                             </button>
                             <p v-if="eventsOn(cell).length > 3" class="text-xs text-gray-400 px-1">+{{ eventsOn(cell).length - 3 }} more</p>
                         </div>
@@ -421,7 +421,7 @@ function eventsAtHour(date, hour) {
                                 :style="{ backgroundColor: activityTypes[ev.type]?.color }"
                                 :class="[ev.status === 'completed' ? 'opacity-60 line-through' : '', ev.source === 'personal' ? 'ring-2 ring-white/50 ring-inset' : '']">
                                 <p class="font-semibold flex items-center gap-1">
-                                    <span v-if="crossArea" class="bg-white/30 px-1 rounded text-[9px]">{{ areaStyle(ev).label }}</span>
+                                    <span v-if="ev.area === 'sales'" class="bg-white/30 px-1 rounded text-[9px]">{{ areaStyle(ev).label }}</span>
                                     {{ formatTime(ev.start) }}
                                 </p>
                                 <p class="truncate">{{ ev.title }}</p>
@@ -442,7 +442,7 @@ function eventsAtHour(date, hour) {
                                 class="w-full text-left text-sm p-2 rounded text-white flex items-start gap-2"
                                 :style="{ backgroundColor: activityTypes[ev.type]?.color }"
                                 :class="[ev.status === 'completed' ? 'opacity-60 line-through' : '', ev.source === 'personal' ? 'ring-2 ring-white/50 ring-inset' : '']">
-                                <span v-if="crossArea" class="bg-white/30 px-1 rounded text-[9px] font-bold">{{ areaStyle(ev).label }}</span>
+                                <span v-if="ev.area === 'sales'" class="bg-white/30 px-1 rounded text-[9px] font-bold">{{ areaStyle(ev).label }}</span>
                                 <span class="text-xs font-semibold">{{ formatTime(ev.start) }}</span>
                                 <span class="flex-1">{{ ev.title }}</span>
                                 <span v-if="ev.lead_name" class="text-xs opacity-80">{{ ev.lead_name }}</span>

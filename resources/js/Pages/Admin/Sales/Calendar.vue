@@ -458,7 +458,7 @@ function submitCreate() {
                                 class="w-full text-left px-1.5 py-0.5 rounded text-[10px] font-medium truncate block border transition-opacity hover:opacity-80"
                                 :class="[typeStyle(evt.type).bg, typeStyle(evt.type).text, typeStyle(evt.type).border]"
                             >
-                                <span v-if="crossArea" class="inline-block bg-white px-1 mr-0.5 rounded text-[9px] font-bold border" :class="typeStyle(evt.type).border">{{ areaLabel(evt) }}</span>{{ evt.title || typeLabel(evt.type) }}
+                                <span v-if="evt.area === 'sponsorship'" class="inline-block bg-white px-1 mr-0.5 rounded text-[9px] font-bold border" :class="typeStyle(evt.type).border">{{ areaLabel(evt) }}</span>{{ evt.title || typeLabel(evt.type) }}
                             </button>
                             <span
                                 v-if="eventsForDay(cell.date).length > 3"
@@ -509,7 +509,7 @@ function submitCreate() {
                                 :class="[typeStyle(evt.type).bg, typeStyle(evt.type).text, typeStyle(evt.type).border]"
                             >
                                 <div class="text-[11px] font-semibold truncate flex items-center gap-1">
-                                    <span v-if="crossArea" class="bg-white px-1 rounded text-[9px] border" :class="typeStyle(evt.type).border">{{ areaLabel(evt) }}</span>
+                                    <span v-if="evt.area === 'sponsorship'" class="bg-white px-1 rounded text-[9px] border" :class="typeStyle(evt.type).border">{{ areaLabel(evt) }}</span>
                                     {{ evt.title || typeLabel(evt.type) }}
                                 </div>
                                 <div v-if="evt.lead_name" class="text-[10px] opacity-70 truncate">{{ evt.lead_name }}</div>
@@ -537,7 +537,7 @@ function submitCreate() {
                                 >
                                     <div class="flex items-center justify-between mb-1">
                                         <div class="flex items-center gap-2">
-                                            <span v-if="crossArea" class="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 text-gray-700">{{ areaLabel(evt) }}</span>
+                                            <span v-if="evt.area === 'sponsorship'" class="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 text-gray-700">{{ areaLabel(evt) }}</span>
                                             <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full" :class="[typeStyle(evt.type).bg, typeStyle(evt.type).text]">
                                                 <span v-if="typeIcon(evt.type)" v-text="typeIcon(evt.type)"></span>
                                                 {{ typeLabel(evt.type) }}
