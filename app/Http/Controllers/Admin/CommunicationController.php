@@ -9,7 +9,10 @@ use App\Jobs\SendBulkUserSmsJob;
 use App\Models\CommunicationLog;
 use App\Models\DeviceToken;
 use App\Models\Event;
+use App\Models\LeadTag;
+use App\Models\Sponsorship\Tag as SponsorshipTag;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use App\Services\SmsService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -117,6 +120,26 @@ class CommunicationController extends Controller
             });
         }
 
+        // Sales tag filter — applies to designers (User) whose origin DesignerLead has the tag
+        if ($request->filled('lead_tag_id') && in_array('designer', $allowedRoles)) {
+            $tagId = (int) $request->lead_tag_id;
+            $query->whereExists(fn($q) => $q->select(DB::raw(1))
+                ->from('designer_leads as dl')
+                ->join('lead_tag as lt', 'lt.lead_id', '=', 'dl.id')
+                ->whereColumn('dl.converted_designer_id', 'users.id')
+                ->where('lt.tag_id', $tagId));
+        }
+
+        // Sponsorship tag filter — applies to sponsors (User) whose origin Sponsorship\Lead has the tag
+        if ($request->filled('sponsorship_tag_id') && in_array('sponsor', $allowedRoles)) {
+            $tagId = (int) $request->sponsorship_tag_id;
+            $query->whereExists(fn($q) => $q->select(DB::raw(1))
+                ->from('sponsorship_leads as sl')
+                ->join('sponsorship_lead_tag as slt', 'slt.lead_id', '=', 'sl.id')
+                ->whereColumn('sl.converted_user_id', 'users.id')
+                ->where('slt.tag_id', $tagId));
+        }
+
         // Channel-specific filters
         if ($channel === 'email') {
             $query->whereNotNull('email');
@@ -153,7 +176,13 @@ class CommunicationController extends Controller
             'allowedRoles'   => $allowedRoles,
             'statusesByRole' => $filteredStatuses,
             'events'         => Event::whereNull('deleted_at')->where('status', '!=', 'cancelled')->select('id', 'name')->orderBy('start_date', 'desc')->get(),
-            'filters'        => $request->only(['search', 'role', 'status', 'event_id', 'phone_valid', 'has_device']),
+            'filters'        => $request->only(['search', 'role', 'status', 'event_id', 'phone_valid', 'has_device', 'lead_tag_id', 'sponsorship_tag_id']),
+            'leadTags'       => in_array('designer', $allowedRoles)
+                ? LeadTag::orderBy('name')->get(['id', 'name', 'color'])
+                : [],
+            'sponsorshipTags' => in_array('sponsor', $allowedRoles)
+                ? SponsorshipTag::orderBy('name')->get(['id', 'name', 'color'])
+                : [],
         ];
 
         if ($channel === 'sms' || $channel === 'notifications') {

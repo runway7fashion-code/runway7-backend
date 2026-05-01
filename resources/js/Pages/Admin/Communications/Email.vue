@@ -12,13 +12,20 @@ const props = defineProps({
     statusesByRole: Object,
     events: Array,
     filters: Object,
+    leadTags: { type: Array, default: () => [] },
+    sponsorshipTags: { type: Array, default: () => [] },
 });
 
 const search = ref(props.filters?.search || '');
 const role = ref(props.filters?.role || '');
 const status = ref(props.filters?.status || '');
 const eventId = ref(props.filters?.event_id || '');
+const leadTagId = ref(props.filters?.lead_tag_id || '');
+const sponsorshipTagId = ref(props.filters?.sponsorship_tag_id || '');
 const selectedUsers = ref([]);
+
+const showLeadTagFilter = computed(() => props.leadTags.length > 0 && (!role.value || role.value === 'designer'));
+const showSponsorshipTagFilter = computed(() => props.sponsorshipTags.length > 0 && (!role.value || role.value === 'sponsor'));
 
 const showEmailModal = ref(false);
 const emailProcessing = ref(false);
@@ -28,7 +35,13 @@ watch(search, () => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => applyFilters(), 400);
 });
-watch([role, status, eventId], () => applyFilters());
+watch([role, status, eventId, leadTagId, sponsorshipTagId], () => applyFilters());
+
+// Reset tag filters when the role changes to one that doesn't apply
+watch(role, (newRole) => {
+    if (newRole && newRole !== 'designer' && leadTagId.value) leadTagId.value = '';
+    if (newRole && newRole !== 'sponsor' && sponsorshipTagId.value) sponsorshipTagId.value = '';
+});
 
 function applyFilters() {
     router.get('/admin/communications/email', {
@@ -36,6 +49,8 @@ function applyFilters() {
         role: role.value || undefined,
         status: status.value || undefined,
         event_id: eventId.value || undefined,
+        lead_tag_id: leadTagId.value || undefined,
+        sponsorship_tag_id: sponsorshipTagId.value || undefined,
     }, { preserveState: true, replace: true });
 }
 
@@ -147,6 +162,16 @@ const roleColors = {
                 <select v-model="eventId" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
                     <option value="">All events</option>
                     <option v-for="ev in events" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
+                </select>
+                <select v-if="showLeadTagFilter" v-model="leadTagId"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
+                    <option value="">All sales tags</option>
+                    <option v-for="t in leadTags" :key="t.id" :value="t.id">{{ t.name }}</option>
+                </select>
+                <select v-if="showSponsorshipTagFilter" v-model="sponsorshipTagId"
+                    class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
+                    <option value="">All sponsorship tags</option>
+                    <option v-for="t in sponsorshipTags" :key="t.id" :value="t.id">{{ t.name }}</option>
                 </select>
             </div>
 
