@@ -6,7 +6,6 @@ use App\Models\DesignerLead;
 use App\Models\LeadActivity;
 use App\Models\SalesBotMessage;
 use App\Models\User;
-use Illuminate\Support\Facades\Mail;
 
 class SalesBotService
 {
@@ -69,59 +68,6 @@ class SalesBotService
         }
 
         return $count;
-    }
-
-    /**
-     * Send a single consolidated email per advisor with all their overdue activities.
-     * Runs once per day on weekdays only (scheduled at 9 AM Lima time).
-     */
-    public function sendDailyOverdueDigest(): int
-    {
-        $nowLima = now('America/Lima');
-
-        $overdueActivities = LeadActivity::where('status', 'pending')
-            ->whereNotNull('scheduled_at')
-            ->where('scheduled_at', '<', $nowLima->format('Y-m-d H:i:s'))
-            ->whereNotNull('user_id')
-            ->with(['lead:id,first_name,last_name,company_name', 'user:id,first_name,last_name,email'])
-            ->get();
-
-        $sent = 0;
-        $groupedByUser = $overdueActivities->groupBy('user_id');
-
-        foreach ($groupedByUser as $userId => $activities) {
-            $user = $activities->first()->user;
-            if (!$user || !$user->email) continue;
-
-            // Build the body with one line per overdue activity, oldest first.
-            $lines = $activities
-                ->sortBy(fn($a) => $a->scheduled_at)
-                ->map(function ($a) {
-                    $when = $a->scheduled_at?->format('M j, Y g:i A');
-                    $lead = $a->lead?->full_name ?? '—';
-                    $company = $a->lead?->company_name ? " ({$a->lead->company_name})" : '';
-                    return "• {$a->title} — {$lead}{$company} — was due {$when}";
-                })
-                ->join("\n");
-
-            $count = $activities->count();
-            $body = "Hi {$user->first_name},\n\n"
-                . "You have {$count} overdue " . ($count === 1 ? 'activity' : 'activities') . " in the Runway 7 sales CRM:\n\n"
-                . $lines
-                . "\n\nPlease review your sales panel and update the status of each activity (complete, cancelled or not completed).\n\n"
-                . url('/admin/sales/leads')
-                . "\n\n— Runway 7 Sales Bot";
-
-            Mail::raw($body, function ($message) use ($user, $count) {
-                $message->to($user->email)
-                    ->from('designers@runway7fashion.com', 'Runway 7 Sales Bot')
-                    ->subject("Daily digest: {$count} overdue " . ($count === 1 ? 'activity' : 'activities'));
-            });
-
-            $sent++;
-        }
-
-        return $sent;
     }
 
     /**

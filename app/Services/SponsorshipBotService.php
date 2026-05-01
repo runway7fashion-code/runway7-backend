@@ -6,7 +6,6 @@ use App\Models\Sponsorship\BotMessage;
 use App\Models\Sponsorship\Lead;
 use App\Models\Sponsorship\LeadActivity;
 use App\Models\User;
-use Illuminate\Support\Facades\Mail;
 
 class SponsorshipBotService
 {
@@ -71,58 +70,6 @@ class SponsorshipBotService
         }
 
         return $count;
-    }
-
-    /**
-     * Send a single consolidated email per advisor with all their overdue activities.
-     * Runs once per day on weekdays only (scheduled at 9 AM Lima time).
-     */
-    public function sendDailyOverdueDigest(): int
-    {
-        $nowLima = now('America/Lima');
-
-        $overdueActivities = LeadActivity::where('status', 'pending')
-            ->whereNotNull('scheduled_at')
-            ->where('scheduled_at', '<', $nowLima->format('Y-m-d H:i:s'))
-            ->whereNotNull('assigned_to_user_id')
-            ->with(['lead.company:id,name', 'assignedTo:id,first_name,last_name,email'])
-            ->get();
-
-        $sent = 0;
-        $groupedByUser = $overdueActivities->groupBy('assigned_to_user_id');
-
-        foreach ($groupedByUser as $userId => $activities) {
-            $user = $activities->first()->assignedTo;
-            if (!$user || !$user->email) continue;
-
-            $lines = $activities
-                ->sortBy(fn($a) => $a->scheduled_at)
-                ->map(function ($a) {
-                    $when = $a->scheduled_at?->format('M j, Y g:i A');
-                    $leadName = trim(($a->lead?->first_name ?? '') . ' ' . ($a->lead?->last_name ?? '')) ?: '—';
-                    $company = $a->lead?->company?->name ? " ({$a->lead->company->name})" : '';
-                    return "• {$a->title} — {$leadName}{$company} — was due {$when}";
-                })
-                ->join("\n");
-
-            $count = $activities->count();
-            $body = "Hi {$user->first_name},\n\n"
-                . "You have {$count} overdue " . ($count === 1 ? 'activity' : 'activities') . " in the Runway 7 sponsorship CRM:\n\n"
-                . $lines
-                . "\n\nPlease review your sponsorship panel and update the status of each activity (complete, cancelled or not completed).\n\n"
-                . url('/admin/sponsorship/leads')
-                . "\n\n— Runway 7 Partnerships Bot";
-
-            Mail::raw($body, function ($message) use ($user, $count) {
-                $message->to($user->email)
-                    ->from('partnerships@runway7fashion.com', 'Runway 7 Partnerships Bot')
-                    ->subject("Daily digest: {$count} overdue " . ($count === 1 ? 'activity' : 'activities'));
-            });
-
-            $sent++;
-        }
-
-        return $sent;
     }
 
     /**
