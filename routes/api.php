@@ -124,10 +124,17 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('my-materials/summary', [App\Http\Controllers\Api\V1\MaterialController::class, 'summary'])->name('materials.summary');
         Route::post('materials/{material}/upload-url', [App\Http\Controllers\Api\V1\MaterialController::class, 'uploadUrl'])->name('materials.upload-url');
         Route::post('materials/{material}/upload-complete', [App\Http\Controllers\Api\V1\MaterialController::class, 'uploadComplete'])->name('materials.upload-complete');
+        Route::delete('materials/{material}/files/{file}', [App\Http\Controllers\Api\V1\MaterialController::class, 'deleteFile'])->name('materials.delete-file');
+        Route::get('materials/{material}/files/{file}/content', [App\Http\Controllers\Api\V1\MaterialController::class, 'materialFileContent'])->name('materials.files.content');
+        Route::get('materials/{material}/moodboard-items/{item}/files/{file}/content', [App\Http\Controllers\Api\V1\MaterialController::class, 'moodboardItemFileContent'])->name('materials.moodboard-items.files.content');
         Route::post('materials/{material}/confirm', [App\Http\Controllers\Api\V1\MaterialController::class, 'confirm'])->name('materials.confirm');
         Route::post('materials/{material}/observe', [App\Http\Controllers\Api\V1\MaterialController::class, 'observe'])->name('materials.observe');
         Route::put('materials/{material}/bio', [App\Http\Controllers\Api\V1\MaterialController::class, 'saveBio'])->name('materials.save-bio');
         Route::post('materials/{material}/moodboard-respond', [App\Http\Controllers\Api\V1\MaterialController::class, 'moodboardRespond'])->name('materials.moodboard-respond');
+        Route::post('materials/{material}/moodboard-items/{item}/upload-url', [App\Http\Controllers\Api\V1\MaterialController::class, 'moodboardItemUploadUrl'])->name('materials.moodboard-items.upload-url');
+        Route::post('materials/{material}/moodboard-items/{item}/upload-complete', [App\Http\Controllers\Api\V1\MaterialController::class, 'moodboardItemUploadComplete'])->name('materials.moodboard-items.upload-complete');
+        Route::delete('materials/{material}/moodboard-items/{item}/files/{file}', [App\Http\Controllers\Api\V1\MaterialController::class, 'moodboardItemFileDelete'])->name('materials.moodboard-items.delete-file');
+        Route::get('moodboard-items/{moodboardItem}/image', [App\Http\Controllers\Api\V1\MaterialController::class, 'moodboardItemImage'])->name('moodboard-items.image');
 
         // Profile
         Route::put('profile', [App\Http\Controllers\Api\V1\ProfileController::class, 'update'])->name('profile.update');

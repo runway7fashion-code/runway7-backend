@@ -110,6 +110,7 @@ class ArtworkController extends Controller
             $material->drive_folder_id,
             $request->file_name,
             $request->mime_type,
+            $request->header('Origin'),
         );
 
         return response()->json(['upload_url' => $uploadUrl]);

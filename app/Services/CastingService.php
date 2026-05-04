@@ -96,20 +96,48 @@ class CastingService
             throw new \Exception('You are not assigned to this show.');
         }
 
-        // 2. Reject duplicate / re-send after rejection for the same (show, model, designer).
+        $show->loadMissing('eventDay');
+        $eventId = $show->eventDay->event_id;
+
+        // 2. Quota: count of active invitations (requested + confirmed) cannot exceed designer.looks.
+        // Rejected and expired do NOT count — they free the slot.
+        $eventDesigner = DB::table('event_designer')
+            ->where('event_id', $eventId)
+            ->where('designer_id', $designer->id)
+            ->first();
+        $looks = (int) ($eventDesigner->looks ?? 0);
+
+        $activeCount = DB::table('show_model')
+            ->join('shows', 'shows.id', '=', 'show_model.show_id')
+            ->join('event_days', 'event_days.id', '=', 'shows.event_day_id')
+            ->where('event_days.event_id', $eventId)
+            ->where('show_model.designer_id', $designer->id)
+            ->whereIn('show_model.status', ['requested', 'confirmed'])
+            ->count();
+
+        if ($looks > 0 && $activeCount >= $looks) {
+            throw new \Exception("You reached your invitation limit ({$looks}). Resolve pending invites or wait for them to expire before sending more.");
+        }
+
+        // 3. Reject duplicate, but allow re-send after expired (model didn't reject — they just didn't respond in time).
         $existingRequest = $show->models()
             ->where('model_id', $model->id)
             ->wherePivot('designer_id', $designer->id)
             ->first();
 
         if ($existingRequest) {
-            if ($existingRequest->pivot->status === 'rejected') {
+            $prevStatus = $existingRequest->pivot->status;
+            if ($prevStatus === 'rejected') {
                 throw new \Exception('This model already rejected this request. You cannot send it again.');
             }
-            throw new \Exception('A request for this model already exists for this show.');
+            if ($prevStatus !== 'expired') {
+                throw new \Exception('A request for this model already exists for this show.');
+            }
+            // Expired → detach so we can re-attach as a fresh request below.
+            $show->models()->wherePivot('designer_id', $designer->id)->detach($model->id);
         }
 
-        // 3. Same-show rule: another designer in this same show already has the model confirmed/reserved.
+        // 4. Same-show rule: another designer in this same show already has the model confirmed/reserved.
         $sameShowTaken = DB::table('show_model')
             ->where('show_id', $show->id)
             ->where('model_id', $model->id)
@@ -119,22 +147,36 @@ class CastingService
             throw new \Exception('This model is already booked for this show by another designer.');
         }
 
-        // 4. Adjacent-show rule: model is confirmed/reserved in the show immediately
+        // 5. Adjacent-show rule: model is confirmed/reserved in the show immediately
         // before or after this one within the same day (ordered chronologically by
         // scheduled_time). Two back-to-back shows are not allowed.
         if ($this->hasAdjacentShowConflict($show, $model)) {
             throw new \Exception('This model has another show right before or after this one. Models cannot take back-to-back shows.');
         }
 
+        // Compute expires_at from event setting (NULL on event = no expiration).
+        $event = Event::find($eventId);
+        $expiresHours = $event?->casting_invitation_expiration_hours;
+        $expiresAt = $expiresHours ? now()->addHours((int) $expiresHours) : null;
+
         $show->models()->attach($model->id, [
             'designer_id'  => $designer->id,
             'status'       => 'requested',
             'requested_by' => $designer->id,
             'requested_at' => now(),
+            'expires_at'   => $expiresAt,
             'notes'        => $message,
         ]);
 
-        // Notify the model
+        // Get the inserted pivot id (needed by the delayed jobs).
+        $showModelId = (int) DB::table('show_model')
+            ->where('show_id', $show->id)
+            ->where('model_id', $model->id)
+            ->where('designer_id', $designer->id)
+            ->orderByDesc('id')
+            ->value('id');
+
+        // Initial push to the model.
         $designerName = trim($designer->first_name . ' ' . $designer->last_name);
         $brandName = $designer->designerProfile?->brand_name;
         $displayName = $brandName ?: $designerName;
@@ -145,6 +187,10 @@ class CastingService
             showId: $show->id,
             senderId: $designer->id,
         );
+
+        // Reminders + expiration are handled by the casting:process-invitations
+        // command (scheduled every minute). expires_at on the pivot is the only
+        // signal needed; the worker fills in notified_*_at and the final status.
 
         return ['message' => 'Solicitud enviada correctamente.'];
     }

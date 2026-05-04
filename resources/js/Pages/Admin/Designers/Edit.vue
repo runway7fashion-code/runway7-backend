@@ -232,7 +232,7 @@ function displayStatusLabel(status) {
 function materialsProgress(eventId) {
     const mats = materials.value.filter(m => m.event_id === eventId);
     if (mats.length === 0) return 0;
-    const done = mats.filter(m => m.status === 'confirmed' || m.status === 'submitted').length;
+    const done = mats.filter(m => m.status === 'completed' || m.status === 'confirmed').length;
     return Math.round((done / mats.length) * 100);
 }
 

@@ -382,6 +382,7 @@ class ModelCastingController extends Controller
                 'show_model.requested_at',
                 'show_model.responded_at',
                 'show_model.confirmed_at',
+                'show_model.expires_at',
                 'show_model.rejection_reason',
                 'shows.id as show_id',
                 'shows.name as show_name',
@@ -412,6 +413,7 @@ class ModelCastingController extends Controller
                 'requested_at' => $r->requested_at,
                 'responded_at' => $r->responded_at,
                 'confirmed_at' => $r->confirmed_at,
+                'expires_at' => $r->expires_at,
                 'rejection_reason' => $r->rejection_reason,
                 'show' => [
                     'id' => $r->show_id,
@@ -444,6 +446,7 @@ class ModelCastingController extends Controller
             'requested' => $data->where('status', 'requested')->count(),
             'confirmed' => $data->where('status', 'confirmed')->count(),
             'rejected' => $data->where('status', 'rejected')->count(),
+            'expired'  => $data->where('status', 'expired')->count(),
         ];
 
         return response()->json([

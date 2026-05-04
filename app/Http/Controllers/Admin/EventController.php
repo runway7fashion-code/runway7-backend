@@ -66,6 +66,7 @@ class EventController extends Controller
             'model_number_start' => 'required|integer|min:1',
             'call_time'          => 'nullable|string|max:255',
             'hmua_address'       => 'nullable|string|max:500',
+            'casting_invitation_expiration_hours' => 'nullable|integer|min:1|max:168',
             'days'               => 'required|array|min:1',
             'days.*.date'  => 'required|date',
             'days.*.label' => 'required|string',
@@ -81,7 +82,7 @@ class EventController extends Controller
         ]);
 
         $event = $this->eventService->createEvent(
-            $request->only(['name', 'city', 'venue', 'venue_address', 'venue_latitude', 'venue_longitude', 'timezone', 'start_date', 'end_date', 'description', 'status', 'model_number_start', 'call_time', 'hmua_address']),
+            $request->only(['name', 'city', 'venue', 'venue_address', 'venue_latitude', 'venue_longitude', 'timezone', 'start_date', 'end_date', 'description', 'status', 'model_number_start', 'call_time', 'hmua_address', 'casting_invitation_expiration_hours']),
             $request->input('days', []),
             $request->input('time_slots', []),
             $request->boolean('apply_same_schedule', true)
@@ -154,6 +155,7 @@ class EventController extends Controller
             'model_number_start' => 'required|integer|min:1',
             'call_time'          => 'nullable|string|max:255',
             'hmua_address'       => 'nullable|string|max:500',
+            'casting_invitation_expiration_hours' => 'nullable|integer|min:1|max:168',
             'days'               => 'required|array|min:1',
             'days.*.casting_slots'          => 'nullable|array',
             'days.*.casting_slots.*.time'     => 'required|string',
@@ -165,7 +167,7 @@ class EventController extends Controller
 
         $this->eventService->updateEvent(
             $event,
-            $request->only(['name', 'city', 'venue', 'venue_address', 'venue_latitude', 'venue_longitude', 'timezone', 'start_date', 'end_date', 'description', 'status', 'model_number_start', 'call_time', 'hmua_address']),
+            $request->only(['name', 'city', 'venue', 'venue_address', 'venue_latitude', 'venue_longitude', 'timezone', 'start_date', 'end_date', 'description', 'status', 'model_number_start', 'call_time', 'hmua_address', 'casting_invitation_expiration_hours']),
             $request->input('days', [])
         );
 

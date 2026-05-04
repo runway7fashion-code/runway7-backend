@@ -18,4 +18,5 @@ class MaterialMoodboardItem extends Model
 
     public function material() { return $this->belongsTo(DesignerMaterial::class, 'material_id'); }
     public function uploader()  { return $this->belongsTo(User::class, 'uploaded_by'); }
+    public function files()     { return $this->hasMany(MoodboardItemFile::class, 'moodboard_item_id'); }
 }

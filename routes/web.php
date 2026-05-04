@@ -107,6 +107,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::get('designers/material-instructions', [MaterialInstructionsController::class, 'index'])->name('designers.material-instructions.index');
                 Route::patch('designers/material-instructions/{instruction}', [MaterialInstructionsController::class, 'update'])->name('designers.material-instructions.update');
                 Route::patch('designers/material-instructions/events/{event}/deadline', [MaterialInstructionsController::class, 'updateEventDeadline'])->name('designers.material-instructions.update-event-deadline');
+                Route::post('designers/material-instructions/events/{event}/shared/upload-url', [MaterialInstructionsController::class, 'sharedUploadUrl'])->name('designers.material-instructions.shared.upload-url');
+                Route::post('designers/material-instructions/events/{event}/shared/upload-complete', [MaterialInstructionsController::class, 'sharedUploadComplete'])->name('designers.material-instructions.shared.upload-complete');
+                Route::delete('designers/material-instructions/shared/{eventSharedMaterial}', [MaterialInstructionsController::class, 'sharedDestroy'])->name('designers.material-instructions.shared.destroy');
                 Route::resource('designers', DesignerController::class)->except(['destroy']);
                 Route::patch('designers/{designer}/status', [DesignerController::class, 'updateStatus'])->name('designers.update-status');
                 Route::post('designers/{designer}/assign-event', [DesignerController::class, 'assignEvent'])->name('designers.assign-event');

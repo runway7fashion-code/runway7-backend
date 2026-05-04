@@ -28,7 +28,7 @@ class DesignerService
                 'phone'      => $userData['phone'] ?? null,
                 'password'   => bcrypt('runway7'),
                 'role'       => 'designer',
-                'status'     => 'active',
+                'status'     => 'pending',
             ]);
 
             $user->designerProfile()->create($profileData);
@@ -140,6 +140,13 @@ class DesignerService
                 'drive_folder_id'  => $driveFolder['id'] ?? null,
                 'drive_folder_url' => $driveFolder['url'] ?? null,
             ]);
+        }
+
+        // Replicate any pre-existing global Operation files (Runway Logo, Moodboards) to the new designer.
+        try {
+            app(\App\Services\OperationSharedMaterialService::class)->replicateExistingToDesigner($user, $event);
+        } catch (\Throwable $e) {
+            \Log::warning("Failed to replicate shared materials for designer {$user->id} in event {$event->id}: " . $e->getMessage());
         }
     }
 

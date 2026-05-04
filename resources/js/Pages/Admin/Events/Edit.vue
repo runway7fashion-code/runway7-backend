@@ -25,6 +25,7 @@ const form = useForm({
     model_number_start: props.event.model_number_start ?? 1,
     call_time: props.event.call_time ?? '',
     hmua_address: props.event.hmua_address ?? '',
+    casting_invitation_expiration_hours: props.event.casting_invitation_expiration_hours ?? null,
     days: [...props.event.event_days].sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '')).map(d => {
         const allSlots = d.casting_slots ?? [];
         const slots = allSlots.filter(s => (s.slot_type ?? 'normal') === 'normal');
@@ -87,17 +88,17 @@ const form = useForm({
 });
 
 const statusOptions = [
-    { value: 'draft', label: 'Borrador' },
-    { value: 'published', label: 'Publicado' },
-    { value: 'active', label: 'Activo' },
-    { value: 'completed', label: 'Completado' },
-    { value: 'cancelled', label: 'Cancelado' },
+    { value: 'draft', label: 'Draft' },
+    { value: 'published', label: 'Published' },
+    { value: 'active', label: 'Active' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'cancelled', label: 'Cancelled' },
 ];
 
 function addDay() {
     form.days.push({
         date: '',
-        label: 'Nuevo Día',
+        label: 'New Day',
         type: 'show_day',
         start_time: '',
         end_time: '',
@@ -149,7 +150,7 @@ function onTypeChange(day) {
 }
 
 function deleteShow(day, show) {
-    if (!confirm('¿Eliminar este show?')) return;
+    if (!confirm('Delete this show?')) return;
     router.delete(`/admin/operations/shows/${show.id}`, { preserveScroll: true });
     day.shows = day.shows.filter(s => s.id !== show.id);
 }
@@ -245,10 +246,10 @@ function submit() {
         <template #header>
             <div class="flex items-center gap-3">
                 <Link :href="`/admin/operations/events/${event.id}`" class="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-sm">
-                    <ArrowLeftIcon class="w-4 h-4" /> Volver
+                    <ArrowLeftIcon class="w-4 h-4" /> Back
                 </Link>
                 <span class="text-gray-300">/</span>
-                <h2 class="text-lg font-semibold text-gray-900">Editar Evento</h2>
+                <h2 class="text-lg font-semibold text-gray-900">Edit Event</h2>
             </div>
         </template>
 
@@ -257,17 +258,17 @@ function submit() {
 
                 <!-- General info -->
                 <div class="bg-white rounded-2xl border border-gray-200 p-6">
-                    <h3 class="text-lg font-bold mb-5">Información General</h3>
+                    <h3 class="text-lg font-bold mb-5">General Information</h3>
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
                             <input v-model="form.name" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             <p v-if="form.errors.name" class="mt-1 text-red-500 text-xs">{{ form.errors.name }}</p>
                         </div>
 
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Ciudad</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">City</label>
                                 <input v-model="form.city" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
                             <div>
@@ -289,15 +290,15 @@ function submit() {
 
                         <div class="grid grid-cols-3 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
                                 <input v-model="form.start_date" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha Fin</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
                                 <input v-model="form.end_date" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                                 <select v-model="form.status" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                                     <option v-for="s in statusOptions" :key="s.value" :value="s.value">{{ s.label }}</option>
                                 </select>
@@ -306,15 +307,15 @@ function submit() {
 
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
                                 <textarea v-model="form.description" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"></textarea>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Numeración de modelos desde</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Model numbering from</label>
                                 <input v-model.number="form.model_number_start" type="number" min="1"
-                                    placeholder="ej. 4058"
+                                    placeholder="e.g. 4058"
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
-                                <p class="mt-1 text-xs text-gray-400">Primera modelo asignada recibirá este número.</p>
+                                <p class="mt-1 text-xs text-gray-400">The first assigned model will receive this number.</p>
                                 <p v-if="form.errors.model_number_start" class="mt-1 text-red-500 text-xs">{{ form.errors.model_number_start }}</p>
                             </div>
                             <div class="grid grid-cols-2 gap-4 mt-4">
@@ -333,13 +334,22 @@ function submit() {
                                     <p class="mt-1 text-xs text-gray-400">Location for hair & makeup preparation.</p>
                                 </div>
                             </div>
+                            <div class="grid grid-cols-2 gap-4 mt-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Casting invitation expiration (hours)</label>
+                                    <input v-model.number="form.casting_invitation_expiration_hours" type="number" min="1" max="168"
+                                        placeholder="2"
+                                        class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
+                                    <p class="mt-1 text-xs text-gray-400">How long a model has to accept/reject a casting invitation before it auto-expires. Leave blank to disable expiration.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Days & Shows -->
                 <div class="bg-white rounded-2xl border border-gray-200 p-6">
-                    <h3 class="text-lg font-bold mb-5">Días del Evento</h3>
+                    <h3 class="text-lg font-bold mb-5">Event Days</h3>
 
                     <div class="space-y-3">
                         <div
@@ -351,7 +361,7 @@ function submit() {
                             <!-- Day fields -->
                             <div class="flex items-end gap-3 flex-wrap">
                                 <div class="flex-shrink-0">
-                                    <p class="text-xs text-gray-500 mb-0.5">Fecha</p>
+                                    <p class="text-xs text-gray-500 mb-0.5">Date</p>
                                     <p v-if="day.id" class="text-sm font-medium text-gray-700 py-2">{{ formatDayLabel(day.date) }}</p>
                                     <input v-else v-model="day.date" type="date"
                                         class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
@@ -362,24 +372,24 @@ function submit() {
                                         class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                                 </div>
                                 <div class="w-32">
-                                    <label class="text-xs text-gray-500 mb-0.5 block">Tipo</label>
+                                    <label class="text-xs text-gray-500 mb-0.5 block">Type</label>
                                     <select v-model="day.type" @change="onTypeChange(day)"
                                         class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                                         <option value="setup">Setup</option>
                                         <option value="casting">Casting</option>
                                         <option value="show_day">Show Day</option>
                                         <option value="fitting">Fitting</option>
-                                        <option value="ceremony">Ceremonia</option>
-                                        <option value="other">Otro</option>
+                                        <option value="ceremony">Ceremony</option>
+                                        <option value="other">Other</option>
                                     </select>
                                 </div>
                                 <div class="flex gap-2">
                                     <div>
-                                        <label class="text-xs text-gray-500 mb-0.5 block">Inicio</label>
+                                        <label class="text-xs text-gray-500 mb-0.5 block">Start</label>
                                         <input v-model="day.start_time" @change="syncDayTimes(day)" type="time" class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm w-24 focus:outline-none" />
                                     </div>
                                     <div>
-                                        <label class="text-xs text-gray-500 mb-0.5 block">Fin</label>
+                                        <label class="text-xs text-gray-500 mb-0.5 block">End</label>
                                         <input v-model="day.end_time" @change="syncDayTimes(day)" type="time" class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm w-24 focus:outline-none" />
                                     </div>
                                 </div>
@@ -388,7 +398,7 @@ function submit() {
                                         type="button"
                                         @click="removeDay(i)"
                                         :disabled="day.has_assigned_shows"
-                                        :title="day.has_assigned_shows ? 'No se puede eliminar: tiene shows con diseñadores asignados' : 'Eliminar día'"
+                                        :title="day.has_assigned_shows ? 'Cannot remove: has shows with assigned designers' : 'Remove day'"
                                         class="text-red-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
                                     >
                                         <XMarkIcon class="w-5 h-5" />
@@ -400,17 +410,17 @@ function submit() {
                             <div v-if="day.type === 'casting'" class="mt-3 pt-3 border-t border-yellow-200">
                                 <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
                                     <div>
-                                        <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Inicio casting</label>
+                                        <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Casting start</label>
                                         <input v-model="day.casting_start" type="time"
                                             class="w-full border border-yellow-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400/30" />
                                     </div>
                                     <div>
-                                        <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Fin casting</label>
+                                        <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Casting end</label>
                                         <input v-model="day.casting_end" type="time"
                                             class="w-full border border-yellow-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400/30" />
                                     </div>
                                     <div>
-                                        <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Intervalo (min)</label>
+                                        <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Interval (min)</label>
                                         <select v-model="day.casting_interval"
                                             class="w-full border border-yellow-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400/30">
                                             <option :value="15">15 min</option>
@@ -420,14 +430,14 @@ function submit() {
                                         </select>
                                     </div>
                                     <div>
-                                        <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Cap. por slot</label>
+                                        <label class="text-xs text-yellow-700 font-medium mb-0.5 block">Cap. per slot</label>
                                         <input v-model.number="day.casting_capacity" type="number" min="1"
                                             class="w-full border border-yellow-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400/30" />
                                     </div>
                                     <div class="flex items-end">
                                         <button @click="generateCastingSlots(day)" type="button"
                                             class="w-full px-3 py-1.5 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors">
-                                            Generar slots
+                                            Generate slots
                                         </button>
                                     </div>
                                 </div>
@@ -435,9 +445,9 @@ function submit() {
                                 <!-- Casting slots preview/edit -->
                                 <div v-if="day.casting_slots?.length" class="mt-3 pt-3 border-t border-yellow-200">
                                     <div class="flex items-center justify-between mb-2">
-                                        <p class="text-xs font-semibold text-yellow-800">{{ day.casting_slots.length }} slots — edita los horarios según necesites</p>
+                                        <p class="text-xs font-semibold text-yellow-800">{{ day.casting_slots.length }} slots — edit times as needed</p>
                                         <button @click="addCastingSlot(day)" type="button"
-                                            class="text-xs text-yellow-700 hover:text-yellow-900 font-medium">+ Agregar slot</button>
+                                            class="text-xs text-yellow-700 hover:text-yellow-900 font-medium">+ Add slot</button>
                                     </div>
                                     <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
                                         <div v-for="(slot, si) in day.casting_slots" :key="si"
@@ -446,7 +456,7 @@ function submit() {
                                                 class="border-0 text-sm font-medium text-gray-800 p-0 focus:outline-none focus:ring-0 w-[70px]" />
                                             <input v-model.number="slot.capacity" type="number" min="1"
                                                 class="border-0 text-xs text-gray-500 p-0 focus:outline-none focus:ring-0 w-[35px] text-center"
-                                                title="Capacidad" />
+                                                title="Capacity" />
                                             <button @click="removeCastingSlot(day, si)" type="button" class="text-red-300 hover:text-red-500 flex-shrink-0">
                                                 <XMarkIcon class="w-3.5 h-3.5" />
                                             </button>
@@ -460,17 +470,17 @@ function submit() {
                                 <p class="text-xs font-bold text-orange-700 uppercase tracking-wider mb-2">Casting Merch (Runway Merch)</p>
                                 <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
                                     <div>
-                                        <label class="text-xs text-orange-600 font-medium mb-0.5 block">Inicio</label>
+                                        <label class="text-xs text-orange-600 font-medium mb-0.5 block">Start</label>
                                         <input v-model="day.merch_casting_start" type="time"
                                             class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
                                     </div>
                                     <div>
-                                        <label class="text-xs text-orange-600 font-medium mb-0.5 block">Fin</label>
+                                        <label class="text-xs text-orange-600 font-medium mb-0.5 block">End</label>
                                         <input v-model="day.merch_casting_end" type="time"
                                             class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
                                     </div>
                                     <div>
-                                        <label class="text-xs text-orange-600 font-medium mb-0.5 block">Intervalo (min)</label>
+                                        <label class="text-xs text-orange-600 font-medium mb-0.5 block">Interval (min)</label>
                                         <select v-model="day.merch_casting_interval"
                                             class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30">
                                             <option :value="15">15 min</option>
@@ -480,14 +490,14 @@ function submit() {
                                         </select>
                                     </div>
                                     <div>
-                                        <label class="text-xs text-orange-600 font-medium mb-0.5 block">Cap. por slot</label>
+                                        <label class="text-xs text-orange-600 font-medium mb-0.5 block">Cap. per slot</label>
                                         <input v-model.number="day.merch_casting_capacity" type="number" min="1"
                                             class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
                                     </div>
                                     <div class="flex items-end">
                                         <button @click="generateMerchSlots(day)" type="button"
                                             class="w-full px-3 py-1.5 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors">
-                                            Generar slots
+                                            Generate slots
                                         </button>
                                     </div>
                                 </div>
@@ -495,9 +505,9 @@ function submit() {
                                 <!-- Merch slots preview/edit -->
                                 <div v-if="day.merch_casting_slots?.length" class="mt-3 pt-3 border-t border-orange-200">
                                     <div class="flex items-center justify-between mb-2">
-                                        <p class="text-xs font-semibold text-orange-700">{{ day.merch_casting_slots.length }} slots merch</p>
+                                        <p class="text-xs font-semibold text-orange-700">{{ day.merch_casting_slots.length }} merch slots</p>
                                         <button @click="addMerchSlot(day)" type="button"
-                                            class="text-xs text-orange-600 hover:text-orange-800 font-medium">+ Agregar slot</button>
+                                            class="text-xs text-orange-600 hover:text-orange-800 font-medium">+ Add slot</button>
                                     </div>
                                     <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
                                         <div v-for="(slot, si) in day.merch_casting_slots" :key="si"
@@ -506,7 +516,7 @@ function submit() {
                                                 class="border-0 text-sm font-medium text-gray-800 p-0 focus:outline-none focus:ring-0 w-[70px]" />
                                             <input v-model.number="slot.capacity" type="number" min="1"
                                                 class="border-0 text-xs text-gray-500 p-0 focus:outline-none focus:ring-0 w-[35px] text-center"
-                                                title="Capacidad" />
+                                                title="Capacity" />
                                             <button @click="removeMerchSlot(day, si)" type="button" class="text-red-300 hover:text-red-500 flex-shrink-0">
                                                 <XMarkIcon class="w-3.5 h-3.5" />
                                             </button>
@@ -518,17 +528,17 @@ function submit() {
                             <!-- Fitting fields (for type "fitting") -->
                             <div v-if="day.type === 'fitting'" class="mt-3 pt-3 border-t border-orange-200 grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 <div>
-                                    <label class="text-xs text-orange-700 font-medium mb-0.5 block">Inicio fitting</label>
+                                    <label class="text-xs text-orange-700 font-medium mb-0.5 block">Fitting start</label>
                                     <input v-model="day.fitting_start" type="time"
                                         class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
                                 </div>
                                 <div>
-                                    <label class="text-xs text-orange-700 font-medium mb-0.5 block">Fin fitting</label>
+                                    <label class="text-xs text-orange-700 font-medium mb-0.5 block">Fitting end</label>
                                     <input v-model="day.fitting_end" type="time"
                                         class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
                                 </div>
                                 <div>
-                                    <label class="text-xs text-orange-700 font-medium mb-0.5 block">Intervalo (min)</label>
+                                    <label class="text-xs text-orange-700 font-medium mb-0.5 block">Interval (min)</label>
                                     <select v-model="day.fitting_interval"
                                         class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30">
                                         <option :value="15">15 min</option>
@@ -537,7 +547,7 @@ function submit() {
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="text-xs text-orange-700 font-medium mb-0.5 block">Cap. por slot</label>
+                                    <label class="text-xs text-orange-700 font-medium mb-0.5 block">Cap. per slot</label>
                                     <input v-model.number="day.fitting_capacity" type="number" min="1"
                                         class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
                                 </div>
@@ -558,7 +568,7 @@ function submit() {
                                             type="button"
                                             @click="deleteShow(day, show)"
                                             :disabled="show.designers_count > 0"
-                                            :title="show.designers_count > 0 ? 'Tiene diseñadores asignados' : 'Eliminar show'"
+                                            :title="show.designers_count > 0 ? 'Has assigned designers' : 'Delete show'"
                                             class="text-red-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
                                         >
                                             <XMarkIcon class="w-3.5 h-3.5" />
@@ -584,21 +594,21 @@ function submit() {
                                 <div class="mt-3 pt-3 border-t border-orange-100">
                                     <label class="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
                                         <input v-model="day.has_fitting" type="checkbox" class="rounded text-orange-500 focus:ring-orange-400" />
-                                        Incluir fitting en la mañana
+                                        Include morning fitting
                                     </label>
                                     <div v-if="day.has_fitting" class="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
                                         <div>
-                                            <label class="text-xs text-orange-700 font-medium mb-0.5 block">Inicio fitting</label>
+                                            <label class="text-xs text-orange-700 font-medium mb-0.5 block">Fitting start</label>
                                             <input v-model="day.fitting_start" type="time"
                                                 class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
                                         </div>
                                         <div>
-                                            <label class="text-xs text-orange-700 font-medium mb-0.5 block">Fin fitting</label>
+                                            <label class="text-xs text-orange-700 font-medium mb-0.5 block">Fitting end</label>
                                             <input v-model="day.fitting_end" type="time"
                                                 class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
                                         </div>
                                         <div>
-                                            <label class="text-xs text-orange-700 font-medium mb-0.5 block">Intervalo (min)</label>
+                                            <label class="text-xs text-orange-700 font-medium mb-0.5 block">Interval (min)</label>
                                             <select v-model="day.fitting_interval"
                                                 class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30">
                                                 <option :value="15">15 min</option>
@@ -607,7 +617,7 @@ function submit() {
                                             </select>
                                         </div>
                                         <div>
-                                            <label class="text-xs text-orange-700 font-medium mb-0.5 block">Cap. por slot</label>
+                                            <label class="text-xs text-orange-700 font-medium mb-0.5 block">Cap. per slot</label>
                                             <input v-model.number="day.fitting_capacity" type="number" min="1"
                                                 class="w-full border border-orange-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400/30" />
                                         </div>
@@ -618,7 +628,7 @@ function submit() {
 
                         <button type="button" @click="addDay"
                             class="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 text-sm hover:border-gray-400 hover:text-gray-700 transition-colors">
-                            + Agregar día
+                            + Add day
                         </button>
                     </div>
                 </div>
@@ -626,15 +636,15 @@ function submit() {
                 <!-- Submit -->
                 <div class="flex justify-between">
                     <Link :href="`/admin/operations/events/${event.id}`" class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-                        Cancelar
+                        Cancel
                     </Link>
                     <button
                         type="submit"
                         :disabled="form.processing"
                         class="px-8 py-2.5 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800 disabled:opacity-60 transition-colors"
                     >
-                        <span v-if="form.processing">Guardando...</span>
-                        <span v-else>Guardar Cambios</span>
+                        <span v-if="form.processing">Saving...</span>
+                        <span v-else>Save Changes</span>
                     </button>
                 </div>
             </form>

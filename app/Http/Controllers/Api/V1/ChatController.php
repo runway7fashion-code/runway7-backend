@@ -344,18 +344,45 @@ class ChatController extends Controller
             'name'         => 'required|string|max:120',
             'member_ids'   => 'required|array|min:1',
             'member_ids.*' => 'integer|exists:users,id',
+            'event_id'     => 'nullable|integer|exists:events,id',
+            'show_id'      => 'nullable|integer|exists:shows,id',
         ];
 
-        if ($user->role === 'designer') {
-            $rules['show_id'] = 'required|integer|exists:shows,id';
-        } elseif (!$user->isInternalTeam()) {
+        if ($user->role !== 'designer' && !$user->isInternalTeam()) {
             return response()->json(['message' => 'Only designers and internal staff can create groups.'], 403);
         }
 
         $data = $request->validate($rules);
 
+        $showId = $data['show_id'] ?? null;
+
         if ($user->role === 'designer') {
-            $error = $this->validateDesignerGroup($user, (int) $data['show_id'], $data['member_ids']);
+            // Auto-resolve show_id when not provided. Each designer is currently assigned
+            // to one show per event, so we look it up via show_designer + event_id (or
+            // pick the only assignment if only one event is in play).
+            if (!$showId) {
+                $assignmentsQuery = \DB::table('show_designer')
+                    ->join('shows', 'shows.id', '=', 'show_designer.show_id')
+                    ->join('event_days', 'event_days.id', '=', 'shows.event_day_id')
+                    ->where('show_designer.designer_id', $user->id)
+                    ->whereNotIn('show_designer.status', ['cancelled']);
+
+                if (!empty($data['event_id'])) {
+                    $assignmentsQuery->where('event_days.event_id', $data['event_id']);
+                }
+
+                $assignments = $assignmentsQuery->pluck('shows.id')->unique()->values();
+
+                if ($assignments->isEmpty()) {
+                    return response()->json(['message' => 'You are not assigned to any show.'], 422);
+                }
+                if ($assignments->count() > 1) {
+                    return response()->json(['message' => 'You are assigned to multiple shows; specify show_id or event_id.'], 422);
+                }
+                $showId = (int) $assignments->first();
+            }
+
+            $error = $this->validateDesignerGroup($user, $showId, $data['member_ids']);
             if ($error) return response()->json(['message' => $error], 422);
         }
 
@@ -363,7 +390,7 @@ class ChatController extends Controller
             $user,
             $data['name'],
             $data['member_ids'],
-            $request->input('show_id')
+            $showId
         );
 
         return response()->json($this->serializeGroup($conversation, $user), 201);

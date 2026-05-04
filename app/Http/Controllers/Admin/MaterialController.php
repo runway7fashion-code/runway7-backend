@@ -91,17 +91,22 @@ class MaterialController extends Controller
 
         $material->update(['status' => $request->status]);
 
-        // Notify designer when operation changes status
-        if (in_array($request->status, ['in_progress', 'completed'])) {
-            $statusLabel = $request->status === 'completed' ? 'completed and ready for review' : 'in progress';
-            SendMaterialNotificationJob::dispatch(
-                recipientId: $material->designer_id,
-                title: "{$material->name} Updated",
-                body: "Your {$material->name} is now {$statusLabel}.",
-                materialId: $material->id,
-                senderId: auth()->id(),
-            );
-        }
+        // Notify designer on every status change
+        $statusLabel = match ($request->status) {
+            'pending'     => 'pending again',
+            'in_progress' => 'in progress',
+            'completed'   => 'completed and ready for review',
+            'confirmed'   => 'confirmed',
+            'observed'    => 'observed (needs rework)',
+            default       => $request->status,
+        };
+        SendMaterialNotificationJob::dispatch(
+            recipientId: $material->designer_id,
+            title: "{$material->name} Updated",
+            body: "Your {$material->name} is now {$statusLabel}.",
+            materialId: $material->id,
+            senderId: auth()->id(),
+        );
 
         return back()->with('success', 'Status updated.');
     }
@@ -124,6 +129,7 @@ class MaterialController extends Controller
             $material->drive_folder_id,
             $request->file_name,
             $request->mime_type,
+            $request->header('Origin'),
         );
 
         return response()->json(['upload_url' => $uploadUrl]);
@@ -163,6 +169,15 @@ class MaterialController extends Controller
             $newStatus = $material->isCollaborative() ? 'in_progress' : 'completed';
             $material->update(['status' => $newStatus]);
         }
+
+        // Notify designer that operations uploaded a file
+        SendMaterialNotificationJob::dispatch(
+            recipientId: $material->designer_id,
+            title: "{$material->name} Updated",
+            body: "Operations uploaded a file to your {$material->name}.",
+            materialId: $material->id,
+            senderId: auth()->id(),
+        );
 
         return back()->with('success', 'File uploaded.');
     }
@@ -349,6 +364,14 @@ class MaterialController extends Controller
             if ($material->status === 'pending') {
                 $material->update(['status' => 'completed']);
             }
+
+            SendMaterialNotificationJob::dispatch(
+                recipientId: $material->designer_id,
+                title: "{$material->name} Updated",
+                body: "Operations uploaded a Runway Logo for the event.",
+                materialId: $material->id,
+                senderId: auth()->id(),
+            );
         }
 
         return back()->with('success', 'Runway logo uploaded for all designers in this event.');

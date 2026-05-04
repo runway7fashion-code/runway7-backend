@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SendPaymentNotificationJob;
 use App\Models\DesignerInstallment;
 use App\Models\DesignerPaymentPlan;
 use Illuminate\Support\Facades\DB;
@@ -49,6 +50,15 @@ class AccountingService
 
                 $this->generateInstallments($plan, $installmentsCount, $remaining, $startDate, 1, $customAmounts, $customDates);
             }
+
+            SendPaymentNotificationJob::dispatch(
+                recipientId: $designerId,
+                title: 'Payment Plan Assigned',
+                body: 'Your payment plan is active: $' . number_format($totalAmount, 2) . ' in ' . $installmentsCount . ' installment' . ($installmentsCount === 1 ? '' : 's') . '.',
+                eventId: $eventId,
+                type: 'plan_assigned',
+                senderId: $createdById,
+            );
 
             return $plan->load('installments');
         });
@@ -152,6 +162,14 @@ class AccountingService
             'downpayment_receipt' => $receiptPath,
         ]);
 
+        SendPaymentNotificationJob::dispatch(
+            recipientId: $plan->designer_id,
+            title: 'Downpayment Confirmed',
+            body: 'Downpayment of $' . number_format((float) $plan->downpayment, 2) . ' confirmed.',
+            eventId: $plan->event_id,
+            type: 'downpayment_paid',
+        );
+
         $this->checkIfCompleted($plan);
     }
 
@@ -173,7 +191,20 @@ class AccountingService
             'notes' => $notes,
         ]);
 
-        $this->checkIfCompleted($installment->paymentPlan);
+        $plan = $installment->paymentPlan;
+        if ($plan) {
+            SendPaymentNotificationJob::dispatch(
+                recipientId: $plan->designer_id,
+                title: 'Payment Confirmed',
+                body: 'Installment ' . $installment->installment_number . ' of ' . $plan->installments_count . ' confirmed: $' . number_format((float) $installment->amount, 2) . '.',
+                eventId: $plan->event_id,
+                type: 'installment_paid',
+                installmentId: $installment->id,
+                senderId: $markedById,
+            );
+        }
+
+        $this->checkIfCompleted($plan);
     }
 
     private function generateInstallments(
@@ -285,6 +316,30 @@ class AccountingService
                 }
 
                 $installment->update($updateData);
+
+                if (($updateData['status'] ?? null) === 'paid') {
+                    SendPaymentNotificationJob::dispatch(
+                        recipientId: $plan->designer_id,
+                        title: 'Payment Confirmed',
+                        body: 'Installment ' . $installment->installment_number . ' of ' . $plan->installments_count . ' confirmed: $' . number_format((float) $installment->amount, 2) . '.',
+                        eventId: $plan->event_id,
+                        type: 'installment_paid',
+                        installmentId: $installment->id,
+                        senderId: $markedById,
+                    );
+                } elseif (($updateData['status'] ?? null) === 'partial') {
+                    $remainingOnInstallment = round((float) $installment->amount - $newPaidAmount, 2);
+                    SendPaymentNotificationJob::dispatch(
+                        recipientId: $plan->designer_id,
+                        title: 'Partial Payment Received',
+                        body: 'Partial payment of $' . number_format($toApply, 2) . ' applied to installment ' . $installment->installment_number . '. Remaining: $' . number_format($remainingOnInstallment, 2) . '.',
+                        eventId: $plan->event_id,
+                        type: 'payment_partial',
+                        installmentId: $installment->id,
+                        senderId: $markedById,
+                    );
+                }
+
                 $remaining = round($remaining - $toApply, 2);
             }
 

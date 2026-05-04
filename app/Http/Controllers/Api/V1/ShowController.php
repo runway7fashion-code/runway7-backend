@@ -56,6 +56,7 @@ class ShowController extends Controller
                     'confirmed_at' => $pivot->confirmed_at,
                     'message' => $pivot->notes,
                     'requested_at' => $pivot->requested_at,
+                    'expires_at' => $pivot->expires_at ?? null,
                     'designer' => $designer ? [
                         'id' => $designer->id,
                         'name' => trim($designer->first_name . ' ' . $designer->last_name),

@@ -107,7 +107,16 @@ class EventController extends Controller
             'eventDays.shows.designers' => fn ($q) => $q->select('users.id', 'users.first_name', 'users.last_name'),
         ]);
 
-        $days = $event->eventDays->map(function ($day) {
+        // Pre-compute designer pivot (used for designer_info AND per-show looks)
+        $designerPivot = null;
+        if ($user->role === 'designer') {
+            $designerPivot = \DB::table('event_designer')
+                ->where('event_id', $event->id)
+                ->where('designer_id', $user->id)
+                ->first();
+        }
+
+        $days = $event->eventDays->map(function ($day) use ($designerPivot, $user) {
             return [
                 'id' => $day->id,
                 'date' => $day->date->format('Y-m-d'),
@@ -116,13 +125,19 @@ class EventController extends Controller
                 'start_time' => $day->start_time,
                 'end_time' => $day->end_time,
                 'description' => $day->description,
-                'shows' => $day->shows->map(function ($show) {
+                'shows' => $day->shows->map(function ($show) use ($designerPivot, $user) {
+                    // Looks slot for the authenticated designer in this show.
+                    // The show_designer pivot does not yet store a per-show looks distribution,
+                    // so we expose the event-level looks for shows the designer is assigned to.
+                    $isAssigned = $designerPivot && $show->designers->contains('id', $user->id);
+
                     return [
                         'id' => $show->id,
                         'name' => $show->name,
                         'scheduled_time' => $show->formatted_time,
                         'status' => $show->status,
                         'model_slots' => $show->model_slots,
+                        'looks' => $isAssigned ? (int) $designerPivot->looks : null,
                         'designers' => $show->designers->map(fn ($d) => [
                             'id' => $d->id,
                             'name' => $d->first_name . ' ' . $d->last_name,
@@ -135,29 +150,37 @@ class EventController extends Controller
 
         // Include designer_info if user is a designer assigned to this event
         $designerInfo = null;
-        if ($user->role === 'designer') {
-            $pivot = \DB::table('event_designer')
-                ->where('event_id', $event->id)
-                ->where('designer_id', $user->id)
-                ->first();
+        if ($designerPivot) {
+            $castingDays = $event->eventDays->where('type', 'casting')->values();
 
-            if ($pivot) {
-                $castingDays = $event->eventDays->where('type', 'casting')->values();
+            $registeredCount = \DB::table('event_model')
+                ->join('users', 'users.id', '=', 'event_model.model_id')
+                ->where('event_model.event_id', $event->id)
+                ->whereIn('users.status', ['pending', 'active'])
+                ->count();
 
-                $designerInfo = [
-                    'model_casting_enabled' => (bool) $pivot->model_casting_enabled,
-                    'looks' => $pivot->looks,
-                    'assistants' => $pivot->assistants,
-                    'package_price' => $pivot->package_price,
-                    'status' => $pivot->status,
-                    'casting_days' => $castingDays->map(fn($d) => [
-                        'date' => $d->date->format('Y-m-d'),
-                        'label' => $d->label,
-                        'start_time' => $d->start_time,
-                        'end_time' => $d->end_time,
-                    ])->values(),
-                ];
-            }
+            $checkedInCount = \DB::table('event_model')
+                ->join('users', 'users.id', '=', 'event_model.model_id')
+                ->where('event_model.event_id', $event->id)
+                ->whereIn('event_model.casting_status', ['checked_in', 'selected'])
+                ->whereIn('users.status', ['pending', 'active'])
+                ->count();
+
+            $designerInfo = [
+                'model_casting_enabled' => (bool) $designerPivot->model_casting_enabled,
+                'looks' => $designerPivot->looks,
+                'assistants' => $designerPivot->assistants,
+                'package_price' => $designerPivot->package_price,
+                'status' => $designerPivot->status,
+                'registered_models_count' => $registeredCount,
+                'available_models_count'  => $checkedInCount,
+                'casting_days' => $castingDays->map(fn($d) => [
+                    'date' => $d->date->format('Y-m-d'),
+                    'label' => $d->label,
+                    'start_time' => $d->start_time,
+                    'end_time' => $d->end_time,
+                ])->values(),
+            ];
         }
 
         return response()->json([
