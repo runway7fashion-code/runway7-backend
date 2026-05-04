@@ -1205,6 +1205,16 @@ class DesignerController extends Controller
 
         $modelCountsByEvent = $modelsByEvent->map(fn($rows) => $rows->count());
 
+        // Resolve package names for the events the designer is in
+        $packageIds = collect($designer->eventsAsDesigner ?? [])
+            ->pluck('pivot.package_id')
+            ->filter()
+            ->unique()
+            ->values();
+        $packageNames = $packageIds->isEmpty()
+            ? collect()
+            : DesignerPackage::whereIn('id', $packageIds)->pluck('name', 'id');
+
         return array_merge($designer->toArray(), [
             'designer_profile' => $profile ? array_merge($profile->toArray(), [
                 'category' => $profile->category,
@@ -1219,6 +1229,7 @@ class DesignerController extends Controller
                 'name'                  => $event->name,
                 'status'                => $event->status,
                 'package_id'            => $event->pivot->package_id,
+                'package_name'          => $event->pivot->package_id ? ($packageNames[$event->pivot->package_id] ?? null) : null,
                 'looks'                 => $event->pivot->looks,
                 'assistants'            => $event->pivot->assistants,
                 'model_casting_enabled' => $event->pivot->model_casting_enabled,

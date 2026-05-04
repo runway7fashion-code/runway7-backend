@@ -54,7 +54,7 @@ const tabAssistants = computed(() =>
 );
 const tabProgress = computed(() => {
     if (!tabMaterials.value.length) return 0;
-    const done = tabMaterials.value.filter(m => m.status === 'confirmed' || m.status === 'submitted').length;
+    const done = tabMaterials.value.filter(m => m.status === 'completed' || m.status === 'confirmed').length;
     return Math.round((done / tabMaterials.value.length) * 100);
 });
 
@@ -439,7 +439,10 @@ const socialLinks = computed(() => {
                                 </span>
                             </p>
                             <p v-if="selectedEvent.package_id" class="text-xs text-gray-500">
-                                Package: <span class="font-medium text-gray-700">${{ Number(selectedEvent.package_price).toLocaleString() }}</span>
+                                Package:
+                                <span class="font-medium text-gray-700">
+                                    <template v-if="selectedEvent.package_name">{{ selectedEvent.package_name }} / </template>${{ Number(selectedEvent.package_price).toLocaleString() }}
+                                </span>
                             </p>
                             <p class="text-xs text-gray-500">
                                 Looks: <span class="font-medium text-gray-700">{{ selectedEvent.looks }}</span>

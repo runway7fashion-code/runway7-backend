@@ -71,17 +71,17 @@ const noEventMissing = ref([]);
 
 function updateDesignerStatus(d, newStatus, event) {
     if (newStatus === 'pending') {
-        // Prioridad 1: Plan de pagos
+        // Priority 1: Payment plan
         if (!d.has_payment_plan) {
             if (event?.target) event.target.value = d.status;
             noPlanDesigner.value = d;
             showNoPlanModal.value = true;
             return;
         }
-        // Prioridad 2: Evento (incluye show y fitting)
+        // Priority 2: Event (includes show and fitting)
         const missing = [];
-        if (!d.has_event) missing.push('No tiene evento asignado.');
-        if (!d.has_show) missing.push('No tiene show asignado (día y hora).');
+        if (!d.has_event) missing.push('No event assigned.');
+        if (!d.has_show) missing.push('No show assigned (day and time).');
         if (missing.length) {
             if (event?.target) event.target.value = d.status;
             noEventDesigner.value = d;
@@ -132,8 +132,45 @@ function storageUrl(path) {
 
 function materialsProgress(materials) {
     if (!materials || materials.length === 0) return 0;
-    const done = materials.filter(m => m.status === 'confirmed' || m.status === 'submitted').length;
+    const done = materials.filter(m => m.status === 'completed' || m.status === 'confirmed').length;
     return Math.round((done / materials.length) * 100);
+}
+
+// Progress for a designer scoped to a specific event.
+function materialsProgressForEvent(materials, eventId) {
+    const filtered = (materials ?? []).filter(m => m.event_id === eventId);
+    if (filtered.length === 0) return 0;
+    const done = filtered.filter(m => m.status === 'completed' || m.status === 'confirmed').length;
+    return Math.round((done / filtered.length) * 100);
+}
+
+// The "current" event of a designer:
+// - If there are upcoming events (start_date >= today), the soonest one.
+// - Otherwise the most recent past event.
+function nearestEvent(designer) {
+    const events = designer.events_as_designer ?? [];
+    if (events.length === 0) return null;
+    const today = new Date().toISOString().slice(0, 10);
+    const upcoming = events.filter(e => e.start_date && e.start_date >= today)
+        .sort((a, b) => a.start_date.localeCompare(b.start_date));
+    if (upcoming.length) return upcoming[0];
+    return [...events].filter(e => e.start_date)
+        .sort((a, b) => b.start_date.localeCompare(a.start_date))[0] ?? events[0];
+}
+
+function displayProgress(designer) {
+    const ev = nearestEvent(designer);
+    if (!ev) return 0;
+    return materialsProgressForEvent(designer.designer_materials, ev.id);
+}
+
+const showMaterialsModal = ref(false);
+const materialsModalDesigner = ref(null);
+
+function openMaterialsModal(d, e) {
+    e?.stopPropagation();
+    materialsModalDesigner.value = d;
+    showMaterialsModal.value = true;
 }
 
 function progressColor(pct) {
@@ -161,36 +198,36 @@ function timeAgo(dt) {
     const mins  = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days  = Math.floor(diff / 86400000);
-    if (mins < 60)   return `hace ${mins}m`;
-    if (hours < 24)  return `hace ${hours}h`;
-    if (days < 30)   return `hace ${days}d`;
+    if (mins < 60)   return `${mins}m ago`;
+    if (hours < 24)  return `${hours}h ago`;
+    if (days < 30)   return `${days}d ago`;
     return fmtDate(dt);
 }
 
 function fmtDate(dt) {
     if (!dt) return null;
-    return new Date(dt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+    return new Date(dt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function fmtTime(dt) {
     if (!dt) return null;
-    return new Date(dt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    return new Date(dt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }
 
 function fmtDateTime(dt) {
     if (!dt) return null;
     const d = new Date(dt);
-    return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
-        + ' ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
+        + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }
 
 function fmtEmailSent(dt) {
     if (!dt) return null;
     const d = new Date(dt);
-    return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-// --- Modales de envío de email / SMS ---
+// --- Email / SMS send modals ---
 const emailModalDesigner = ref(null);
 const emailModalEventId  = ref(null);
 const smsModalDesigner   = ref(null);
@@ -202,7 +239,7 @@ function sendOnboardingEmail(d, e) {
     e.stopPropagation();
     const events = d.events_as_designer ?? [];
     if (events.length <= 1) {
-        // Un solo evento o sin evento — enviar directo
+        // Single event or none — send directly
         router.post(`/admin/operations/designers/${d.id}/send-onboarding`,
             { event_id: events[0]?.id ?? null },
             { preserveScroll: true }
@@ -222,7 +259,7 @@ function confirmSendEmail() {
 }
 
 function sendPendingOnboarding() {
-    if (!confirm(`¿Enviar email de onboarding a ${props.pendingEmailCount} diseñador(es) pendiente(s)? Los emails se procesarán en cola.`)) return;
+    if (!confirm(`Send onboarding email to ${props.pendingEmailCount} pending designer(s)? Emails will be queued.`)) return;
     router.post('/admin/operations/designers/send-bulk-onboarding', {}, { preserveScroll: true });
 }
 
@@ -236,7 +273,7 @@ function canSendSms(d) {
 
 function sendOnboardingSms(d, e) {
     e.stopPropagation();
-    if (!d.phone) return alert(`${d.first_name} no tiene número de teléfono registrado.`);
+    if (!d.phone) return alert(`${d.first_name} has no registered phone number.`);
     const events = d.events_as_designer ?? [];
     if (events.length <= 1) {
         router.post(`/admin/operations/designers/${d.id}/send-onboarding-sms`,
@@ -258,7 +295,7 @@ function confirmSendSms() {
 }
 
 function sendPendingSms() {
-    if (!confirm(`¿Enviar SMS de onboarding a ${props.pendingSmsCount} diseñador(es) con teléfono? Los SMS se procesarán en cola.`)) return;
+    if (!confirm(`Send onboarding SMS to ${props.pendingSmsCount} designer(s) with phone? SMS will be queued.`)) return;
     router.post('/admin/operations/designers/send-bulk-onboarding-sms', {}, { preserveScroll: true });
 }
 
@@ -281,11 +318,11 @@ function eventStatusBadge(status) {
 }
 
 function eventStatusLabel(status) {
-    return { draft: 'Borrador', published: 'Publicado', active: 'Activo', completed: 'Completado', cancelled: 'Cancelado' }[status] ?? status;
+    return { draft: 'Draft', published: 'Published', active: 'Active', completed: 'Completed', cancelled: 'Cancelled' }[status] ?? status;
 }
 
 function pivotStatusLabel(status) {
-    return { confirmed: 'Confirmado', cancelled: 'Cancelado', pending: 'Pendiente' }[status] ?? status;
+    return { confirmed: 'Confirmed', cancelled: 'Cancelled', pending: 'Pending' }[status] ?? status;
 }
 
 function pivotStatusBadge(status) {
@@ -330,14 +367,14 @@ function submitImport() {
 <template>
     <AdminLayout>
         <template #header>
-            <h2 class="text-lg font-semibold text-gray-900">Diseñadores</h2>
+            <h2 class="text-lg font-semibold text-gray-900">Designers</h2>
         </template>
 
         <div>
             <div class="flex items-center justify-between mb-6">
                 <div>
-                    <h3 class="text-2xl font-bold text-gray-900">Diseñadores</h3>
-                    <p class="text-gray-500 text-sm mt-1">{{ designers.total }} diseñadores registrados</p>
+                    <h3 class="text-2xl font-bold text-gray-900">Designers</h3>
+                    <p class="text-gray-500 text-sm mt-1">{{ designers.total }} registered designers</p>
                 </div>
                 <div class="flex items-center gap-3">
                     <div v-if="twilioBalance" class="flex flex-col items-end px-3 py-1.5 border border-gray-200 rounded-lg bg-white">
@@ -348,12 +385,12 @@ function submitImport() {
                         <button @click="sendPendingSms"
                             class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
                             <DevicePhoneMobileIcon class="w-4 h-4 text-gray-500" />
-                            Enviar SMS
+                            Send SMS
                             <span class="bg-green-100 text-green-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ pendingSmsCount }}</span>
                         </button>
                         <button @click="showSmsInfoModal = true"
                             class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                            title="¿Cómo funciona el envío masivo?">
+                            title="How does bulk send work?">
                             <InformationCircleIcon class="w-4 h-4" />
                         </button>
                     </div>
@@ -361,12 +398,12 @@ function submitImport() {
                         <button @click="sendPendingOnboarding"
                             class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
                             <EnvelopeIcon class="w-4 h-4 text-gray-500" />
-                            Enviar correos
+                            Send emails
                             <span class="bg-amber-100 text-amber-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ pendingEmailCount }}</span>
                         </button>
                         <button @click="showEmailInfoModal = true"
                             class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                            title="¿Cómo funciona el envío masivo?">
+                            title="How does bulk send work?">
                             <InformationCircleIcon class="w-4 h-4" />
                         </button>
                     </div>
@@ -384,73 +421,73 @@ function submitImport() {
                         Material Instructions
                     </Link>
 
-                    <!-- Exportar Excel -->
+                    <!-- Export Excel -->
                     <a :href="exportUrl"
                         class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
                         <ArrowDownTrayIcon class="w-4 h-4 text-gray-500" />
-                        Exportar Excel
+                        Export Excel
                     </a>
 
-                    <!-- Importar Excel -->
+                    <!-- Import Excel -->
                     <button @click="showImportModal = true"
                         class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
                         <ArrowUpTrayIcon class="w-4 h-4 text-gray-500" />
-                        Importar Excel
+                        Import Excel
                     </button>
 
                     <Link href="/admin/operations/designers/create" class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
-                        + Crear Diseñador
+                        + Create Designer
                     </Link>
                 </div>
             </div>
 
-            <!-- Filtros -->
+            <!-- Filters -->
             <div class="flex flex-wrap gap-3 mb-6">
-                <input v-model="search" type="text" placeholder="Buscar por nombre, email, marca..."
+                <input v-model="search" type="text" placeholder="Search by name, email, brand..."
                     class="flex-1 min-w-48 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
 
                 <select v-model="event"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todos los eventos</option>
+                    <option value="">All events</option>
                     <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
                 </select>
 
                 <select v-model="category"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todas las categorías</option>
+                    <option value="">All categories</option>
                     <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
                 </select>
 
                 <select v-model="pkg"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todos los paquetes</option>
+                    <option value="">All packages</option>
                     <option v-for="p in packages" :key="p.id" :value="p.id">{{ p.name }}</option>
                 </select>
 
                 <select v-model="salesRep"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todos los vendedores</option>
+                    <option value="">All sales reps</option>
                     <option v-for="s in salesReps" :key="s.id" :value="s.id">{{ s.first_name }} {{ s.last_name }}</option>
                 </select>
 
                 <select v-model="materials"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Material: Todos</option>
-                    <option value="complete">Completo</option>
-                    <option value="incomplete">Incompleto</option>
+                    <option value="">Materials: All</option>
+                    <option value="complete">Complete</option>
+                    <option value="incomplete">Incomplete</option>
                 </select>
 
                 <select v-model="country"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todos los paises</option>
+                    <option value="">All countries</option>
                     <option v-for="c in countries" :key="c" :value="c">{{ c }}</option>
                 </select>
 
                 <select v-model="checkin"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Check-in: Todos</option>
-                    <option value="yes">Con check-in</option>
-                    <option value="no">Sin check-in</option>
+                    <option value="">Check-in: All</option>
+                    <option value="yes">Checked in</option>
+                    <option value="no">Not checked in</option>
                 </select>
             </div>
 
@@ -474,14 +511,15 @@ function submitImport() {
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         <tr v-if="designers.data.length === 0">
-                            <td colspan="12" class="text-center text-gray-400 py-12">No hay diseñadores registrados.</td>
+                            <td colspan="12" class="text-center text-gray-400 py-12">No registered designers.</td>
                         </tr>
                         <tr v-for="d in designers.data" :key="d.id"
                             class="hover:bg-gray-50 cursor-pointer transition-colors"
                             @click="router.visit(`/admin/operations/designers/${d.id}`)">
                             <!-- Registro -->
                             <td class="px-4 py-3">
-                                <p class="text-xs text-gray-700">{{ fmtDateTime(d.created_at) }}</p>
+                                <p class="text-xs text-gray-700">{{ fmtDate(d.created_at) }}</p>
+                                <p class="text-[11px] text-gray-400">{{ fmtTime(d.created_at) }}</p>
                             </td>
                             <!-- Foto + Nombre + Brand -->
                             <td class="px-5 py-3">
@@ -510,15 +548,23 @@ function submitImport() {
                                 <p v-if="d.phone" class="text-gray-400 text-xs mt-0.5">{{ d.phone }}</p>
                             </td>
                             <!-- Materials -->
-                            <td class="px-4 py-3">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                        <div :class="progressColor(materialsProgress(d.designer_materials))"
-                                            class="h-full rounded-full transition-all"
-                                            :style="{ width: materialsProgress(d.designer_materials) + '%' }"></div>
+                            <td class="px-4 py-3" @click.stop>
+                                <div v-if="nearestEvent(d)" class="space-y-1">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                            <div :class="progressColor(displayProgress(d))"
+                                                class="h-full rounded-full transition-all"
+                                                :style="{ width: displayProgress(d) + '%' }"></div>
+                                        </div>
+                                        <span class="text-xs text-gray-500">{{ displayProgress(d) }}%</span>
                                     </div>
-                                    <span class="text-xs text-gray-500">{{ materialsProgress(d.designer_materials) }}%</span>
+                                    <button v-if="(d.events_as_designer?.length ?? 0) > 1"
+                                        @click="openMaterialsModal(d, $event)"
+                                        class="text-[10px] text-blue-600 hover:underline cursor-pointer">
+                                        {{ d.events_as_designer.length }} events
+                                    </button>
                                 </div>
+                                <span v-else class="text-gray-400 text-xs">—</span>
                             </td>
                             <!-- Eventos -->
                             <td class="px-4 py-3" @click.stop>
@@ -614,19 +660,19 @@ function submitImport() {
                                         class="p-1.5 border border-gray-200 rounded-lg transition-colors"
                                         :class="canSendEmail(d) ? 'hover:bg-gray-50 text-gray-600' : 'opacity-40 cursor-not-allowed text-gray-400'"
                                         :disabled="!canSendEmail(d)"
-                                        title="Enviar Email">
+                                        title="Send Email">
                                         <EnvelopeIcon class="w-4 h-4" />
                                     </button>
                                     <button @click="sendOnboardingSms(d, $event)"
                                         class="p-1.5 border border-gray-200 rounded-lg transition-colors"
                                         :class="canSendSms(d) ? 'hover:bg-gray-50 text-gray-600' : 'opacity-40 cursor-not-allowed text-gray-400'"
                                         :disabled="!canSendSms(d)"
-                                        title="Enviar SMS">
+                                        title="Send SMS">
                                         <DevicePhoneMobileIcon class="w-4 h-4" />
                                     </button>
                                     <Link :href="`/admin/operations/designers/${d.id}/edit`"
                                         class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
-                                        title="Editar">
+                                        title="Edit">
                                         <PencilSquareIcon class="w-4 h-4" />
                                     </Link>
                                 </div>
@@ -635,14 +681,14 @@ function submitImport() {
                     </tbody>
                 </table>
 
-                <!-- Paginación -->
+                <!-- Pagination -->
                 <div v-if="designers.last_page > 1" class="border-t border-gray-100 px-5 py-3 flex items-center justify-between text-sm text-gray-500">
-                    <span>{{ designers.from }}–{{ designers.to }} de {{ designers.total }} diseñadores</span>
+                    <span>{{ designers.from }}–{{ designers.to }} of {{ designers.total }} designers</span>
                     <div class="flex gap-1">
                         <Link v-if="designers.prev_page_url" :href="designers.prev_page_url"
-                            class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">← Anterior</Link>
+                            class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">← Previous</Link>
                         <Link v-if="designers.next_page_url" :href="designers.next_page_url"
-                            class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">Siguiente →</Link>
+                            class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">Next →</Link>
                     </div>
                 </div>
             </div>
@@ -684,7 +730,7 @@ function submitImport() {
                                         <div class="flex items-center gap-1.5 mt-0.5">
                                             <span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>
                                             <p class="text-white/60 text-xs">
-                                                {{ checkinPasses(checkinDesigner).length }} check-in{{ checkinPasses(checkinDesigner).length !== 1 ? 's' : '' }} registrado{{ checkinPasses(checkinDesigner).length !== 1 ? 's' : '' }}
+                                                {{ checkinPasses(checkinDesigner).length }} check-in{{ checkinPasses(checkinDesigner).length !== 1 ? 's' : '' }} recorded
                                             </p>
                                         </div>
                                     </div>
@@ -716,7 +762,7 @@ function submitImport() {
                                     <div class="bg-gray-50 border border-gray-100 rounded-xl p-3.5 hover:border-gray-200 transition-colors">
                                         <!-- Evento -->
                                         <div class="flex items-start justify-between gap-2 mb-2.5">
-                                            <p class="font-semibold text-gray-900 text-sm leading-tight truncate">{{ pass.event?.name ?? 'Evento' }}</p>
+                                            <p class="font-semibold text-gray-900 text-sm leading-tight truncate">{{ pass.event?.name ?? 'Event' }}</p>
                                         </div>
 
                                         <!-- Fecha y hora del check-in -->
@@ -752,11 +798,11 @@ function submitImport() {
                         <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
                             <Link :href="`/admin/operations/designers/${checkinDesigner.id}`"
                                 class="text-sm font-semibold text-black hover:underline underline-offset-2">
-                                Ver perfil completo →
+                                View full profile →
                             </Link>
                             <button @click="checkinDesigner = null"
                                 class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-                                Cerrar
+                                Close
                             </button>
                         </div>
 
@@ -804,7 +850,7 @@ function submitImport() {
                                         </p>
                                         <p class="text-white/50 text-xs mt-0.5">
                                             {{ selectedDesigner.events_as_designer.length }}
-                                            evento{{ selectedDesigner.events_as_designer.length !== 1 ? 's' : '' }} asignado{{ selectedDesigner.events_as_designer.length !== 1 ? 's' : '' }}
+                                            event{{ selectedDesigner.events_as_designer.length !== 1 ? 's' : '' }} assigned
                                         </p>
                                     </div>
                                 </div>
@@ -845,7 +891,7 @@ function submitImport() {
                                             </svg>
                                         </div>
                                         <div>
-                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Estado</p>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Status</p>
                                             <span :class="pivotStatusBadge(ev.pivot?.status)"
                                                 class="text-xs font-medium px-1.5 py-0.5 rounded-full">
                                                 {{ pivotStatusLabel(ev.pivot?.status) }}
@@ -874,7 +920,7 @@ function submitImport() {
                                             </svg>
                                         </div>
                                         <div>
-                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Paquete</p>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Package</p>
                                             <p class="text-xs font-semibold text-gray-800">
                                                 {{ ev.pivot?.package_price ? '$' + Number(ev.pivot.package_price).toLocaleString() : '—' }}
                                             </p>
@@ -905,7 +951,7 @@ function submitImport() {
 
                                 </div>
 
-                                <!-- Notas -->
+                                <!-- Notes -->
                                 <p v-if="ev.pivot?.notes" class="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
                                     {{ ev.pivot.notes }}
                                 </p>
@@ -916,14 +962,91 @@ function submitImport() {
                         <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
                             <Link :href="`/admin/operations/designers/${selectedDesigner.id}`"
                                 class="text-sm font-semibold text-black hover:underline underline-offset-2">
-                                Ver perfil completo →
+                                View full profile →
                             </Link>
                             <button @click="selectedDesigner = null"
                                 class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-                                Cerrar
+                                Close
                             </button>
                         </div>
 
+                    </div>
+                </Transition>
+            </div>
+        </Transition>
+    </Teleport>
+
+    <!-- Modal: Materials progress per event -->
+    <Teleport to="body">
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0">
+            <div v-if="showMaterialsModal && materialsModalDesigner" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showMaterialsModal = false"></div>
+                <Transition
+                    enter-active-class="transition duration-200 ease-out"
+                    enter-from-class="opacity-0 scale-95 translate-y-2"
+                    enter-to-class="opacity-100 scale-100 translate-y-0"
+                    leave-active-class="transition duration-150 ease-in"
+                    leave-from-class="opacity-100 scale-100 translate-y-0"
+                    leave-to-class="opacity-0 scale-95 translate-y-2">
+                    <div v-if="showMaterialsModal" class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+
+                        <div class="bg-black px-6 py-5">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-bold text-white text-base leading-tight">Materials progress</p>
+                                    <p class="text-white/50 text-xs mt-0.5">
+                                        {{ materialsModalDesigner.first_name }} {{ materialsModalDesigner.last_name }}
+                                        · {{ materialsModalDesigner.events_as_designer?.length ?? 0 }} events
+                                    </p>
+                                </div>
+                                <button @click="showMaterialsModal = false"
+                                    class="w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white">
+                                    <XMarkIcon class="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
+                            <div v-for="ev in materialsModalDesigner.events_as_designer ?? []" :key="ev.id"
+                                class="border border-gray-100 rounded-xl p-4 bg-gray-50/50">
+                                <div class="mb-2">
+                                    <p class="font-semibold text-gray-900 text-sm leading-snug">{{ ev.name }}</p>
+                                    <p v-if="ev.start_date" class="text-[11px] text-gray-400 mt-0.5">Starts {{ fmtDate(ev.start_date) }}</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                        <div :class="progressColor(materialsProgressForEvent(materialsModalDesigner.designer_materials, ev.id))"
+                                            class="h-full rounded-full transition-all"
+                                            :style="{ width: materialsProgressForEvent(materialsModalDesigner.designer_materials, ev.id) + '%' }"></div>
+                                    </div>
+                                    <span class="text-xs font-medium text-gray-700 flex-shrink-0">
+                                        {{ materialsProgressForEvent(materialsModalDesigner.designer_materials, ev.id) }}%
+                                    </span>
+                                </div>
+                                <p class="text-[11px] text-gray-500 mt-1.5">
+                                    {{ (materialsModalDesigner.designer_materials ?? []).filter(m => m.event_id === ev.id && (m.status === 'completed' || m.status === 'confirmed')).length }}
+                                    of
+                                    {{ (materialsModalDesigner.designer_materials ?? []).filter(m => m.event_id === ev.id).length }}
+                                    materials completed
+                                </p>
+                            </div>
+                            <p v-if="!(materialsModalDesigner.events_as_designer ?? []).length" class="text-center text-sm text-gray-400 italic py-4">
+                                No events assigned.
+                            </p>
+                        </div>
+
+                        <div class="border-t border-gray-100 px-5 py-3 flex justify-end">
+                            <button @click="showMaterialsModal = false"
+                                class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+                                Close
+                            </button>
+                        </div>
                     </div>
                 </Transition>
             </div>
@@ -937,7 +1060,7 @@ function submitImport() {
             <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
                 <!-- Header -->
                 <div class="flex items-center justify-between mb-5">
-                    <h3 class="text-lg font-bold text-gray-900">Importar Diseñadores desde Excel</h3>
+                    <h3 class="text-lg font-bold text-gray-900">Import Designers from Excel</h3>
                     <button @click="showImportModal = false" class="text-gray-400 hover:text-gray-600">
                         <XMarkIcon class="w-5 h-5" />
                     </button>
@@ -945,55 +1068,55 @@ function submitImport() {
 
                 <!-- Formato esperado -->
                 <div class="bg-gray-50 rounded-xl p-4 mb-5 text-xs text-gray-600">
-                    <p class="font-semibold text-gray-800 mb-2">Columnas del Excel:</p>
+                    <p class="font-semibold text-gray-800 mb-2">Excel columns:</p>
                     <div class="grid grid-cols-2 gap-1">
-                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">email</span> <span class="text-red-500">*obligatorio</span></span>
-                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">first_name</span> o <span class="font-mono bg-white border border-gray-200 px-1 rounded">nombre</span></span>
-                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">last_name</span> o <span class="font-mono bg-white border border-gray-200 px-1 rounded">apellido</span></span>
-                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">phone</span> / <span class="font-mono bg-white border border-gray-200 px-1 rounded">telefono</span></span>
-                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">brand_name</span> / <span class="font-mono bg-white border border-gray-200 px-1 rounded">marca</span></span>
-                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">country</span> / <span class="font-mono bg-white border border-gray-200 px-1 rounded">pais</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">email</span> <span class="text-red-500">*required</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">first_name</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">last_name</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">phone</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">brand_name</span></span>
+                        <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">country</span></span>
                         <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">website</span></span>
                         <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">instagram</span></span>
                     </div>
-                    <p class="mt-2 text-gray-500">Formatos: <strong>.xlsx, .xls, .csv</strong></p>
+                    <p class="mt-2 text-gray-500">Formats: <strong>.xlsx, .xls, .csv</strong></p>
                 </div>
 
-                <!-- Selector de evento -->
+                <!-- Event selector -->
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Asignar a un evento <span class="text-gray-400 font-normal">(opcional)</span></label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Assign to an event <span class="text-gray-400 font-normal">(optional)</span></label>
                     <select v-model="importForm.event_id"
                         class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                        <option value="">— Sin asignar a evento —</option>
+                        <option value="">— Do not assign to event —</option>
                         <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
                     </select>
                     <p v-if="importForm.event_id" class="mt-1.5 text-xs text-blue-600">
-                        Todos los diseñadores importados se asignarán a este evento con materiales y display por defecto.
+                        All imported designers will be assigned to this event with default materials and display.
                     </p>
                     <p v-else class="mt-1.5 text-xs text-gray-400">
-                        Si no seleccionas un evento, los diseñadores se crean sin asignación.
+                        If you don't select an event, designers are created without assignment.
                     </p>
                 </div>
 
-                <!-- Input archivo -->
+                <!-- File input -->
                 <div class="mb-5">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar archivo</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select file</label>
                     <input ref="fileInput" type="file" accept=".xlsx,.xls,.csv"
                         @change="handleFileChange"
                         class="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800 cursor-pointer" />
                     <p v-if="importForm.errors.file" class="mt-1 text-xs text-red-500">{{ importForm.errors.file }}</p>
                 </div>
 
-                <!-- Acciones -->
+                <!-- Actions -->
                 <div class="flex gap-3">
                     <button @click="showImportModal = false"
                         class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                        Cancelar
+                        Cancel
                     </button>
                     <button @click="submitImport"
                         :disabled="!importForm.file || importForm.processing"
                         class="flex-1 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                        {{ importForm.processing ? 'Importando...' : 'Importar' }}
+                        {{ importForm.processing ? 'Importing...' : 'Import' }}
                     </button>
                 </div>
             </div>
@@ -1010,17 +1133,18 @@ function submitImport() {
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                         </svg>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Plan de pagos requerido</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Payment plan required</h3>
                     <p class="text-sm text-gray-500 mb-1">
-                        No se puede cambiar a <span class="font-medium text-yellow-700">Pendiente</span> al diseñador
-                        <span class="font-semibold text-gray-800">{{ noPlanDesigner?.first_name }} {{ noPlanDesigner?.last_name }}</span>.
+                        Cannot change designer
+                        <span class="font-semibold text-gray-800">{{ noPlanDesigner?.first_name }} {{ noPlanDesigner?.last_name }}</span>
+                        to <span class="font-medium text-yellow-700">Pending</span>.
                     </p>
                     <p class="text-sm text-gray-500 mb-6">
-                        Contabilidad debe asignar un plan de pagos antes de cambiar el estado.
+                        Accounting must assign a payment plan before changing status.
                     </p>
                     <button @click="showNoPlanModal = false"
                         class="px-6 py-2.5 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
-                        Entendido
+                        Got it
                     </button>
                 </div>
             </div>
@@ -1037,10 +1161,11 @@ function submitImport() {
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                         </svg>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Evento incompleto</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Incomplete event</h3>
                     <p class="text-sm text-gray-500 mb-4">
-                        No se puede cambiar a <span class="font-medium text-yellow-700">Pendiente</span> al diseñador
-                        <span class="font-semibold text-gray-800">{{ noEventDesigner?.first_name }} {{ noEventDesigner?.last_name }}</span>:
+                        Cannot change designer
+                        <span class="font-semibold text-gray-800">{{ noEventDesigner?.first_name }} {{ noEventDesigner?.last_name }}</span>
+                        to <span class="font-medium text-yellow-700">Pending</span>:
                     </p>
                     <ul class="text-left text-sm space-y-2 mb-6">
                         <li v-for="(msg, i) in noEventMissing" :key="i" class="flex items-start gap-2">
@@ -1050,7 +1175,7 @@ function submitImport() {
                     </ul>
                     <button @click="showNoEventModal = false"
                         class="px-6 py-2.5 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
-                        Entendido
+                        Got it
                     </button>
                 </div>
             </div>
@@ -1116,33 +1241,33 @@ function submitImport() {
         <div v-if="emailModalDesigner" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="emailModalDesigner = null">
             <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
                 <div class="bg-black px-6 py-5">
-                    <h3 class="text-base font-semibold text-white">Enviar Email de Onboarding</h3>
+                    <h3 class="text-base font-semibold text-white">Send Onboarding Email</h3>
                     <p class="text-white/60 text-sm mt-0.5">{{ emailModalDesigner.first_name }} {{ emailModalDesigner.last_name }}</p>
                 </div>
                 <div class="p-6 space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Seleccionar Evento</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Select Event</label>
                         <select v-model="emailModalEventId" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-white">
                             <option v-for="ev in emailModalDesigner.events_as_designer" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
                         </select>
                     </div>
-                    <!-- Nota asistentes -->
+                    <!-- Attendees note -->
                     <div class="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-700">
                         <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
                         </svg>
-                        <span>También se enviará el correo a los <strong>asistentes registrados</strong> en este evento.</span>
+                        <span>The email will also be sent to <strong>registered attendees</strong> for this event.</span>
                     </div>
                 </div>
                 <div class="px-6 pb-6 flex gap-3">
                     <button @click="confirmSendEmail"
                         :disabled="!emailModalEventId"
                         class="flex-1 px-4 py-2.5 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-40 transition-colors">
-                        Enviar Email
+                        Send Email
                     </button>
                     <button @click="emailModalDesigner = null"
                         class="px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
-                        Cancelar
+                        Cancel
                     </button>
                 </div>
             </div>
@@ -1154,11 +1279,11 @@ function submitImport() {
         <div v-if="smsModalDesigner" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="smsModalDesigner = null">
             <div class="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
                 <div class="bg-black px-6 py-5">
-                    <h3 class="text-base font-semibold text-white">Enviar SMS de Onboarding</h3>
+                    <h3 class="text-base font-semibold text-white">Send Onboarding SMS</h3>
                     <p class="text-white/60 text-sm mt-0.5">{{ smsModalDesigner.first_name }} {{ smsModalDesigner.last_name }}</p>
                 </div>
                 <div class="p-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Seleccionar Evento</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Select Event</label>
                     <select v-model="smsModalEventId" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 bg-white">
                         <option v-for="ev in smsModalDesigner.events_as_designer" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
                     </select>
@@ -1167,11 +1292,11 @@ function submitImport() {
                     <button @click="confirmSendSms"
                         :disabled="!smsModalEventId"
                         class="flex-1 px-4 py-2.5 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-40 transition-colors">
-                        Enviar SMS
+                        Send SMS
                     </button>
                     <button @click="smsModalDesigner = null"
                         class="px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">
-                        Cancelar
+                        Cancel
                     </button>
                 </div>
             </div>
@@ -1188,7 +1313,7 @@ function submitImport() {
                         <div class="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
                             <EnvelopeIcon class="w-5 h-5 text-amber-600" />
                         </div>
-                        <h3 class="text-base font-semibold text-gray-900">¿Cómo funciona el envío masivo de emails?</h3>
+                        <h3 class="text-base font-semibold text-gray-900">How does bulk email sending work?</h3>
                     </div>
                     <button @click="showEmailInfoModal = false" class="text-gray-400 hover:text-gray-600 ml-2">
                         <XMarkIcon class="w-5 h-5" />
@@ -1197,24 +1322,24 @@ function submitImport() {
                 <ul class="space-y-3 text-sm text-gray-600">
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>Solo se envía a diseñadores con estado Pendiente que no hayan recibido email de onboarding anteriormente.</span>
+                        <span>Only sent to designers with Pending status who have not previously received an onboarding email.</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>El email incluye todos los eventos asignados del diseñador con sus shows y horarios correspondientes.</span>
+                        <span>The email includes all the designer's assigned events with their shows and times.</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>Si un diseñador tiene 2 eventos, el email muestra ambos con sus shows correspondientes.</span>
+                        <span>If a designer has 2 events, the email shows both with their corresponding shows.</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>El envío se procesa en cola — puede tardar unos segundos dependiendo del volumen.</span>
+                        <span>Sending is queued — it may take a few seconds depending on volume.</span>
                     </li>
                 </ul>
                 <button @click="showEmailInfoModal = false"
                     class="mt-5 w-full py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
-                    Entendido
+                    Got it
                 </button>
             </div>
         </div>
@@ -1230,7 +1355,7 @@ function submitImport() {
                         <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                             <DevicePhoneMobileIcon class="w-5 h-5 text-green-600" />
                         </div>
-                        <h3 class="text-base font-semibold text-gray-900">¿Cómo funciona el envío masivo de SMS?</h3>
+                        <h3 class="text-base font-semibold text-gray-900">How does bulk SMS sending work?</h3>
                     </div>
                     <button @click="showSmsInfoModal = false" class="text-gray-400 hover:text-gray-600 ml-2">
                         <XMarkIcon class="w-5 h-5" />
@@ -1239,24 +1364,24 @@ function submitImport() {
                 <ul class="space-y-3 text-sm text-gray-600">
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>Solo se envía a diseñadores con estado Pendiente que tengan teléfono con código de país (+1...) y no hayan recibido SMS anteriormente.</span>
+                        <span>Only sent to designers with Pending status who have a phone with country code (+1...) and have not previously received SMS.</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>El SMS menciona todos los eventos asignados del diseñador.</span>
+                        <span>The SMS mentions all the designer's assigned events.</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>El mensaje incluye las credenciales de acceso a la app y los enlaces de descarga.</span>
+                        <span>The message includes app access credentials and download links.</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>Requiere saldo disponible en Twilio. Si no hay saldo el envío fallará.</span>
+                        <span>Requires Twilio balance. If there's no balance, sending will fail.</span>
                     </li>
                 </ul>
                 <button @click="showSmsInfoModal = false"
                     class="mt-5 w-full py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
-                    Entendido
+                    Got it
                 </button>
             </div>
         </div>
