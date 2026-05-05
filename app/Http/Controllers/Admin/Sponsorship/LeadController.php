@@ -664,7 +664,7 @@ class LeadController extends Controller
             'assigned_to_user_id' => 'nullable|exists:users,id',
             'is_contract'         => 'nullable|boolean',
             'files'               => 'nullable|array',
-            'files.*'             => 'file|max:20480',
+            'files.*'             => 'file|max:30720',
         ]);
 
         $isScheduled = !empty($validated['scheduled_at']);
@@ -788,7 +788,7 @@ class LeadController extends Controller
             'all_day'             => 'nullable|boolean',
             'assigned_to_user_id' => 'nullable|exists:users,id',
             'files'               => 'nullable|array',
-            'files.*'             => 'file|max:20480',
+            'files.*'             => 'file|max:30720',
         ]);
 
         $updates = [

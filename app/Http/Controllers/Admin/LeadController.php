@@ -641,7 +641,7 @@ class LeadController extends Controller
             'all_day'      => 'nullable|boolean',
             'user_id'      => 'nullable|exists:users,id',
             'files'        => 'nullable|array',
-            'files.*'      => 'file|max:10240',
+            'files.*'      => 'file|max:30720',
         ]);
 
         $assigneeId = $validated['user_id'] ?? auth()->id();
@@ -731,7 +731,7 @@ class LeadController extends Controller
             'all_day'      => 'nullable|boolean',
             'user_id'      => 'nullable|exists:users,id',
             'files'        => 'nullable|array',
-            'files.*'      => 'file|max:10240',
+            'files.*'      => 'file|max:30720',
         ]);
 
         $updates = [];
