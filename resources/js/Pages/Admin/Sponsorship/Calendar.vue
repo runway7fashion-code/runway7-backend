@@ -117,9 +117,23 @@ function goToday() {
     currentDate.value = new Date();
 }
 
-function goToDayView(date) {
-    currentDate.value = new Date(date);
-    currentView.value = 'day';
+// "+N more" abre un modal con todos los eventos del día y scroll interno.
+const showMoreModal = ref(false);
+const moreModalDate = ref(null);
+const moreModalEvents = computed(() =>
+    moreModalDate.value ? eventsOn(moreModalDate.value) : []
+);
+const moreModalDateLabel = computed(() => {
+    if (!moreModalDate.value) return '';
+    return moreModalDate.value.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+});
+function openMoreModal(date) {
+    moreModalDate.value = new Date(date);
+    showMoreModal.value = true;
+}
+function openEventFromMore(evt) {
+    showMoreModal.value = false;
+    openEvent(evt);
 }
 
 const fetchRange = computed(() => {
@@ -427,7 +441,7 @@ function eventsAtHour(date, hour) {
                                 :class="[ev.status === 'completed' ? 'opacity-60 line-through' : '', ev.source === 'personal' ? 'ring-2 ring-white/50 ring-inset' : '']">
                                 <span v-if="ev.area === 'sales'" class="inline-block bg-white/30 px-1 mr-0.5 rounded text-[9px] font-bold align-middle">{{ areaStyle(ev).label }}</span>{{ formatTime(ev.start) }} {{ ev.title }}
                             </button>
-                            <button type="button" v-if="eventsOn(cell).length > 3" @click="goToDayView(cell)"
+                            <button type="button" v-if="eventsOn(cell).length > 3" @click="openMoreModal(cell)"
                                 class="text-xs text-gray-500 px-1 hover:text-black hover:underline cursor-pointer">+{{ eventsOn(cell).length - 3 }} more</button>
                         </div>
                     </div>
@@ -641,6 +655,41 @@ function eventsAtHour(date, hour) {
                                 {{ createForm.processing ? 'Saving…' : 'Create' }}
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- ═══ MORE EVENTS MODAL — list of all events for a given day ═══ -->
+        <Teleport to="body">
+            <div v-if="showMoreModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div class="absolute inset-0 bg-black/40" @click="showMoreModal = false"></div>
+                <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col z-10">
+                    <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+                        <h3 class="text-base font-bold text-gray-900">{{ moreModalDateLabel }}</h3>
+                        <button @click="showMoreModal = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+                            <XMarkIcon class="w-5 h-5" />
+                        </button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-3 space-y-2">
+                        <button v-for="ev in moreModalEvents" :key="`${ev.source}-${ev.id}`"
+                            @click="openEventFromMore(ev)"
+                            class="w-full flex items-start gap-3 p-3 rounded-xl text-left transition-opacity hover:opacity-90 text-white"
+                            :style="chipStyle(ev)"
+                            :class="ev.source === 'personal' ? 'ring-2 ring-white/50 ring-inset' : ''">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-1.5">
+                                    <span v-if="ev.area === 'sales'" class="inline-block bg-white/30 px-1 rounded text-[9px] font-bold">SA</span>
+                                    <p class="font-semibold text-sm truncate">{{ ev.title }}</p>
+                                </div>
+                                <p class="text-xs opacity-90 mt-0.5">
+                                    {{ formatTime(ev.start) }}<template v-if="ev.ends_at"> – {{ new Date(ev.ends_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) }}</template>
+                                </p>
+                                <p v-if="ev.advisor" class="text-xs opacity-80 mt-0.5">→ {{ ev.advisor }}</p>
+                                <p v-if="ev.lead_name" class="text-xs opacity-80 truncate">{{ ev.lead_name }}<span v-if="ev.company" class="opacity-70"> · {{ ev.company }}</span></p>
+                            </div>
+                        </button>
+                        <p v-if="!moreModalEvents.length" class="text-sm text-gray-400 text-center py-6">No activities.</p>
                     </div>
                 </div>
             </div>

@@ -94,10 +94,23 @@ function goToday() {
     currentDate.value = new Date();
 }
 
-// Saltar a vista de día desde un cell del mes (para abrir +N more).
-function goToDayView(date) {
-    currentDate.value = new Date(date);
-    currentView.value = 'day';
+// "+N more" abre un modal con todos los eventos del día y scroll interno.
+const showMoreModal = ref(false);
+const moreModalDate = ref(null);
+const moreModalEvents = computed(() =>
+    moreModalDate.value ? eventsForDay(moreModalDate.value) : []
+);
+const moreModalDateLabel = computed(() => {
+    if (!moreModalDate.value) return '';
+    return moreModalDate.value.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+});
+function openMoreModal(date) {
+    moreModalDate.value = new Date(date);
+    showMoreModal.value = true;
+}
+function openEventFromMore(evt) {
+    showMoreModal.value = false;
+    openEvent(evt);
 }
 
 // ── Date ranges ────────────────────────────────────────────────────
@@ -494,7 +507,7 @@ function submitCreate() {
                             <button
                                 type="button"
                                 v-if="eventsForDay(cell.date).length > 3"
-                                @click="goToDayView(cell.date)"
+                                @click="openMoreModal(cell.date)"
                                 class="text-[10px] text-gray-500 font-medium px-1 hover:text-black hover:underline cursor-pointer"
                             >
                                 +{{ eventsForDay(cell.date).length - 3 }} more
@@ -771,6 +784,43 @@ function submitCreate() {
                                 {{ createForm.processing ? 'Saving…' : 'Create' }}
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- ═══ MORE EVENTS MODAL — list of all events for a given day ═══ -->
+        <Teleport to="body">
+            <div v-if="showMoreModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div class="absolute inset-0 bg-black/40" @click="showMoreModal = false"></div>
+                <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col z-10">
+                    <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+                        <h3 class="text-base font-bold text-gray-900">{{ moreModalDateLabel }}</h3>
+                        <button @click="showMoreModal = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-3 space-y-2">
+                        <button v-for="evt in moreModalEvents" :key="`${evt.source}-${evt.id}`"
+                            @click="openEventFromMore(evt)"
+                            class="w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-colors hover:bg-gray-50"
+                            :class="[eventStyle(evt).bg, eventStyle(evt).border]">
+                            <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-white/60" :class="eventStyle(evt).text">
+                                <span v-text="typeIcon(evt.type)"></span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-1.5">
+                                    <span v-if="evt.area === 'sponsorship'" class="inline-block px-1 rounded text-[9px] font-bold bg-white border" :class="eventStyle(evt).border">SP</span>
+                                    <p class="font-semibold text-gray-900 text-sm truncate">{{ evt.title || typeLabel(evt.type) }}</p>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-0.5">
+                                    {{ formatTime(evt.start) }}<template v-if="evt.ends_at"> – {{ new Date(evt.ends_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) }}</template>
+                                </p>
+                                <p v-if="evt.advisor" class="text-xs text-gray-500 mt-0.5">→ {{ evt.advisor }}</p>
+                                <p v-if="evt.lead_name" class="text-xs text-gray-500 truncate">{{ evt.lead_name }}<span v-if="evt.company" class="text-gray-400"> · {{ evt.company }}</span></p>
+                            </div>
+                        </button>
+                        <p v-if="!moreModalEvents.length" class="text-sm text-gray-400 text-center py-6">No activities.</p>
                     </div>
                 </div>
             </div>
