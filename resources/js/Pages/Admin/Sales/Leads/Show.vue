@@ -1,5 +1,6 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import RichTextEditor from '@/Components/RichTextEditor.vue';
 import EmailComposer from '@/Components/EmailComposer.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { ref, computed, watch } from 'vue';
@@ -965,8 +966,7 @@ function isActivityExpanded(id) {
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-500 mb-1">Description <span class="text-gray-400">(optional)</span></label>
-                            <textarea v-model="activityForm.description" rows="2" placeholder="Details..."
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black focus:border-black"></textarea>
+                            <RichTextEditor v-model="activityForm.description" placeholder="Details..." min-height="100px" />
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-500 mb-1">Schedule date <span class="text-gray-400">(optional)</span></label>
