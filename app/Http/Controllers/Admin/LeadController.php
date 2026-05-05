@@ -715,6 +715,73 @@ class LeadController extends Controller
         return back()->with('success', 'Activity created.');
     }
 
+    public function updateActivity(Request $request, LeadActivity $activity, \App\Services\CalendarAvailabilityChecker $checker)
+    {
+        // Solo se editan tipos manuales: note + call + meeting. Email/system/auto no.
+        $editableTypes = ['note', 'call', 'meeting'];
+        if (!in_array($activity->type, $editableTypes, true)) {
+            abort(403, 'This activity type cannot be edited.');
+        }
+
+        $validated = $request->validate([
+            'title'        => 'nullable|string|max:255',
+            'description'  => 'nullable|string',
+            'scheduled_at' => 'nullable|date',
+            'ends_at'      => 'nullable|date|after:scheduled_at',
+            'all_day'      => 'nullable|boolean',
+            'user_id'      => 'nullable|exists:users,id',
+            'files'        => 'nullable|array',
+            'files.*'      => 'file|max:10240',
+        ]);
+
+        $updates = [];
+
+        if ($activity->type === 'note') {
+            if (empty(trim($validated['description'] ?? ''))) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['description' => 'Description is required for notes.']);
+            }
+            $updates['title']       = $validated['title'] ?: 'Note';
+            $updates['description'] = $validated['description'];
+        } else {
+            // call / meeting
+            if (empty(trim($validated['title'] ?? ''))) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['title' => 'Title is required.']);
+            }
+            $allDay = !empty($validated['all_day']);
+            $endsAt = $allDay ? null : ($validated['ends_at'] ?? null);
+            // All-day no genera conflicto; hora específica sí (excluyendo esta misma activity).
+            if (!$allDay) {
+                $checker->assertNoConflict(
+                    $validated['user_id'] ?? $activity->user_id,
+                    $validated['scheduled_at'] ?? null,
+                    $endsAt,
+                    ['sales_lead' => $activity->id],
+                );
+            }
+            $updates['title']        = $validated['title'];
+            $updates['description']  = $validated['description'] ?? null;
+            $updates['scheduled_at'] = $validated['scheduled_at'] ?? null;
+            $updates['ends_at']      = $endsAt;
+            $updates['all_day']      = $allDay;
+            $updates['user_id']      = $validated['user_id'] ?? $activity->user_id;
+        }
+
+        $activity->update($updates);
+
+        if ($request->hasFile('files')) {
+            foreach ($request->file('files') as $file) {
+                $path = $file->store('lead-files', 'public');
+                $activity->files()->create([
+                    'file_path' => $path,
+                    'file_name' => $file->getClientOriginalName(),
+                ]);
+            }
+        }
+
+        if ($request->wantsJson()) return response()->json(['ok' => true]);
+        return back()->with('success', 'Activity updated.');
+    }
+
     public function completeActivity(LeadActivity $activity)
     {
         $activity->update([

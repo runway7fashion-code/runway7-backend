@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\DesignerController;
 use App\Http\Controllers\Admin\DesignerSettingsController;
 use App\Http\Controllers\Admin\AccountingController;
+use App\Http\Controllers\Admin\SubscriptionsController;
 use App\Http\Controllers\Admin\PassController;
 use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\VolunteerController;
@@ -331,6 +332,30 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::delete('payment-methods/{paymentMethodConfig}', [PaymentMethodConfigController::class, 'destroy'])->name('payment-methods.destroy');
                 Route::post('payment-methods/reorder', [PaymentMethodConfigController::class, 'reorder'])->name('payment-methods.reorder');
             });
+
+            // Suscripciones de la empresa - admin, accounting
+            Route::middleware('section:accounting_subscriptions')->group(function () {
+                Route::prefix('subscriptions')->name('subscriptions.')->group(function () {
+                    Route::get('dashboard', [SubscriptionsController::class, 'dashboard'])->name('dashboard');
+                    Route::get('renewals', [SubscriptionsController::class, 'renewals'])->name('renewals');
+
+                    Route::get('payment-methods', [SubscriptionsController::class, 'paymentMethods'])->name('payment-methods.index');
+                    Route::post('payment-methods', [SubscriptionsController::class, 'storePaymentMethod'])->name('payment-methods.store');
+                    Route::put('payment-methods/{method}', [SubscriptionsController::class, 'updatePaymentMethod'])->name('payment-methods.update');
+                    Route::delete('payment-methods/{method}', [SubscriptionsController::class, 'destroyPaymentMethod'])->name('payment-methods.destroy');
+
+                    Route::get('/', [SubscriptionsController::class, 'index'])->name('index');
+                    Route::get('create', [SubscriptionsController::class, 'create'])->name('create');
+                    Route::post('/', [SubscriptionsController::class, 'store'])->name('store');
+                    Route::get('{subscription}', [SubscriptionsController::class, 'show'])->name('show');
+                    Route::get('{subscription}/edit', [SubscriptionsController::class, 'edit'])->name('edit');
+                    Route::put('{subscription}', [SubscriptionsController::class, 'update'])->name('update');
+                    Route::delete('{subscription}', [SubscriptionsController::class, 'destroy'])->name('destroy');
+
+                    Route::post('{subscription}/payments', [SubscriptionsController::class, 'storePayment'])->name('payments.store');
+                    Route::delete('{subscription}/payments/{payment}', [SubscriptionsController::class, 'destroyPayment'])->name('payments.destroy');
+                });
+            });
         });
 
         // Pases - admin, tickets_manager
@@ -391,6 +416,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::post('leads/{lead}/send-email', [LeadEmailController::class, 'send'])->name('leads.send-email');
                 Route::post('leads/send-bulk-email', [LeadEmailController::class, 'sendBulk'])->name('leads.send-bulk-email');
                 Route::post('leads/{lead}/activity', [LeadController::class, 'addActivity'])->name('leads.add-activity');
+                Route::match(['put','patch'], 'activities/{activity}', [LeadController::class, 'updateActivity'])->name('leads.update-activity');
                 Route::patch('activities/{activity}/complete', [LeadController::class, 'completeActivity'])->name('leads.complete-activity');
                 Route::patch('activities/{activity}/cancel', [LeadController::class, 'cancelActivity'])->name('leads.cancel-activity');
                 Route::patch('activities/{activity}/not-completed', [LeadController::class, 'notCompletedActivity'])->name('leads.not-completed-activity');

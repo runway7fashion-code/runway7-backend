@@ -197,6 +197,7 @@ const activityForm = useForm({
 });
 
 function openActivityModal() {
+    editingActivityId.value = null;
     activityForm.reset();
     activityForm.type = 'note';
     activityForm.user_id = null;
@@ -208,6 +209,36 @@ function openActivityModal() {
     showActivityModal.value = true;
 }
 
+// Edit existente — solo aplica a note/call/meeting (igual que sponsorship).
+const editingActivityId = ref(null);
+function utcToLocalDateInput(utc) {
+    if (!utc) return '';
+    const d = new Date(utc);
+    if (isNaN(d)) return '';
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+function utcToLocalTimeInput(utc) {
+    if (!utc) return '';
+    const d = new Date(utc);
+    if (isNaN(d)) return '';
+    const pad = n => String(n).padStart(2, '0');
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function openEditActivity(activity) {
+    editingActivityId.value = activity.id;
+    activityForm.type           = activity.type;
+    activityForm.title          = activity.title || '';
+    activityForm.description    = activity.description || '';
+    activityForm.scheduled_date = utcToLocalDateInput(activity.scheduled_at);
+    activityForm.scheduled_time = activity.all_day ? '' : utcToLocalTimeInput(activity.scheduled_at);
+    activityForm.has_end_time   = !!activity.ends_at && !activity.all_day;
+    activityForm.ends_at_time   = utcToLocalTimeInput(activity.ends_at);
+    activityForm.user_id        = activity.user?.id ?? null;
+    availabilityConflicts.value = [];
+    showActivityModal.value = true;
+}
+
 function combineDateTimeIso(dateStr, timeStr) {
     if (!dateStr) return null;
     const d = new Date(`${dateStr}T${timeStr || '12:00'}`);
@@ -215,17 +246,26 @@ function combineDateTimeIso(dateStr, timeStr) {
 }
 
 function submitActivity() {
-    activityForm.transform(d => {
+    const transform = d => {
         const allDay = !!d.scheduled_date && !d.scheduled_time;
         const scheduledIso = d.scheduled_date ? combineDateTimeIso(d.scheduled_date, d.scheduled_time) : null;
         const endsIso = (!allDay && d.has_end_time && d.scheduled_time)
             ? combineDateTimeIso(d.scheduled_date, d.ends_at_time)
             : null;
         return { ...d, scheduled_at: scheduledIso, ends_at: endsIso, all_day: allDay };
-    }).post(`/admin/sales/leads/${props.lead.id}/activity`, {
-        preserveScroll: true,
-        onSuccess: () => { activityForm.reset(); showActivityModal.value = false; },
-    });
+    };
+    if (editingActivityId.value) {
+        activityForm.transform(d => ({ ...transform(d), _method: 'PATCH' }))
+            .post(`/admin/sales/activities/${editingActivityId.value}`, {
+                preserveScroll: true,
+                onSuccess: () => { showActivityModal.value = false; editingActivityId.value = null; activityForm.reset(); },
+            });
+    } else {
+        activityForm.transform(transform).post(`/admin/sales/leads/${props.lead.id}/activity`, {
+            preserveScroll: true,
+            onSuccess: () => { activityForm.reset(); showActivityModal.value = false; },
+        });
+    }
 }
 
 // ── Availability check (debounced) — solo aplica a call/meeting con hora.
@@ -792,6 +832,11 @@ function isActivityExpanded(id) {
                                                 {{ isActivityExpanded(activity.id) ? 'Ver menos' : 'Ver más' }}
                                                 <ChevronDownIcon class="w-3 h-3 transition-transform" :class="{ 'rotate-180': isActivityExpanded(activity.id) }" />
                                             </button>
+                                            <button v-if="['note', 'call', 'meeting'].includes(activity.type)"
+                                                @click="openEditActivity(activity)"
+                                                class="inline-flex items-center gap-1 text-[10px] font-medium text-gray-500 hover:text-black px-2 py-0.5 rounded border border-gray-200 hover:border-gray-400 transition-colors">
+                                                <PencilSquareIcon class="w-3 h-3" /> Edit
+                                            </button>
                                         </div>
                                     </div>
 
@@ -901,15 +946,15 @@ function isActivityExpanded(id) {
                 <div class="absolute inset-0 bg-black/50" @click="showActivityModal = false"></div>
                 <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">New Activity</h3>
+                        <h3 class="text-lg font-semibold text-gray-900">{{ editingActivityId ? 'Edit Activity' : 'New Activity' }}</h3>
                         <button @click="showActivityModal = false" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
                     </div>
                     <form @submit.prevent="submitActivity" class="space-y-3">
                         <div>
                             <label class="block text-xs font-medium text-gray-500 mb-1">Type</label>
-                            <select v-model="activityForm.type"
-                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black focus:border-black">
-                                <option v-for="(info, key) in activityTypes" :key="key" :value="key" v-show="['call','email','meeting'].includes(key)">{{ info.label }}</option>
+                            <select v-model="activityForm.type" :disabled="!!editingActivityId"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black focus:border-black disabled:bg-gray-100 disabled:text-gray-500">
+                                <option v-for="(info, key) in activityTypes" :key="key" :value="key" v-show="['call','email','meeting','note'].includes(key)">{{ info.label }}</option>
                             </select>
                         </div>
                         <div>
@@ -970,7 +1015,7 @@ function isActivityExpanded(id) {
                                 :disabled="activityForm.processing || !activityForm.title || ((activityForm.type === 'call' || activityForm.type === 'meeting') && availabilityConflicts.length > 0)"
                                 :title="availabilityConflicts.length > 0 ? 'Hay conflictos de horario' : ''"
                                 class="flex-1 px-4 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                                Register
+                                {{ editingActivityId ? 'Save' : 'Register' }}
                             </button>
                         </div>
                     </form>
