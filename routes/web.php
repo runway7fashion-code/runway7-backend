@@ -443,7 +443,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::patch('calendar-activities/{calendar_activity}/pending',       [CalendarActivityController::class, 'markPending'])->name('calendar-activities.pending');
                 Route::delete('calendar-activities/{calendar_activity}',              [CalendarActivityController::class, 'destroy'])->name('calendar-activities.destroy');
 
-                Route::get('calendar/availability', fn(\Illuminate\Http\Request $r) => app(CalendarActivityController::class)->availability($r, 'sales'))->name('calendar.availability');
+                Route::get('calendar/availability', fn(\Illuminate\Http\Request $r) => app(CalendarActivityController::class)->availability($r, 'sales', app(\App\Services\CalendarAvailabilityChecker::class)))->name('calendar.availability');
             });
             // Analytics - admin, sales lider
             Route::middleware('section:sales_leads')->group(function () {
@@ -565,7 +565,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::patch('calendar-activities/{calendar_activity}/pending',       [CalendarActivityController::class, 'markPending'])->name('calendar-activities.pending');
                 Route::delete('calendar-activities/{calendar_activity}',              [CalendarActivityController::class, 'destroy'])->name('calendar-activities.destroy');
 
-                Route::get('calendar/availability', fn(\Illuminate\Http\Request $r) => app(CalendarActivityController::class)->availability($r, 'sponsorship'))->name('calendar.availability');
+                Route::get('calendar/availability', fn(\Illuminate\Http\Request $r) => app(CalendarActivityController::class)->availability($r, 'sponsorship', app(\App\Services\CalendarAvailabilityChecker::class)))->name('calendar.availability');
             });
 
             // Sponsors

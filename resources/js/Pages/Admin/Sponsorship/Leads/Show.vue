@@ -202,18 +202,19 @@ function handleNoteFileSelect(e) {
 }
 function removeNoteFile(i) { noteFiles.value.splice(i, 1); }
 
+// useForm + forceFormData es más confiable que router.post(formData) cuando hay
+// archivos adjuntos: Inertia maneja el multipart, errores de validación,
+// progress, y reintentos correctamente.
+const noteForm = useForm({ type: 'note', title: '', description: '', files: [] });
 function saveNote() {
     if (!noteContent.value.trim()) return;
-    const formData = new FormData();
-    formData.append('type', 'note');
-    formData.append('title', noteTitle.value.trim() || 'Note');
-    formData.append('description', noteContent.value.trim());
-    noteFiles.value.forEach((f, i) => formData.append(`files[${i}]`, f.file));
-
-    router.post(`/admin/sponsorship/leads/${props.lead.id}/activities`, formData, {
-        preserveScroll: true,
+    noteForm.title = noteTitle.value.trim() || 'Note';
+    noteForm.description = noteContent.value.trim();
+    noteForm.files = noteFiles.value.map(f => f.file);
+    noteForm.post(`/admin/sponsorship/leads/${props.lead.id}/activities`, {
         forceFormData: true,
-        onSuccess: () => cancelNote(),
+        preserveScroll: true,
+        onSuccess: () => { noteForm.reset(); cancelNote(); },
     });
 }
 function cancelNote() {

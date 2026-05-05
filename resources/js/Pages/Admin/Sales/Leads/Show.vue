@@ -82,18 +82,18 @@ const leadNotes = computed(() =>
     (props.lead.activities || []).filter(a => a.type === 'note').sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 );
 
+// useForm + forceFormData es más confiable que router.post(formData) cuando hay
+// archivos adjuntos: Inertia maneja el multipart correctamente.
+const noteForm = useForm({ type: 'note', title: '', description: '', files: [] });
 function saveNote() {
     if (!noteContent.value.trim()) return;
-    const formData = new FormData();
-    formData.append('type', 'note');
-    formData.append('title', noteTitle.value.trim() || 'Note');
-    formData.append('description', noteContent.value.trim());
-    noteFiles.value.forEach((f, i) => formData.append(`files[${i}]`, f.file));
-
-    router.post(`/admin/sales/leads/${props.lead.id}/activity`, formData, {
-        preserveScroll: true,
+    noteForm.title = noteTitle.value.trim() || 'Note';
+    noteForm.description = noteContent.value.trim();
+    noteForm.files = noteFiles.value.map(f => f.file);
+    noteForm.post(`/admin/sales/leads/${props.lead.id}/activity`, {
         forceFormData: true,
-        onSuccess: () => { cancelNote(); },
+        preserveScroll: true,
+        onSuccess: () => { noteForm.reset(); cancelNote(); },
     });
 }
 
