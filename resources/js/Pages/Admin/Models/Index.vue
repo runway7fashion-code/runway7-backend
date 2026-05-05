@@ -315,11 +315,11 @@ function eventStatusBadge(status) {
 
 function eventStatusLabel(status) {
     return {
-        draft:     'Borrador',
-        published: 'Publicado',
-        active:    'Activo',
-        completed: 'Completado',
-        cancelled: 'Cancelado',
+        draft:     'Draft',
+        published: 'Published',
+        active:    'Active',
+        completed: 'Completed',
+        cancelled: 'Cancelled',
     }[status] ?? status;
 }
 
@@ -334,9 +334,9 @@ function pivotStatusBadge(status) {
 
 function pivotStatusLabel(status) {
     return {
-        invited:    'Invitada',
-        confirmed:  'Confirmada',
-        rejected:   'Rechazada',
+        invited:    'Invited',
+        confirmed:  'Confirmed',
+        rejected:   'Rejected',
         checked_in: 'Check-in',
     }[status] ?? status;
 }
@@ -349,14 +349,13 @@ function formatTime(t) {
 
 function castingStatusInfo(status, gender = null) {
     if (status === 'rejected') {
-        const label = gender === 'male' ? 'Rechazado' : 'Rechazada';
-        return { label, color: 'text-red-500', dot: 'bg-red-400' };
+        return { label: 'Rejected', color: 'text-red-500', dot: 'bg-red-400' };
     }
     return {
-        scheduled:  { label: 'Agendada',        color: 'text-gray-500',  dot: 'bg-gray-400' },
-        checked_in: { label: 'Check-in',         color: 'text-blue-600',  dot: 'bg-blue-500' },
-        selected:   { label: 'Seleccionada',      color: 'text-green-600', dot: 'bg-green-500' },
-        no_show:    { label: 'No se presentó',   color: 'text-red-500',   dot: 'bg-red-400' },
+        scheduled:  { label: 'Scheduled', color: 'text-gray-500',  dot: 'bg-gray-400' },
+        checked_in: { label: 'Check-in',  color: 'text-blue-600',  dot: 'bg-blue-500' },
+        selected:   { label: 'Selected',  color: 'text-green-600', dot: 'bg-green-500' },
+        no_show:    { label: 'No-show',   color: 'text-red-500',   dot: 'bg-red-400' },
     }[status] ?? { label: status ?? '—', color: 'text-gray-400', dot: 'bg-gray-300' };
 }
 
@@ -406,12 +405,12 @@ function openCheckinModal(model, e) {
 
 function fmtCheckinDate(dt) {
     if (!dt) return null;
-    return new Date(dt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+    return new Date(dt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function fmtCheckinTime(dt) {
     if (!dt) return null;
-    return new Date(dt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    return new Date(dt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }
 
 function timeAgo(dt) {
@@ -420,30 +419,30 @@ function timeAgo(dt) {
     const mins  = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days  = Math.floor(diff / 86400000);
-    if (mins < 60)   return `hace ${mins}m`;
-    if (hours < 24)  return `hace ${hours}h`;
-    if (days < 30)   return `hace ${days}d`;
+    if (mins < 60)   return `${mins}m ago`;
+    if (hours < 24)  return `${hours}h ago`;
+    if (days < 30)   return `${days}d ago`;
     return fmtCheckinDate(dt);
 }
 
 // --- Send pending emails/SMS ---
 function sendPendingEmails() {
-    if (!confirm(`¿Enviar email de onboarding a ${props.pendingEmailCount} modelo(s) pendiente(s)?`)) return;
+    if (!confirm(`Send onboarding email to ${props.pendingEmailCount} pending model(s)?`)) return;
     router.post('/admin/operations/models/send-pending-emails', {}, { preserveScroll: true });
 }
 
 function sendPendingSms() {
-    if (!confirm(`¿Enviar SMS de onboarding a ${props.pendingSmsCount} modelo(s) pendiente(s)?`)) return;
+    if (!confirm(`Send onboarding SMS to ${props.pendingSmsCount} pending model(s)?`)) return;
     router.post('/admin/operations/models/send-bulk-onboarding-sms', {}, { preserveScroll: true });
 }
 
 function sendBulkRejectionEmails() {
-    if (!confirm(`¿Enviar email de rechazo a ${props.rejectedEmailCount} modelo(s) rechazada(s)?`)) return;
+    if (!confirm(`Send rejection email to ${props.rejectedEmailCount} rejected model(s)?`)) return;
     router.post('/admin/operations/models/send-bulk-rejection-emails', {}, { preserveScroll: true });
 }
 
 function sendBulkRejectionSms() {
-    if (!confirm(`¿Enviar SMS de rechazo a ${props.rejectedSmsCount} modelo(s) rechazada(s)?`)) return;
+    if (!confirm(`Send rejection SMS to ${props.rejectedSmsCount} rejected model(s)?`)) return;
     router.post('/admin/operations/models/send-bulk-rejection-sms', {}, { preserveScroll: true });
 }
 
@@ -455,7 +454,7 @@ function progressColor(pct) {
 }
 
 function genderLabel(g) {
-    return { female: 'Femenino', male: 'Masculino', non_binary: 'No binario' }[g] ?? g ?? '—';
+    return { female: 'Female', male: 'Male', non_binary: 'Non-binary' }[g] ?? g ?? '—';
 }
 
 function statusBadge(status) {
@@ -477,14 +476,14 @@ function storageUrl(path) {
 function fmtLogin(dt) {
     if (!dt) return null;
     const d = new Date(dt);
-    return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
-        + ' ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })
+        + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }
 
 function fmtEmailSent(dt) {
     if (!dt) return null;
     const d = new Date(dt);
-    return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function onNotification(e) {
@@ -578,23 +577,23 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         <span class="text-sm font-bold text-gray-900 leading-tight">{{ twilioBalance.balance }} {{ twilioBalance.currency }}</span>
                     </div>
 
-                    <!-- Botón exportar Excel -->
+                    <!-- Export Excel button -->
                     <a :href="exportUrl"
                         class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
                         <ArrowDownTrayIcon class="w-4 h-4 text-gray-500" />
-                        Exportar Excel
+                        Export Excel
                     </a>
 
-                    <!-- Botón importar Excel -->
+                    <!-- Import Excel button -->
                     <button @click="showImportModal = true"
                         class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
                         <ArrowUpTrayIcon class="w-4 h-4 text-gray-500" />
-                        Importar Excel
+                        Import Excel
                     </button>
 
                     <Link href="/admin/operations/models/create"
                         class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
-                        + Crear Modelo
+                        + Create Model
                     </Link>
                 </div>
             </div>
@@ -614,7 +613,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <p class="text-2xl font-bold text-green-600 mt-1">{{ stats?.kit_paid ?? 0 }}</p>
                 </div>
                 <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Agencia</p>
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Agency</p>
                     <p class="text-2xl font-bold text-blue-600 mt-1">{{ stats?.agency ?? 0 }}</p>
                 </div>
                 <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
@@ -622,15 +621,15 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <p class="text-2xl font-bold text-amber-500 mt-1">{{ stats?.top ?? 0 }}</p>
                 </div>
                 <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Normales</p>
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Regular</p>
                     <p class="text-2xl font-bold text-gray-900 mt-1">{{ stats?.normal ?? 0 }}</p>
                 </div>
                 <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Hombres</p>
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Male</p>
                     <p class="text-2xl font-bold text-indigo-600 mt-1">{{ stats?.male ?? 0 }}</p>
                 </div>
                 <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Mujeres</p>
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Female</p>
                     <p class="text-2xl font-bold text-pink-500 mt-1">{{ stats?.female ?? 0 }}</p>
                 </div>
             </div>
@@ -642,41 +641,41 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <p class="text-2xl font-bold text-teal-600 mt-1">{{ stats?.checkin ?? 0 }}</p>
                 </div>
                 <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Activas</p>
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Active</p>
                     <p class="text-2xl font-bold text-green-600 mt-1">{{ stats?.active ?? 0 }}</p>
                 </div>
                 <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Pendientes</p>
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Pending</p>
                     <p class="text-2xl font-bold text-yellow-600 mt-1">{{ stats?.pending ?? 0 }}</p>
                 </div>
                 <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Aplicantes</p>
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Applicants</p>
                     <p class="text-2xl font-bold text-purple-600 mt-1">{{ stats?.applicant ?? 0 }}</p>
                 </div>
                 <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Rechazadas</p>
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Rejected</p>
                     <p class="text-2xl font-bold text-orange-600 mt-1">{{ stats?.rejected ?? 0 }}</p>
                 </div>
                 <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Inactivas</p>
+                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Inactive</p>
                     <p class="text-2xl font-bold text-red-600 mt-1">{{ stats?.inactive ?? 0 }}</p>
                 </div>
             </div>
 
-            <!-- Filtros -->
+            <!-- Filters -->
             <div class="flex flex-wrap gap-3 mb-6">
-                <input v-model="search" type="text" placeholder="Buscar por nombre, email, teléfono, # participación..."
+                <input v-model="search" type="text" placeholder="Search by name, email, phone, # participation..."
                     class="flex-1 min-w-48 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
 
                 <select v-model="event"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todos los eventos</option>
+                    <option value="">All events</option>
                     <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
                 </select>
 
                 <select v-model="designer"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todos los diseñadores</option>
+                    <option value="">All designers</option>
                     <option v-for="d in designers" :key="d.id" :value="d.id">
                         {{ d.brand_name || d.name }}
                     </option>
@@ -684,71 +683,71 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
 
                 <select v-model="gender"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todos los géneros</option>
-                    <option value="female">Femenino</option>
-                    <option value="male">Masculino</option>
-                    <option value="non_binary">No binario</option>
+                    <option value="">All genders</option>
+                    <option value="female">Female</option>
+                    <option value="male">Male</option>
+                    <option value="non_binary">Non-binary</option>
                 </select>
 
                 <select v-model="ethnicity"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todas las etnias</option>
-                    <option value="asian">Asiática</option>
-                    <option value="black">Negra</option>
-                    <option value="caucasian">Caucásica</option>
-                    <option value="hispanic">Hispana / Latina</option>
-                    <option value="middle_eastern">Medio Oriente</option>
-                    <option value="mixed">Mixta</option>
-                    <option value="other">Otra</option>
+                    <option value="">All ethnicities</option>
+                    <option value="asian">Asian</option>
+                    <option value="black">Black</option>
+                    <option value="caucasian">Caucasian</option>
+                    <option value="hispanic">Hispanic / Latina</option>
+                    <option value="middle_eastern">Middle Eastern</option>
+                    <option value="mixed">Mixed</option>
+                    <option value="other">Other</option>
                 </select>
 
                 <select v-model="is_agency"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Agencia: todas</option>
-                    <option value="yes">Con agencia</option>
-                    <option value="no">Sin agencia</option>
+                    <option value="">Agency: all</option>
+                    <option value="yes">With agency</option>
+                    <option value="no">No agency</option>
                 </select>
 
                 <select v-model="is_top"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Top: todas</option>
-                    <option value="yes">Solo Top</option>
-                    <option value="no">No Top</option>
+                    <option value="">Top: all</option>
+                    <option value="yes">Top only</option>
+                    <option value="no">Not Top</option>
                 </select>
 
                 <select v-model="compcard"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Comp card: todos</option>
-                    <option value="complete">Comp card completo</option>
-                    <option value="incomplete">Comp card incompleto</option>
+                    <option value="">Comp card: all</option>
+                    <option value="complete">Complete comp card</option>
+                    <option value="incomplete">Incomplete comp card</option>
                 </select>
 
                 <select v-model="email_sent"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Correo: todos</option>
-                    <option value="sent">Correo enviado</option>
-                    <option value="not_sent">Correo no enviado</option>
+                    <option value="">Email: all</option>
+                    <option value="sent">Email sent</option>
+                    <option value="not_sent">Email not sent</option>
                 </select>
 
                 <select v-model="merch"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Merch: todos</option>
-                    <option value="with">Con código</option>
-                    <option value="without">Sin código</option>
+                    <option value="">Merch: all</option>
+                    <option value="with">With code</option>
+                    <option value="without">No code</option>
                 </select>
 
                 <select v-model="model_kit"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Model Kit: todos</option>
-                    <option value="paid">Compraron Model Kit</option>
-                    <option value="not_paid">No han comprado</option>
+                    <option value="">Model Kit: all</option>
+                    <option value="paid">Purchased Model Kit</option>
+                    <option value="not_paid">Not purchased</option>
                 </select>
 
                 <select v-model="test_model"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Tipo: todas</option>
-                    <option value="only_real">Solo reales</option>
-                    <option value="only_test">Solo prueba</option>
+                    <option value="">Type: all</option>
+                    <option value="only_real">Real only</option>
+                    <option value="only_test">Test only</option>
                 </select>
 
                 <select v-model="casting_time"
@@ -757,28 +756,28 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         'border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white',
                         !event ? 'opacity-50 cursor-not-allowed' : ''
                     ]">
-                    <option value="">{{ event ? 'Horario casting: todos' : 'Seleccione evento primero' }}</option>
+                    <option value="">{{ event ? 'Casting time: all' : 'Select event first' }}</option>
                     <option v-for="t in castingTimes" :key="t" :value="t">{{ t }}</option>
                 </select>
 
                 <select v-model="casting_status"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Estado casting: todos</option>
-                    <option value="scheduled">Agendada</option>
+                    <option value="">Casting status: all</option>
+                    <option value="scheduled">Scheduled</option>
                     <option value="checked_in">Check-in</option>
-                    <option value="selected">Seleccionada</option>
-                    <option value="no_show">No se presentó</option>
-                    <option value="rejected">Rechazada/o</option>
+                    <option value="selected">Selected</option>
+                    <option value="no_show">No-show</option>
+                    <option value="rejected">Rejected</option>
                 </select>
 
                 <select v-model="status"
                     class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Estado: todos</option>
-                    <option value="active">Activo</option>
-                    <option value="inactive">Inactivo</option>
-                    <option value="rejected">Rechazada</option>
-                    <option value="pending">Pendiente</option>
-                    <option value="applicant">Aplicante</option>
+                    <option value="">Status: all</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="pending">Pending</option>
+                    <option value="applicant">Applicant</option>
                 </select>
 
                 <div class="w-56">
@@ -790,7 +789,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         :enable-time-picker="false"
                         auto-apply
                         :formats="{ input: formatDateRange }"
-                        placeholder="Registro: fechas"
+                        placeholder="Registration: dates"
                         :clearable="true"
                         input-class-name="dp-input"
                     />
@@ -805,7 +804,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         :enable-time-picker="false"
                         auto-apply
                         :formats="{ input: formatDateRange }"
-                        placeholder="Check-in: fechas"
+                        placeholder="Check-in: dates"
                         :clearable="true"
                         input-class-name="dp-input"
                     />
@@ -819,27 +818,27 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         <tr>
                             <th class="text-left px-5 py-3 font-medium text-gray-500">
                                 <button @click="toggleSortName" class="flex items-center gap-1 hover:text-gray-800 transition-colors cursor-pointer">
-                                    Modelo
+                                    Model
                                     <svg v-if="sort_name === 'asc'" class="w-3.5 h-3.5 text-black" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" /></svg>
                                     <svg v-else-if="sort_name === 'desc'" class="w-3.5 h-3.5 text-black" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
                                     <svg v-else class="w-3.5 h-3.5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" /></svg>
                                 </button>
                             </th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Género / Edad</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Eventos</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Gender / Age</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Events</th>
                             <th class="text-left px-4 py-3 font-medium text-gray-500"># Part.</th>
                             <th class="text-left px-4 py-3 font-medium text-gray-500">Comp Card</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Estado</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Último Check-in</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Registro</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Último Login</th>
-                            <th class="text-left px-4 py-3 font-medium text-gray-500">Último Correo</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Status</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Last Check-in</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Registration</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Last Login</th>
+                            <th class="text-left px-4 py-3 font-medium text-gray-500">Last Email</th>
                             <th class="px-4 py-3"></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         <tr v-if="models.data.length === 0">
-                            <td colspan="11" class="text-center text-gray-400 py-12">No hay modelos registradas.</td>
+                            <td colspan="11" class="text-center text-gray-400 py-12">No registered models.</td>
                         </tr>
                         <tr v-for="m in models.data" :key="m.id"
                             class="hover:bg-gray-50 cursor-pointer transition-colors"
@@ -862,7 +861,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                             <p class="font-medium text-gray-900">{{ m.first_name }} {{ m.last_name }}</p>
                                             <button @click="toggleTop(m, $event)"
                                                 class="flex-shrink-0 cursor-pointer hover:scale-110 transition-transform"
-                                                :title="m.model_profile?.is_top ? 'Quitar Top' : 'Marcar como Top'">
+                                                :title="m.model_profile?.is_top ? 'Remove Top' : 'Mark as Top'">
                                                 <StarSolid v-if="m.model_profile?.is_top" class="w-4 h-4 text-[#D4AF37]" />
                                                 <StarOutline v-else class="w-4 h-4 text-gray-300 hover:text-[#D4AF37]" />
                                             </button>
@@ -874,15 +873,15 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                             </td>
                             <td class="px-4 py-3 text-gray-600">
                                 <p>{{ genderLabel(m.model_profile?.gender) }}</p>
-                                <p class="text-xs text-gray-400">{{ m.model_profile?.age ? m.model_profile.age + ' años' : '—' }}</p>
+                                <p class="text-xs text-gray-400">{{ m.model_profile?.age ? m.model_profile.age + ' years' : '—' }}</p>
                             </td>
                             <td class="px-4 py-3" @click.stop>
                                 <button v-if="m.events_as_model_with_casting?.length"
                                     @click="openEventsModal(m, $event)"
                                     class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full hover:bg-blue-100 transition-colors cursor-pointer">
-                                    {{ m.events_as_model_with_casting.length }} evento{{ m.events_as_model_with_casting.length !== 1 ? 's' : '' }}
+                                    {{ m.events_as_model_with_casting.length }} event{{ m.events_as_model_with_casting.length !== 1 ? 's' : '' }}
                                 </button>
-                                <span v-else class="text-gray-400 text-xs">Sin eventos</span>
+                                <span v-else class="text-gray-400 text-xs">No events</span>
                             </td>
                             <td class="px-4 py-3" @click.stop>
                                 <template v-if="participationNumbers(m).length">
@@ -910,29 +909,29 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                 </div>
                             </td>
                             <td class="px-4 py-3" @click.stop>
-                                <!-- Activo: badge estático (solo la app puede asignar este estado) -->
+                                <!-- Active: static badge (only the app can assign this status) -->
                                 <span v-if="m.status === 'active'"
                                     class="text-xs font-medium rounded-full px-2 py-0.5 bg-green-100 text-green-700">
-                                    Activo
+                                    Active
                                 </span>
-                                <!-- Rechazada: solo permite cambiar a inactivo -->
+                                <!-- Rejected: can only switch to inactive -->
                                 <select v-else-if="m.status === 'rejected'" :value="m.status"
                                     @change="updateModelStatus(m, $event.target.value)"
                                     :data-status-select="m.id"
                                     :class="statusBadge(m.status)"
                                     class="text-xs font-medium rounded-full px-2 py-0.5 border-0 outline-none cursor-pointer appearance-none">
-                                    <option value="rejected">Rechazada</option>
-                                    <option value="inactive">Inactivo</option>
+                                    <option value="rejected">Rejected</option>
+                                    <option value="inactive">Inactive</option>
                                 </select>
-                                <!-- Pendiente / Inactivo / Aplicante: selector editable -->
+                                <!-- Pending / Inactive / Applicant: editable selector -->
                                 <select v-else :value="m.status"
                                     @change="updateModelStatus(m, $event.target.value)"
                                     :data-status-select="m.id"
                                     :class="[statusBadge(m.status), isReadyForPending(m) ? 'animate-pulse ring-2 ring-purple-400 ring-offset-1' : '']"
                                     class="text-xs font-medium rounded-full px-2 py-0.5 border-0 outline-none cursor-pointer appearance-none">
-                                    <option value="inactive">Inactivo</option>
-                                    <option value="pending">Pendiente</option>
-                                    <option value="applicant">Aplicante</option>
+                                    <option value="inactive">Inactive</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="applicant">Applicant</option>
                                 </select>
                             </td>
                             <td class="px-4 py-3" @click.stop>
@@ -977,7 +976,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                         </span>
                                     </template>
                                     <span v-else class="inline-flex items-center text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                                        No enviado
+                                        Not sent
                                     </span>
                                 </button>
                             </td>
@@ -987,19 +986,19 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                         class="p-1.5 border border-gray-200 rounded-lg transition-colors"
                                         :class="canSendEmail(m) ? 'hover:bg-gray-50 text-gray-600' : 'opacity-40 cursor-not-allowed text-gray-400'"
                                         :disabled="!canSendEmail(m)"
-                                        title="Enviar Email">
+                                        title="Send Email">
                                         <EnvelopeIcon class="w-4 h-4" />
                                     </button>
                                     <button @click="sendIndividualSms(m)"
                                         class="p-1.5 border border-gray-200 rounded-lg transition-colors"
                                         :class="canSendSms(m) ? 'hover:bg-gray-50 text-green-600' : 'opacity-40 cursor-not-allowed text-gray-400'"
                                         :disabled="!canSendSms(m)"
-                                        title="Enviar SMS">
+                                        title="Send SMS">
                                         <DevicePhoneMobileIcon class="w-4 h-4" />
                                     </button>
                                     <Link :href="`/admin/operations/models/${m.id}/edit`"
                                         class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
-                                        title="Editar">
+                                        title="Edit">
                                         <PencilSquareIcon class="w-4 h-4" />
                                     </Link>
                                 </div>
@@ -1008,10 +1007,10 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     </tbody>
                 </table>
 
-                <!-- Paginación -->
+                <!-- Pagination -->
                 <div class="border-t border-gray-100 px-5 py-3 flex items-center justify-between text-sm text-gray-500">
                     <div class="flex items-center gap-3">
-                        <span>{{ models.from }}–{{ models.to }} de {{ models.total }} modelos</span>
+                        <span>{{ models.from }}–{{ models.to }} of {{ models.total }} models</span>
                         <select v-model="perPage"
                             class="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
                             <option value="20">20</option>
@@ -1023,9 +1022,9 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     </div>
                     <div v-if="models.last_page > 1" class="flex gap-1">
                         <Link v-if="models.prev_page_url" :href="models.prev_page_url"
-                            class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">← Anterior</Link>
+                            class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">← Previous</Link>
                         <Link v-if="models.next_page_url" :href="models.next_page_url"
-                            class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">Siguiente →</Link>
+                            class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">Next →</Link>
                     </div>
                 </div>
             </div>
@@ -1042,14 +1041,14 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
                     </svg>
                 </div>
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">No se puede cambiar a Pendiente</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Cannot switch to Pending</h3>
                 <p class="text-sm text-gray-600 mb-5">
-                    La modelo <span class="font-medium">{{ statusAlertModel.first_name }} {{ statusAlertModel.last_name }}</span>
-                    no tiene un evento con horario de casting asignado. Asígnale un evento y casting primero.
+                    Model <span class="font-medium">{{ statusAlertModel.first_name }} {{ statusAlertModel.last_name }}</span>
+                    has no event with a casting time assigned. Assign an event and casting first.
                 </p>
                 <button @click="statusAlertModel = null"
                     class="px-5 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
-                    Entendido
+                    Got it
                 </button>
             </div>
         </div>
@@ -1095,7 +1094,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                         <div class="flex items-center gap-1.5 mt-0.5">
                                             <span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>
                                             <p class="text-white/60 text-xs">
-                                                {{ checkinEvents(checkinModel).length }} check-in{{ checkinEvents(checkinModel).length !== 1 ? 's' : '' }} registrado{{ checkinEvents(checkinModel).length !== 1 ? 's' : '' }}
+                                                {{ checkinEvents(checkinModel).length }} check-in{{ checkinEvents(checkinModel).length !== 1 ? 's' : '' }} recorded
                                             </p>
                                         </div>
                                     </div>
@@ -1157,13 +1156,13 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                         <!-- Datos extra -->
                                         <div class="flex items-center gap-3 flex-wrap">
                                             <div v-if="ev.pivot?.participation_number" class="flex items-center gap-1">
-                                                <span class="text-[10px] text-gray-400">Participación:</span>
+                                                <span class="text-[10px] text-gray-400">Participation:</span>
                                                 <span class="text-xs font-bold bg-black text-white px-1.5 py-0.5 rounded-full">
                                                     #{{ ev.pivot.participation_number }}
                                                 </span>
                                             </div>
                                             <div v-if="ev.pivot?.casting_time" class="flex items-center gap-1">
-                                                <span class="text-[10px] text-gray-400">Horario:</span>
+                                                <span class="text-[10px] text-gray-400">Time:</span>
                                                 <span class="text-xs font-medium text-gray-700">{{ formatTime(ev.pivot.casting_time) }}</span>
                                             </div>
                                             <div class="ml-auto">
@@ -1179,11 +1178,11 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
                             <Link :href="`/admin/operations/models/${checkinModel.id}`"
                                 class="text-sm font-semibold text-black hover:underline underline-offset-2">
-                                Ver perfil completo →
+                                View full profile →
                             </Link>
                             <button @click="checkinModel = null"
                                 class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-                                Cerrar
+                                Close
                             </button>
                         </div>
 
@@ -1235,7 +1234,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                         </p>
                                         <p class="text-white/50 text-xs mt-0.5">
                                             {{ selectedModel.events_as_model_with_casting.length }}
-                                            evento{{ selectedModel.events_as_model_with_casting.length !== 1 ? 's' : '' }} asignado{{ selectedModel.events_as_model_with_casting.length !== 1 ? 's' : '' }}
+                                            event{{ selectedModel.events_as_model_with_casting.length !== 1 ? 's' : '' }} assigned
                                         </p>
                                     </div>
                                 </div>
@@ -1276,7 +1275,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                             </svg>
                                         </div>
                                         <div>
-                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Participación</p>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Participation</p>
                                             <p class="text-xs font-semibold text-gray-800">
                                                 {{ ev.pivot?.participation_number ? '#' + ev.pivot.participation_number : '—' }}
                                             </p>
@@ -1291,7 +1290,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                             </svg>
                                         </div>
                                         <div>
-                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Horario casting</p>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Casting time</p>
                                             <p class="text-xs font-semibold text-gray-800">{{ formatTime(ev.pivot?.casting_time) }}</p>
                                         </div>
                                     </div>
@@ -1304,7 +1303,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                             </svg>
                                         </div>
                                         <div>
-                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Estado en evento</p>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Event status</p>
                                             <span :class="pivotStatusBadge(ev.pivot?.status)"
                                                 class="text-xs font-medium px-1.5 py-0.5 rounded-full">
                                                 {{ pivotStatusLabel(ev.pivot?.status) }}
@@ -1320,7 +1319,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                             </svg>
                                         </div>
                                         <div class="flex-1 min-w-0">
-                                            <p class="text-[10px] text-gray-400 leading-none mb-1">Estado casting</p>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-1">Casting status</p>
                                             <select
                                                 :value="ev.pivot?.casting_status"
                                                 @change="updateCastingStatus(selectedModel, ev.id, $event.target.value)"
@@ -1331,11 +1330,11 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                                     'border-blue-300 bg-blue-50 text-blue-700': ev.pivot?.casting_status === 'checked_in',
                                                     'border-gray-300 bg-white text-gray-600': ev.pivot?.casting_status === 'scheduled',
                                                 }">
-                                                <option value="scheduled">Agendada</option>
+                                                <option value="scheduled">Scheduled</option>
                                                 <option value="checked_in">Check-in</option>
-                                                <option value="selected">Seleccionada</option>
-                                                <option value="no_show">No se presentó</option>
-                                                <option value="rejected">{{ selectedModel?.model_profile?.gender === 'male' ? 'Rechazado' : 'Rechazada' }}</option>
+                                                <option value="selected">Selected</option>
+                                                <option value="no_show">No-show</option>
+                                                <option value="rejected">Rejected</option>
                                             </select>
                                         </div>
                                     </div>
@@ -1349,7 +1348,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                             </svg>
                                         </div>
                                         <div class="flex-1 min-w-0">
-                                            <p class="text-[10px] text-gray-400 leading-none mb-1">Tag modelo</p>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-1">Model tag</p>
                                             <select
                                                 :value="ev.pivot?.model_tag || ''"
                                                 @change="updateModelTag(selectedModel, ev.id, $event.target.value)"
@@ -1359,7 +1358,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                                     'border-green-300 bg-green-50 text-green-700': ev.pivot?.model_tag === 'runway_brand',
                                                     'border-gray-300 bg-white text-gray-500': !ev.pivot?.model_tag,
                                                 }">
-                                                <option value="">Sin tag</option>
+                                                <option value="">No tag</option>
                                                 <option value="runway_merch">Runway Merch</option>
                                                 <option value="runway_brand">Runway Brand</option>
                                             </select>
@@ -1374,7 +1373,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                     <button @click="sendOnboarding(selectedModel, ev.id)"
                                         class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-800 transition-colors">
                                         <EnvelopeIcon class="w-3.5 h-3.5" />
-                                        Enviar onboarding {{ ev.pivot.model_tag === 'runway_merch' ? '(Merch)' : '(Brand)' }}
+                                        Send onboarding {{ ev.pivot.model_tag === 'runway_merch' ? '(Merch)' : '(Brand)' }}
                                     </button>
                                 </div>
 
@@ -1385,9 +1384,9 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                                     </svg>
                                     <p class="text-xs text-gray-500">
-                                        Check-in realizado:
+                                        Checked in:
                                         <span class="font-medium text-gray-700">
-                                            {{ new Date(ev.pivot.casting_checked_in_at).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) }}
+                                            {{ new Date(ev.pivot.casting_checked_in_at).toLocaleString('en-US', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) }}
                                         </span>
                                     </p>
                                 </div>
@@ -1415,7 +1414,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                             'bg-yellow-100 text-yellow-700': s.status === 'reserved',
                                             'bg-red-100 text-red-600': s.status === 'rejected',
                                         }" class="flex-shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full capitalize">
-                                            {{ { confirmed: 'Confirmada', requested: 'Solicitada', reserved: 'Reservada', rejected: 'Rechazada' }[s.status] ?? s.status }}
+                                            {{ { confirmed: 'Confirmed', requested: 'Requested', reserved: 'Reserved', rejected: 'Rejected' }[s.status] ?? s.status }}
                                         </span>
                                     </div>
                                 </div>
@@ -1446,11 +1445,11 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
                             <Link :href="`/admin/operations/models/${selectedModel.id}`"
                                 class="text-sm font-semibold text-black hover:underline underline-offset-2">
-                                Ver perfil completo →
+                                View full profile →
                             </Link>
                             <button @click="selectedModel = null"
                                 class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-                                Cerrar
+                                Close
                             </button>
                         </div>
 
@@ -1498,7 +1497,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                             {{ participationModel.first_name }} {{ participationModel.last_name }}
                                         </p>
                                         <p class="text-white/50 text-xs mt-0.5">
-                                            {{ participationNumbers(participationModel).length }} número{{ participationNumbers(participationModel).length !== 1 ? 's' : '' }} de participación
+                                            {{ participationNumbers(participationModel).length }} participation number{{ participationNumbers(participationModel).length !== 1 ? 's' : '' }}
                                         </p>
                                     </div>
                                 </div>
@@ -1530,11 +1529,11 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
                             <Link :href="`/admin/operations/models/${participationModel.id}`"
                                 class="text-sm font-semibold text-black hover:underline underline-offset-2">
-                                Ver perfil completo →
+                                View full profile →
                             </Link>
                             <button @click="participationModel = null"
                                 class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-                                Cerrar
+                                Close
                             </button>
                         </div>
 
@@ -1551,7 +1550,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
             <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
                 <!-- Header -->
                 <div class="flex items-center justify-between mb-5">
-                    <h3 class="text-lg font-bold text-gray-900">Importar Modelos desde Excel</h3>
+                    <h3 class="text-lg font-bold text-gray-900">Import Models from Excel</h3>
                     <button @click="showImportModal = false" class="text-gray-400 hover:text-gray-600">
                         <XMarkIcon class="w-5 h-5" />
                     </button>
@@ -1589,41 +1588,41 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <p class="mt-2 text-gray-500">Formats: <strong>.xlsx, .xls, .csv</strong></p>
                 </div>
 
-                <!-- Selector de evento -->
+                <!-- Event selector -->
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Asignar a un evento <span class="text-gray-400 font-normal">(opcional)</span></label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1.5">Assign to an event <span class="text-gray-400 font-normal">(optional)</span></label>
                     <select v-model="importForm.event_id"
                         class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                        <option value="">— Sin asignar a evento —</option>
+                        <option value="">— Do not assign to event —</option>
                         <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
                     </select>
                     <p v-if="importForm.event_id" class="mt-1.5 text-xs text-blue-600">
-                        Todas las modelos importadas se asignarán a este evento. Si el Excel incluye la columna <span class="font-mono">casting_time</span>, cada modelo recibirá su horario individual.
+                        All imported models will be assigned to this event. If the Excel includes the <span class="font-mono">casting_time</span> column, each model will receive their individual time.
                     </p>
                     <p v-else class="mt-1.5 text-xs text-gray-400">
-                        Si no seleccionas un evento, las modelos se crean sin asignación.
+                        If you don't select an event, models are created without assignment.
                     </p>
                 </div>
 
-                <!-- Input archivo -->
+                <!-- File input -->
                 <div class="mb-5">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar archivo</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select file</label>
                     <input ref="fileInput" type="file" accept=".xlsx,.xls,.csv"
                         @change="handleFileChange"
                         class="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800 cursor-pointer" />
                     <p v-if="importForm.errors.file" class="mt-1 text-xs text-red-500">{{ importForm.errors.file }}</p>
                 </div>
 
-                <!-- Acciones -->
+                <!-- Actions -->
                 <div class="flex gap-3">
                     <button @click="showImportModal = false"
                         class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                        Cancelar
+                        Cancel
                     </button>
                     <button @click="submitImport"
                         :disabled="!importForm.file || importForm.processing"
                         class="flex-1 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                        {{ importForm.processing ? 'Importando...' : 'Importar' }}
+                        {{ importForm.processing ? 'Importing...' : 'Import' }}
                     </button>
                 </div>
             </div>
@@ -1636,7 +1635,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
             <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
                 <div class="flex items-center justify-between mb-5">
                     <div>
-                        <h3 class="text-base font-bold text-gray-900">Historial de correos</h3>
+                        <h3 class="text-base font-bold text-gray-900">Email history</h3>
                         <p class="text-sm text-gray-500">{{ emailHistoryModel.first_name }} {{ emailHistoryModel.last_name }}</p>
                     </div>
                     <button @click="emailHistoryModel = null" class="text-gray-400 hover:text-gray-600">
@@ -1645,7 +1644,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 </div>
 
                 <div v-if="!getEmailLogs(emailHistoryModel).length" class="text-center py-8 text-gray-400 text-sm italic">
-                    No se han enviado correos aún.
+                    No emails sent yet.
                 </div>
 
                 <div v-else class="space-y-3 max-h-80 overflow-y-auto">
@@ -1658,11 +1657,11 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                 {{ commStatusLabel(log.status) }}
                             </span>
                             <span class="text-xs text-gray-400">
-                                {{ new Date(log.sent_at ?? log.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' }) }}
+                                {{ new Date(log.sent_at ?? log.created_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) }}
                             </span>
                         </div>
                         <div class="text-xs text-gray-500">
-                            Enviado por <span class="font-medium text-gray-700">{{ log.sender ? `${log.sender.first_name} ${log.sender.last_name}` : 'Registro automático' }}</span>
+                            Sent by <span class="font-medium text-gray-700">{{ log.sender ? `${log.sender.first_name} ${log.sender.last_name}` : 'Automatic record' }}</span>
                         </div>
                         <div v-if="log.error_message" class="mt-2 text-xs text-red-600 bg-red-100 rounded-lg p-2">
                             {{ log.error_message }}
@@ -1673,7 +1672,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 <div class="mt-5 flex justify-end">
                     <button @click="emailHistoryModel = null"
                         class="px-5 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
-                        Cerrar
+                        Close
                     </button>
                 </div>
             </div>
@@ -1685,16 +1684,16 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
         <div v-if="emailModalModel" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="emailModalModel = null">
             <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-base font-bold text-gray-900">Enviar email de onboarding</h3>
+                    <h3 class="text-base font-bold text-gray-900">Send onboarding email</h3>
                     <button @click="emailModalModel = null" class="text-gray-400 hover:text-gray-600">
                         <XMarkIcon class="w-5 h-5" />
                     </button>
                 </div>
                 <p class="text-sm text-gray-500 mb-4">
-                    ¿Enviar email de bienvenida a
+                    Send welcome email to
                     <span class="font-semibold text-gray-800">{{ emailModalModel.first_name }} {{ emailModalModel.last_name }}</span>?
                 </p>
-                <p class="text-xs text-gray-400 mb-3">Se incluirán los siguientes eventos:</p>
+                <p class="text-xs text-gray-400 mb-3">The following events will be included:</p>
                 <div class="space-y-2 mb-5">
                     <div v-for="evt in scheduledEvents(emailModalModel)" :key="evt.id"
                         class="flex items-center gap-3 p-3 border border-gray-200 rounded-xl bg-gray-50">
@@ -1706,18 +1705,18 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         </div>
                     </div>
                     <p v-if="!scheduledEvents(emailModalModel).length" class="text-sm text-red-500 italic">
-                        No tiene eventos con casting agendado.
+                        No events with scheduled casting.
                     </p>
                 </div>
                 <div class="flex gap-3">
                     <button @click="emailModalModel = null"
                         class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
-                        Cancelar
+                        Cancel
                     </button>
                     <button @click="confirmSendWelcomeEmail()"
                         :disabled="!scheduledEvents(emailModalModel).length"
                         class="flex-1 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                        Enviar Email
+                        Send Email
                     </button>
                 </div>
             </div>
@@ -1734,7 +1733,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         <div class="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
                             <EnvelopeIcon class="w-5 h-5 text-amber-600" />
                         </div>
-                        <h3 class="text-base font-semibold text-gray-900">¿Cómo funciona el envío masivo de emails?</h3>
+                        <h3 class="text-base font-semibold text-gray-900">How does bulk email sending work?</h3>
                     </div>
                     <button @click="showEmailInfoModal = false" class="text-gray-400 hover:text-gray-600 ml-2">
                         <XMarkIcon class="w-5 h-5" />
@@ -1743,24 +1742,24 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 <ul class="space-y-3 text-sm text-gray-600">
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>Solo se envía a modelos con estado Pendiente que tengan casting agendado y no hayan recibido email de bienvenida anteriormente.</span>
+                        <span>Only sent to models with Pending status who have a scheduled casting and have not previously received a welcome email.</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>El email incluye todos los eventos asignados de la modelo donde su casting está agendado, con la fecha y hora correspondiente.</span>
+                        <span>The email includes all the model's assigned events where casting is scheduled, with their date and time.</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>Si una modelo tiene 2 eventos, el email muestra ambos con sus fechas y horarios de casting.</span>
+                        <span>If a model has 2 events, the email shows both with their casting dates and times.</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>El envío se procesa en cola — puede tardar unos segundos dependiendo del volumen.</span>
+                        <span>Sending is queued — it may take a few seconds depending on volume.</span>
                     </li>
                 </ul>
                 <button @click="showEmailInfoModal = false"
                     class="mt-5 w-full py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
-                    Entendido
+                    Got it
                 </button>
             </div>
         </div>
@@ -1776,7 +1775,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                             <DevicePhoneMobileIcon class="w-5 h-5 text-green-600" />
                         </div>
-                        <h3 class="text-base font-semibold text-gray-900">¿Cómo funciona el envío masivo de SMS?</h3>
+                        <h3 class="text-base font-semibold text-gray-900">How does bulk SMS sending work?</h3>
                     </div>
                     <button @click="showSmsInfoModal = false" class="text-gray-400 hover:text-gray-600 ml-2">
                         <XMarkIcon class="w-5 h-5" />
@@ -1785,20 +1784,20 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 <ul class="space-y-3 text-sm text-gray-600">
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>Solo se envía a modelos con estado Pendiente que tengan teléfono con código de país (+1...) y no hayan recibido SMS anteriormente.</span>
+                        <span>Only sent to models with Pending status who have a phone with country code (+1...) and have not previously received SMS.</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>El SMS incluye los eventos asignados con casting agendado, las credenciales de acceso a la app y los enlaces de descarga.</span>
+                        <span>The SMS includes the assigned events with scheduled casting, app access credentials, and download links.</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>Requiere saldo disponible en Twilio. Si no hay saldo el envío fallará.</span>
+                        <span>Requires Twilio balance. If there's no balance, sending will fail.</span>
                     </li>
                 </ul>
                 <button @click="showSmsInfoModal = false"
                     class="mt-5 w-full py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
-                    Entendido
+                    Got it
                 </button>
             </div>
         </div>
@@ -1814,7 +1813,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
                             <EnvelopeIcon class="w-5 h-5 text-red-600" />
                         </div>
-                        <h3 class="text-base font-semibold text-gray-900">¿Cómo funciona el email de rechazo masivo?</h3>
+                        <h3 class="text-base font-semibold text-gray-900">How does bulk rejection email work?</h3>
                     </div>
                     <button @click="showRejectionEmailInfoModal = false" class="text-gray-400 hover:text-gray-600 ml-2">
                         <XMarkIcon class="w-5 h-5" />
@@ -1823,20 +1822,20 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 <ul class="space-y-3 text-sm text-gray-600">
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-red-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>Solo se envía a modelos con estado Rechazada que no hayan recibido email de rechazo anteriormente.</span>
+                        <span>Only sent to models with Rejected status who have not previously received a rejection email.</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-red-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>El email informa a la modelo que no fue seleccionada para el casting principal y le ofrece la oportunidad de participar en el Merch Casting comprando merch.</span>
+                        <span>The email informs the model that she was not selected for the main casting and offers the chance to join the Merch Casting by purchasing merch.</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-red-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>El envío se procesa en cola — puede tardar unos segundos dependiendo del volumen.</span>
+                        <span>Sending is queued — it may take a few seconds depending on volume.</span>
                     </li>
                 </ul>
                 <button @click="showRejectionEmailInfoModal = false"
                     class="mt-5 w-full py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
-                    Entendido
+                    Got it
                 </button>
             </div>
         </div>
@@ -1852,7 +1851,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
                             <DevicePhoneMobileIcon class="w-5 h-5 text-red-600" />
                         </div>
-                        <h3 class="text-base font-semibold text-gray-900">¿Cómo funciona el SMS de rechazo masivo?</h3>
+                        <h3 class="text-base font-semibold text-gray-900">How does bulk rejection SMS work?</h3>
                     </div>
                     <button @click="showRejectionSmsInfoModal = false" class="text-gray-400 hover:text-gray-600 ml-2">
                         <XMarkIcon class="w-5 h-5" />
@@ -1861,20 +1860,20 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 <ul class="space-y-3 text-sm text-gray-600">
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-red-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>Solo se envía a modelos con estado Rechazada que tengan teléfono con código de país (+1...) y no hayan recibido SMS de rechazo anteriormente.</span>
+                        <span>Only sent to models with Rejected status who have a phone with country code (+1...) and have not previously received a rejection SMS.</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-red-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>El SMS informa que no fue seleccionada y le ofrece comprar merch para participar en el Merch Casting.</span>
+                        <span>The SMS informs that she was not selected and offers to purchase merch to join the Merch Casting.</span>
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="w-1.5 h-1.5 bg-red-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                        <span>Requiere saldo disponible en Twilio. Si no hay saldo el envío fallará.</span>
+                        <span>Requires Twilio balance. If there's no balance, sending will fail.</span>
                     </li>
                 </ul>
                 <button @click="showRejectionSmsInfoModal = false"
                     class="mt-5 w-full py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
-                    Entendido
+                    Got it
                 </button>
             </div>
         </div>

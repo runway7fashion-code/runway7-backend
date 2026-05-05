@@ -13,20 +13,20 @@ const props = defineProps({
 const statusFilter = ref(props.filters?.status ?? '');
 
 const statusOptions = [
-    { value: '', label: 'Todos los estados' },
-    { value: 'draft', label: 'Borrador' },
-    { value: 'published', label: 'Publicado' },
-    { value: 'active', label: 'Activo' },
-    { value: 'completed', label: 'Completado' },
-    { value: 'cancelled', label: 'Cancelado' },
+    { value: '', label: 'All statuses' },
+    { value: 'draft', label: 'Draft' },
+    { value: 'published', label: 'Published' },
+    { value: 'active', label: 'Active' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'cancelled', label: 'Cancelled' },
 ];
 
 const statusConfig = {
-    draft:     { label: 'Borrador',   class: 'bg-gray-700 text-gray-300' },
-    published: { label: 'Publicado',  class: 'bg-blue-900/50 text-blue-300' },
-    active:    { label: 'Activo',     class: 'bg-green-900/50 text-green-300' },
-    completed: { label: 'Completado', class: 'bg-purple-900/50 text-purple-300' },
-    cancelled: { label: 'Cancelado',  class: 'bg-red-900/50 text-red-300' },
+    draft:     { label: 'Draft',     class: 'bg-gray-700 text-gray-300' },
+    published: { label: 'Published', class: 'bg-blue-900/50 text-blue-300' },
+    active:    { label: 'Active',    class: 'bg-green-900/50 text-green-300' },
+    completed: { label: 'Completed', class: 'bg-purple-900/50 text-purple-300' },
+    cancelled: { label: 'Cancelled', class: 'bg-red-900/50 text-red-300' },
 };
 
 function applyFilter() {
@@ -41,7 +41,7 @@ const duplicateForm = ref({ name: '', start_date: '', end_date: '' });
 function openDuplicate(event) {
     duplicatingEvent.value = event;
     duplicateForm.value = {
-        name: event.name + ' (Copia)',
+        name: event.name + ' (Copy)',
         start_date: '',
         end_date: '',
     };
@@ -58,7 +58,7 @@ function submitDuplicate() {
 <template>
     <AdminLayout>
         <template #header>
-            <h2 class="text-lg font-semibold text-gray-900">Eventos</h2>
+            <h2 class="text-lg font-semibold text-gray-900">Events</h2>
         </template>
 
         <div>
@@ -77,7 +77,7 @@ function submitDuplicate() {
                     href="/admin/operations/events/create"
                     class="px-4 py-2 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors"
                 >
-                    + Crear Evento
+                    + Create Event
                 </Link>
             </div>
 
@@ -107,7 +107,7 @@ function submitDuplicate() {
                     <div class="grid grid-cols-3 divide-x divide-gray-100 border-b border-gray-100">
                         <div class="px-4 py-3 text-center">
                             <p class="text-xl font-bold text-gray-900">{{ event.days_count }}</p>
-                            <p class="text-xs text-gray-500">Días</p>
+                            <p class="text-xs text-gray-500">Days</p>
                         </div>
                         <div class="px-4 py-3 text-center">
                             <p class="text-xl font-bold text-gray-900">{{ event.total_shows }}</p>
@@ -117,7 +117,7 @@ function submitDuplicate() {
                             <p class="text-xl font-bold" :class="event.assigned_designers === event.total_shows && event.total_shows > 0 ? 'text-green-600' : 'text-yellow-600'">
                                 {{ event.assigned_designers }}/{{ event.total_shows }}
                             </p>
-                            <p class="text-xs text-gray-500">Diseñadores</p>
+                            <p class="text-xs text-gray-500">Designers</p>
                         </div>
                     </div>
 
@@ -127,18 +127,18 @@ function submitDuplicate() {
                             :href="`/admin/operations/events/${event.id}`"
                             class="flex-1 text-center py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
                         >
-                            Ver
+                            View
                         </Link>
                         <Link
                             :href="`/admin/operations/events/${event.id}/edit`"
                             class="flex-1 text-center py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
                         >
-                            Editar
+                            Edit
                         </Link>
                         <button
                             @click="openDuplicate(event)"
                             class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                            title="Duplicar evento"
+                            title="Duplicate event"
                         >
                             <DocumentDuplicateIcon class="w-4 h-4 text-gray-500" />
                         </button>
@@ -149,10 +149,10 @@ function submitDuplicate() {
             <!-- Empty state -->
             <div v-else class="text-center py-20">
                 <CalendarDaysIcon class="mx-auto h-16 w-16 text-gray-300 mb-4" />
-                <h3 class="text-lg font-semibold text-gray-900 mb-1">No hay eventos</h3>
-                <p class="text-gray-500 text-sm mb-6">Crea el primer evento para comenzar</p>
+                <h3 class="text-lg font-semibold text-gray-900 mb-1">No events</h3>
+                <p class="text-gray-500 text-sm mb-6">Create the first event to get started</p>
                 <Link href="/admin/operations/events/create" class="px-5 py-2 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800">
-                    Crear Evento
+                    Create Event
                 </Link>
             </div>
 
@@ -172,26 +172,26 @@ function submitDuplicate() {
         <!-- Duplicate Modal -->
         <div v-if="duplicateModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-                <h3 class="text-lg font-bold mb-4">Duplicar Evento</h3>
+                <h3 class="text-lg font-bold mb-4">Duplicate Event</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm text-gray-600 mb-1">Nombre del nuevo evento</label>
+                        <label class="block text-sm text-gray-600 mb-1">New event name</label>
                         <input v-model="duplicateForm.name" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/20" />
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-sm text-gray-600 mb-1">Fecha inicio</label>
+                            <label class="block text-sm text-gray-600 mb-1">Start date</label>
                             <input v-model="duplicateForm.start_date" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/20" />
                         </div>
                         <div>
-                            <label class="block text-sm text-gray-600 mb-1">Fecha fin</label>
+                            <label class="block text-sm text-gray-600 mb-1">End date</label>
                             <input v-model="duplicateForm.end_date" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/20" />
                         </div>
                     </div>
                 </div>
                 <div class="flex gap-3 mt-6">
-                    <button @click="duplicateModal = false" class="flex-1 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Cancelar</button>
-                    <button @click="submitDuplicate" class="flex-1 py-2 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800">Duplicar</button>
+                    <button @click="duplicateModal = false" class="flex-1 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+                    <button @click="submitDuplicate" class="flex-1 py-2 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800">Duplicate</button>
                 </div>
             </div>
         </div>

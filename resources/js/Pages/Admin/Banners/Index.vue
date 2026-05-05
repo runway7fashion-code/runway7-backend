@@ -41,9 +41,9 @@ function storageUrl(path) {
 
 function roleLabel(r) {
     return {
-        model: 'Modelo', designer: 'Diseñador', media: 'Media', volunteer: 'Voluntario',
-        staff: 'Staff', attendee: 'Asistente', vip: 'VIP', influencer: 'Influencer',
-        press: 'Prensa', sponsor: 'Sponsor', complementary: 'Complementario',
+        model: 'Model', designer: 'Designer', media: 'Media', volunteer: 'Volunteer',
+        staff: 'Staff', attendee: 'Attendee', vip: 'VIP', influencer: 'Influencer',
+        press: 'Press', sponsor: 'Sponsor', complementary: 'Complementary',
     }[r] ?? r;
 }
 
@@ -53,7 +53,7 @@ const availableRoles = [
 ];
 
 function deleteBanner(banner) {
-    if (!confirm(`Eliminar banner "${banner.title}"?`)) return;
+    if (!confirm(`Delete banner "${banner.title}"?`)) return;
     router.delete(`/admin/operations/banners/${banner.id}`);
 }
 
@@ -91,10 +91,10 @@ function moveDown(banner, index) {
             <div class="flex items-center justify-between mb-6">
                 <div>
                     <h3 class="text-2xl font-bold text-gray-900">Banners</h3>
-                    <p class="text-gray-500 text-sm mt-1">{{ banners.length }} banners registrados</p>
+                    <p class="text-gray-500 text-sm mt-1">{{ banners.length }} registered banners</p>
                 </div>
                 <Link href="/admin/operations/banners/create" class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
-                    + Crear Banner
+                    + Create Banner
                 </Link>
             </div>
 
@@ -103,27 +103,27 @@ function moveDown(banner, index) {
                 <input
                     v-model="search"
                     type="text"
-                    placeholder="Buscar por título..."
+                    placeholder="Search by title..."
                     class="flex-1 min-w-48 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400"
                 />
                 <select v-model="status" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todos los estados</option>
-                    <option value="active">Activos</option>
-                    <option value="inactive">Inactivos</option>
+                    <option value="">All statuses</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
                 </select>
                 <select v-model="role" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todos los roles</option>
+                    <option value="">All roles</option>
                     <option v-for="r in availableRoles" :key="r" :value="r">{{ roleLabel(r) }}</option>
                 </select>
                 <select v-model="event_id" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todos los eventos</option>
+                    <option value="">All events</option>
                     <option v-for="ev in events" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
                 </select>
             </div>
 
             <!-- Grid de banners -->
             <div v-if="banners.length === 0" class="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-                <p class="text-gray-400">No se encontraron banners con los filtros aplicados.</p>
+                <p class="text-gray-400">No banners found with the applied filters.</p>
             </div>
 
             <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -138,13 +138,13 @@ function moveDown(banner, index) {
                             class="w-full h-full object-cover" />
                         <div v-else class="w-full h-full flex flex-col items-center justify-center gap-2 text-gray-300 border-2 border-dashed border-gray-200 rounded-t-2xl">
                             <PhotoIcon class="w-10 h-10" />
-                            <span class="text-xs text-gray-400">Sin imagen</span>
+                            <span class="text-xs text-gray-400">No image</span>
                         </div>
 
                         <!-- Status badge -->
                         <span class="absolute top-2 left-2 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
                             :class="banner.status === 'active' ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'">
-                            {{ banner.status === 'active' ? 'Activo' : 'Inactivo' }}
+                            {{ banner.status === 'active' ? 'Active' : 'Inactive' }}
                         </span>
 
                         <!-- Orden -->
@@ -166,20 +166,20 @@ function moveDown(banner, index) {
                                 </span>
                             </template>
                             <span v-else class="text-[10px] bg-[#D4AF37]/10 text-[#D4AF37] px-1.5 py-0.5 rounded font-medium">
-                                Todos los roles
+                                All roles
                             </span>
                         </div>
 
                         <!-- Evento -->
                         <p class="text-xs text-gray-400 mb-2">
-                            {{ banner.event ? banner.event.name : 'Todos los eventos' }}
+                            {{ banner.event ? banner.event.name : 'All events' }}
                         </p>
 
                         <!-- Fechas -->
                         <p v-if="banner.starts_at || banner.ends_at" class="text-xs text-gray-400 mb-3">
-                            {{ banner.starts_at ? new Date(banner.starts_at).toLocaleDateString('es') : 'Siempre' }}
+                            {{ banner.starts_at ? new Date(banner.starts_at).toLocaleDateString('en-US') : 'Always' }}
                             &rarr;
-                            {{ banner.ends_at ? new Date(banner.ends_at).toLocaleDateString('es') : 'Indefinido' }}
+                            {{ banner.ends_at ? new Date(banner.ends_at).toLocaleDateString('en-US') : 'Indefinite' }}
                         </p>
 
                         <!-- Acciones -->
@@ -195,11 +195,11 @@ function moveDown(banner, index) {
                             <div class="flex-1"></div>
                             <Link :href="`/admin/operations/banners/${banner.id}/edit`"
                                 class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                                Editar
+                                Edit
                             </Link>
                             <button type="button" @click="deleteBanner(banner)"
                                 class="text-xs px-3 py-1.5 border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors">
-                                Eliminar
+                                Delete
                             </button>
                         </div>
                     </div>

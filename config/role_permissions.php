@@ -2,11 +2,11 @@
 
 return [
     'admin' => [
-        'sections' => ['dashboard', 'events', 'models', 'designers', 'volunteers', 'media', 'attendance', 'chats', 'banners', 'users', 'settings', 'accounting', 'accounting_dashboard', 'accounting_payments', 'tickets_dashboard', 'tickets_management', 'activity_logs', 'sales_dashboard', 'sales_designers', 'sales_leads', 'sales_calendar', 'designer_categories', 'designer_packages', 'countries', 'incoming_leads', 'communications', 'sponsorship_companies', 'sponsorship_categories', 'sponsorship_packages', 'sponsorship_benefits', 'sponsorship_tags', 'sponsorship_leads', 'sponsorship_calendar', 'sponsorship_sponsors', 'sponsorship_dashboard'],
+        'sections' => ['dashboard', 'events', 'models', 'designers', 'volunteers', 'media', 'attendance', 'chats', 'banners', 'users', 'settings', 'accounting', 'accounting_dashboard', 'accounting_payments', 'accounting_subscriptions', 'tickets_dashboard', 'tickets_management', 'activity_logs', 'sales_dashboard', 'sales_designers', 'sales_leads', 'sales_calendar', 'designer_categories', 'designer_packages', 'countries', 'incoming_leads', 'communications', 'sponsorship_companies', 'sponsorship_categories', 'sponsorship_packages', 'sponsorship_benefits', 'sponsorship_tags', 'sponsorship_leads', 'sponsorship_calendar', 'sponsorship_sponsors', 'sponsorship_dashboard'],
         'label' => 'Administrador',
     ],
     'accounting' => [
-        'sections' => ['accounting_dashboard', 'accounting_payments'],
+        'sections' => ['accounting_dashboard', 'accounting_payments', 'accounting_subscriptions'],
         'label' => 'Contabilidad',
     ],
     'operation' => [

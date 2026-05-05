@@ -84,7 +84,7 @@ function getSchedulesForEvent(eventId) {
 }
 
 function removeEvent(eventId, eventName) {
-    if (!confirm(`¿Quitar del evento "${eventName}"?`)) return;
+    if (!confirm(`Remove from event "${eventName}"?`)) return;
     router.delete(`/admin/operations/volunteers/${props.volunteer.id}/remove-event/${eventId}`, { preserveScroll: true });
 }
 
@@ -115,7 +115,7 @@ function submitSchedule() {
 }
 
 function removeSchedule(scheduleId) {
-    if (!confirm('¿Eliminar este horario?')) return;
+    if (!confirm('Delete this schedule?')) return;
     router.delete(`/admin/operations/volunteers/${props.volunteer.id}/schedules/${scheduleId}`, { preserveScroll: true });
 }
 
@@ -135,7 +135,7 @@ function formatTime(t) {
             <div class="flex items-center gap-3">
                 <Link :href="`/admin/operations/volunteers/${volunteer.id}`" class="text-gray-400 hover:text-gray-600 text-sm">&larr; {{ volunteer.first_name }} {{ volunteer.last_name }}</Link>
                 <span class="text-gray-300">/</span>
-                <h2 class="text-lg font-semibold text-gray-900">Editar</h2>
+                <h2 class="text-lg font-semibold text-gray-900">Edit</h2>
             </div>
         </template>
 
@@ -143,9 +143,9 @@ function formatTime(t) {
             <!-- Tabs -->
             <div class="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6">
                 <button v-for="tab in [
-                    { n: 1, label: 'Datos Personales' },
-                    { n: 2, label: 'Detalles Voluntario' },
-                    { n: 3, label: 'Eventos y Horarios' },
+                    { n: 1, label: 'Personal Data' },
+                    { n: 2, label: 'Volunteer Details' },
+                    { n: 3, label: 'Events and Schedules' },
                 ]" :key="tab.n"
                     type="button"
                     @click="activeTab = tab.n"
@@ -161,13 +161,13 @@ function formatTime(t) {
                 <div v-show="activeTab === 1" class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
                             <input v-model="form.first_name" type="text"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             <p v-if="form.errors.first_name" class="mt-1 text-red-500 text-xs">{{ form.errors.first_name }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
                             <input v-model="form.last_name" type="text"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
@@ -181,7 +181,7 @@ function formatTime(t) {
                             <p v-if="form.errors.email" class="mt-1 text-red-500 text-xs">{{ form.errors.email }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                             <div class="flex gap-2">
                                 <select v-model="phoneCode"
                                     class="w-28 border border-gray-300 rounded-lg px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
@@ -196,34 +196,34 @@ function formatTime(t) {
 
                     <div class="grid grid-cols-3 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Edad</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Age</label>
                             <select v-model="form.age"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="">— Seleccionar —</option>
+                                <option value="">— Select —</option>
                                 <option v-for="a in ageOptions" :key="a" :value="a">{{ a }}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Género</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
                             <select v-model="form.gender"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="female">Femenino</option>
-                                <option value="male">Masculino</option>
-                                <option value="non_binary">No binario</option>
+                                <option value="female">Female</option>
+                                <option value="male">Male</option>
+                                <option value="non_binary">Non-binary</option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Instagram</label>
-                            <input v-model="form.instagram" type="text" placeholder="@usuario"
+                            <input v-model="form.instagram" type="text" placeholder="@username"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
                         <select v-model="form.location"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                            <option value="">— Seleccionar —</option>
+                            <option value="">— Select —</option>
                             <option v-for="st in usStates" :key="st" :value="st">{{ st }}</option>
                         </select>
                     </div>
@@ -231,54 +231,54 @@ function formatTime(t) {
 
                 <!-- Tab 2: Detalles Voluntario -->
                 <div v-show="activeTab === 2" class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
-                    <h3 class="font-semibold text-gray-800">Detalles</h3>
+                    <h3 class="font-semibold text-gray-800">Details</h3>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Talla Camiseta</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">T-shirt Size</label>
                             <select v-model="form.tshirt_size"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="">— Seleccionar —</option>
+                                <option value="">— Select —</option>
                                 <option value="XS">XS</option><option value="S">S</option><option value="M">M</option>
                                 <option value="L">L</option><option value="XL">XL</option><option value="XXL">XXL</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Experiencia</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Experience</label>
                             <select v-model="form.experience"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="">— Seleccionar —</option>
-                                <option value="none">Sin experiencia</option>
-                                <option value="some">Algo de experiencia</option>
-                                <option value="experienced">Con experiencia</option>
+                                <option value="">— Select —</option>
+                                <option value="none">No experience</option>
+                                <option value="some">Some experience</option>
+                                <option value="experienced">Experienced</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Estilo de trabajo</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Work style</label>
                             <select v-model="form.comfortable_fast_paced"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="">— Seleccionar —</option>
-                                <option value="multitask">Multitarea / Dinámico</option>
-                                <option value="structured">Estructurado</option>
+                                <option value="">— Select —</option>
+                                <option value="multitask">Multitask / Dynamic</option>
+                                <option value="structured">Structured</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Disponibilidad</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Availability</label>
                             <select v-model="form.full_availability"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="">— Seleccionar —</option>
-                                <option value="yes">Completa</option>
-                                <option value="no">No disponible</option>
-                                <option value="partially">Parcial</option>
+                                <option value="">— Select —</option>
+                                <option value="yes">Full</option>
+                                <option value="no">Not available</option>
+                                <option value="partially">Partial</option>
                             </select>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Contribución</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Contribution</label>
                         <textarea v-model="form.contribution" rows="3"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"></textarea>
                     </div>
@@ -290,8 +290,8 @@ function formatTime(t) {
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Notas Internas</label>
-                        <textarea v-model="form.notes" rows="3" placeholder="Notas visibles solo para admin/operation..."
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Internal Notes</label>
+                        <textarea v-model="form.notes" rows="3" placeholder="Notes visible only to admin/operation..."
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"></textarea>
                     </div>
                 </div>
@@ -300,20 +300,20 @@ function formatTime(t) {
                 <div v-show="activeTab === 3" class="space-y-5">
                     <!-- Asignar nuevo evento -->
                     <div class="bg-white rounded-2xl border border-gray-200 p-6">
-                        <h3 class="font-semibold text-gray-800 mb-3">Asignar Evento</h3>
+                        <h3 class="font-semibold text-gray-800 mb-3">Assign Event</h3>
                         <div class="flex gap-2">
                             <select v-model="assignForm.event_id"
                                 class="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm">
-                                <option value="">Seleccionar evento...</option>
+                                <option value="">Select event...</option>
                                 <option v-for="ev in events" :key="ev.id" :value="ev.id">
-                                    {{ ev.name }} — {{ { draft: 'Borrador', published: 'Publicado', active: 'Activo', completed: 'Completado' }[ev.status] ?? ev.status }}
+                                    {{ ev.name }} — {{ { draft: 'Draft', published: 'Published', active: 'Active', completed: 'Completed' }[ev.status] ?? ev.status }}
                                 </option>
                             </select>
-                            <input v-model="assignForm.area" type="text" placeholder="Área"
+                            <input v-model="assignForm.area" type="text" placeholder="Area"
                                 class="w-36 border border-gray-300 rounded-lg px-3 py-2.5 text-sm" />
                             <button type="button" @click="submitAssignEvent" :disabled="!assignForm.event_id"
                                 class="px-4 py-2.5 bg-black text-white rounded-lg text-sm font-medium disabled:opacity-40 flex items-center gap-1 cursor-pointer">
-                                <PlusIcon class="w-4 h-4" /> Asignar
+                                <PlusIcon class="w-4 h-4" /> Assign
                             </button>
                         </div>
                     </div>
@@ -325,7 +325,7 @@ function formatTime(t) {
                         <div class="flex items-start justify-between mb-4">
                             <div>
                                 <h3 class="font-semibold text-gray-900">{{ ev.name }}</h3>
-                                <p class="text-xs text-gray-400 mt-0.5">Estado: {{ ev.pivot?.status || 'assigned' }}</p>
+                                <p class="text-xs text-gray-400 mt-0.5">Status: {{ ev.pivot?.status || 'assigned' }}</p>
                             </div>
                             <button type="button" @click="removeEvent(ev.id, ev.name)"
                                 class="text-red-400 hover:text-red-600 cursor-pointer p-1">
@@ -335,19 +335,19 @@ function formatTime(t) {
 
                         <!-- Área -->
                         <div class="mb-4">
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Área</label>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Area</label>
                             <input type="text" :value="ev.pivot?.area || ''" @input="onAreaInput(ev.id, $event.target.value)"
-                                placeholder="ej: Backstage, Front of House..."
+                                placeholder="e.g. Backstage, Front of House..."
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
 
                         <!-- Horarios de este evento -->
                         <div>
                             <div class="flex items-center justify-between mb-2">
-                                <label class="text-xs font-medium text-gray-500">Horarios</label>
+                                <label class="text-xs font-medium text-gray-500">Schedules</label>
                                 <button type="button" @click="scheduleForm.event_id = ev.id; onScheduleEventChange(); showScheduleModal = true"
                                     class="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200 cursor-pointer">
-                                    <PlusIcon class="w-3 h-3" /> Agregar
+                                    <PlusIcon class="w-3 h-3" /> Add
                                 </button>
                             </div>
                             <div v-if="getSchedulesForEvent(ev.id).length" class="space-y-1.5">
@@ -365,12 +365,12 @@ function formatTime(t) {
                                     </button>
                                 </div>
                             </div>
-                            <p v-else class="text-xs text-gray-400 italic">Sin horarios asignados.</p>
+                            <p v-else class="text-xs text-gray-400 italic">No schedules assigned.</p>
                         </div>
                     </div>
 
                     <p v-if="!assignedEvents.length" class="bg-white rounded-2xl border border-gray-200 p-6 text-sm text-gray-400 italic text-center">
-                        Sin eventos asignados.
+                        No events assigned.
                     </p>
                 </div>
 
@@ -378,21 +378,21 @@ function formatTime(t) {
                 <div class="flex justify-between">
                     <Link :href="`/admin/operations/volunteers/${volunteer.id}`"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-                        Cancelar
+                        Cancel
                     </Link>
                     <div class="flex gap-3">
                         <button v-if="activeTab > 1" type="button" @click="activeTab--"
                             class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-                            &larr; Anterior
+                            &larr; Previous
                         </button>
                         <button v-if="activeTab < 3" type="button" @click="activeTab++"
                             class="px-6 py-2.5 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-black transition-colors">
-                            Siguiente &rarr;
+                            Next &rarr;
                         </button>
                         <button v-else type="submit" :disabled="form.processing"
                             class="px-8 py-2.5 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800 disabled:opacity-60 transition-colors">
-                            <span v-if="form.processing">Guardando...</span>
-                            <span v-else>Guardar Cambios</span>
+                            <span v-if="form.processing">Saving...</span>
+                            <span v-else>Save Changes</span>
                         </button>
                     </div>
                 </div>
@@ -404,12 +404,12 @@ function formatTime(t) {
             <div v-if="showScheduleModal" class="fixed inset-0 z-50 flex items-center justify-center">
                 <div class="absolute inset-0 bg-black/50" @click="showScheduleModal = false"></div>
                 <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">Agregar Horario</h3>
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">Add Schedule</h3>
                     <form @submit.prevent="submitSchedule" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Día</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Day</label>
                             <select v-model="scheduleForm.event_day_id" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm">
-                                <option value="">Seleccionar...</option>
+                                <option value="">Select...</option>
                                 <option v-for="day in selectedEventDays" :key="day.id" :value="day.id">
                                     {{ formatDayDate(day.date) }} — {{ day.label }}
                                 </option>
@@ -417,18 +417,18 @@ function formatTime(t) {
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Hora Inicio</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
                                 <input v-model="scheduleForm.start_time" type="time" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Hora Fin</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
                                 <input v-model="scheduleForm.end_time" type="time" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm" />
                             </div>
                         </div>
                         <div class="flex justify-end gap-3">
-                            <button @click="showScheduleModal = false" type="button" class="px-4 py-2 border border-gray-200 rounded-lg text-sm">Cancelar</button>
+                            <button @click="showScheduleModal = false" type="button" class="px-4 py-2 border border-gray-200 rounded-lg text-sm">Cancel</button>
                             <button type="submit" :disabled="scheduleForm.processing || !scheduleForm.event_day_id || !scheduleForm.start_time || !scheduleForm.end_time"
-                                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium disabled:opacity-40">Agregar</button>
+                                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium disabled:opacity-40">Add</button>
                         </div>
                     </form>
                 </div>

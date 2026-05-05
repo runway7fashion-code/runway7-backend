@@ -1,0 +1,589 @@
+<style>
+  .r7-form{font-family:'Helvetica Neue',Arial,sans-serif;max-width:720px;margin:0 auto;padding:20px;color:#000}
+  .r7-form *{box-sizing:border-box}
+  .r7-form h2{text-align:center;font-size:28px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:30px}
+  .r7-form .r7-subtitle{text-align:left;color:#fff;font-size:14px;margin-bottom:20px}
+  .r7-form .r7-section{margin-bottom:28px}
+  .r7-form .r7-section-title{font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;padding-bottom:8px;border-bottom:2px solid #D4AF37;margin-bottom:16px;color:#fff}
+  .r7-form .r7-row{display:flex;gap:12px;margin-bottom:12px}
+  .r7-form .r7-col{flex:1;display:flex;flex-direction:column}
+  .r7-form label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;color:#fff}
+  .r7-form label .r7-req{color:#D4AF37}
+  .r7-form input,.r7-form select{width:100%;padding:10px 12px;border:1px solid #ccc;border-radius:6px;font-size:14px;transition:border-color .2s;background:#fff}
+  .r7-form input:focus,.r7-form select:focus{outline:none;border-color:#D4AF37;box-shadow:0 0 0 2px rgba(212,175,55,.15)}
+  .r7-form input.r7-error,.r7-form select.r7-error{border-color:#e53e3e}
+  .r7-form .r7-error-msg{color:#e53e3e;font-size:12px;margin-top:2px}
+  .r7-form .r7-btn{display:block;width:100%;padding:14px;background:#D4AF37;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:2px;cursor:pointer;transition:background .2s,opacity .2s;margin-top:24px}
+  .r7-form .r7-btn:hover:not(:disabled){background:#222}
+  .r7-form .r7-btn:disabled{opacity:.4;cursor:not-allowed}
+  .r7-form .r7-btn-loading::after{content:'';display:inline-block;width:18px;height:18px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:r7spin .6s linear infinite;margin-left:8px;vertical-align:middle}
+  @keyframes r7spin{to{transform:rotate(360deg)}}
+  .r7-form .r7-success{text-align:center;padding:40px 20px}
+  .r7-form .r7-success h3{font-size:22px;font-weight:700;margin-bottom:8px;color:#fff}
+  .r7-form .r7-success p{color:#ccc;font-size:15px}
+  .r7-form .r7-success .r7-check{font-size:48px;color:#D4AF37;margin-bottom:12px}
+  .r7-form .r7-server-error{background:#fee;border:1px solid #fcc;color:#c00;padding:10px 14px;border-radius:6px;margin-bottom:16px;font-size:13px}
+  .r7-form .r7-hp{position:absolute;left:-9999px;opacity:0;height:0;width:0}
+  .r7-form .r7-terms-row{display:flex;align-items:flex-start;gap:8px;margin-top:20px}
+  .r7-form .r7-terms-row input[type="checkbox"]{width:18px;height:18px;margin-top:2px;accent-color:#D4AF37;cursor:pointer;flex-shrink:0}
+  .r7-form .r7-terms-row label{font-size:13px;text-transform:none;letter-spacing:0;font-weight:400;color:#fff;cursor:pointer}
+  .r7-form .r7-terms-row a{color:#D4AF37;text-decoration:underline;font-weight:600;cursor:pointer}
+
+  /* Kit selection cards */
+  .r7-kit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+  .r7-kit-card{position:relative;border:2px solid #444;border-radius:10px;padding:16px;cursor:pointer;background:#111;transition:all .2s;display:flex;flex-direction:column}
+  .r7-kit-card:hover{border-color:#D4AF37}
+  .r7-kit-card.selected{border-color:#D4AF37;background:#1a1a1a;box-shadow:0 0 0 2px rgba(212,175,55,.25)}
+  .r7-kit-card input[type="radio"]{position:absolute;opacity:0;pointer-events:none}
+  .r7-kit-name{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#fff;margin-bottom:4px}
+  .r7-kit-price{font-size:22px;font-weight:700;color:#D4AF37;margin-bottom:8px}
+  .r7-kit-desc{font-size:12px;color:#aaa;line-height:1.4}
+
+  /* Add-ons */
+  .r7-addon-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#111;border:1px solid #333;border-radius:8px;margin-bottom:8px;cursor:pointer;transition:all .2s}
+  .r7-addon-row:hover:not(.disabled){border-color:#666}
+  .r7-addon-row.selected{border-color:#D4AF37;background:#1a1a1a}
+  .r7-addon-row.disabled{opacity:.4;cursor:not-allowed}
+  .r7-addon-row input[type="checkbox"]{width:18px;height:18px;margin-right:10px;accent-color:#D4AF37;cursor:pointer;flex-shrink:0}
+  .r7-addon-row.disabled input[type="checkbox"]{cursor:not-allowed}
+  .r7-addon-info{flex:1;text-align:left}
+  .r7-addon-name{font-size:13px;font-weight:600;color:#fff;text-transform:none;letter-spacing:0;margin-bottom:2px}
+  .r7-addon-desc{font-size:11px;color:#888}
+  .r7-addon-price{font-size:14px;font-weight:700;color:#D4AF37;flex-shrink:0;margin-left:12px}
+  .r7-addon-included{font-size:11px;color:#D4AF37;font-style:italic;margin-left:12px;flex-shrink:0}
+
+  /* Total summary */
+  .r7-total-box{background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:14px;margin-top:12px}
+  .r7-total-line{display:flex;justify-content:space-between;font-size:13px;color:#ccc;margin-bottom:4px}
+  .r7-total-line.total{border-top:1px solid #444;padding-top:8px;margin-top:8px;font-size:16px;font-weight:700;color:#fff}
+  .r7-total-line.total .r7-total-amount{color:#D4AF37}
+
+  .r7-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;align-items:center;justify-content:center;padding:20px}
+  .r7-modal-overlay.active{display:flex}
+  .r7-modal{background:#000;border-radius:12px;max-width:600px;width:100%;max-height:80vh;overflow-y:auto;padding:32px;position:relative}
+  .r7-modal h3{font-size:20px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:20px;text-align:center;border-bottom:2px solid #fff;padding-bottom:10px}
+  .r7-modal h4{font-size:14px;font-weight:700;text-transform:uppercase;margin-top:18px;margin-bottom:8px;color:#fff}
+  .r7-modal p,.r7-modal li{font-size:13px;color:#fff;line-height:1.6}
+  .r7-modal ul{padding-left:18px;margin:0}
+  .r7-modal ul li{margin-bottom:4px}
+  .r7-modal .r7-modal-close{position:absolute;top:12px;right:16px;background:none;border:none;font-size:24px;cursor:pointer;color:#fff}
+  .r7-modal .r7-modal-accept{display:block;width:100%;padding:12px;background:#fff;color:#000;border:none;border-radius:8px;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:pointer;margin-top:20px}
+
+  @media(max-width:600px){
+    .r7-form .r7-row{flex-direction:column;gap:0}
+    .r7-kit-grid{grid-template-columns:1fr}
+  }
+</style>
+
+<div class="r7-form" id="r7-media-form-wrapper">
+  <form id="r7-media-form" novalidate>
+    <h2>Media Registration</h2>
+    <p class="r7-subtitle">Apply for Media Access at NYFW!</p>
+    <p class="r7-subtitle">Please complete the form below <strong>ONLY IF YOU PLAN TO ATTEND THE EVENT.</strong> Select your media kit and any add-ons. Your registration is confirmed once payment is completed.</p>
+
+    <div id="r7-server-error" class="r7-server-error" style="display:none;"></div>
+
+    <div class="r7-hp" aria-hidden="true">
+      <label for="website_url">Website</label>
+      <input type="text" id="website_url" name="website_url" tabindex="-1" autocomplete="off">
+    </div>
+
+    <div class="r7-section">
+      <div class="r7-section-title">Personal Information</div>
+      <div class="r7-row">
+        <div class="r7-col">
+          <label>First Name <span class="r7-req">*</span></label>
+          <input type="text" name="first_name" required>
+        </div>
+        <div class="r7-col">
+          <label>Last Name <span class="r7-req">*</span></label>
+          <input type="text" name="last_name" required>
+        </div>
+      </div>
+      <div class="r7-row">
+        <div class="r7-col">
+          <label>Email <span class="r7-req">*</span></label>
+          <input type="email" name="email" required>
+        </div>
+        <div class="r7-col">
+          <label>Phone <span class="r7-req">*</span></label>
+          <div style="display:flex;gap:6px;">
+            <select name="phone_code" id="r7-phone-code" style="width:130px;flex-shrink:0;padding:10px 6px;border:1px solid #ccc;border-radius:6px;font-size:13px;background:#fff;">
+              <option value="+1" selected>🇺🇸 +1</option>
+              <option value="+1CA">🇨🇦 +1</option>
+              <option value="+52">🇲🇽 +52</option>
+              <option value="+54">🇦🇷 +54</option>
+              <option value="+55">🇧🇷 +55</option>
+              <option value="+56">🇨🇱 +56</option>
+              <option value="+57">🇨🇴 +57</option>
+              <option value="+58">🇻🇪 +58</option>
+              <option value="+51">🇵🇪 +51</option>
+              <option value="+53">🇨🇺 +53</option>
+              <option value="+506">🇨🇷 +506</option>
+              <option value="+507">🇵🇦 +507</option>
+              <option value="+502">🇬🇹 +502</option>
+              <option value="+503">🇸🇻 +503</option>
+              <option value="+504">🇭🇳 +504</option>
+              <option value="+505">🇳🇮 +505</option>
+              <option value="+509">🇭🇹 +509</option>
+              <option value="+593">🇪🇨 +593</option>
+              <option value="+595">🇵🇾 +595</option>
+              <option value="+598">🇺🇾 +598</option>
+              <option value="+591">🇧🇴 +591</option>
+              <option value="+1DO">🇩🇴 +1</option>
+              <option value="+1PR">🇵🇷 +1</option>
+              <option value="+44">🇬🇧 +44</option>
+              <option value="+33">🇫🇷 +33</option>
+              <option value="+49">🇩🇪 +49</option>
+              <option value="+34">🇪🇸 +34</option>
+              <option value="+39">🇮🇹 +39</option>
+              <option value="+351">🇵🇹 +351</option>
+              <option value="+31">🇳🇱 +31</option>
+              <option value="+32">🇧🇪 +32</option>
+              <option value="+41">🇨🇭 +41</option>
+              <option value="+43">🇦🇹 +43</option>
+              <option value="+46">🇸🇪 +46</option>
+              <option value="+47">🇳🇴 +47</option>
+              <option value="+45">🇩🇰 +45</option>
+              <option value="+358">🇫🇮 +358</option>
+              <option value="+353">🇮🇪 +353</option>
+              <option value="+48">🇵🇱 +48</option>
+              <option value="+30">🇬🇷 +30</option>
+              <option value="+36">🇭🇺 +36</option>
+              <option value="+420">🇨🇿 +420</option>
+              <option value="+40">🇷🇴 +40</option>
+              <option value="+380">🇺🇦 +380</option>
+              <option value="+7">🇷🇺 +7</option>
+              <option value="+90">🇹🇷 +90</option>
+              <option value="+81">🇯🇵 +81</option>
+              <option value="+82">🇰🇷 +82</option>
+              <option value="+86">🇨🇳 +86</option>
+              <option value="+91">🇮🇳 +91</option>
+              <option value="+62">🇮🇩 +62</option>
+              <option value="+63">🇵🇭 +63</option>
+              <option value="+66">🇹🇭 +66</option>
+              <option value="+84">🇻🇳 +84</option>
+              <option value="+60">🇲🇾 +60</option>
+              <option value="+65">🇸🇬 +65</option>
+              <option value="+852">🇭🇰 +852</option>
+              <option value="+886">🇹🇼 +886</option>
+              <option value="+971">🇦🇪 +971</option>
+              <option value="+966">🇸🇦 +966</option>
+              <option value="+972">🇮🇱 +972</option>
+              <option value="+961">🇱🇧 +961</option>
+              <option value="+20">🇪🇬 +20</option>
+              <option value="+212">🇲🇦 +212</option>
+              <option value="+234">🇳🇬 +234</option>
+              <option value="+27">🇿🇦 +27</option>
+              <option value="+254">🇰🇪 +254</option>
+              <option value="+233">🇬🇭 +233</option>
+              <option value="+61">🇦🇺 +61</option>
+              <option value="+64">🇳🇿 +64</option>
+            </select>
+            <input type="tel" name="phone" placeholder="(555) 123-4567" required style="flex:1;">
+          </div>
+        </div>
+      </div>
+      <div class="r7-row">
+        <div class="r7-col">
+          <label>Category <span class="r7-req">*</span></label>
+          <select name="category" required>
+            <option value="">Select...</option>
+            <option value="photographer">Photographer</option>
+            <option value="videographer">Videographer</option>
+          </select>
+        </div>
+        <div class="r7-col">
+          <label>Instagram <span class="r7-req">*</span></label>
+          <input type="text" name="instagram" id="r7-instagram" placeholder="username" required>
+        </div>
+      </div>
+      <div class="r7-row">
+        <div class="r7-col">
+          <label>Portfolio / Web Page Link <span class="r7-req">*</span></label>
+          <input type="url" name="portfolio_url" placeholder="https://..." required>
+        </div>
+        <div class="r7-col">
+          <label>Location <span class="r7-req">*</span></label>
+          <select name="location" required>
+            <option value="">Select...</option>
+            <option value="Alabama">Alabama</option><option value="Alaska">Alaska</option><option value="Arizona">Arizona</option><option value="Arkansas">Arkansas</option><option value="California">California</option><option value="Colorado">Colorado</option><option value="Connecticut">Connecticut</option><option value="Delaware">Delaware</option><option value="Florida">Florida</option><option value="Georgia">Georgia</option><option value="Hawaii">Hawaii</option><option value="Idaho">Idaho</option><option value="Illinois">Illinois</option><option value="Indiana">Indiana</option><option value="Iowa">Iowa</option><option value="Kansas">Kansas</option><option value="Kentucky">Kentucky</option><option value="Louisiana">Louisiana</option><option value="Maine">Maine</option><option value="Maryland">Maryland</option><option value="Massachusetts">Massachusetts</option><option value="Michigan">Michigan</option><option value="Minnesota">Minnesota</option><option value="Mississippi">Mississippi</option><option value="Missouri">Missouri</option><option value="Montana">Montana</option><option value="Nebraska">Nebraska</option><option value="Nevada">Nevada</option><option value="New Hampshire">New Hampshire</option><option value="New Jersey">New Jersey</option><option value="New Mexico">New Mexico</option><option value="New York">New York</option><option value="North Carolina">North Carolina</option><option value="North Dakota">North Dakota</option><option value="Ohio">Ohio</option><option value="Oklahoma">Oklahoma</option><option value="Oregon">Oregon</option><option value="Pennsylvania">Pennsylvania</option><option value="Rhode Island">Rhode Island</option><option value="South Carolina">South Carolina</option><option value="South Dakota">South Dakota</option><option value="Tennessee">Tennessee</option><option value="Texas">Texas</option><option value="Utah">Utah</option><option value="Vermont">Vermont</option><option value="Virginia">Virginia</option><option value="Washington">Washington</option><option value="Washington D.C.">Washington D.C.</option><option value="West Virginia">West Virginia</option><option value="Wisconsin">Wisconsin</option><option value="Wyoming">Wyoming</option><option value="Puerto Rico">Puerto Rico</option><option value="Outside the U.S.">Outside the U.S.</option>
+          </select>
+        </div>
+      </div>
+      <div class="r7-row">
+        <div class="r7-col">
+          <label>Will you travel only to cover the Runway 7 Fashion event? <span class="r7-req">*</span></label>
+          <select name="will_travel" required>
+            <option value="">Select...</option>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="r7-section">
+      <div class="r7-section-title">Event</div>
+      <div class="r7-row">
+        <div class="r7-col">
+          <label>Select Event <span class="r7-req">*</span></label>
+          <select name="event_id" id="r7-event-select" required>
+            <option value="">Loading events...</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="r7-section">
+      <div class="r7-section-title">Select Your Media Kit <span class="r7-req">*</span></div>
+      <div class="r7-kit-grid" id="r7-kit-grid">
+        <div style="grid-column:1/-1;color:#888;font-size:13px;">Loading kits...</div>
+      </div>
+
+      <div id="r7-addons-wrap" style="display:none;">
+        <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin:18px 0 10px;color:#fff;">Add-Ons (optional)</div>
+        <div id="r7-addons-list"></div>
+      </div>
+
+      <div class="r7-total-box" id="r7-total-box" style="display:none;">
+        <div id="r7-total-lines"></div>
+        <div class="r7-total-line total">
+          <span>Total</span>
+          <span class="r7-total-amount" id="r7-total-amount">$0.00</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="r7-terms-row">
+      <input type="checkbox" id="r7-terms-check">
+      <label for="r7-terms-check">I have read and agree to the <a id="r7-open-terms">Terms and Conditions</a></label>
+    </div>
+
+    <button type="submit" class="r7-btn" id="r7-submit-btn" disabled>Continue to Payment</button>
+    <br><br>
+    <p style="color:#fff">By clicking "Continue to Payment", you agree to Runway 7 Fashion Privacy Policy. You consent to receive phone calls and SMS messages from Runway 7 Fashion to provide updates on your application, provide you information, send you notifications and occasional promotions. Message frequency varies, it depends on your activity. Message and data rates may apply. You may opt out at any time by texting "STOP" or text "HELP" for more information. Please see
+        <a href="https://runway7fashion.com/nyfw-privacy-policy/">Runway 7 Fashion Privacy Policy</a><br><br>Runway 7 Fashion is dedicated to providing a secure environment for all users. If something feels off, please contact us immediately at events@runway7fashion.com</p>
+  </form>
+</div>
+
+<div class="r7-modal-overlay" id="r7-terms-modal">
+  <div class="r7-modal">
+    <button class="r7-modal-close" id="r7-close-terms">&times;</button>
+    <h3>Media - Terms and Conditions</h3>
+
+    <h4>Media (Photographers/Videographers)</h4>
+    <ul>
+      <li>Media kit purchase is required to confirm your registration.</li>
+      <li>Invited media must be in NYC for the event; travel is not covered.</li>
+      <li>Professional conduct and adherence to event guidelines are mandatory.</li>
+      <li>Runway 7 may use captured content for promotional purposes.</li>
+      <li>If featured on Runway 7 Fashion's official Instagram, the photographer will be tagged.</li>
+      <li>Invited media will have exclusive networking opportunities with designers, models, sponsors, press, and industry professionals.</li>
+      <li>All media kit purchases are final. No refunds will be issued.</li>
+    </ul>
+
+    <button class="r7-modal-accept" id="r7-accept-terms">I Accept</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  const API_BASE = 'https://runways7.com/api/v1';
+  const form = document.getElementById('r7-media-form');
+  const wrapper = document.getElementById('r7-media-form-wrapper');
+  const submitBtn = document.getElementById('r7-submit-btn');
+  const serverError = document.getElementById('r7-server-error');
+  const termsCheck = document.getElementById('r7-terms-check');
+  const termsModal = document.getElementById('r7-terms-modal');
+  const eventSelect = document.getElementById('r7-event-select');
+  const kitGrid = document.getElementById('r7-kit-grid');
+  const addonsWrap = document.getElementById('r7-addons-wrap');
+  const addonsList = document.getElementById('r7-addons-list');
+  const totalBox = document.getElementById('r7-total-box');
+  const totalLines = document.getElementById('r7-total-lines');
+  const totalAmount = document.getElementById('r7-total-amount');
+
+  const requiredFields = ['first_name','last_name','email','phone','category','portfolio_url','instagram','location','will_travel','event_id'];
+
+  let kitsCatalog = [];
+  let addonsCatalog = [];
+  let selectedKit = null;
+  const selectedAddons = new Set();
+
+  // Load events
+  fetch(API_BASE + '/media/events', { headers: { 'Accept': 'application/json' } })
+    .then(r => r.json())
+    .then(events => {
+      eventSelect.innerHTML = '<option value="">Select event...</option>';
+      events.forEach(ev => {
+        const opt = document.createElement('option');
+        opt.value = ev.id;
+        opt.textContent = ev.name;
+        eventSelect.appendChild(opt);
+      });
+      checkFormComplete();
+    })
+    .catch(() => { eventSelect.innerHTML = '<option value="">Unable to load events</option>'; });
+
+  // Load kits + add-ons catalog
+  fetch(API_BASE + '/media/products', { headers: { 'Accept': 'application/json' } })
+    .then(r => r.json())
+    .then(data => {
+      kitsCatalog = data.kits || [];
+      addonsCatalog = data.addons || [];
+      renderKits();
+      renderAddons();
+    })
+    .catch(() => {
+      kitGrid.innerHTML = '<div style="grid-column:1/-1;color:#e53e3e;font-size:13px;">Unable to load media kits. Please refresh the page.</div>';
+    });
+
+  function renderKits() {
+    kitGrid.innerHTML = '';
+    kitsCatalog.forEach(kit => {
+      const card = document.createElement('label');
+      card.className = 'r7-kit-card';
+      card.dataset.kitKey = kit.key;
+      card.innerHTML = `
+        <input type="radio" name="kit_type" value="${kit.key}">
+        <div class="r7-kit-name">${kit.name}</div>
+        <div class="r7-kit-price">$${kit.price.toFixed(2)}</div>
+        <div class="r7-kit-desc">${kit.description}</div>
+      `;
+      card.addEventListener('click', function(e) {
+        e.preventDefault();
+        selectKit(kit.key);
+      });
+      kitGrid.appendChild(card);
+    });
+  }
+
+  function renderAddons() {
+    addonsList.innerHTML = '';
+    addonsCatalog.forEach(addon => {
+      const row = document.createElement('label');
+      row.className = 'r7-addon-row';
+      row.dataset.addonKey = addon.key;
+      row.innerHTML = `
+        <input type="checkbox" value="${addon.key}">
+        <div class="r7-addon-info">
+          <div class="r7-addon-name">${addon.name}</div>
+          <div class="r7-addon-desc">${addon.description}</div>
+        </div>
+        <div class="r7-addon-price">$${addon.price.toFixed(2)}</div>
+      `;
+      const checkbox = row.querySelector('input[type="checkbox"]');
+      checkbox.addEventListener('change', function() {
+        if (row.classList.contains('disabled')) { this.checked = false; return; }
+        if (this.checked) selectedAddons.add(addon.key); else selectedAddons.delete(addon.key);
+        row.classList.toggle('selected', this.checked);
+        updateTotal();
+      });
+      addonsList.appendChild(row);
+    });
+  }
+
+  function selectKit(kitKey) {
+    selectedKit = kitsCatalog.find(k => k.key === kitKey);
+    document.querySelectorAll('.r7-kit-card').forEach(c => {
+      c.classList.toggle('selected', c.dataset.kitKey === kitKey);
+      const radio = c.querySelector('input[type="radio"]');
+      radio.checked = c.dataset.kitKey === kitKey;
+    });
+
+    // Update addon availability based on kit
+    const allowed = selectedKit.allowed_addons;
+    document.querySelectorAll('.r7-addon-row').forEach(row => {
+      const key = row.dataset.addonKey;
+      const isAllowed = allowed.includes(key);
+      row.classList.toggle('disabled', !isAllowed);
+      const cb = row.querySelector('input[type="checkbox"]');
+
+      // Reset disabled add-ons
+      if (!isAllowed && cb.checked) {
+        cb.checked = false;
+        selectedAddons.delete(key);
+        row.classList.remove('selected');
+      }
+
+      // Show "Included" label for excluded lunch_box on 5-day kit
+      const priceEl = row.querySelector('.r7-addon-price');
+      const includedEl = row.querySelector('.r7-addon-included');
+      if (!isAllowed && key === 'lunch_box') {
+        if (!includedEl) {
+          priceEl.style.display = 'none';
+          const span = document.createElement('div');
+          span.className = 'r7-addon-included';
+          span.textContent = 'Included';
+          row.appendChild(span);
+        }
+      } else {
+        priceEl.style.display = '';
+        if (includedEl) includedEl.remove();
+      }
+    });
+
+    addonsWrap.style.display = 'block';
+    updateTotal();
+    checkFormComplete();
+  }
+
+  function updateTotal() {
+    if (!selectedKit) { totalBox.style.display = 'none'; return; }
+    let total = selectedKit.price;
+    let lines = `<div class="r7-total-line"><span>${selectedKit.name}</span><span>$${selectedKit.price.toFixed(2)}</span></div>`;
+    selectedAddons.forEach(key => {
+      const a = addonsCatalog.find(x => x.key === key);
+      if (a) {
+        total += a.price;
+        lines += `<div class="r7-total-line"><span>+ ${a.name}</span><span>$${a.price.toFixed(2)}</span></div>`;
+      }
+    });
+    totalLines.innerHTML = lines;
+    totalAmount.textContent = '$' + total.toFixed(2);
+    totalBox.style.display = 'block';
+    submitBtn.textContent = 'Continue to Payment ($' + total.toFixed(2) + ')';
+  }
+
+  // Instagram sanitize
+  const igInput = document.getElementById('r7-instagram');
+  igInput.addEventListener('input', function() {
+    let v = this.value;
+    v = v.split('?')[0];
+    v = v.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '');
+    v = v.replace(/\/+$/, '');
+    v = v.replace(/^@/, '');
+    if (v !== this.value) this.value = v;
+  });
+
+  // Email duplicate check
+  const emailInput = form.querySelector('[name="email"]');
+  emailInput.addEventListener('blur', async function() {
+    const email = this.value.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+    try {
+      const res = await fetch(API_BASE + '/check-email', { method: 'POST', headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, role: 'media' }) });
+      const data = await res.json();
+      if (!data.available) {
+        const old = emailInput.parentElement.querySelector('.r7-error-msg'); if (old) old.remove();
+        emailInput.classList.add('r7-error');
+        const div = document.createElement('div'); div.className = 'r7-error-msg'; div.textContent = data.message;
+        emailInput.parentElement.appendChild(div);
+      }
+    } catch(e) {}
+  });
+
+  // Terms modal
+  document.getElementById('r7-open-terms').addEventListener('click', function(e) { e.preventDefault(); termsModal.classList.add('active'); });
+  document.getElementById('r7-close-terms').addEventListener('click', function() { termsModal.classList.remove('active'); });
+  document.getElementById('r7-accept-terms').addEventListener('click', function() { termsCheck.checked = true; termsModal.classList.remove('active'); checkFormComplete(); });
+  termsModal.addEventListener('click', function(e) { if (e.target === termsModal) termsModal.classList.remove('active'); });
+
+  function checkFormComplete() {
+    let complete = true;
+    for (const name of requiredFields) {
+      const el = form.querySelector('[name="' + name + '"]');
+      if (!el || !el.value.trim()) { complete = false; break; }
+    }
+    if (!selectedKit) complete = false;
+    if (complete && !termsCheck.checked) complete = false;
+    submitBtn.disabled = !complete;
+  }
+
+  form.addEventListener('input', function(e) {
+    e.target.classList.remove('r7-error');
+    const err = e.target.parentElement.querySelector('.r7-error-msg');
+    if (err) err.remove();
+    checkFormComplete();
+  });
+  form.addEventListener('change', function() { checkFormComplete(); });
+  termsCheck.addEventListener('change', function() { checkFormComplete(); });
+
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    serverError.style.display = 'none';
+    form.querySelectorAll('.r7-error').forEach(el => el.classList.remove('r7-error'));
+    form.querySelectorAll('.r7-error-msg').forEach(el => el.remove());
+
+    let valid = true;
+    function showFieldError(name, msg) {
+      const input = form.querySelector('[name="' + name + '"]'); if (!input) return;
+      input.classList.add('r7-error');
+      const div = document.createElement('div'); div.className = 'r7-error-msg'; div.textContent = msg;
+      input.parentElement.appendChild(div); valid = false;
+    }
+
+    for (const name of requiredFields) {
+      const el = form.querySelector('[name="' + name + '"]');
+      if (!el || !el.value.trim()) showFieldError(name, 'This field is required');
+    }
+    const emailVal = form.querySelector('[name="email"]').value.trim();
+    if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) showFieldError('email', 'Enter a valid email');
+    if (!selectedKit) { valid = false; serverError.textContent = 'Please select a media kit.'; serverError.style.display = 'block'; }
+    if (!termsCheck.checked) { valid = false; serverError.textContent = 'You must accept the Terms and Conditions.'; serverError.style.display = 'block'; }
+    if (!valid) { const firstErr = form.querySelector('.r7-error') || serverError; firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+
+    const phoneCode = document.getElementById('r7-phone-code');
+    const codeValue = phoneCode.value.replace(/[A-Z]+$/, '');
+    const phoneInput = form.querySelector('[name="phone"]');
+    const fullPhone = phoneInput.value ? (codeValue + ' ' + phoneInput.value.trim()) : '';
+
+    const payload = {
+      first_name:    form.querySelector('[name="first_name"]').value.trim(),
+      last_name:     form.querySelector('[name="last_name"]').value.trim(),
+      email:         emailVal,
+      phone:         fullPhone,
+      category:      form.querySelector('[name="category"]').value,
+      portfolio_url: form.querySelector('[name="portfolio_url"]').value.trim(),
+      instagram:     form.querySelector('[name="instagram"]').value.trim(),
+      location:      form.querySelector('[name="location"]').value,
+      will_travel:   form.querySelector('[name="will_travel"]').value,
+      event_id:      form.querySelector('[name="event_id"]').value,
+      kit_type:      selectedKit.key,
+      addons:        Array.from(selectedAddons),
+    };
+
+    submitBtn.disabled = true; submitBtn.classList.add('r7-btn-loading'); submitBtn.textContent = 'Processing';
+    try {
+      const response = await fetch(API_BASE + '/media/register', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.status === 201) {
+        const data = await response.json();
+        wrapper.innerHTML = '<div class="r7-success"><div class="r7-check">&#10003;</div><h3>Redirecting to checkout...</h3><p>Complete your payment to confirm your media registration.</p></div>';
+        wrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => { window.location.href = data.checkout_url; }, 1200);
+        return;
+      }
+      if (response.status === 422) {
+        const data = await response.json();
+        if (data.errors) {
+          Object.keys(data.errors).forEach(field => showFieldError(field, data.errors[field][0]));
+          const firstErr = form.querySelector('.r7-error'); if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else if (data.message) {
+          serverError.textContent = data.message; serverError.style.display = 'block';
+        }
+      } else if (response.status === 429) {
+        serverError.textContent = 'Too many attempts. Please wait a moment and try again.';
+        serverError.style.display = 'block';
+      } else {
+        const data = await response.json().catch(() => ({}));
+        serverError.textContent = data.message || 'An error occurred. Please try again.';
+        serverError.style.display = 'block';
+      }
+    } catch (err) {
+      serverError.textContent = 'Connection error. Please check your internet and try again.';
+      serverError.style.display = 'block';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.classList.remove('r7-btn-loading');
+      updateTotal();
+      checkFormComplete();
+    }
+  });
+})();
+</script>

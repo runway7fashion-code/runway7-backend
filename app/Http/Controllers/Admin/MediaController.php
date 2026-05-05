@@ -66,6 +66,10 @@ class MediaController extends Controller
             $query->whereHas('mediaProfile', fn($q) => $q->where('category', $request->category));
         }
 
+        if ($request->filled('payment_status')) {
+            $query->whereHas('eventsAsMedia', fn($q) => $q->where('event_media.payment_status', $request->payment_status));
+        }
+
         $query->orderBy('created_at', 'desc');
 
         $perPage = in_array((int) $request->input('per_page'), [20, 50, 100, 200, 500]) ? (int) $request->input('per_page') : 20;
@@ -90,7 +94,7 @@ class MediaController extends Controller
         return Inertia::render('Admin/Media/Index', [
             'mediaUsers'         => $mediaUsers,
             'events'             => $events,
-            'filters'            => $request->only(['search', 'status', 'event_id', 'category', 'per_page']),
+            'filters'            => $request->only(['search', 'status', 'event_id', 'category', 'payment_status', 'per_page']),
             'pendingEmailCount'  => $pendingEmailCount,
             'pendingSmsCount'    => $pendingSmsCount,
             'twilioBalance'      => $this->twilioService->getBalance(),
@@ -115,27 +119,52 @@ class MediaController extends Controller
 
         $passMap = $media->eventPasses->keyBy('event_id');
 
+        $kitsConfig   = config('media_kits.kits');
+        $addonsConfig = config('media_kits.addons');
+
         return Inertia::render('Admin/Media/Show', [
             'media' => array_merge($media->toArray(), [
                 'media_profile' => $media->mediaProfile,
-                'events' => $media->eventsAsMedia?->map(fn($event) => [
-                    'id'             => $event->id,
-                    'name'           => $event->name,
-                    'status'         => $event->status,
-                    'media_status'   => $event->pivot->status,
-                    'checked_in_at'  => $event->pivot->checked_in_at,
-                    'days'           => $event->eventDays->map(fn($d) => ['id' => $d->id, 'label' => $d->label, 'date' => $d->date?->format('Y-m-d')])->toArray(),
-                    'pass'           => $passMap->has($event->id) ? (function () use ($passMap, $event) {
-                        $p = $passMap[$event->id];
-                        return [
-                            'qr_code'         => $p->qr_code,
-                            'status'          => $p->status,
-                            'pass_type'       => $p->pass_type,
-                            'holder_name'     => $p->holder_name,
-                            'is_preferential' => (bool) $p->is_preferential,
-                        ];
-                    })() : null,
-                ])->toArray(),
+                'events' => $media->eventsAsMedia?->map(function ($event) use ($passMap, $kitsConfig, $addonsConfig) {
+                    $addonKeys = is_array($event->pivot->addons)
+                        ? $event->pivot->addons
+                        : (json_decode($event->pivot->addons ?? '[]', true) ?: []);
+
+                    $purchase = $event->pivot->kit_type ? [
+                        'kit_type'             => $event->pivot->kit_type,
+                        'kit_name'             => $kitsConfig[$event->pivot->kit_type]['name'] ?? $event->pivot->kit_type,
+                        'addons'               => array_map(fn($k) => [
+                            'key'   => $k,
+                            'name'  => $addonsConfig[$k]['name'] ?? $k,
+                            'price' => (float) ($addonsConfig[$k]['price'] ?? 0),
+                        ], $addonKeys),
+                        'payment_status'       => $event->pivot->payment_status,
+                        'total_amount'         => $event->pivot->total_amount !== null ? (float) $event->pivot->total_amount : null,
+                        'shopify_order_number' => $event->pivot->shopify_order_number,
+                        'paid_at'              => $event->pivot->paid_at,
+                    ] : null;
+
+                    return [
+                        'id'             => $event->id,
+                        'name'           => $event->name,
+                        'status'         => $event->status,
+                        'media_status'   => $event->pivot->status,
+                        'payment_status' => $event->pivot->payment_status,
+                        'checked_in_at'  => $event->pivot->checked_in_at,
+                        'days'           => $event->eventDays->map(fn($d) => ['id' => $d->id, 'label' => $d->label, 'date' => $d->date?->format('Y-m-d')])->toArray(),
+                        'pass'           => $passMap->has($event->id) ? (function () use ($passMap, $event) {
+                            $p = $passMap[$event->id];
+                            return [
+                                'qr_code'         => $p->qr_code,
+                                'status'          => $p->status,
+                                'pass_type'       => $p->pass_type,
+                                'holder_name'     => $p->holder_name,
+                                'is_preferential' => (bool) $p->is_preferential,
+                            ];
+                        })() : null,
+                        'purchase'       => $purchase,
+                    ];
+                })->toArray(),
                 'assistants' => $media->mediaAssistants->map(fn($a) => [
                     'id'          => $a->id,
                     'full_name'   => $a->full_name,
@@ -205,7 +234,10 @@ class MediaController extends Controller
             ]);
 
             if ($request->filled('event_id')) {
-                $user->eventsAsMedia()->attach($request->event_id, ['status' => 'assigned']);
+                $user->eventsAsMedia()->attach($request->event_id, [
+                    'status'         => 'assigned',
+                    'payment_status' => 'manual',
+                ]);
 
                 EventPass::create([
                     'event_id'     => $request->event_id,
@@ -303,7 +335,10 @@ class MediaController extends Controller
             return back()->with('error', 'Ya está asignado a este evento.');
         }
 
-        $media->eventsAsMedia()->attach($eventId, ['status' => 'assigned']);
+        $media->eventsAsMedia()->attach($eventId, [
+            'status'         => 'assigned',
+            'payment_status' => 'manual',
+        ]);
 
         EventPass::create([
             'event_id'     => $eventId,

@@ -10,17 +10,17 @@ const props = defineProps({
 });
 
 const allRoles = [
-    { value: 'model',         label: 'Modelo' },
-    { value: 'designer',      label: 'Disenador' },
+    { value: 'model',         label: 'Model' },
+    { value: 'designer',      label: 'Designer' },
     { value: 'media',         label: 'Media' },
-    { value: 'volunteer',     label: 'Voluntario' },
+    { value: 'volunteer',     label: 'Volunteer' },
     { value: 'staff',         label: 'Staff' },
-    { value: 'attendee',      label: 'Asistente' },
+    { value: 'attendee',      label: 'Attendee' },
     { value: 'vip',           label: 'VIP' },
     { value: 'influencer',    label: 'Influencer' },
-    { value: 'press',         label: 'Prensa' },
+    { value: 'press',         label: 'Press' },
     { value: 'sponsor',       label: 'Sponsor' },
-    { value: 'complementary', label: 'Complementario' },
+    { value: 'complementary', label: 'Complementary' },
 ];
 
 const form = useForm({
@@ -70,7 +70,7 @@ function submit() {
             <div class="flex items-center gap-3">
                 <Link href="/admin/operations/banners" class="text-gray-400 hover:text-gray-600 text-sm">Banners</Link>
                 <span class="text-gray-300">/</span>
-                <h2 class="text-lg font-semibold text-gray-900">Crear Banner</h2>
+                <h2 class="text-lg font-semibold text-gray-900">Create Banner</h2>
             </div>
         </template>
 
@@ -78,13 +78,13 @@ function submit() {
             <form @submit.prevent="submit" class="space-y-6">
                 <!-- Imagen -->
                 <div class="bg-white rounded-2xl border border-gray-200 p-6">
-                    <h3 class="font-bold text-gray-900 mb-4">Imagen del Banner *</h3>
+                    <h3 class="font-bold text-gray-900 mb-4">Banner Image *</h3>
 
                     <div class="aspect-[16/9] rounded-xl overflow-hidden border-2 border-dashed border-gray-300 bg-gray-50 mb-3 relative">
                         <img v-if="imagePreview" :src="imagePreview" class="w-full h-full object-cover" />
                         <div v-else class="w-full h-full flex flex-col items-center justify-center text-gray-300">
                             <PhotoIcon class="w-12 h-12 mb-2" />
-                            <p class="text-sm">Proporcion recomendada: 16:9</p>
+                            <p class="text-sm">Recommended ratio: 16:9</p>
                         </div>
                     </div>
 
@@ -95,17 +95,17 @@ function submit() {
 
                 <!-- Info -->
                 <div class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
-                    <h3 class="font-bold text-gray-900 mb-2">Informacion</h3>
+                    <h3 class="font-bold text-gray-900 mb-2">Information</h3>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Titulo (nombre interno) *</label>
-                        <input v-model="form.title" type="text" placeholder="ej. NYFW September 2026"
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Title (internal name) *</label>
+                        <input v-model="form.title" type="text" placeholder="e.g. NYFW September 2026"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         <p v-if="form.errors.title" class="mt-1 text-red-500 text-xs">{{ form.errors.title }}</p>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">URL de destino (opcional)</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Destination URL (optional)</label>
                         <input v-model="form.link_url" type="url" placeholder="https://runway7.com/..."
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         <p v-if="form.errors.link_url" class="mt-1 text-red-500 text-xs">{{ form.errors.link_url }}</p>
@@ -113,15 +113,15 @@ function submit() {
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Evento *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Event *</label>
                             <select v-model="form.event_id"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="">Todos los eventos</option>
+                                <option value="">All events</option>
                                 <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Orden</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Order</label>
                             <input v-model.number="form.order" type="number" min="0"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
@@ -129,11 +129,11 @@ function submit() {
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                             <select v-model="form.status"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="active">Activo</option>
-                                <option value="inactive">Inactivo</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
                             </select>
                         </div>
                         <div></div>
@@ -141,12 +141,12 @@ function submit() {
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Mostrar desde *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Show from *</label>
                             <input v-model="form.starts_at" type="datetime-local"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Mostrar hasta *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Show until *</label>
                             <input v-model="form.ends_at" type="datetime-local"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
@@ -155,13 +155,13 @@ function submit() {
 
                 <!-- Roles target -->
                 <div class="bg-white rounded-2xl border border-gray-200 p-6">
-                    <h3 class="font-bold text-gray-900 mb-3">Roles objetivo</h3>
-                    <p class="text-xs text-gray-400 mb-4">Si no seleccionas ninguno, el banner se mostrara a todos los roles.</p>
+                    <h3 class="font-bold text-gray-900 mb-3">Target roles</h3>
+                    <p class="text-xs text-gray-400 mb-4">If you don't select any, the banner will be shown to all roles.</p>
 
                     <label class="flex items-center gap-2 cursor-pointer mb-3 pb-3 border-b border-gray-100">
                         <input type="checkbox" :checked="allRolesSelected" @change="toggleAllRoles"
                             class="rounded border-gray-300 text-[#D4AF37] focus:ring-[#D4AF37]/20" />
-                        <span class="text-sm font-semibold text-gray-800">Todos los roles</span>
+                        <span class="text-sm font-semibold text-gray-800">All roles</span>
                     </label>
 
                     <div class="grid grid-cols-3 gap-2">
@@ -178,12 +178,12 @@ function submit() {
                 <div class="flex justify-between">
                     <Link href="/admin/operations/banners"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-                        Cancelar
+                        Cancel
                     </Link>
                     <button type="submit" :disabled="!canSubmit || form.processing"
                         class="px-8 py-2.5 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed transition-colors">
-                        <span v-if="form.processing">Guardando...</span>
-                        <span v-else>Crear Banner</span>
+                        <span v-if="form.processing">Saving...</span>
+                        <span v-else>Create Banner</span>
                     </button>
                 </div>
             </form>

@@ -46,7 +46,7 @@ function submit() {
         <template #header>
             <div class="flex items-center gap-2">
                 <Link :href="`/admin/operations/media/${media.id}`" class="text-gray-400 hover:text-gray-600"><ArrowLeftIcon class="w-5 h-5" /></Link>
-                <h2 class="text-lg font-semibold text-gray-900">Editar Media — {{ media.first_name }} {{ media.last_name }}</h2>
+                <h2 class="text-lg font-semibold text-gray-900">Edit Media — {{ media.first_name }} {{ media.last_name }}</h2>
             </div>
         </template>
 
@@ -54,12 +54,12 @@ function submit() {
             <form @submit.prevent="submit" class="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
                         <input v-model="form.first_name" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         <p v-if="form.errors.first_name" class="text-xs text-red-500 mt-1">{{ form.errors.first_name }}</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
                         <input v-model="form.last_name" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                     </div>
                     <div>
@@ -68,20 +68,20 @@ function submit() {
                         <p v-if="form.errors.email" class="text-xs text-red-500 mt-1">{{ form.errors.email }}</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                         <input v-model="form.phone" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                         <select v-model="form.status" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                            <option value="applicant">Aplicante</option>
-                            <option value="pending">Pendiente</option>
-                            <option value="active">Activo</option>
-                            <option value="inactive">Inactivo</option>
+                            <option value="applicant">Applicant</option>
+                            <option value="pending">Pending</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Categoría *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Category *</label>
                         <select v-model="form.category" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
                             <option value="photographer">Photographer</option>
                             <option value="videographer">Videographer</option>
@@ -92,16 +92,16 @@ function submit() {
                         <input v-model="form.instagram" type="text" placeholder="username" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
                         <select v-model="form.location" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                            <option value="">Seleccionar...</option>
+                            <option value="">Select...</option>
                             <option v-for="s in usStates" :key="s" :value="s">{{ s }}</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">¿Viaja para el evento?</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Traveling for the event?</label>
                         <select v-model="form.will_travel" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                            <option value="yes">Sí</option>
+                            <option value="yes">Yes</option>
                             <option value="no">No</option>
                         </select>
                     </div>
@@ -114,22 +114,22 @@ function submit() {
 
                 <div class="grid grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Importancia</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Importance</label>
                         <select v-model="form.importance" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                            <option :value="1">1 (Alta)</option>
-                            <option :value="2">2 (Media)</option>
-                            <option :value="3">3 (Baja)</option>
+                            <option :value="1">1 (High)</option>
+                            <option :value="2">2 (Medium)</option>
+                            <option :value="3">3 (Low)</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Max Asistentes</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Max Assistants</label>
                         <input v-model.number="form.max_assistants" type="number" min="0" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                     </div>
                 </div>
 
                 <!-- Media Links -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Links de Media (subidos por el usuario)</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Media Links (uploaded by user)</label>
                     <div class="space-y-2">
                         <input v-model="form.media_link_1" type="url" placeholder="Link 1 — https://..." class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         <input v-model="form.media_link_2" type="url" placeholder="Link 2 — https://..." class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
@@ -138,14 +138,14 @@ function submit() {
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Notas</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                     <textarea v-model="form.notes" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"></textarea>
                 </div>
 
                 <div class="flex gap-3 pt-4">
-                    <Link :href="`/admin/operations/media/${media.id}`" class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 text-center hover:bg-gray-50">Cancelar</Link>
+                    <Link :href="`/admin/operations/media/${media.id}`" class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 text-center hover:bg-gray-50">Cancel</Link>
                     <button type="submit" :disabled="form.processing" class="flex-1 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-800 disabled:opacity-40">
-                        {{ form.processing ? 'Guardando...' : 'Guardar Cambios' }}
+                        {{ form.processing ? 'Saving...' : 'Save Changes' }}
                     </button>
                 </div>
             </form>

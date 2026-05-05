@@ -91,9 +91,9 @@ function submit() {
     <AdminLayout>
         <template #header>
             <div class="flex items-center gap-3">
-                <Link href="/admin/operations/models" class="text-gray-400 hover:text-gray-600 text-sm">← Modelos</Link>
+                <Link href="/admin/operations/models" class="text-gray-400 hover:text-gray-600 text-sm">← Models</Link>
                 <span class="text-gray-300">/</span>
-                <h2 class="text-lg font-semibold text-gray-900">Crear Modelo</h2>
+                <h2 class="text-lg font-semibold text-gray-900">Create Model</h2>
             </div>
         </template>
 
@@ -101,9 +101,9 @@ function submit() {
             <!-- Tabs -->
             <div class="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6">
                 <button v-for="tab in [
-                    { n: 1, label: 'Datos Personales' },
-                    { n: 2, label: 'Medidas' },
-                    { n: 3, label: 'Evento y Casting' },
+                    { n: 1, label: 'Personal Info' },
+                    { n: 2, label: 'Measurements' },
+                    { n: 3, label: 'Event and Casting' },
                 ]" :key="tab.n"
                     type="button"
                     @click="activeTab = tab.n"
@@ -115,21 +115,21 @@ function submit() {
 
             <form @submit.prevent="submit" novalidate class="space-y-5">
 
-                <!-- Pestaña 1: Datos Personales -->
+                <!-- Tab 1: Personal Info -->
                 <div v-show="activeTab === 1" class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
                     <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                        La contraseña de acceso a la app será <strong>runway7</strong> para todas las modelos.
+                        The app login password will be <strong>runway7</strong> for all models.
                     </p>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
                             <input v-model="form.first_name" type="text"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             <p v-if="form.errors.first_name" class="mt-1 text-red-500 text-xs">{{ form.errors.first_name }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
                             <input v-model="form.last_name" type="text"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             <p v-if="form.errors.last_name" class="mt-1 text-red-500 text-xs">{{ form.errors.last_name }}</p>
@@ -144,7 +144,7 @@ function submit() {
                             <p v-if="form.errors.email" class="mt-1 text-red-500 text-xs">{{ form.errors.email }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                             <div class="flex gap-2">
                                 <select v-model="phoneCode"
                                     class="w-28 border border-gray-300 rounded-lg px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
@@ -158,74 +158,74 @@ function submit() {
 
                     <div class="grid grid-cols-3 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Edad</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Age</label>
                             <select v-model="form.age"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="">— Seleccionar —</option>
+                                <option value="">— Select —</option>
                                 <option v-for="a in ageOptions" :key="a" :value="a">{{ a }}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Género</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
                             <select v-model="form.gender"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="female">Femenino</option>
-                                <option value="male">Masculino</option>
-                                <option value="non_binary">No binario</option>
+                                <option value="female">Female</option>
+                                <option value="male">Male</option>
+                                <option value="non_binary">Non-binary</option>
                             </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Instagram</label>
-                            <input v-model="form.instagram" type="text" placeholder="@usuario"
+                            <input v-model="form.instagram" type="text" placeholder="@username"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
                         <select v-model="form.location"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                            <option value="">Seleccionar...</option>
+                            <option value="">Select...</option>
                             <option v-for="s in usStates" :key="s" :value="s">{{ s }}</option>
                         </select>
                     </div>
 
                     <div class="grid grid-cols-3 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Etnia</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Ethnicity</label>
                             <select v-model="form.ethnicity"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="">— Sin especificar —</option>
-                                <option value="asian">Asiática</option>
-                                <option value="black">Negra</option>
-                                <option value="caucasian">Caucásica</option>
-                                <option value="hispanic">Hispana</option>
-                                <option value="middle_eastern">Medio Oriente</option>
-                                <option value="mixed">Mixta</option>
-                                <option value="other">Otra</option>
+                                <option value="">— Unspecified —</option>
+                                <option value="asian">Asian</option>
+                                <option value="black">Black</option>
+                                <option value="caucasian">Caucasian</option>
+                                <option value="hispanic">Hispanic</option>
+                                <option value="middle_eastern">Middle Eastern</option>
+                                <option value="mixed">Mixed</option>
+                                <option value="other">Other</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Color de cabello</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Hair color</label>
                             <select v-model="form.hair"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="">— Sin especificar —</option>
-                                <option value="black">Negro</option>
-                                <option value="brown">Castaño</option>
-                                <option value="blonde">Rubio</option>
-                                <option value="red">Rojo</option>
-                                <option value="gray">Gris</option>
-                                <option value="other">Otro</option>
+                                <option value="">— Unspecified —</option>
+                                <option value="black">Black</option>
+                                <option value="brown">Brown</option>
+                                <option value="blonde">Blonde</option>
+                                <option value="red">Red</option>
+                                <option value="gray">Gray</option>
+                                <option value="other">Other</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de cuerpo</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Body type</label>
                             <select v-model="form.body_type"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="">— Sin especificar —</option>
-                                <option value="slim">Delgada</option>
-                                <option value="athletic">Atlética</option>
-                                <option value="average">Promedio</option>
+                                <option value="">— Unspecified —</option>
+                                <option value="slim">Slim</option>
+                                <option value="athletic">Athletic</option>
+                                <option value="average">Average</option>
                                 <option value="curvy">Curvy</option>
                                 <option value="plus_size">Plus Size</option>
                             </select>
@@ -236,14 +236,14 @@ function submit() {
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input v-model="form.is_test_model" type="checkbox"
                                 class="rounded border-gray-300 text-black focus:ring-black/20" />
-                            <span class="text-sm text-gray-700">Modelo de prueba</span>
+                            <span class="text-sm text-gray-700">Test model</span>
                         </label>
                     </div>
                 </div>
 
-                <!-- Pestaña 2: Medidas -->
+                <!-- Tab 2: Measurements -->
                 <div v-show="activeTab === 2" class="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
-                    <h3 class="font-semibold text-gray-800">Medidas</h3>
+                    <h3 class="font-semibold text-gray-800">Measurements</h3>
 
                     <div class="grid grid-cols-3 gap-4">
                         <div>
@@ -270,13 +270,13 @@ function submit() {
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Talla de zapato</label>
-                            <input v-model="form.shoe_size" type="text" placeholder="ej. 8.5"
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Shoe size</label>
+                            <input v-model="form.shoe_size" type="text" placeholder="e.g. 8.5"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Talla de ropa</label>
-                            <input v-model="form.dress_size" type="text" placeholder="ej. S, M, 4"
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Dress size</label>
+                            <input v-model="form.dress_size" type="text" placeholder="e.g. S, M, 4"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
                     </div>
@@ -285,36 +285,36 @@ function submit() {
                         <label class="flex items-center gap-2 cursor-pointer mb-3">
                             <input v-model="form.is_agency" type="checkbox"
                                 class="rounded border-gray-300 text-black focus:ring-black/20" />
-                            <span class="text-sm font-medium text-gray-700">Viene de agencia</span>
+                            <span class="text-sm font-medium text-gray-700">Comes from an agency</span>
                         </label>
                         <div v-if="form.is_agency">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombre de la agencia</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Agency name</label>
                             <input v-model="form.agency" type="text"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Notas internas</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Internal notes</label>
                         <textarea v-model="form.notes" rows="3"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 resize-none"></textarea>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">¿Cómo se enteró?</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">How did she hear about us?</label>
                         <select v-model="form.referral_source"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                            <option value="">— Sin especificar —</option>
+                            <option value="">— Unspecified —</option>
                             <option value="instagram">Instagram</option>
                             <option value="tiktok">TikTok</option>
                             <option value="facebook">Facebook</option>
-                            <option value="friends_family">Amigos o Familia</option>
-                            <option value="agency">Agencia</option>
-                            <option value="other">Otro</option>
+                            <option value="friends_family">Friends or Family</option>
+                            <option value="agency">Agency</option>
+                            <option value="other">Other</option>
                         </select>
                     </div>
                     <div v-if="form.referral_source === 'other'">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Especificar</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Specify</label>
                         <input v-model="form.referral_source_other" type="text"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                     </div>
@@ -322,28 +322,28 @@ function submit() {
                         <label class="block text-sm font-medium text-gray-700 mb-1">Walk Video URL</label>
                         <input v-model="form.walk_video_url" type="url" placeholder="https://..."
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
-                        <p class="text-xs text-gray-400 mt-1">Link público donde se pueda ver su pasarela</p>
+                        <p class="text-xs text-gray-400 mt-1">Public link where her runway walk can be viewed</p>
                     </div>
                 </div>
 
-                <!-- Pestaña 3: Evento y Casting -->
+                <!-- Tab 3: Event and Casting -->
                 <div v-show="activeTab === 3" class="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Asignar a evento</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Assign to event</label>
                         <select v-model="form.event_id"
                             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                            <option value="">— Sin asignar —</option>
+                            <option value="">— Unassigned —</option>
                             <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
                         </select>
                     </div>
 
-                    <!-- Casting slots del evento seleccionado -->
+                    <!-- Casting slots for the selected event -->
                     <div v-if="selectedEvent && castingSlots.length">
                         <p class="text-sm font-medium text-gray-700 mb-1">
                             Casting:
                             <span class="text-gray-500 font-normal">{{ selectedEvent.casting_day?.date }}</span>
                         </p>
-                        <p class="text-xs text-gray-400 mb-3">Selecciona el horario de casting de la modelo:</p>
+                        <p class="text-xs text-gray-400 mb-3">Select the model's casting time:</p>
 
                         <div class="grid grid-cols-4 gap-2">
                             <button
@@ -363,35 +363,35 @@ function submit() {
                         </div>
 
                         <p v-if="form.casting_time" class="mt-2 text-sm text-green-700">
-                            ✓ Horario seleccionado: <strong>{{ formatSlotTime(form.casting_time) }}</strong>
+                            ✓ Time selected: <strong>{{ formatSlotTime(form.casting_time) }}</strong>
                         </p>
                     </div>
 
                     <div v-else-if="selectedEvent && !castingSlots.length" class="text-sm text-gray-400 italic">
-                        Este evento no tiene día de casting configurado.
+                        This event has no casting day configured.
                     </div>
 
                 </div>
 
-                <!-- Botones -->
+                <!-- Buttons -->
                 <div class="flex justify-between">
                     <Link href="/admin/operations/models"
                         class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-                        Cancelar
+                        Cancel
                     </Link>
                     <div class="flex gap-3">
                         <button v-if="activeTab > 1" type="button" @click="activeTab--"
                             class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-                            ← Anterior
+                            ← Previous
                         </button>
                         <button v-if="activeTab < 3" type="button" @click="activeTab++"
                             class="px-6 py-2.5 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-black transition-colors">
-                            Siguiente →
+                            Next →
                         </button>
                         <button v-else type="submit" :disabled="form.processing"
                             class="px-8 py-2.5 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800 disabled:opacity-60 transition-colors">
-                            <span v-if="form.processing">Creando...</span>
-                            <span v-else>Crear Modelo</span>
+                            <span v-if="form.processing">Creating...</span>
+                            <span v-else>Create Model</span>
                         </button>
                     </div>
                 </div>

@@ -37,13 +37,13 @@ function bodyTypeLabel(b) {
     return { slim: 'Delgada', athletic: 'Atlética', average: 'Promedio', curvy: 'Curvy', plus_size: 'Plus Size' }[b] ?? '—';
 }
 
-function castingStatusLabel(s, gender = null) {
-    if (s === 'rejected') return gender === 'male' ? 'Rechazado' : 'Rechazada';
-    return { scheduled: 'Agendada', checked_in: 'Hizo check-in', selected: 'Seleccionada', no_show: 'No se presentó' }[s] ?? s ?? '—';
+function castingStatusLabel(s) {
+    if (s === 'rejected') return 'Rejected';
+    return { scheduled: 'Scheduled', checked_in: 'Checked in', selected: 'Selected', no_show: 'No-show' }[s] ?? s ?? '—';
 }
 
 function showStatusLabel(s) {
-    return { pending: 'Pendiente', confirmed: 'Confirmado', rejected: 'Rechazado', requested: 'Solicitado' }[s] ?? s ?? '—';
+    return { pending: 'Pending', confirmed: 'Confirmed', rejected: 'Rejected', requested: 'Requested' }[s] ?? s ?? '—';
 }
 
 function showStatusClass(s) {
@@ -60,7 +60,7 @@ function passStatusClass(s) {
 }
 
 function passStatusLabel(s) {
-    return { active: 'Activo', cancelled: 'Cancelado', used: 'Usado' }[s] ?? s;
+    return { active: 'Active', cancelled: 'Cancelled', used: 'Used' }[s] ?? s;
 }
 
 function progressColor(pct) {
@@ -70,12 +70,12 @@ function progressColor(pct) {
 }
 
 function sendWelcomeEmail() {
-    if (!confirm('¿Enviar email de bienvenida a ' + props.model.first_name + '?')) return;
+    if (!confirm('Send welcome email to ' + props.model.first_name + '?')) return;
     router.post(`/admin/operations/models/${props.model.id}/send-welcome-email`, {}, { preserveScroll: true });
 }
 
 function removeFromEvent(eventId, eventName) {
-    if (!confirm(`¿Quitar a ${props.model.first_name} del evento "${eventName}"?`)) return;
+    if (!confirm(`Remove ${props.model.first_name} from event "${eventName}"?`)) return;
     router.delete(`/admin/operations/models/${props.model.id}/remove-event/${eventId}`, { preserveScroll: true });
 }
 
@@ -94,7 +94,7 @@ function updateModelTag(eventId, newTag) {
 }
 
 function sendOnboarding(eventId) {
-    if (!confirm('¿Enviar email de onboarding personalizado?')) return;
+    if (!confirm('Send personalized onboarding email?')) return;
     router.post(`/admin/operations/models/${props.model.id}/events/${eventId}/send-onboarding`, {}, { preserveScroll: true });
 }
 
@@ -102,7 +102,7 @@ function statusBadgeClass(s) {
     return { active: 'bg-green-50 text-green-700', inactive: 'bg-red-50 text-red-600', rejected: 'bg-orange-50 text-orange-700', pending: 'bg-yellow-50 text-yellow-700', applicant: 'bg-purple-50 text-purple-700' }[s] ?? 'bg-gray-50 text-gray-600';
 }
 function statusBadgeLabel(s) {
-    return { active: 'Activo', inactive: 'Inactivo', rejected: 'Rechazada', pending: 'Pendiente', applicant: 'Aplicante' }[s] ?? s;
+    return { active: 'Active', inactive: 'Inactive', rejected: 'Rejected', pending: 'Pending', applicant: 'Applicant' }[s] ?? s;
 }
 
 const compCardLabels = ['Headshot', 'Full Body Front', 'Full Body Side', 'Creative/Editorial'];
@@ -110,7 +110,7 @@ const compCardPhotos = [profile?.photo_1, profile?.photo_2, profile?.photo_3, pr
 const failedImgs = ref([false, false, false, false]);
 
 // Lightbox gallery
-const allGalleryLabels = ['Foto de Perfil', ...compCardLabels];
+const allGalleryLabels = ['Profile Picture', ...compCardLabels];
 const allGalleryPhotos = [props.model.profile_picture, ...compCardPhotos];
 const lightboxIndex = ref(-1);
 function openLightbox(index) { lightboxIndex.value = index; }
@@ -130,7 +130,7 @@ function closePassModal()   { passModal.value = null; }
         <template #header>
             <div class="flex items-center gap-3">
                 <Link href="/admin/operations/models" class="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-sm">
-                    <ArrowLeftIcon class="w-4 h-4" /> Modelos
+                    <ArrowLeftIcon class="w-4 h-4" /> Models
                 </Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900">{{ model.first_name }} {{ model.last_name }}</h2>
@@ -305,7 +305,7 @@ function closePassModal()   { passModal.value = null; }
                         <div v-if="profile?.model_kit_paid_at" class="mt-3 pt-3 border-t border-gray-100">
                             <p class="text-xs text-gray-500 mb-1">Model Kit ($9.99)</p>
                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                                Comprado — {{ new Date(profile.model_kit_paid_at).toLocaleDateString('es-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
+                                Purchased — {{ new Date(profile.model_kit_paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
                             </span>
                         </div>
                     </div>

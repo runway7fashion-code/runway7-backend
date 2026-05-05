@@ -21,37 +21,51 @@ const statusColors = {
     applicant: 'bg-blue-100 text-blue-800',
 };
 
-const search   = ref(props.filters?.search   || '');
-const status   = ref(props.filters?.status   || '');
-const eventId  = ref(props.filters?.event_id || '');
-const category = ref(props.filters?.category || '');
-const perPage  = ref(props.filters?.per_page ?? '20');
+const search        = ref(props.filters?.search         || '');
+const status        = ref(props.filters?.status         || '');
+const eventId       = ref(props.filters?.event_id       || '');
+const category      = ref(props.filters?.category       || '');
+const paymentStatus = ref(props.filters?.payment_status || '');
+const perPage       = ref(props.filters?.per_page ?? '20');
 
 let timer = null;
 function applyFilters() {
     clearTimeout(timer);
     timer = setTimeout(() => {
         router.get('/admin/operations/media', {
-            search:   search.value   || undefined,
-            status:   status.value   || undefined,
-            event_id: eventId.value  || undefined,
-            category: category.value || undefined,
-            per_page: perPage.value != 20 ? perPage.value : undefined,
+            search:         search.value        || undefined,
+            status:         status.value        || undefined,
+            event_id:       eventId.value       || undefined,
+            category:       category.value      || undefined,
+            payment_status: paymentStatus.value || undefined,
+            per_page:       perPage.value != 20 ? perPage.value : undefined,
         }, { preserveState: true, replace: true });
     }, 300);
 }
-watch([search, status, eventId, category, perPage], applyFilters);
+watch([search, status, eventId, category, paymentStatus, perPage], applyFilters);
+
+const kitLabels = { '1_day': '1-Day', '5_day': '5-Day' };
+const paymentLabels = { paid: 'Paid', pending: 'Pending', expired: 'Expired', manual: 'Manual' };
+const paymentClasses = {
+    paid: 'bg-green-100 text-green-700',
+    pending: 'bg-yellow-100 text-yellow-700',
+    expired: 'bg-red-100 text-red-600',
+    manual: 'bg-gray-100 text-gray-700',
+};
+function primaryRegistration(m) {
+    return (m.events_as_media ?? [])[0] ?? null;
+}
 
 const showEmailInfoModal = ref(false);
 const showSmsInfoModal = ref(false);
 
 function sendBulkEmails() {
-    if (!confirm(`¿Enviar email de onboarding a ${props.pendingEmailCount} media pendiente(s)?`)) return;
+    if (!confirm(`Send onboarding email to ${props.pendingEmailCount} pending media?`)) return;
     router.post('/admin/operations/media/send-bulk-onboarding', {}, { preserveScroll: true });
 }
 
 function sendBulkSms() {
-    if (!confirm(`¿Enviar SMS de onboarding a ${props.pendingSmsCount} media pendiente(s)?`)) return;
+    if (!confirm(`Send onboarding SMS to ${props.pendingSmsCount} pending media?`)) return;
     router.post('/admin/operations/media/send-bulk-onboarding-sms', {}, { preserveScroll: true });
 }
 
@@ -64,12 +78,12 @@ function canSendSms(m) {
 }
 
 function sendIndividualEmail(m) {
-    if (!confirm(`¿Enviar email de onboarding a ${m.first_name} ${m.last_name}?`)) return;
+    if (!confirm(`Send onboarding email to ${m.first_name} ${m.last_name}?`)) return;
     router.post(`/admin/operations/media/${m.id}/send-onboarding`, {}, { preserveScroll: true });
 }
 
 function sendIndividualSms(m) {
-    if (!confirm(`¿Enviar SMS de onboarding a ${m.first_name} ${m.last_name}?`)) return;
+    if (!confirm(`Send onboarding SMS to ${m.first_name} ${m.last_name}?`)) return;
     router.post(`/admin/operations/media/${m.id}/send-onboarding-sms`, {}, { preserveScroll: true });
 }
 
@@ -85,7 +99,7 @@ function categoryLabel(c) {
 const emailHistoryMedia = ref(null);
 function openEmailHistory(m, e) { e.stopPropagation(); emailHistoryMedia.value = m; }
 function getEmailLogs(m) { return m.communication_logs ?? []; }
-function commStatusLabel(s) { return { queued: 'En cola', sent: 'Enviado', failed: 'Fallido' }[s] ?? s; }
+function commStatusLabel(s) { return { queued: 'Queued', sent: 'Sent', failed: 'Failed' }[s] ?? s; }
 function commStatusClass(s) {
     return { queued: 'bg-yellow-100 text-yellow-700', sent: 'bg-green-100 text-green-700', failed: 'bg-red-100 text-red-700' }[s] ?? 'bg-gray-100 text-gray-600';
 }
@@ -101,7 +115,7 @@ function commStatusClass(s) {
             <div class="flex items-center justify-between mb-6">
                 <div>
                     <h3 class="text-2xl font-bold text-gray-900">Media</h3>
-                    <p class="text-gray-500 text-sm mt-1">{{ mediaUsers.total }} registrados</p>
+                    <p class="text-gray-500 text-sm mt-1">{{ mediaUsers.total }} registered</p>
                 </div>
                 <div class="flex items-center gap-3">
                     <!-- Twilio Balance -->
@@ -115,7 +129,7 @@ function commStatusClass(s) {
                         <button @click="sendBulkEmails"
                             class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
                             <EnvelopeIcon class="w-4 h-4 text-gray-500" />
-                            Enviar emails
+                            Send emails
                             <span class="bg-amber-100 text-amber-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ pendingEmailCount }}</span>
                         </button>
                         <button @click="showEmailInfoModal = true" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
@@ -128,7 +142,7 @@ function commStatusClass(s) {
                         <button @click="sendBulkSms"
                             class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
                             <DevicePhoneMobileIcon class="w-4 h-4 text-gray-500" />
-                            Enviar SMS
+                            Send SMS
                             <span class="bg-green-100 text-green-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ pendingSmsCount }}</span>
                         </button>
                         <button @click="showSmsInfoModal = true" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
@@ -139,31 +153,38 @@ function commStatusClass(s) {
                     <!-- Create -->
                     <Link href="/admin/operations/media/create"
                         class="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors">
-                        + Crear Media
+                        + Create Media
                     </Link>
                 </div>
             </div>
 
             <!-- Filters -->
             <div class="flex items-center gap-3 mb-6 flex-wrap">
-                <input v-model="search" type="text" placeholder="Buscar nombre, email o teléfono..."
+                <input v-model="search" type="text" placeholder="Search name, email or phone..."
                     class="flex-1 min-w-48 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400" />
                 <select v-model="status" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
-                    <option value="">Todos los estados</option>
-                    <option value="applicant">Aplicante</option>
-                    <option value="pending">Pendiente</option>
-                    <option value="active">Activo</option>
-                    <option value="rejected">Rechazado</option>
-                    <option value="inactive">Inactivo</option>
+                    <option value="">All statuses</option>
+                    <option value="applicant">Applicant</option>
+                    <option value="pending">Pending</option>
+                    <option value="active">Active</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="inactive">Inactive</option>
                 </select>
                 <select v-model="eventId" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
-                    <option value="">Todos los eventos</option>
+                    <option value="">All events</option>
                     <option v-for="e in events" :key="e.id" :value="e.id">{{ e.name }}</option>
                 </select>
                 <select v-model="category" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
-                    <option value="">Todas las categorías</option>
+                    <option value="">All categories</option>
                     <option value="photographer">Photographer</option>
                     <option value="videographer">Videographer</option>
+                </select>
+                <select v-model="paymentStatus" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
+                    <option value="">All payments</option>
+                    <option value="paid">Paid</option>
+                    <option value="pending">Pending</option>
+                    <option value="expired">Expired</option>
+                    <option value="manual">Manual</option>
                 </select>
             </div>
 
@@ -173,17 +194,19 @@ function commStatusClass(s) {
                     <thead>
                         <tr class="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
                             <th class="text-left px-6 py-3 font-medium">Media</th>
-                            <th class="text-left px-6 py-3 font-medium">Categoría</th>
-                            <th class="text-left px-6 py-3 font-medium">Eventos</th>
-                            <th class="text-left px-6 py-3 font-medium">Estado</th>
-                            <th class="text-left px-6 py-3 font-medium">Registro</th>
-                            <th class="text-left px-6 py-3 font-medium">Último Correo</th>
-                            <th class="text-left px-6 py-3 font-medium">Acciones</th>
+                            <th class="text-left px-6 py-3 font-medium">Category</th>
+                            <th class="text-left px-6 py-3 font-medium">Events</th>
+                            <th class="text-left px-6 py-3 font-medium">Kit</th>
+                            <th class="text-left px-6 py-3 font-medium">Payment</th>
+                            <th class="text-left px-6 py-3 font-medium">Status</th>
+                            <th class="text-left px-6 py-3 font-medium">Registered</th>
+                            <th class="text-left px-6 py-3 font-medium">Last Email</th>
+                            <th class="text-left px-6 py-3 font-medium">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         <tr v-if="mediaUsers.data.length === 0">
-                            <td colspan="7" class="px-6 py-12 text-center text-gray-400 text-sm italic">No se encontraron resultados.</td>
+                            <td colspan="9" class="px-6 py-12 text-center text-gray-400 text-sm italic">No results found.</td>
                         </tr>
                         <tr v-for="m in mediaUsers.data" :key="m.id"
                             class="hover:bg-gray-50 transition-colors cursor-pointer"
@@ -200,28 +223,47 @@ function commStatusClass(s) {
                             </td>
                             <td class="px-6 py-4">
                                 <span v-if="m.events_as_media?.length" class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
-                                    {{ m.events_as_media.length }} evento{{ m.events_as_media.length !== 1 ? 's' : '' }}
+                                    {{ m.events_as_media.length }} event{{ m.events_as_media.length !== 1 ? 's' : '' }}
                                 </span>
-                                <span v-else class="text-gray-400 text-xs">Sin eventos</span>
+                                <span v-else class="text-gray-400 text-xs">No events</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <template v-if="primaryRegistration(m)?.pivot?.kit_type">
+                                    <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                                        {{ kitLabels[primaryRegistration(m).pivot.kit_type] || primaryRegistration(m).pivot.kit_type }}
+                                    </span>
+                                    <span v-if="(JSON.parse(primaryRegistration(m).pivot.addons || '[]')).length" class="text-[10px] text-gray-500 ml-1">
+                                        +{{ JSON.parse(primaryRegistration(m).pivot.addons).length }} add-on{{ JSON.parse(primaryRegistration(m).pivot.addons).length !== 1 ? 's' : '' }}
+                                    </span>
+                                </template>
+                                <span v-else class="text-gray-400 text-xs">—</span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span v-if="primaryRegistration(m)?.pivot?.payment_status"
+                                    class="text-xs font-medium rounded-full px-2.5 py-1"
+                                    :class="paymentClasses[primaryRegistration(m).pivot.payment_status] || 'bg-gray-100 text-gray-600'">
+                                    {{ paymentLabels[primaryRegistration(m).pivot.payment_status] || primaryRegistration(m).pivot.payment_status }}
+                                </span>
+                                <span v-else class="text-gray-400 text-xs">—</span>
                             </td>
                             <td class="px-6 py-4" @click.stop>
-                                <span v-if="m.status === 'active'" class="text-xs font-medium rounded-full px-2.5 py-1 bg-green-100 text-green-800">Activo</span>
-                                <span v-else-if="m.status === 'rejected'" class="text-xs font-medium rounded-full px-2.5 py-1 bg-orange-100 text-orange-800">Rechazado</span>
+                                <span v-if="m.status === 'active'" class="text-xs font-medium rounded-full px-2.5 py-1 bg-green-100 text-green-800">Active</span>
+                                <span v-else-if="m.status === 'rejected'" class="text-xs font-medium rounded-full px-2.5 py-1 bg-orange-100 text-orange-800">Rejected</span>
                                 <select v-else :value="m.status" @change="updateStatus(m, $event.target.value)"
                                     class="text-xs font-medium rounded-full px-2.5 py-1 border-0 cursor-pointer appearance-none"
                                     :class="statusColors[m.status] || 'bg-gray-100 text-gray-800'">
-                                    <option value="applicant">Aplicante</option>
-                                    <option value="pending">Pendiente</option>
-                                    <option value="inactive">Inactivo</option>
+                                    <option value="applicant">Applicant</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="inactive">Inactive</option>
                                 </select>
                             </td>
                             <td class="px-6 py-4 text-gray-500 text-sm">
-                                {{ new Date(m.created_at).toLocaleDateString('es-US') }}
+                                {{ new Date(m.created_at).toLocaleDateString('en-US') }}
                             </td>
                             <td class="px-6 py-4 text-sm" @click.stop>
                                 <button v-if="m.welcome_email_sent_at" @click="openEmailHistory(m, $event)"
                                     class="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full hover:bg-green-100 cursor-pointer">
-                                    {{ new Date(m.welcome_email_sent_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) }}
+                                    {{ new Date(m.welcome_email_sent_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) }}
                                 </button>
                                 <button v-else @click="openEmailHistory(m, $event)"
                                     class="text-xs text-gray-400 hover:text-gray-600 cursor-pointer">—</button>
@@ -231,17 +273,17 @@ function commStatusClass(s) {
                                     <button @click="sendIndividualEmail(m)"
                                         class="p-1.5 border border-gray-200 rounded-lg transition-colors"
                                         :class="canSendEmail(m) ? 'hover:bg-gray-50 text-gray-600' : 'opacity-40 cursor-not-allowed text-gray-400'"
-                                        :disabled="!canSendEmail(m)" title="Enviar Email">
+                                        :disabled="!canSendEmail(m)" title="Send Email">
                                         <EnvelopeIcon class="w-4 h-4" />
                                     </button>
                                     <button @click="sendIndividualSms(m)"
                                         class="p-1.5 border border-gray-200 rounded-lg transition-colors"
                                         :class="canSendSms(m) ? 'hover:bg-gray-50 text-green-600' : 'opacity-40 cursor-not-allowed text-gray-400'"
-                                        :disabled="!canSendSms(m)" title="Enviar SMS">
+                                        :disabled="!canSendSms(m)" title="Send SMS">
                                         <DevicePhoneMobileIcon class="w-4 h-4" />
                                     </button>
                                     <Link :href="`/admin/operations/media/${m.id}/edit`"
-                                        class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors" title="Editar">
+                                        class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors" title="Edit">
                                         <PencilSquareIcon class="w-4 h-4" />
                                     </Link>
                                 </div>
@@ -253,7 +295,7 @@ function commStatusClass(s) {
                 <!-- Pagination -->
                 <div class="border-t border-gray-100 px-5 py-3 flex items-center justify-between text-sm text-gray-500">
                     <div class="flex items-center gap-3">
-                        <span>{{ mediaUsers.from }}–{{ mediaUsers.to }} de {{ mediaUsers.total }} media</span>
+                        <span>{{ mediaUsers.from }}–{{ mediaUsers.to }} of {{ mediaUsers.total }} media</span>
                         <select v-model="perPage" class="border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-black/10 bg-white">
                             <option value="20">20</option>
                             <option value="50">50</option>
@@ -261,8 +303,8 @@ function commStatusClass(s) {
                         </select>
                     </div>
                     <div v-if="mediaUsers.last_page > 1" class="flex gap-1">
-                        <Link v-if="mediaUsers.prev_page_url" :href="mediaUsers.prev_page_url" class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">← Anterior</Link>
-                        <Link v-if="mediaUsers.next_page_url" :href="mediaUsers.next_page_url" class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">Siguiente →</Link>
+                        <Link v-if="mediaUsers.prev_page_url" :href="mediaUsers.prev_page_url" class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">← Previous</Link>
+                        <Link v-if="mediaUsers.next_page_url" :href="mediaUsers.next_page_url" class="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">Next →</Link>
                     </div>
                 </div>
             </div>
@@ -275,26 +317,26 @@ function commStatusClass(s) {
             <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
                 <div class="flex items-center justify-between mb-5">
                     <div>
-                        <h3 class="text-base font-bold text-gray-900">Historial de correos</h3>
+                        <h3 class="text-base font-bold text-gray-900">Email history</h3>
                         <p class="text-sm text-gray-500">{{ emailHistoryMedia.first_name }} {{ emailHistoryMedia.last_name }}</p>
                     </div>
                     <button @click="emailHistoryMedia = null" class="text-gray-400 hover:text-gray-600"><XMarkIcon class="w-5 h-5" /></button>
                 </div>
-                <div v-if="!getEmailLogs(emailHistoryMedia).length" class="text-center py-8 text-gray-400 text-sm italic">No se han enviado correos aún.</div>
+                <div v-if="!getEmailLogs(emailHistoryMedia).length" class="text-center py-8 text-gray-400 text-sm italic">No emails have been sent yet.</div>
                 <div v-else class="space-y-3 max-h-80 overflow-y-auto">
                     <div v-for="log in getEmailLogs(emailHistoryMedia)" :key="log.id" class="border border-gray-100 rounded-xl p-4" :class="log.status === 'failed' ? 'bg-red-50/50' : 'bg-gray-50'">
                         <div class="flex items-center justify-between mb-2">
                             <span :class="commStatusClass(log.status)" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium">{{ commStatusLabel(log.status) }}</span>
-                            <span class="text-xs text-gray-400">{{ new Date(log.sent_at ?? log.created_at).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' }) }}</span>
+                            <span class="text-xs text-gray-400">{{ new Date(log.sent_at ?? log.created_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) }}</span>
                         </div>
                         <div class="text-xs text-gray-500">
-                            Enviado por <span class="font-medium text-gray-700">{{ log.sender ? `${log.sender.first_name} ${log.sender.last_name}` : 'Registro automático' }}</span>
+                            Sent by <span class="font-medium text-gray-700">{{ log.sender ? `${log.sender.first_name} ${log.sender.last_name}` : 'Automatic record' }}</span>
                         </div>
                         <div v-if="log.error_message" class="mt-2 text-xs text-red-600 bg-red-100 rounded-lg p-2">{{ log.error_message }}</div>
                     </div>
                 </div>
                 <div class="mt-5 flex justify-end">
-                    <button @click="emailHistoryMedia = null" class="px-5 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">Cerrar</button>
+                    <button @click="emailHistoryMedia = null" class="px-5 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">Close</button>
                 </div>
             </div>
         </div>
@@ -308,16 +350,16 @@ function commStatusClass(s) {
                 <div class="flex items-start justify-between mb-4">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0"><EnvelopeIcon class="w-5 h-5 text-amber-600" /></div>
-                        <h3 class="text-base font-semibold text-gray-900">¿Cómo funciona el envío masivo de emails?</h3>
+                        <h3 class="text-base font-semibold text-gray-900">How does bulk email sending work?</h3>
                     </div>
                     <button @click="showEmailInfoModal = false" class="text-gray-400 hover:text-gray-600 ml-2"><XMarkIcon class="w-5 h-5" /></button>
                 </div>
                 <ul class="space-y-3 text-sm text-gray-600">
-                    <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span><span>Solo se envía a media con estado Pendiente que no hayan recibido email de onboarding anteriormente.</span></li>
-                    <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span><span>El email incluye todos los eventos asignados con sus días, credenciales de acceso y links de la app.</span></li>
-                    <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span><span>El envío se procesa en cola — puede tardar unos segundos dependiendo del volumen.</span></li>
+                    <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span><span>Only sent to media with Pending status who have not received an onboarding email before.</span></li>
+                    <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span><span>The email includes all assigned events with their days, access credentials and app links.</span></li>
+                    <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span><span>Sending is processed in a queue — may take a few seconds depending on volume.</span></li>
                 </ul>
-                <button @click="showEmailInfoModal = false" class="mt-5 w-full py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">Entendido</button>
+                <button @click="showEmailInfoModal = false" class="mt-5 w-full py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">Got it</button>
             </div>
         </div>
     </Teleport>
@@ -330,16 +372,16 @@ function commStatusClass(s) {
                 <div class="flex items-start justify-between mb-4">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0"><DevicePhoneMobileIcon class="w-5 h-5 text-green-600" /></div>
-                        <h3 class="text-base font-semibold text-gray-900">¿Cómo funciona el envío masivo de SMS?</h3>
+                        <h3 class="text-base font-semibold text-gray-900">How does bulk SMS sending work?</h3>
                     </div>
                     <button @click="showSmsInfoModal = false" class="text-gray-400 hover:text-gray-600 ml-2"><XMarkIcon class="w-5 h-5" /></button>
                 </div>
                 <ul class="space-y-3 text-sm text-gray-600">
-                    <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span><span>Solo se envía a media con estado Pendiente que tengan teléfono con código de país (+1...) y no hayan recibido SMS anteriormente.</span></li>
-                    <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span><span>El SMS incluye los eventos asignados, credenciales de acceso y links de descarga de la app.</span></li>
-                    <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span><span>Requiere saldo disponible en Twilio. Si no hay saldo el envío fallará.</span></li>
+                    <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span><span>Only sent to media with Pending status who have a phone with country code (+1...) and have not received SMS before.</span></li>
+                    <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span><span>The SMS includes assigned events, access credentials and app download links.</span></li>
+                    <li class="flex items-start gap-2"><span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span><span>Requires available balance on Twilio. If there is no balance, sending will fail.</span></li>
                 </ul>
-                <button @click="showSmsInfoModal = false" class="mt-5 w-full py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">Entendido</button>
+                <button @click="showSmsInfoModal = false" class="mt-5 w-full py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">Got it</button>
             </div>
         </div>
     </Teleport>

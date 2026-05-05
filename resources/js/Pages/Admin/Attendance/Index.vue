@@ -236,15 +236,15 @@ function submitEdit() {
 
 // ─── Eliminar ──────────────────────────────────────────────────────────────
 function deleteCheckin(id) {
-    if (!confirm('¿Eliminar esta marcación?')) return;
+    if (!confirm('Delete this check-in?')) return;
     router.delete(`/admin/operations/attendance/${id}`, { preserveScroll: true });
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 const roleLabels = {
-    admin: 'Admin', model: 'Modelo', designer: 'Diseñador', media: 'Media',
-    volunteer: 'Voluntario', staff: 'Staff', attendee: 'Asistente',
-    vip: 'VIP', press: 'Prensa', sponsor: 'Sponsor',
+    admin: 'Admin', model: 'Model', designer: 'Designer', media: 'Media',
+    volunteer: 'Volunteer', staff: 'Staff', attendee: 'Attendee',
+    vip: 'VIP', press: 'Press', sponsor: 'Sponsor',
 };
 const roleColors = {
     volunteer: 'bg-purple-100 text-purple-700',
@@ -256,7 +256,7 @@ const roleColors = {
     press:     'bg-cyan-100 text-cyan-700',
     admin:     'bg-gray-100 text-gray-700',
 };
-const typeLabels  = { entry: 'Entrada', exit: 'Salida', single: 'Asistencia' };
+const typeLabels  = { entry: 'Entry', exit: 'Exit', single: 'Attendance' };
 const typeColors  = {
     entry:  'bg-green-100 text-green-700',
     exit:   'bg-red-100 text-red-700',
@@ -266,7 +266,7 @@ const methodColors = { kiosk: 'bg-blue-50 text-blue-600', manual: 'bg-gray-100 t
 
 function formatDate(dt, tz) {
     if (!dt) return '—';
-    return new Date(dt).toLocaleDateString('es', {
+    return new Date(dt).toLocaleDateString('en-US', {
         timeZone: tz || undefined,
         month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
     });
@@ -279,7 +279,7 @@ function initials(c) {
 <template>
     <AdminLayout>
         <template #header>
-            <h2 class="text-lg font-semibold text-gray-900">Asistencia</h2>
+            <h2 class="text-lg font-semibold text-gray-900">Attendance</h2>
         </template>
 
         <div class="space-y-5">
@@ -287,17 +287,17 @@ function initials(c) {
             <!-- Título y acciones -->
             <div class="flex items-center justify-between">
                 <div>
-                    <h3 class="text-2xl font-bold text-gray-900">Asistencia</h3>
-                    <p class="text-gray-500 text-sm mt-1">{{ checkins.total }} marcaciones en total</p>
+                    <h3 class="text-2xl font-bold text-gray-900">Attendance</h3>
+                    <p class="text-gray-500 text-sm mt-1">{{ checkins.total }} total check-ins</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <button @click="exportData"
                         class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
-                        <ArrowDownTrayIcon class="w-4 h-4 text-gray-500" /> Exportar Excel
+                        <ArrowDownTrayIcon class="w-4 h-4 text-gray-500" /> Export Excel
                     </button>
                     <button @click="showModal = true"
                         class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
-                        + Registrar manual
+                        + Register manual
                     </button>
                 </div>
             </div>
@@ -306,19 +306,19 @@ function initials(c) {
             <div class="grid grid-cols-4 gap-4">
                 <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
                     <p class="text-2xl font-bold text-gray-900">{{ summary.todayCount }}</p>
-                    <p class="text-xs text-gray-500 mt-1">Marcaciones hoy</p>
+                    <p class="text-xs text-gray-500 mt-1">Check-ins today</p>
                 </div>
                 <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
                     <p class="text-2xl font-bold text-green-600">{{ summary.entryCount }}</p>
-                    <p class="text-xs text-gray-500 mt-1">Entradas hoy</p>
+                    <p class="text-xs text-gray-500 mt-1">Entries today</p>
                 </div>
                 <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
                     <p class="text-2xl font-bold text-red-500">{{ summary.exitCount }}</p>
-                    <p class="text-xs text-gray-500 mt-1">Salidas hoy</p>
+                    <p class="text-xs text-gray-500 mt-1">Exits today</p>
                 </div>
                 <div class="bg-white rounded-xl border border-gray-200 p-4 text-center">
                     <p class="text-2xl font-bold text-gray-600">{{ summary.singleCount }}</p>
-                    <p class="text-xs text-gray-500 mt-1">Asistencias hoy</p>
+                    <p class="text-xs text-gray-500 mt-1">Attendances today</p>
                 </div>
             </div>
 
@@ -328,36 +328,36 @@ function initials(c) {
                     <!-- Búsqueda -->
                     <div class="relative flex-1 min-w-48">
                         <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <input v-model="search" type="text" placeholder="Buscar por nombre o email..."
+                        <input v-model="search" type="text" placeholder="Search by name or email..."
                             class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                     </div>
                     <!-- Evento -->
                     <select v-model="eventId"
                         class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                        <option value="">Todos los eventos</option>
+                        <option value="">All events</option>
                         <option v-for="ev in events" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
                     </select>
                     <!-- Día -->
                     <select v-model="eventDayId" :disabled="availableDays.length === 0"
                         class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 disabled:opacity-40">
-                        <option value="">Todos los días</option>
+                        <option value="">All days</option>
                         <option v-for="d in availableDays" :key="d.id" :value="d.id">{{ d.label }}</option>
                     </select>
                     <!-- Rol -->
                     <select v-model="role"
                         class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                        <option value="">Todos los roles</option>
+                        <option value="">All roles</option>
                         <template v-if="!allowed_roles || allowed_roles.includes('volunteer')">
-                            <option value="volunteer">Voluntario</option>
+                            <option value="volunteer">Volunteer</option>
                         </template>
                         <template v-if="!allowed_roles || allowed_roles.includes('staff')">
                             <option value="staff">Staff</option>
                         </template>
                         <template v-if="!allowed_roles || allowed_roles.includes('model')">
-                            <option value="model">Modelo</option>
+                            <option value="model">Model</option>
                         </template>
                         <template v-if="!allowed_roles || allowed_roles.includes('designer')">
-                            <option value="designer">Diseñador</option>
+                            <option value="designer">Designer</option>
                         </template>
                         <template v-if="!allowed_roles || allowed_roles.includes('media')">
                             <option value="media">Media</option>
@@ -366,29 +366,29 @@ function initials(c) {
                             <option value="vip">VIP</option>
                         </template>
                         <template v-if="!allowed_roles || allowed_roles.includes('press')">
-                            <option value="press">Prensa</option>
+                            <option value="press">Press</option>
                         </template>
                     </select>
                     <!-- Tipo -->
                     <select v-model="type"
                         class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                        <option value="">Todos los tipos</option>
-                        <option value="entry">Entrada</option>
-                        <option value="exit">Salida</option>
-                        <option value="single">Asistencia</option>
+                        <option value="">All types</option>
+                        <option value="entry">Entry</option>
+                        <option value="exit">Exit</option>
+                        <option value="single">Attendance</option>
                     </select>
                     <!-- Método -->
                     <select v-model="method"
                         class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                        <option value="">Todos los métodos</option>
-                        <option value="kiosk">Kiosco</option>
+                        <option value="">All methods</option>
+                        <option value="kiosk">Kiosk</option>
                         <option value="manual">Manual</option>
                     </select>
                     <!-- Limpiar -->
                     <button v-if="search || eventId || eventDayId || role || method || type"
                         @click="clearFilters"
                         class="flex items-center gap-1 px-3 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
-                        <XMarkIcon class="w-4 h-4" /> Limpiar
+                        <XMarkIcon class="w-4 h-4" /> Clear
                     </button>
                 </div>
             </div>
@@ -398,19 +398,19 @@ function initials(c) {
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 border-b border-gray-200">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Usuario</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Rol / Área</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Evento / Día</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipo</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Hora</th>
-                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Método</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">User</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Role / Area</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Event / Day</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Time</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Method</th>
                             <th class="px-4 py-3"></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         <tr v-if="checkins.data.length === 0">
                             <td colspan="7" class="px-4 py-12 text-center text-gray-400 text-sm">
-                                No hay marcaciones registradas con estos filtros.
+                                No check-ins registered with these filters.
                             </td>
                         </tr>
                         <tr v-for="c in checkins.data" :key="c.id" class="hover:bg-gray-50 transition-colors">
@@ -454,7 +454,7 @@ function initials(c) {
                             <td class="px-4 py-3">
                                 <span class="inline-block px-2 py-0.5 rounded text-xs font-medium"
                                     :class="methodColors[c.method]">
-                                    {{ c.method === 'kiosk' ? 'Kiosco' : 'Manual' }}
+                                    {{ c.method === 'kiosk' ? 'Kiosk' : 'Manual' }}
                                 </span>
                                 <p v-if="c.creator" class="text-gray-400 text-xs mt-0.5">
                                     {{ c.creator.first_name }} {{ c.creator.last_name }}
@@ -479,12 +479,12 @@ function initials(c) {
 
                 <!-- Paginación -->
                 <div v-if="checkins.last_page > 1" class="px-4 py-3 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
-                    <span>{{ checkins.from }}–{{ checkins.to }} de {{ checkins.total }} marcaciones</span>
+                    <span>{{ checkins.from }}–{{ checkins.to }} of {{ checkins.total }} check-ins</span>
                     <div class="flex gap-1">
                         <Link v-if="checkins.prev_page_url" :href="checkins.prev_page_url"
-                            class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50">← Anterior</Link>
+                            class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50">← Previous</Link>
                         <Link v-if="checkins.next_page_url" :href="checkins.next_page_url"
-                            class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50">Siguiente →</Link>
+                            class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50">Next →</Link>
                     </div>
                 </div>
             </div>
@@ -495,7 +495,7 @@ function initials(c) {
             <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
                 <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
                     <div class="flex items-center justify-between">
-                        <h3 class="font-semibold text-gray-900">Registrar marcación manual</h3>
+                        <h3 class="font-semibold text-gray-900">Register manual check-in</h3>
                         <button @click="showModal = false; manualForm.reset()" class="text-gray-400 hover:text-gray-600">
                             <XMarkIcon class="w-5 h-5" />
                         </button>
@@ -504,9 +504,9 @@ function initials(c) {
                     <form @submit.prevent="submitManual" class="space-y-3">
                         <!-- Buscar usuario -->
                         <div class="relative">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Buscar usuario</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Search user</label>
                             <input v-if="!selectedUser" v-model="userSearch" type="text"
-                                placeholder="Nombre, apellido, email, teléfono, instagram, marca..."
+                                placeholder="First name, last name, email, phone, instagram, brand..."
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
 
                             <!-- Usuario seleccionado -->
@@ -532,7 +532,7 @@ function initials(c) {
                             <p v-if="selectedUser?.error" class="text-red-500 text-xs mt-1">{{ selectedUser.error }}</p>
 
                             <!-- Resultados de búsqueda -->
-                            <div v-if="searchLoading" class="text-gray-400 text-xs mt-1">Buscando...</div>
+                            <div v-if="searchLoading" class="text-gray-400 text-xs mt-1">Searching...</div>
                             <div v-if="searchResults.length > 0"
                                 class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
                                 <button v-for="u in searchResults" :key="u.id" type="button"
@@ -551,18 +551,18 @@ function initials(c) {
                                 </button>
                             </div>
                             <p v-if="!searchLoading && userSearch.length >= 2 && searchResults.length === 0 && !selectedUser"
-                                class="text-gray-400 text-xs mt-1">No se encontraron usuarios activos.</p>
+                                class="text-gray-400 text-xs mt-1">No active users found.</p>
                         </div>
 
                         <!-- Evento (solo si usuario seleccionado) -->
                         <div v-if="selectedUser && !selectedUser.error">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Evento</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Event</label>
                             <div v-if="modalEvents.length === 0" class="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                                Este usuario no tiene eventos válidos para registrar asistencia.
+                                This user has no valid events to register attendance.
                             </div>
                             <select v-else v-model="manualForm.event_id"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="">— Seleccionar —</option>
+                                <option value="">— Select —</option>
                                 <option v-for="ev in modalEvents" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
                             </select>
                             <p v-if="manualForm.errors.event_id" class="text-red-500 text-xs mt-1">{{ manualForm.errors.event_id }}</p>
@@ -570,10 +570,10 @@ function initials(c) {
 
                         <!-- Día -->
                         <div v-if="selectedUser && manualForm.event_id">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Día</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Day</label>
                             <select v-model="manualForm.event_day_id" :disabled="modalDays.length === 0"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 disabled:opacity-40">
-                                <option value="">— Seleccionar —</option>
+                                <option value="">— Select —</option>
                                 <option v-for="d in modalDays" :key="d.id" :value="d.id">{{ d.label }}</option>
                             </select>
                             <p v-if="manualForm.errors.event_day_id" class="text-red-500 text-xs mt-1">{{ manualForm.errors.event_day_id }}</p>
@@ -581,17 +581,17 @@ function initials(c) {
 
                         <!-- Tipo (solo para volunteer/staff) -->
                         <div v-if="selectedUser && manualForm.event_id && needsEntryExit">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
                             <select v-model="manualForm.type"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="entry">Entrada</option>
-                                <option value="exit">Salida</option>
+                                <option value="entry">Entry</option>
+                                <option value="exit">Exit</option>
                             </select>
                         </div>
 
                         <!-- Fecha/hora -->
                         <div v-if="selectedUser && manualForm.event_id">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha y hora</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Date and time</label>
                             <input v-model="manualForm.checked_at" type="datetime-local"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             <p v-if="manualForm.errors.checked_at" class="text-red-500 text-xs mt-1">{{ manualForm.errors.checked_at }}</p>
@@ -599,7 +599,7 @@ function initials(c) {
 
                         <!-- Notas -->
                         <div v-if="selectedUser && manualForm.event_id">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Notas <span class="text-gray-400 font-normal">(opcional)</span></label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Notes <span class="text-gray-400 font-normal">(optional)</span></label>
                             <input v-model="manualForm.notes" type="text"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                         </div>
@@ -607,12 +607,12 @@ function initials(c) {
                         <div class="flex gap-3 pt-1">
                             <button type="button" @click="resetModal"
                                 class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-                                Cancelar
+                                Cancel
                             </button>
                             <button type="submit"
                                 :disabled="manualForm.processing || !selectedUser || !manualForm.event_id || !manualForm.event_day_id"
                                 class="flex-1 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
-                                Registrar
+                                Register
                             </button>
                         </div>
                     </form>
@@ -626,7 +626,7 @@ function initials(c) {
                 <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showEditModal = false" />
                 <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
                     <div class="flex items-center justify-between">
-                        <h3 class="font-semibold text-gray-900">Editar marcación</h3>
+                        <h3 class="font-semibold text-gray-900">Edit check-in</h3>
                         <button @click="showEditModal = false" class="text-gray-400 hover:text-gray-600">
                             <XMarkIcon class="w-5 h-5" />
                         </button>
@@ -641,17 +641,17 @@ function initials(c) {
                     <form @submit.prevent="submitEdit" class="space-y-4">
                         <!-- Tipo -->
                         <div v-if="editingCheckin && ['volunteer','staff'].includes(editingCheckin.user?.role)">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
                             <select v-model="editForm.type"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10">
-                                <option value="entry">Entrada</option>
-                                <option value="exit">Salida</option>
+                                <option value="entry">Entry</option>
+                                <option value="exit">Exit</option>
                             </select>
                         </div>
 
                         <!-- Fecha y hora -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha y hora</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Date and time</label>
                             <input v-model="editForm.checked_at" type="datetime-local"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10" />
                             <p v-if="editForm.errors.checked_at" class="text-red-500 text-xs mt-1">{{ editForm.errors.checked_at }}</p>
@@ -659,20 +659,20 @@ function initials(c) {
 
                         <!-- Notas -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Notas <span class="text-gray-400 font-normal">(opcional)</span></label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Notes <span class="text-gray-400 font-normal">(optional)</span></label>
                             <input v-model="editForm.notes" type="text"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10"
-                                placeholder="Agregar nota..." />
+                                placeholder="Add note..." />
                         </div>
 
                         <div class="flex gap-3 pt-1">
                             <button type="button" @click="showEditModal = false"
                                 class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-                                Cancelar
+                                Cancel
                             </button>
                             <button type="submit" :disabled="editForm.processing"
                                 class="flex-1 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
-                                Guardar
+                                Save
                             </button>
                         </div>
                     </form>

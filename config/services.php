@@ -27,6 +27,7 @@ return [
         'access_token' => env('SHOPIFY_ACCESS_TOKEN'),
         'api_version' => env('SHOPIFY_API_VERSION', '2025-01'),
         'webhook_secret' => env('SHOPIFY_WEBHOOK_SECRET'),
+        'storefront_domain' => env('SHOPIFY_STOREFRONT_DOMAIN', 'shoprunway7.com'),
     ],
 
     'twilio' => [

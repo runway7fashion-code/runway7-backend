@@ -25,11 +25,11 @@ const props = defineProps({
 // ── Helpers ──────────────────────────────────────────────────────────
 const pct = (a, b) => b > 0 ? Math.round((a / b) * 100) : 0;
 
-const today = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
 // ── Doughnut: estado de designers ────────────────────────────────────
 const doughnutData = computed(() => ({
-    labels: ['Registrado', 'Pendiente', 'Activo', 'Inactivo'],
+    labels: ['Registered', 'Pending', 'Active', 'Inactive'],
     datasets: [{
         data: [
             props.designerStatus.registered,
@@ -88,7 +88,7 @@ function statusBadge(status) {
     }[status] ?? 'bg-gray-100 text-gray-600';
 }
 function statusLabel(status) {
-    return { active: 'Activo', published: 'Publicado', draft: 'Borrador' }[status] ?? status;
+    return { active: 'Active', published: 'Published', draft: 'Draft' }[status] ?? status;
 }
 </script>
 
@@ -102,44 +102,44 @@ function statusLabel(status) {
 
             <!-- Header -->
             <div>
-                <h3 class="text-2xl font-bold text-gray-900 mb-1">Panel de Operaciones</h3>
+                <h3 class="text-2xl font-bold text-gray-900 mb-1">Operations Panel</h3>
                 <p class="text-gray-500 capitalize">{{ today }}</p>
             </div>
 
-            <!-- ── Eventos ──────────────────────────────────────────── -->
+            <!-- ── Events ──────────────────────────────────────────── -->
             <div>
-                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Eventos</p>
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Events</p>
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                     <div class="bg-white rounded-2xl p-5 border border-gray-200">
                         <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Total</p>
                         <p class="text-4xl font-bold text-gray-900">{{ eventStats.total }}</p>
                     </div>
                     <div class="bg-black text-white rounded-2xl p-5 border border-gray-800">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Activos</p>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Active</p>
                         <p class="text-4xl font-bold text-green-400">{{ eventStats.active }}</p>
                     </div>
                     <div class="bg-white rounded-2xl p-5 border border-gray-200">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Publicados</p>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Published</p>
                         <p class="text-4xl font-bold text-blue-600">{{ eventStats.published }}</p>
                     </div>
                     <div class="bg-white rounded-2xl p-5 border border-gray-200">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Borrador</p>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Draft</p>
                         <p class="text-4xl font-bold text-gray-500">{{ eventStats.draft }}</p>
                     </div>
                     <div class="bg-white rounded-2xl p-5 border border-gray-200">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Completado</p>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Completed</p>
                         <p class="text-4xl font-bold text-emerald-600">{{ eventStats.completed }}</p>
                     </div>
                     <div class="bg-white rounded-2xl p-5 border border-gray-200">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Cancelado</p>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Cancelled</p>
                         <p class="text-4xl font-bold text-red-500">{{ eventStats.cancelled }}</p>
                     </div>
                 </div>
             </div>
 
-            <!-- ── Participantes ────────────────────────────────────── -->
+            <!-- ── Participants ────────────────────────────────────── -->
             <div>
-                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Participantes del Evento</p>
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Event Participants</p>
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div v-for="(count, key) in participants" :key="key"
                         class="bg-white rounded-2xl p-5 border border-gray-200">
@@ -149,9 +149,9 @@ function statusLabel(status) {
                 </div>
             </div>
 
-            <!-- ── Métricas operativas ───────────────────────────────── -->
+            <!-- ── Operational metrics ───────────────────────────────── -->
             <div>
-                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Progreso Operativo</p>
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Operational Progress</p>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
                     <!-- Onboarding -->
@@ -163,26 +163,26 @@ function statusLabel(status) {
                             </span>
                         </div>
                         <p class="text-3xl font-bold text-gray-900 mb-1">{{ onboarding.sent }}<span class="text-base font-normal text-gray-400">/{{ onboarding.total }}</span></p>
-                        <p class="text-xs text-gray-400 mb-3">Emails enviados</p>
+                        <p class="text-xs text-gray-400 mb-3">Emails sent</p>
                         <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                             <div class="h-full bg-amber-400 rounded-full transition-all"
                                 :style="`width: ${pct(onboarding.sent, onboarding.total)}%`"></div>
                         </div>
                         <p v-if="onboarding.pending > 0" class="text-xs text-amber-600 mt-2">
-                            {{ onboarding.pending }} pendientes de envío
+                            {{ onboarding.pending }} pending to send
                         </p>
                     </div>
 
-                    <!-- Materiales -->
+                    <!-- Materials -->
                     <div class="bg-white rounded-2xl p-5 border border-gray-200">
                         <div class="flex items-center justify-between mb-3">
-                            <p class="text-sm font-semibold text-gray-700">Materiales</p>
+                            <p class="text-sm font-semibold text-gray-700">Materials</p>
                             <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
                                 {{ pct(materials.completed, materials.total) }}%
                             </span>
                         </div>
                         <p class="text-3xl font-bold text-gray-900 mb-1">{{ materials.completed }}<span class="text-base font-normal text-gray-400">/{{ materials.total }}</span></p>
-                        <p class="text-xs text-gray-400 mb-3">Enviados / confirmados</p>
+                        <p class="text-xs text-gray-400 mb-3">Sent / confirmed</p>
                         <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                             <div class="h-full bg-blue-500 rounded-full transition-all"
                                 :style="`width: ${pct(materials.completed, materials.total)}%`"></div>
@@ -198,28 +198,28 @@ function statusLabel(status) {
                             </span>
                         </div>
                         <p class="text-3xl font-bold text-gray-900 mb-1">{{ fittings.assigned }}<span class="text-base font-normal text-gray-400">/{{ fittings.total }}</span></p>
-                        <p class="text-xs text-gray-400 mb-3">Designers asignados</p>
+                        <p class="text-xs text-gray-400 mb-3">Designers assigned</p>
                         <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                             <div class="h-full bg-green-500 rounded-full transition-all"
                                 :style="`width: ${pct(fittings.assigned, fittings.total)}%`"></div>
                         </div>
                     </div>
 
-                    <!-- Passes & Nuevos (últimos 7 días) -->
+                    <!-- Passes & New (last 7 days) -->
                     <div class="bg-white rounded-2xl p-5 border border-gray-200">
-                        <p class="text-sm font-semibold text-gray-700 mb-3">Últimos 7 días</p>
+                        <p class="text-sm font-semibold text-gray-700 mb-3">Last 7 days</p>
                         <div class="space-y-3">
                             <div class="flex items-center justify-between">
-                                <span class="text-xs text-gray-500">Nuevos designers</span>
+                                <span class="text-xs text-gray-500">New designers</span>
                                 <span class="text-sm font-bold text-[#D4AF37]">+{{ recent.designers }}</span>
                             </div>
                             <div class="flex items-center justify-between">
-                                <span class="text-xs text-gray-500">Nuevas modelos</span>
+                                <span class="text-xs text-gray-500">New models</span>
                                 <span class="text-sm font-bold text-purple-600">+{{ recent.models }}</span>
                             </div>
                             <div class="border-t border-gray-100 pt-3">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs text-gray-500">Passes emitidos</span>
+                                    <span class="text-xs text-gray-500">Passes issued</span>
                                     <span class="text-sm font-bold text-gray-700">{{ passes.total }}</span>
                                 </div>
                                 <div class="flex items-center justify-between mt-1">
@@ -236,19 +236,19 @@ function statusLabel(status) {
             <!-- ── Charts ────────────────────────────────────────────── -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                <!-- Doughnut: Estado designers -->
+                <!-- Doughnut: Designer status -->
                 <div class="bg-white rounded-2xl border border-gray-200 p-6">
-                    <h4 class="font-bold text-gray-900 mb-1">Estado de Designers</h4>
-                    <p class="text-xs text-gray-400 mb-4">Distribución actual por estado</p>
+                    <h4 class="font-bold text-gray-900 mb-1">Designer Status</h4>
+                    <p class="text-xs text-gray-400 mb-4">Current distribution by status</p>
                     <div class="h-56">
                         <Doughnut :data="doughnutData" :options="doughnutOptions" />
                     </div>
                 </div>
 
-                <!-- Bar: Registros mensuales -->
+                <!-- Bar: Monthly registrations -->
                 <div class="bg-white rounded-2xl border border-gray-200 p-6">
-                    <h4 class="font-bold text-gray-900 mb-1">Registros por Mes</h4>
-                    <p class="text-xs text-gray-400 mb-4">Últimos 6 meses</p>
+                    <h4 class="font-bold text-gray-900 mb-1">Registrations by Month</h4>
+                    <p class="text-xs text-gray-400 mb-4">Last 6 months</p>
                     <div class="h-56">
                         <Bar :data="barData" :options="barOptions" />
                     </div>
@@ -256,16 +256,16 @@ function statusLabel(status) {
 
             </div>
 
-            <!-- ── Eventos activos ────────────────────────────────────── -->
+            <!-- ── Active events ────────────────────────────────────── -->
             <div v-if="activeEvents.length">
-                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Eventos Activos y Publicados</p>
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Active and Published Events</p>
                 <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
                     <table class="w-full text-sm">
                         <thead>
                             <tr class="border-b border-gray-100 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                                <th class="text-left px-6 py-3">Evento</th>
-                                <th class="text-left px-4 py-3">Estado</th>
-                                <th class="text-left px-4 py-3">Fechas</th>
+                                <th class="text-left px-6 py-3">Event</th>
+                                <th class="text-left px-4 py-3">Status</th>
+                                <th class="text-left px-4 py-3">Dates</th>
                                 <th class="text-center px-4 py-3">Designers</th>
                                 <th class="text-center px-4 py-3">Models</th>
                             </tr>
@@ -295,7 +295,7 @@ function statusLabel(status) {
                 </div>
             </div>
             <div v-else class="bg-white rounded-2xl border border-gray-200 p-8 text-center text-sm text-gray-400 italic">
-                No hay eventos activos o publicados actualmente.
+                No active or published events currently.
             </div>
 
         </div>

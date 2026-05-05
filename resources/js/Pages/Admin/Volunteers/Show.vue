@@ -36,21 +36,21 @@ function passStatusClass(s) {
     return { active: 'bg-green-50 text-green-700', cancelled: 'bg-red-50 text-red-600', used: 'bg-gray-100 text-gray-500' }[s] ?? 'bg-gray-100 text-gray-500';
 }
 function passStatusLabel(s) {
-    return { active: 'Activo', cancelled: 'Cancelado', used: 'Usado' }[s] ?? s;
+    return { active: 'Active', cancelled: 'Cancelled', used: 'Used' }[s] ?? s;
 }
 
 // Labels
 function genderLabel(g) {
-    return { female: 'Femenino', male: 'Masculino', non_binary: 'No binario' }[g] ?? '—';
+    return { female: 'Female', male: 'Male', non_binary: 'Non-binary' }[g] ?? '—';
 }
 function experienceLabel(e) {
-    return { none: 'Sin experiencia', some: 'Algo de experiencia', experienced: 'Con experiencia' }[e] ?? '—';
+    return { none: 'No experience', some: 'Some experience', experienced: 'Experienced' }[e] ?? '—';
 }
 function workStyleLabel(w) {
-    return { multitask: 'Multitarea / Dinámico', structured: 'Estructurado' }[w] ?? '—';
+    return { multitask: 'Multitask / Dynamic', structured: 'Structured' }[w] ?? '—';
 }
 function availabilityLabel(a) {
-    return { yes: 'Completa', no: 'No disponible', partially: 'Parcial' }[a] ?? '—';
+    return { yes: 'Full', no: 'Not available', partially: 'Partial' }[a] ?? '—';
 }
 function availabilityColor(a) {
     return { yes: 'text-green-600', no: 'text-red-600', partially: 'text-yellow-600' }[a] ?? 'text-gray-600';
@@ -59,13 +59,13 @@ function statusBadgeClass(s) {
     return { active: 'bg-green-50 text-green-700', inactive: 'bg-red-50 text-red-600', rejected: 'bg-orange-50 text-orange-700', pending: 'bg-yellow-50 text-yellow-700', applicant: 'bg-purple-50 text-purple-700' }[s] ?? 'bg-gray-50 text-gray-600';
 }
 function statusBadgeLabel(s) {
-    return { active: 'Activo', inactive: 'Inactivo', rejected: 'Rechazado', pending: 'Pendiente', applicant: 'Aplicante' }[s] ?? s;
+    return { active: 'Active', inactive: 'Inactive', rejected: 'Rejected', pending: 'Pending', applicant: 'Applicant' }[s] ?? s;
 }
 function commStatusClass(s) {
     return { queued: 'bg-yellow-100 text-yellow-700', sent: 'bg-green-100 text-green-700', failed: 'bg-red-100 text-red-700' }[s] ?? 'bg-gray-100 text-gray-600';
 }
 function commStatusLabel(s) {
-    return { queued: 'En cola', sent: 'Enviado', failed: 'Fallido' }[s] ?? s;
+    return { queued: 'Queued', sent: 'Sent', failed: 'Failed' }[s] ?? s;
 }
 function formatTime(t) {
     if (!t) return '—';
@@ -89,7 +89,7 @@ function formatDayDate(date) {
 
 // Status change
 function updateStatus(newStatus) {
-    if (!confirm(`¿Cambiar estado a "${statusBadgeLabel(newStatus)}"?`)) return;
+    if (!confirm(`Change status to "${statusBadgeLabel(newStatus)}"?`)) return;
     router.patch(`/admin/operations/volunteers/${props.volunteer.id}/status`, { status: newStatus }, { preserveScroll: true });
 }
 
@@ -105,7 +105,7 @@ function submitAssignEvent() {
 
 // Remove event
 function removeEvent(eventId, eventName) {
-    if (!confirm(`¿Quitar a ${props.volunteer.first_name} del evento "${eventName}"?`)) return;
+    if (!confirm(`Remove ${props.volunteer.first_name} from event "${eventName}"?`)) return;
     router.delete(`/admin/operations/volunteers/${props.volunteer.id}/remove-event/${eventId}`, { preserveScroll: true });
 }
 
@@ -128,19 +128,19 @@ function submitSchedule() {
 }
 
 function removeSchedule(scheduleId) {
-    if (!confirm('¿Eliminar este horario?')) return;
+    if (!confirm('Delete this schedule?')) return;
     router.delete(`/admin/operations/volunteers/${props.volunteer.id}/schedules/${scheduleId}`, { preserveScroll: true });
 }
 
 // Onboarding email
 function sendOnboarding() {
-    if (!confirm(`¿Enviar email de onboarding a ${props.volunteer.first_name}?`)) return;
+    if (!confirm(`Send onboarding email to ${props.volunteer.first_name}?`)) return;
     router.post(`/admin/operations/volunteers/${props.volunteer.id}/send-onboarding`, {}, { preserveScroll: true });
 }
 
 // Onboarding SMS
 function sendSms() {
-    if (!confirm(`¿Enviar SMS de onboarding a ${props.volunteer.first_name}?`)) return;
+    if (!confirm(`Send onboarding SMS to ${props.volunteer.first_name}?`)) return;
     router.post(`/admin/operations/volunteers/${props.volunteer.id}/send-onboarding-sms`, {}, { preserveScroll: true });
 }
 
@@ -151,7 +151,7 @@ function sendSms() {
         <template #header>
             <div class="flex items-center gap-3">
                 <Link href="/admin/operations/volunteers" class="flex items-center gap-1 text-gray-400 hover:text-gray-600 text-sm">
-                    <ArrowLeftIcon class="w-4 h-4" /> Voluntarios
+                    <ArrowLeftIcon class="w-4 h-4" /> Volunteers
                 </Link>
                 <span class="text-gray-300">/</span>
                 <h2 class="text-lg font-semibold text-gray-900">{{ volunteer.first_name }} {{ volunteer.last_name }}</h2>
@@ -176,7 +176,7 @@ function sendSms() {
                                 <h3 class="text-xl font-bold text-gray-900">{{ volunteer.first_name }} {{ volunteer.last_name }}</h3>
                                 <p class="text-gray-500 text-sm">
                                     {{ genderLabel(profile?.gender) }}
-                                    <span v-if="profile?.age"> · {{ profile.age }} años</span>
+                                    <span v-if="profile?.age"> · {{ profile.age }} years</span>
                                     <span v-if="profile?.location"> · {{ profile.location }}</span>
                                 </p>
                             </div>
@@ -186,7 +186,7 @@ function sendSms() {
                                 </span>
                                 <Link :href="`/admin/operations/volunteers/${volunteer.id}/edit`"
                                     class="px-4 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
-                                    Editar
+                                    Edit
                                 </Link>
                             </div>
                         </div>
@@ -215,29 +215,29 @@ function sendSms() {
             <!-- Perfil detallado -->
             <div class="grid grid-cols-2 gap-6">
                 <div class="bg-white rounded-2xl border border-gray-200 p-6">
-                    <h4 class="font-semibold text-gray-800 mb-4">Detalles del Voluntario</h4>
+                    <h4 class="font-semibold text-gray-800 mb-4">Volunteer Details</h4>
                     <dl class="space-y-3 text-sm">
-                        <div class="flex justify-between"><dt class="text-gray-500">Talla Camiseta</dt><dd class="font-medium">{{ profile?.tshirt_size || '—' }}</dd></div>
-                        <div class="flex justify-between"><dt class="text-gray-500">Experiencia</dt><dd class="font-medium">{{ experienceLabel(profile?.experience) }}</dd></div>
-                        <div class="flex justify-between"><dt class="text-gray-500">Estilo de Trabajo</dt><dd class="font-medium">{{ workStyleLabel(profile?.comfortable_fast_paced) }}</dd></div>
+                        <div class="flex justify-between"><dt class="text-gray-500">T-shirt Size</dt><dd class="font-medium">{{ profile?.tshirt_size || '—' }}</dd></div>
+                        <div class="flex justify-between"><dt class="text-gray-500">Experience</dt><dd class="font-medium">{{ experienceLabel(profile?.experience) }}</dd></div>
+                        <div class="flex justify-between"><dt class="text-gray-500">Work Style</dt><dd class="font-medium">{{ workStyleLabel(profile?.comfortable_fast_paced) }}</dd></div>
                         <div class="flex justify-between">
-                            <dt class="text-gray-500">Disponibilidad</dt>
+                            <dt class="text-gray-500">Availability</dt>
                             <dd class="font-medium" :class="availabilityColor(profile?.full_availability)">{{ availabilityLabel(profile?.full_availability) }}</dd>
                         </div>
                         <div v-if="profile?.resume_link" class="flex justify-between">
                             <dt class="text-gray-500">Resume</dt>
-                            <dd><a :href="profile.resume_link" target="_blank" class="text-blue-600 hover:underline text-xs">Ver resume</a></dd>
+                            <dd><a :href="profile.resume_link" target="_blank" class="text-blue-600 hover:underline text-xs">View resume</a></dd>
                         </div>
-                        <div class="flex justify-between"><dt class="text-gray-500">Registro</dt><dd class="font-medium">{{ new Date(volunteer.created_at).toLocaleDateString('es-US') }}</dd></div>
+                        <div class="flex justify-between"><dt class="text-gray-500">Registered</dt><dd class="font-medium">{{ new Date(volunteer.created_at).toLocaleDateString('en-US') }}</dd></div>
                     </dl>
                 </div>
 
                 <div class="bg-white rounded-2xl border border-gray-200 p-6">
-                    <h4 class="font-semibold text-gray-800 mb-4">Contribución</h4>
-                    <p class="text-sm text-gray-600 whitespace-pre-line">{{ profile?.contribution || 'No especificado.' }}</p>
+                    <h4 class="font-semibold text-gray-800 mb-4">Contribution</h4>
+                    <p class="text-sm text-gray-600 whitespace-pre-line">{{ profile?.contribution || 'Not specified.' }}</p>
 
-                    <h4 class="font-semibold text-gray-800 mt-6 mb-2">Notas Internas</h4>
-                    <p class="text-sm text-gray-500 italic whitespace-pre-line">{{ profile?.notes || 'Sin notas.' }}</p>
+                    <h4 class="font-semibold text-gray-800 mt-6 mb-2">Internal Notes</h4>
+                    <p class="text-sm text-gray-500 italic whitespace-pre-line">{{ profile?.notes || 'No notes.' }}</p>
                 </div>
             </div>
 
@@ -247,7 +247,7 @@ function sendSms() {
                     <div>
                         <h4 class="font-semibold text-gray-900">{{ ev.name }}</h4>
                         <p class="text-xs text-gray-500 mt-0.5">
-                            Estado: {{ { assigned: 'Agendado', checked_in: 'Check-in', completed: 'Completado', rejected: 'Rechazado', no_show: 'No se presentó' }[ev.pivot?.status] || ev.pivot?.status }}
+                            Status: {{ { assigned: 'Scheduled', checked_in: 'Check-in', completed: 'Completed', rejected: 'Rejected', no_show: 'No show' }[ev.pivot?.status] || ev.pivot?.status }}
                         </p>
                     </div>
                 </div>
@@ -270,13 +270,13 @@ function sendSms() {
                     </span>
                     <button @click="openPassModal(ev)"
                         class="ml-auto flex items-center gap-0.5 text-[11px] text-indigo-500 hover:text-indigo-700 font-medium cursor-pointer">
-                        Ver QR →
+                        View QR →
                     </button>
                 </div>
 
                 <!-- Horarios -->
                 <div>
-                    <p class="text-xs font-medium text-gray-500 mb-2">Horarios</p>
+                    <p class="text-xs font-medium text-gray-500 mb-2">Schedules</p>
                     <div v-if="getSchedulesForEvent(ev.id).length" class="space-y-1.5">
                         <div v-for="sch in getSchedulesForEvent(ev.id)" :key="sch.id"
                             class="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
@@ -286,7 +286,7 @@ function sendSms() {
                             <span class="text-sm font-medium text-blue-700">{{ formatTime(sch.start_time) }} — {{ formatTime(sch.end_time) }}</span>
                         </div>
                     </div>
-                    <p v-else class="text-xs text-gray-400 italic">Sin horarios asignados.</p>
+                    <p v-else class="text-xs text-gray-400 italic">No schedules assigned.</p>
                 </div>
 
                 <!-- Certificado -->
@@ -295,13 +295,13 @@ function sendSms() {
                         <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
                         </svg>
-                        <span class="text-xs font-medium text-gray-600">Certificado</span>
+                        <span class="text-xs font-medium text-gray-600">Certificate</span>
                         <span v-if="certificates?.[ev.id]"
                             class="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full">
-                            Ganado ✓
+                            Earned ✓
                         </span>
                         <span v-else class="inline-flex items-center bg-gray-100 text-gray-500 text-xs font-medium px-2 py-0.5 rounded-full">
-                            Pendiente
+                            Pending
                         </span>
                     </div>
                     <a v-if="certificates?.[ev.id]"
@@ -311,18 +311,18 @@ function sendSms() {
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                         </svg>
-                        Descargar PDF
+                        Download PDF
                     </a>
                 </div>
             </div>
 
             <div v-if="!assignedEvents.length" class="bg-white rounded-2xl border border-gray-200 p-6">
-                <p class="text-sm text-gray-400 italic text-center">No hay eventos asignados.</p>
+                <p class="text-sm text-gray-400 italic text-center">No events assigned.</p>
             </div>
 
             <!-- Historial de comunicaciones -->
             <div v-if="commLogs.length" class="bg-white rounded-2xl border border-gray-200 p-6">
-                <h4 class="font-semibold text-gray-800 mb-4">Historial de Comunicaciones</h4>
+                <h4 class="font-semibold text-gray-800 mb-4">Communication History</h4>
                 <div class="space-y-2">
                     <div v-for="log in commLogs" :key="log.id" class="flex items-center justify-between text-sm py-2 border-b border-gray-50 last:border-0">
                         <div class="flex items-center gap-2">
@@ -334,7 +334,7 @@ function sendSms() {
                             <span :class="commStatusClass(log.status)" class="text-xs font-medium rounded-full px-2 py-0.5">
                                 {{ commStatusLabel(log.status) }}
                             </span>
-                            <span class="text-gray-400 text-xs">{{ new Date(log.created_at).toLocaleString('es-US') }}</span>
+                            <span class="text-gray-400 text-xs">{{ new Date(log.created_at).toLocaleString('en-US') }}</span>
                         </div>
                     </div>
                 </div>
@@ -347,26 +347,26 @@ function sendSms() {
             <div v-if="showAssignModal" class="fixed inset-0 z-50 flex items-center justify-center">
                 <div class="absolute inset-0 bg-black/50" @click="showAssignModal = false"></div>
                 <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">Asignar a Evento</h3>
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">Assign to Event</h3>
                     <form @submit.prevent="submitAssignEvent" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Evento</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Event</label>
                             <select v-model="assignForm.event_id" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm">
-                                <option value="">Seleccionar...</option>
+                                <option value="">Select...</option>
                                 <option v-for="ev in events" :key="ev.id" :value="ev.id">
-                                    {{ ev.name }} — {{ { draft: 'Borrador', published: 'Publicado', active: 'Activo', completed: 'Completado' }[ev.status] ?? ev.status }}
+                                    {{ ev.name }} — {{ { draft: 'Draft', published: 'Published', active: 'Active', completed: 'Completed' }[ev.status] ?? ev.status }}
                                 </option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Área</label>
-                            <input v-model="assignForm.area" type="text" placeholder="ej: Backstage, Front of House..."
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Area</label>
+                            <input v-model="assignForm.area" type="text" placeholder="e.g. Backstage, Front of House..."
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm" />
                         </div>
                         <div class="flex justify-end gap-3">
-                            <button @click="showAssignModal = false" type="button" class="px-4 py-2 border border-gray-200 rounded-lg text-sm">Cancelar</button>
+                            <button @click="showAssignModal = false" type="button" class="px-4 py-2 border border-gray-200 rounded-lg text-sm">Cancel</button>
                             <button type="submit" :disabled="assignForm.processing || !assignForm.event_id"
-                                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium disabled:opacity-40">Asignar</button>
+                                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium disabled:opacity-40">Assign</button>
                         </div>
                     </form>
                 </div>
@@ -378,20 +378,20 @@ function sendSms() {
             <div v-if="showScheduleModal" class="fixed inset-0 z-50 flex items-center justify-center">
                 <div class="absolute inset-0 bg-black/50" @click="showScheduleModal = false"></div>
                 <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">Agregar Horario</h3>
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">Add Schedule</h3>
                     <form @submit.prevent="submitSchedule" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Evento</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Event</label>
                             <select v-model="scheduleForm.event_id" @change="onScheduleEventChange"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm">
-                                <option value="">Seleccionar...</option>
+                                <option value="">Select...</option>
                                 <option v-for="ev in assignedEvents" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Día</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Day</label>
                             <select v-model="scheduleForm.event_day_id" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm">
-                                <option value="">Seleccionar...</option>
+                                <option value="">Select...</option>
                                 <option v-for="day in selectedEventDays" :key="day.id" :value="day.id">
                                     {{ new Date(day.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) }} — {{ day.type }}
                                 </option>
@@ -399,18 +399,18 @@ function sendSms() {
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Hora Inicio</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
                                 <input v-model="scheduleForm.start_time" type="time" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm" />
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Hora Fin</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
                                 <input v-model="scheduleForm.end_time" type="time" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm" />
                             </div>
                         </div>
                         <div class="flex justify-end gap-3">
-                            <button @click="showScheduleModal = false" type="button" class="px-4 py-2 border border-gray-200 rounded-lg text-sm">Cancelar</button>
+                            <button @click="showScheduleModal = false" type="button" class="px-4 py-2 border border-gray-200 rounded-lg text-sm">Cancel</button>
                             <button type="submit" :disabled="scheduleForm.processing || !scheduleForm.event_day_id || !scheduleForm.start_time || !scheduleForm.end_time"
-                                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium disabled:opacity-40">Agregar</button>
+                                class="px-4 py-2 bg-black text-white rounded-lg text-sm font-medium disabled:opacity-40">Add</button>
                         </div>
                     </form>
                 </div>
@@ -437,12 +437,12 @@ function sendSms() {
                         {{ passStatusLabel(passModal.status) }}
                     </span>
                     <div v-if="passModal.schedules?.length" class="text-center">
-                        <p class="text-xs text-gray-500 font-medium mb-1">Días asignados</p>
+                        <p class="text-xs text-gray-500 font-medium mb-1">Assigned days</p>
                         <p v-for="sch in passModal.schedules" :key="sch.id" class="text-xs text-gray-400">
                             {{ formatDayDate(sch.event_day?.date) }} · {{ formatTime(sch.start_time) }} — {{ formatTime(sch.end_time) }}
                         </p>
                     </div>
-                    <p v-else class="text-xs text-gray-400">Sin horarios asignados</p>
+                    <p v-else class="text-xs text-gray-400">No schedules assigned</p>
                 </div>
             </div>
         </Teleport>

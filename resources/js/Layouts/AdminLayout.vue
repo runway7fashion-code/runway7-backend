@@ -38,6 +38,7 @@ import {
     ChatBubbleBottomCenterTextIcon,
     BellAlertIcon,
     StarIcon,
+    CreditCardIcon,
 } from '@heroicons/vue/24/outline';
 
 const page = usePage();
@@ -52,8 +53,8 @@ function hasSection(section) {
 
 const allNavItems = [
     { name: 'Dashboard',    href: '/admin',       exact: true,  section: 'dashboard',          icon: HomeIcon },
-    { name: 'Usuarios',     href: '/admin/users',  exact: false, section: 'users',              icon: UsersIcon },
-    { name: 'Pases',        href: '/admin/passes',           exact: false, section: 'tickets_management', icon: TicketIcon },
+    { name: 'Users',        href: '/admin/users',  exact: false, section: 'users',              icon: UsersIcon },
+    { name: 'Passes',       href: '/admin/passes',           exact: false, section: 'tickets_management', icon: TicketIcon },
     { name: 'Artworks',     href: '/admin/tickets/artworks', exact: false, section: 'tickets_management', icon: PhotoIcon },
     { name: 'Logs',         href: '/admin/logs',   exact: false, section: 'activity_logs',      icon: DocumentTextIcon },
 ];
@@ -93,18 +94,24 @@ const communicationsItems = computed(() => {
     ];
 });
 
-const showAccounting = computed(() => hasSection('accounting_dashboard') || hasSection('accounting_payments'));
+const showAccounting = computed(() => hasSection('accounting_dashboard') || hasSection('accounting_payments') || hasSection('accounting_subscriptions'));
 const accountingItems = computed(() => {
     const items = [];
     if (hasSection('accounting_dashboard')) items.push({ name: 'Dashboard',            href: '/admin/accounting/dashboard',      icon: PresentationChartBarIcon });
     if (hasSection('accounting_payments')) {
-        items.push({ name: 'Diseñadores',          href: '/admin/accounting/designers-list',  icon: UsersIcon });
-        items.push({ name: 'Deudas',               href: '/admin/accounting/overdue',         icon: ExclamationTriangleIcon });
-        items.push({ name: 'Historial',            href: '/admin/accounting/cases',           icon: ClipboardDocumentListIcon });
-        items.push({ name: 'Liquidez',             href: '/admin/accounting/liquidity',       icon: ArrowTrendingUpIcon });
-        items.push({ name: 'Pagos Diseñadores',    href: '/admin/accounting/payments',        icon: BanknotesIcon });
-        items.push({ name: 'Registro de Pagos',    href: '/admin/accounting/payment-records', icon: DocumentTextIcon });
-        items.push({ name: 'Payment Methods',     href: '/admin/accounting/payment-methods', icon: CurrencyDollarIcon });
+        items.push({ name: 'Designers',            href: '/admin/accounting/designers-list',  icon: UsersIcon });
+        items.push({ name: 'Overdue',              href: '/admin/accounting/overdue',         icon: ExclamationTriangleIcon });
+        items.push({ name: 'History',              href: '/admin/accounting/cases',           icon: ClipboardDocumentListIcon });
+        items.push({ name: 'Liquidity',            href: '/admin/accounting/liquidity',       icon: ArrowTrendingUpIcon });
+        items.push({ name: 'Designer Payments',    href: '/admin/accounting/payments',        icon: BanknotesIcon });
+        items.push({ name: 'Payment Records',      href: '/admin/accounting/payment-records', icon: DocumentTextIcon });
+        items.push({ name: 'Payment Methods',      href: '/admin/accounting/payment-methods', icon: CurrencyDollarIcon });
+    }
+    if (hasSection('accounting_subscriptions')) {
+        items.push({ name: 'Subs Dashboard',       href: '/admin/accounting/subscriptions/dashboard',       icon: PresentationChartBarIcon });
+        items.push({ name: 'Subscriptions',        href: '/admin/accounting/subscriptions',                 icon: CreditCardIcon });
+        items.push({ name: 'Renewals',             href: '/admin/accounting/subscriptions/renewals',        icon: BellAlertIcon });
+        items.push({ name: 'Cards',                href: '/admin/accounting/subscriptions/payment-methods', icon: CurrencyDollarIcon });
     }
     return items;
 });
@@ -158,7 +165,7 @@ const salesItems = computed(() => {
     const items = [];
     if (hasSection('sales_dashboard')) items.push({ name: 'Dashboard', href: '/admin/sales/dashboard', icon: PresentationChartBarIcon });
     if (hasSection('sales_designers')) items.push({ name: 'Designers', href: '/admin/sales/designers', icon: PaintBrushIcon });
-    if (hasSection('sales_leads')) items.push({ name: 'Web Leads', href: '/admin/sales/leads', icon: UserPlusIcon });
+    if (hasSection('sales_leads')) items.push({ name: 'Leads', href: '/admin/sales/leads', icon: UserPlusIcon });
     if (hasSection('sales_leads')) items.push({ name: 'Analytics', href: '/admin/sales/analytics', icon: ChartBarSquareIcon });
     if (hasSection('sales_dashboard') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Sales History', href: '/admin/sales/history', icon: ChartBarIcon });
     if (hasSection('sales_leads') && (isAdmin.value || isSalesLider.value)) items.push({ name: 'Tags', href: '/admin/sales/tags', icon: TagIcon });
@@ -274,7 +281,7 @@ function botTimeAgo(date) {
     const d = new Date(date);
     const now = new Date();
     const diff = Math.floor((now - d) / 1000);
-    if (diff < 60) return 'ahora';
+    if (diff < 60) return 'now';
     if (diff < 3600) return Math.floor(diff / 60) + 'min';
     if (diff < 86400) return Math.floor(diff / 3600) + 'h';
     return Math.floor(diff / 86400) + 'd';
@@ -341,7 +348,7 @@ async function requestNotifPermission() {
 function showSystemNotification(notif) {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     try {
-        const n = new Notification(notif.data?.title ?? 'Nueva notificación', {
+        const n = new Notification(notif.data?.title ?? 'New notification', {
             body: notif.data?.message ?? '',
             icon: '/favicon.ico',
             tag: notif.id, // evita duplicados
@@ -415,11 +422,11 @@ function logout() {
             <div :class="['py-5 border-b border-gray-800 flex items-center', sidebarCollapsed ? 'justify-center px-2' : 'justify-between px-6']">
                 <div v-if="!sidebarCollapsed">
                     <img src="/images/logo.webp" alt="Runway7" class="h-20 mx-auto" />
-                    <p class="text-gray-500 text-xs mt-2 tracking-wider">PANEL ADMINISTRATIVO</p>
+                    <p class="text-gray-500 text-xs mt-2 tracking-wider">ADMIN PANEL</p>
                 </div>
                 <button
                     @click="sidebarCollapsed = !sidebarCollapsed"
-                    :title="sidebarCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'"
+                    :title="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
                     class="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors flex-shrink-0"
                 >
                     <ChevronDoubleLeftIcon v-if="!sidebarCollapsed" class="h-5 w-5" />
@@ -480,15 +487,15 @@ function logout() {
                     </div>
                 </template>
 
-                <!-- Contabilidad -->
+                <!-- Accounting -->
                 <template v-if="showAccounting">
                     <div class="pt-3 mt-3 border-t border-gray-800">
-                        <p v-if="!sidebarCollapsed" class="px-3 mb-2 text-xs uppercase tracking-widest text-gray-600">Contabilidad</p>
+                        <p v-if="!sidebarCollapsed" class="px-3 mb-2 text-xs uppercase tracking-widest text-gray-600">Accounting</p>
                         <Link v-for="sub in accountingItems" :key="sub.name" :href="sub.href"
                             :title="sidebarCollapsed ? sub.name : ''"
                             class="flex items-center py-2.5 rounded-lg text-sm font-medium transition-all duration-150"
                             :class="[
-                                (sub.href === '/admin/accounting/payments' ? $page.url.startsWith('/admin/accounting/payments') && !$page.url.startsWith('/admin/accounting/payment-records') : sub.href === '/admin/accounting/designers-list' ? $page.url.startsWith('/admin/accounting/designers-list') : $page.url.startsWith(sub.href))
+                                (sub.href === '/admin/accounting/payments' ? $page.url.startsWith('/admin/accounting/payments') && !$page.url.startsWith('/admin/accounting/payment-records') : sub.href === '/admin/accounting/designers-list' ? $page.url.startsWith('/admin/accounting/designers-list') : sub.href === '/admin/accounting/subscriptions' ? ($page.url.startsWith('/admin/accounting/subscriptions') && !$page.url.startsWith('/admin/accounting/subscriptions/dashboard') && !$page.url.startsWith('/admin/accounting/subscriptions/renewals') && !$page.url.startsWith('/admin/accounting/subscriptions/payment-methods')) : $page.url.startsWith(sub.href))
                                     ? 'bg-yellow-900/30 text-yellow-400'
                                     : 'text-gray-400 hover:text-white hover:bg-gray-800',
                                 sidebarCollapsed ? 'justify-center px-0' : 'px-3'
@@ -556,11 +563,11 @@ function logout() {
                     </div>
                 </template>
 
-                <!-- Ajustes (collapsible) -->
+                <!-- Settings (collapsible) -->
                 <div v-if="showSettings" class="pt-3 mt-3 border-t border-gray-800">
                     <button
                         @click="toggleSettings"
-                        :title="sidebarCollapsed ? 'Ajustes' : ''"
+                        :title="sidebarCollapsed ? 'Settings' : ''"
                         class="flex items-center w-full py-2.5 rounded-lg text-sm font-medium transition-all duration-150"
                         :class="[
                             $page.url.startsWith('/admin/settings')
@@ -570,7 +577,7 @@ function logout() {
                         ]">
                         <Cog6ToothIcon :class="['h-5 w-5 flex-shrink-0', sidebarCollapsed ? '' : 'mr-3']" />
                         <template v-if="!sidebarCollapsed">
-                            Ajustes
+                            Settings
                             <ChevronRightIcon class="ml-auto h-4 w-4 transition-transform" :class="settingsOpen ? 'rotate-90' : ''" />
                         </template>
                     </button>
@@ -615,12 +622,12 @@ function logout() {
                 </div>
                 <button
                     @click="logout"
-                    :title="sidebarCollapsed ? 'Cerrar sesión' : ''"
+                    :title="sidebarCollapsed ? 'Sign out' : ''"
                     class="w-full text-gray-400 hover:text-white text-sm py-2 rounded-lg hover:bg-gray-800 transition-colors flex items-center"
                     :class="sidebarCollapsed ? 'justify-center px-0' : 'text-left px-3'"
                 >
                     <ArrowRightOnRectangleIcon class="h-4 w-4 flex-shrink-0" />
-                    <span v-if="!sidebarCollapsed" class="ml-2">Cerrar sesión</span>
+                    <span v-if="!sidebarCollapsed" class="ml-2">Sign out</span>
                 </button>
             </div>
         </aside>
@@ -643,11 +650,11 @@ function logout() {
                         </button>
                         <div v-if="showNotifDropdown" class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
                             <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                                <h4 class="text-sm font-semibold text-gray-900">Notificaciones</h4>
-                                <button v-if="unreadCount" @click="markAllRead" class="text-xs text-blue-600 hover:underline">Marcar leídas</button>
+                                <h4 class="text-sm font-semibold text-gray-900">Notifications</h4>
+                                <button v-if="unreadCount" @click="markAllRead" class="text-xs text-blue-600 hover:underline">Mark as read</button>
                             </div>
                             <div class="max-h-72 overflow-y-auto">
-                                <div v-if="!notifications.length" class="px-4 py-6 text-center text-gray-400 text-sm">Sin notificaciones</div>
+                                <div v-if="!notifications.length" class="px-4 py-6 text-center text-gray-400 text-sm">No notifications</div>
                                 <component v-for="n in notifications" :key="n.id"
                                     :is="n.data.screen === 'chat' && n.data.conversation_id ? Link : 'div'"
                                     :href="n.data.screen === 'chat' && n.data.conversation_id ? `/admin/operations/chats/${n.data.conversation_id}` : undefined"
@@ -661,12 +668,12 @@ function logout() {
                                         <span v-if="n.data.message_count > 1" class="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">+{{ n.data.message_count - 1 }}</span>
                                     </div>
                                     <p class="text-xs text-gray-500 mt-0.5 truncate">{{ n.data.body || n.data.message }}</p>
-                                    <p class="text-xs text-gray-400 mt-1">{{ new Date(n.created_at).toLocaleString('es-US') }}</p>
+                                    <p class="text-xs text-gray-400 mt-1">{{ new Date(n.created_at).toLocaleString('en-US') }}</p>
                                 </component>
                             </div>
                         </div>
                     </div>
-                    <span class="text-sm text-gray-500">{{ new Date().toLocaleDateString('es-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}</span>
+                    <span class="text-sm text-gray-500">{{ new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}</span>
                 </div>
             </header>
 
@@ -700,12 +707,12 @@ function logout() {
                 <div class="flex items-center gap-2">
                     <span class="text-lg">🤖</span>
                     <div>
-                        <div class="text-sm font-semibold">Hola {{ user?.first_name }}, soy R7</div>
+                        <div class="text-sm font-semibold">Hi {{ user?.first_name }}, I'm R7</div>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button v-if="botUnreadCount > 0" @click="markAllBotRead" class="text-xs text-gray-400 hover:text-white">Leer todo</button>
-                    <button @click="showBotInfo = true" class="text-gray-400 hover:text-white text-sm leading-none" title="¿Qué puede hacer R7?">?</button>
+                    <button v-if="botUnreadCount > 0" @click="markAllBotRead" class="text-xs text-gray-400 hover:text-white">Read all</button>
+                    <button @click="showBotInfo = true" class="text-gray-400 hover:text-white text-sm leading-none" title="What can R7 do?">?</button>
                     <button @click="botOpen = false" class="text-gray-400 hover:text-white text-lg leading-none">&times;</button>
                 </div>
             </div>
@@ -714,7 +721,7 @@ function logout() {
             <div ref="botChatContainer" class="flex-1 overflow-y-auto p-3 space-y-2">
                 <div v-if="botMessages.length === 0" class="text-center text-gray-400 text-sm mt-16">
                     <span class="text-3xl block mb-2">🤖</span>
-                    No hay mensajes aún
+                    No messages yet
                 </div>
                 <div v-for="msg in botMessages" :key="msg.id"
                     @click="!msg.is_read && markBotRead(msg.id)"
@@ -731,7 +738,7 @@ function logout() {
                             </div>
                             <p :class="msg.type === 'user_msg' ? 'text-white text-xs leading-relaxed' : 'text-gray-600 text-xs mt-0.5 whitespace-pre-line leading-relaxed'">{{ msg.message }}</p>
                             <a v-if="msg.action_url" :href="msg.action_url" class="inline-block mt-1.5 text-[11px] font-medium text-blue-600 hover:text-blue-800">
-                                {{ msg.action_label || 'Ver detalle' }} →
+                                {{ msg.action_label || 'View details' }} →
                             </a>
                         </div>
                     </div>
@@ -742,7 +749,7 @@ function logout() {
             <div class="border-t border-gray-100 px-3 py-2 flex-shrink-0">
                 <form @submit.prevent="sendBotMessage" class="flex items-center gap-2">
                     <input v-model="botInput" type="text" :disabled="botLoading"
-                        :placeholder="botLoading ? 'R7 está pensando...' : 'Pregúntale algo a R7...'"
+                        :placeholder="botLoading ? 'R7 is thinking...' : 'Ask R7 something...'"
                         class="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-black focus:ring-1 focus:ring-black" />
                     <button type="submit" :disabled="!botInput.trim() || botLoading"
                         class="w-8 h-8 bg-black text-white rounded-lg flex items-center justify-center hover:bg-gray-800 disabled:opacity-30 transition-colors flex-shrink-0">
@@ -754,36 +761,36 @@ function logout() {
             <!-- Bot Info Modal -->
             <div v-if="showBotInfo" class="absolute inset-0 bg-white rounded-2xl z-10 flex flex-col overflow-hidden">
                 <div class="bg-black text-white px-4 py-3 flex items-center justify-between flex-shrink-0">
-                    <span class="text-sm font-semibold">¿Qué puede hacer R7?</span>
+                    <span class="text-sm font-semibold">What can R7 do?</span>
                     <button @click="showBotInfo = false" class="text-gray-400 hover:text-white text-lg leading-none">&times;</button>
                 </div>
                 <div class="flex-1 overflow-y-auto p-4 space-y-4 text-xs text-gray-700">
                     <div>
-                        <p class="font-semibold text-gray-900 mb-1.5">Crear actividades</p>
+                        <p class="font-semibold text-gray-900 mb-1.5">Create activities</p>
                         <div class="space-y-1.5 text-gray-500">
-                            <p>📞 "Agenda una llamada con Joseph para mañana a las 3pm"</p>
-                            <p>📧 "Programa un email para Joseph el lunes a las 10am"</p>
-                            <p>👥 "Agenda una reunión con Joseph para el viernes a las 2pm"</p>
+                            <p>📞 "Schedule a call with Joseph for tomorrow at 3pm"</p>
+                            <p>📧 "Schedule an email for Joseph on Monday at 10am"</p>
+                            <p>👥 "Schedule a meeting with Joseph for Friday at 2pm"</p>
                         </div>
                     </div>
                     <div>
-                        <p class="font-semibold text-gray-900 mb-1.5">Crear notas</p>
+                        <p class="font-semibold text-gray-900 mb-1.5">Create notes</p>
                         <div class="space-y-1.5 text-gray-500">
-                            <p>📝 "Crea una nota para Joseph que contestó la llamada y hará el pago"</p>
-                            <p>📝 "Agrega nota a Joseph: pidió más info del paquete Gold"</p>
+                            <p>📝 "Create a note for Joseph that he answered the call and will make the payment"</p>
+                            <p>📝 "Add note to Joseph: asked for more info on the Gold package"</p>
                         </div>
                     </div>
                     <div>
-                        <p class="font-semibold text-gray-900 mb-1.5">Consultar información</p>
+                        <p class="font-semibold text-gray-900 mb-1.5">Get information</p>
                         <div class="space-y-1.5 text-gray-500">
-                            <p>📊 "¿Cuántas actividades tengo hoy?"</p>
-                            <p>📊 "¿Cuántos leads nuevos hay?"</p>
-                            <p>📊 "¿Qué leads están en negociación?"</p>
-                            <p>📊 "Dame un resumen de mi semana"</p>
+                            <p>📊 "How many activities do I have today?"</p>
+                            <p>📊 "How many new leads are there?"</p>
+                            <p>📊 "Which leads are in negotiation?"</p>
+                            <p>📊 "Give me a summary of my week"</p>
                         </div>
                     </div>
                     <div class="pt-2 border-t border-gray-100">
-                        <p class="text-[10px] text-gray-400">R7 siempre pedirá confirmación antes de crear cualquier actividad o nota. Puedes cancelar respondiendo "no".</p>
+                        <p class="text-[10px] text-gray-400">R7 will always ask for confirmation before creating any activity or note. You can cancel by replying "no".</p>
                     </div>
                 </div>
             </div>

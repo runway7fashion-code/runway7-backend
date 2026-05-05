@@ -253,7 +253,11 @@ class User extends Authenticatable
     public function eventsAsMedia()
     {
         return $this->belongsToMany(Event::class, 'event_media', 'media_id', 'event_id')
-            ->withPivot(['status', 'checked_in_at', 'notes'])
+            ->withPivot([
+                'status', 'checked_in_at', 'notes',
+                'kit_type', 'addons', 'payment_status',
+                'shopify_order_number', 'total_amount', 'paid_at', 'registration_token',
+            ])
             ->withTimestamps();
     }
 

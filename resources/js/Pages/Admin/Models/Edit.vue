@@ -120,7 +120,7 @@ function uploadPhoto(position) {
 }
 
 function deletePhoto(position) {
-    if (!confirm(`¿Eliminar foto ${position}?`)) return;
+    if (!confirm(`Delete photo ${position}?`)) return;
     router.delete(`/admin/operations/models/${props.model.id}/delete-photo/${position}`, {
         preserveScroll: true,
         onSuccess: () => { compCardPhotos.value[position - 1] = null; },
@@ -155,7 +155,7 @@ function uploadProfilePicture() {
 }
 
 function deleteProfilePicture() {
-    if (!confirm('¿Eliminar la foto de perfil?')) return;
+    if (!confirm('Delete profile picture?')) return;
     router.delete(`/admin/operations/models/${props.model.id}/delete-profile-picture`, {
         preserveScroll: true,
         onSuccess: () => { profilePicture.value = null; },
@@ -207,7 +207,7 @@ function assignEvent() {
 }
 
 function removeFromEvent(eventId, eventName) {
-    if (!confirm(`¿Quitar del evento "${eventName}"?`)) return;
+    if (!confirm(`Remove from event "${eventName}"?`)) return;
     router.delete(`/admin/operations/models/${props.model.id}/remove-event/${eventId}`, { preserveScroll: true });
 }
 
@@ -467,7 +467,7 @@ function submit() {
                                 class="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500/20" />
                             <span class="text-sm font-medium text-gray-700">Model Kit pagado ($9.99 — R7 T-Shirt + R7 Tote Bag)</span>
                             <span v-if="form.model_kit_paid_at" class="text-xs text-gray-400">
-                                ({{ new Date(form.model_kit_paid_at).toLocaleDateString('es-US', { month: 'short', day: 'numeric', year: 'numeric' }) }})
+                                ({{ new Date(form.model_kit_paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }})
                             </span>
                         </label>
                     </div>
@@ -535,7 +535,7 @@ function submit() {
                         <button type="button" @click="assignEvent"
                             :disabled="!selectedEventId"
                             class="w-full py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors">
-                            {{ model.events?.some(e => e.id == selectedEventId) ? 'Actualizar horario de casting' : 'Asignar al evento' }}
+                            {{ model.events?.some(e => e.id == selectedEventId) ? 'Update casting time' : 'Assign to event' }}
                         </button>
                     </div>
                 </div>
@@ -568,7 +568,7 @@ function submit() {
                                 <button type="button" @click="uploadProfilePicture"
                                     :disabled="uploadingProfile"
                                     class="px-3 py-1.5 text-xs bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors">
-                                    {{ uploadingProfile ? 'Subiendo...' : (profilePicture ? 'Cambiar foto' : 'Subir foto') }}
+                                    {{ uploadingProfile ? 'Uploading...' : (profilePicture ? 'Change photo' : 'Upload photo') }}
                                 </button>
                                 <button v-if="profilePicture" type="button" @click="deleteProfilePicture"
                                     class="px-3 py-1.5 text-xs border border-red-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors">

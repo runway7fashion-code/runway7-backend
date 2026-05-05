@@ -12,3 +12,7 @@ Schedule::command('sales:bot-check')->everyFiveMinutes();
 Schedule::command('sponsorship:bot-check')->everyFiveMinutes();
 
 Schedule::command('materials:send-deadline-reminders')->dailyAt('09:00');
+
+Schedule::command('subscriptions:send-renewal-reminders')->dailyAt('09:15');
+
+Schedule::command('media:clean-expired-registrations')->dailyAt('03:00');

@@ -26,15 +26,15 @@ const statusColors = {
 };
 
 const experienceLabels = {
-    none: 'Sin experiencia',
-    some: 'Algo de experiencia',
-    experienced: 'Con experiencia',
+    none: 'No experience',
+    some: 'Some experience',
+    experienced: 'Experienced',
 };
 
 const availabilityLabels = {
-    yes: 'Completa',
-    no: 'No disponible',
-    partially: 'Parcial',
+    yes: 'Full',
+    no: 'Not available',
+    partially: 'Partial',
 };
 
 const availabilityColors = {
@@ -110,7 +110,7 @@ function getPassForEvent(vol, eventId) {
 }
 
 function passStatusLabel(s) {
-    return { active: 'Activo', cancelled: 'Cancelado', used: 'Usado' }[s] ?? s;
+    return { active: 'Active', cancelled: 'Cancelled', used: 'Used' }[s] ?? s;
 }
 
 function passStatusClass(s) {
@@ -148,8 +148,8 @@ function updateStatus(vol, newStatus) {
         if (!hasEvent || !hasSchedules) {
             statusAlertVol.value = vol;
             statusAlertReason.value = !hasEvent
-                ? 'no tiene un evento asignado. Asígnale un evento primero.'
-                : 'no tiene horarios asignados. Asígnale horarios primero.';
+                ? 'has no event assigned. Assign an event first.'
+                : 'has no schedules assigned. Assign schedules first.';
             nextTick(() => {
                 const sel = document.querySelector(`[data-status-select="${vol.id}"]`);
                 if (sel) sel.value = vol.status;
@@ -161,23 +161,23 @@ function updateStatus(vol, newStatus) {
 }
 
 function sendBulkOnboarding() {
-    if (!confirm(`¿Enviar email de onboarding a ${props.pendingEmailCount} voluntarios pendientes?`)) return;
+    if (!confirm(`Send onboarding email to ${props.pendingEmailCount} pending volunteers?`)) return;
     router.post('/admin/operations/volunteers/send-bulk-onboarding', {}, { preserveScroll: true });
 }
 
 function sendBulkSms() {
-    if (!confirm(`¿Enviar SMS de onboarding a ${props.pendingSmsCount} voluntarios pendientes?`)) return;
+    if (!confirm(`Send onboarding SMS to ${props.pendingSmsCount} pending volunteers?`)) return;
     router.post('/admin/operations/volunteers/send-bulk-onboarding-sms', {}, { preserveScroll: true });
 }
 
 function sendOnboardingEmail(vol) {
-    if (!confirm(`¿Enviar email de onboarding a ${vol.first_name} ${vol.last_name}?`)) return;
+    if (!confirm(`Send onboarding email to ${vol.first_name} ${vol.last_name}?`)) return;
     router.post(`/admin/operations/volunteers/${vol.id}/send-onboarding`, {}, { preserveScroll: true });
 }
 
 function sendOnboardingSms(vol) {
-    if (!vol.phone) { alert('Este voluntario no tiene teléfono registrado.'); return; }
-    if (!confirm(`¿Enviar SMS de onboarding a ${vol.first_name} ${vol.last_name}?`)) return;
+    if (!vol.phone) { alert('This volunteer has no phone registered.'); return; }
+    if (!confirm(`Send onboarding SMS to ${vol.first_name} ${vol.last_name}?`)) return;
     router.post(`/admin/operations/volunteers/${vol.id}/send-onboarding-sms`, {}, { preserveScroll: true });
 }
 
@@ -195,14 +195,14 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
 <template>
     <AdminLayout>
         <template #header>
-            <h2 class="text-lg font-semibold text-gray-900">Voluntarios</h2>
+            <h2 class="text-lg font-semibold text-gray-900">Volunteers</h2>
         </template>
 
         <div>
             <div class="flex items-center justify-between mb-6">
                 <div>
-                    <h3 class="text-2xl font-bold text-gray-900">Voluntarios</h3>
-                    <p class="text-gray-500 text-sm mt-1">{{ volunteers.total }} voluntarios registrados</p>
+                    <h3 class="text-2xl font-bold text-gray-900">Volunteers</h3>
+                    <p class="text-gray-500 text-sm mt-1">{{ volunteers.total }} registered volunteers</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <div v-if="twilioBalance" class="flex flex-col items-end px-3 py-1.5 border border-gray-200 rounded-lg bg-white">
@@ -213,12 +213,12 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         <button @click="sendBulkOnboarding"
                             class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
                             <EnvelopeIcon class="w-4 h-4 text-gray-500" />
-                            Enviar emails
+                            Send emails
                             <span class="bg-amber-100 text-amber-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ pendingEmailCount }}</span>
                         </button>
                         <button @click="showEmailInfoModal = true"
                             class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                            title="¿Cómo funciona el envío masivo?">
+                            title="How does bulk sending work?">
                             <InformationCircleIcon class="w-4 h-4" />
                         </button>
                     </div>
@@ -227,12 +227,12 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         <button @click="sendBulkSms"
                             class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
                             <DevicePhoneMobileIcon class="w-4 h-4 text-gray-500" />
-                            Enviar SMS
+                            Send SMS
                             <span class="bg-green-100 text-green-700 text-xs font-bold px-1.5 py-0.5 rounded-full">{{ pendingSmsCount }}</span>
                         </button>
                         <button @click="showSmsInfoModal = true"
                             class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                            title="¿Cómo funciona el envío masivo?">
+                            title="How does bulk sending work?">
                             <InformationCircleIcon class="w-4 h-4" />
                         </button>
                     </div>
@@ -240,16 +240,16 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <a :href="exportUrl"
                         class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
                         <ArrowDownTrayIcon class="w-4 h-4 text-gray-500" />
-                        Exportar Excel
+                        Export Excel
                     </a>
                     <button @click="showImportModal = true"
                         class="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors text-gray-700">
                         <ArrowUpTrayIcon class="w-4 h-4 text-gray-500" />
-                        Importar Excel
+                        Import Excel
                     </button>
                     <Link href="/admin/operations/volunteers/create"
                         class="px-4 py-2 rounded-lg bg-black text-white text-sm font-semibold hover:bg-gray-800 transition-colors">
-                        + Crear Voluntario
+                        + Create Volunteer
                     </Link>
                 </div>
             </div>
@@ -259,19 +259,19 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 <input
                     v-model="search"
                     type="text"
-                    placeholder="Buscar nombre, email o teléfono..."
+                    placeholder="Search name, email or phone..."
                     class="flex-1 min-w-48 border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400"
                 />
                 <select v-model="status" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todos los estados</option>
-                    <option value="applicant">Aplicante</option>
-                    <option value="pending">Pendiente</option>
-                    <option value="active">Activo</option>
-                    <option value="rejected">Rechazado</option>
-                    <option value="inactive">Inactivo</option>
+                    <option value="">All statuses</option>
+                    <option value="applicant">Applicant</option>
+                    <option value="pending">Pending</option>
+                    <option value="active">Active</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="inactive">Inactive</option>
                 </select>
                 <select v-model="eventId" class="border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                    <option value="">Todos los eventos</option>
+                    <option value="">All events</option>
                     <option v-for="ev in events" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
                 </select>
             </div>
@@ -281,16 +281,16 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 <table class="w-full">
                     <thead class="bg-gray-50 border-b border-gray-200">
                         <tr>
-                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Voluntario</th>
-                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ubicación</th>
-                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Experiencia</th>
-                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Disponibilidad</th>
-                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Eventos</th>
-                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
-                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Registro</th>
-                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Último Login</th>
-                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Último Correo</th>
-                            <th class="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
+                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Volunteer</th>
+                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Location</th>
+                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Experience</th>
+                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Availability</th>
+                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Events</th>
+                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Registered</th>
+                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Login</th>
+                            <th class="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Email</th>
+                            <th class="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
@@ -318,22 +318,22 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                             <td class="px-6 py-4" @click.stop>
                                 <button v-if="vol.events_as_volunteer?.length" @click="openEventsModal(vol, $event)"
                                     class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full hover:bg-blue-100 transition-colors cursor-pointer">
-                                    {{ vol.events_as_volunteer.length }} evento{{ vol.events_as_volunteer.length !== 1 ? 's' : '' }}
+                                    {{ vol.events_as_volunteer.length }} event{{ vol.events_as_volunteer.length !== 1 ? 's' : '' }}
                                 </button>
-                                <span v-else class="text-gray-400 text-xs">Sin eventos</span>
+                                <span v-else class="text-gray-400 text-xs">No events</span>
                             </td>
                             <td class="px-6 py-4" @click.stop>
                                 <!-- Activo: badge estático -->
                                 <span v-if="vol.status === 'active'"
                                     class="text-xs font-medium rounded-full px-2.5 py-1 bg-green-100 text-green-800">
-                                    Activo
+                                    Active
                                 </span>
                                 <!-- Rechazado: solo puede ir a inactivo -->
                                 <select v-else-if="vol.status === 'rejected'" :value="vol.status"
                                     :data-status-select="vol.id" @change="updateStatus(vol, $event.target.value)"
                                     class="text-xs font-medium rounded-full px-2.5 py-1 border-0 cursor-pointer focus:ring-2 focus:ring-black/10 appearance-none text-center bg-orange-100 text-orange-800">
-                                    <option value="rejected">Rechazado</option>
-                                    <option value="inactive">Inactivo</option>
+                                    <option value="rejected">Rejected</option>
+                                    <option value="inactive">Inactive</option>
                                 </select>
                                 <!-- Otros: selector editable -->
                                 <select v-else :value="vol.status" :data-status-select="vol.id" @change="updateStatus(vol, $event.target.value)"
@@ -342,22 +342,22 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                         statusColors[vol.status] || 'bg-gray-100 text-gray-800',
                                         isReadyForPending(vol) ? 'animate-pulse ring-2 ring-blue-400 ring-offset-1' : '',
                                     ]">
-                                    <option value="applicant">Aplicante</option>
-                                    <option value="pending">Pendiente</option>
-                                    <option value="inactive">Inactivo</option>
+                                    <option value="applicant">Applicant</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="inactive">Inactive</option>
                                 </select>
                             </td>
                             <td class="px-6 py-4 text-gray-500 text-sm">
-                                {{ new Date(vol.created_at).toLocaleDateString('es-US') }}<br><span class="text-gray-400 text-xs">{{ new Date(vol.created_at).toLocaleTimeString('es-US', { hour: '2-digit', minute: '2-digit' }) }}</span>
+                                {{ new Date(vol.created_at).toLocaleDateString('en-US') }}<br><span class="text-gray-400 text-xs">{{ new Date(vol.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) }}</span>
                             </td>
                             <td class="px-6 py-4 text-gray-500 text-sm">
                                 <template v-if="vol.last_login_at">
-                                    {{ new Date(vol.last_login_at).toLocaleDateString('es-US') }}<br><span class="text-gray-400 text-xs">{{ new Date(vol.last_login_at).toLocaleTimeString('es-US', { hour: '2-digit', minute: '2-digit' }) }}</span>
+                                    {{ new Date(vol.last_login_at).toLocaleDateString('en-US') }}<br><span class="text-gray-400 text-xs">{{ new Date(vol.last_login_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) }}</span>
                                 </template>
                                 <span v-else>—</span>
                             </td>
                             <td class="px-6 py-4 text-sm">
-                                <span v-if="vol.welcome_email_sent_at" class="text-green-600">{{ new Date(vol.welcome_email_sent_at).toLocaleDateString('es-US') }}<br><span class="text-green-400 text-xs">{{ new Date(vol.welcome_email_sent_at).toLocaleTimeString('es-US', { hour: '2-digit', minute: '2-digit' }) }}</span></span>
+                                <span v-if="vol.welcome_email_sent_at" class="text-green-600">{{ new Date(vol.welcome_email_sent_at).toLocaleDateString('en-US') }}<br><span class="text-green-400 text-xs">{{ new Date(vol.welcome_email_sent_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) }}</span></span>
                                 <span v-else class="text-gray-400">—</span>
                             </td>
                             <td class="px-6 py-4" @click.stop>
@@ -365,16 +365,16 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                     <button @click="sendOnboardingEmail(vol)" :disabled="vol.status !== 'pending'"
                                         class="p-1.5 rounded transition-colors"
                                         :class="vol.status === 'pending' ? 'text-gray-400 hover:text-blue-600 hover:bg-blue-50 cursor-pointer' : 'text-gray-200 cursor-not-allowed'"
-                                        title="Enviar email onboarding">
+                                        title="Send onboarding email">
                                         <EnvelopeIcon class="w-4 h-4" />
                                     </button>
                                     <button @click="sendOnboardingSms(vol)" :disabled="vol.status !== 'pending'"
                                         class="p-1.5 rounded transition-colors"
                                         :class="vol.status === 'pending' ? 'text-gray-400 hover:text-green-600 hover:bg-green-50 cursor-pointer' : 'text-gray-200 cursor-not-allowed'"
-                                        title="Enviar SMS onboarding">
+                                        title="Send onboarding SMS">
                                         <DevicePhoneMobileIcon class="w-4 h-4" />
                                     </button>
-                                    <Link :href="`/admin/operations/volunteers/${vol.id}/edit`" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors cursor-pointer" title="Editar">
+                                    <Link :href="`/admin/operations/volunteers/${vol.id}/edit`" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors cursor-pointer" title="Edit">
                                         <PencilSquareIcon class="w-4 h-4" />
                                     </Link>
                                 </div>
@@ -382,7 +382,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         </tr>
                         <tr v-if="volunteers.data.length === 0">
                             <td colspan="10" class="px-6 py-12 text-center text-gray-400 text-sm">
-                                No se encontraron voluntarios con los filtros aplicados.
+                                No volunteers found with the applied filters.
                             </td>
                         </tr>
                     </tbody>
@@ -390,7 +390,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
 
                 <!-- Pagination -->
                 <div v-if="volunteers.last_page > 1" class="border-t border-gray-200 px-6 py-4 flex items-center justify-between">
-                    <p class="text-sm text-gray-500">Mostrando {{ volunteers.from }}–{{ volunteers.to }} de {{ volunteers.total }}</p>
+                    <p class="text-sm text-gray-500">Showing {{ volunteers.from }}–{{ volunteers.to }} of {{ volunteers.total }}</p>
                     <div class="flex gap-1">
                         <Link v-for="link in volunteers.links" :key="link.label" :href="link.url || '#'" v-html="link.label"
                             class="px-3 py-1.5 text-sm rounded-lg border transition-colors"
@@ -423,7 +423,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                         </p>
                                         <p class="text-white/50 text-xs mt-0.5">
                                             {{ selectedVol.events_as_volunteer.length }}
-                                            evento{{ selectedVol.events_as_volunteer.length !== 1 ? 's' : '' }} asignado{{ selectedVol.events_as_volunteer.length !== 1 ? 's' : '' }}
+                                            event{{ selectedVol.events_as_volunteer.length !== 1 ? 's' : '' }} assigned
                                         </p>
                                     </div>
                                 </div>
@@ -449,7 +449,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                     </div>
                                     <span class="flex-shrink-0 text-xs font-medium px-2 py-0.5 rounded-full"
                                         :class="{ 'bg-green-50 text-green-700': ev.status === 'active', 'bg-yellow-50 text-yellow-700': ev.status === 'draft', 'bg-blue-50 text-blue-700': ev.status === 'published' }">
-                                        {{ { active: 'Activo', draft: 'Borrador', published: 'Publicado' }[ev.status] || ev.status }}
+                                        {{ { active: 'Active', draft: 'Draft', published: 'Published' }[ev.status] || ev.status }}
                                     </span>
                                 </div>
 
@@ -462,7 +462,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                             </svg>
                                         </div>
                                         <div class="flex-1 min-w-0">
-                                            <p class="text-[10px] text-gray-400 leading-none mb-1">Estado en evento</p>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-1">Event status</p>
                                             <select
                                                 :value="ev.pivot?.status || 'assigned'"
                                                 @change="updateEventStatus(selectedVol, ev.id, $event.target.value)"
@@ -472,10 +472,10 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                                     'border-blue-300 bg-blue-50 text-blue-700': ev.pivot?.status === 'checked_in',
                                                     'border-gray-300 bg-white text-gray-600': ev.pivot?.status === 'assigned',
                                                 }">
-                                                <option value="assigned">Agendado</option>
+                                                <option value="assigned">Scheduled</option>
                                                 <option value="checked_in">Check-in</option>
-                                                <option value="no_show">No se presentó</option>
-                                                <option value="rejected">Rechazado</option>
+                                                <option value="no_show">No show</option>
+                                                <option value="rejected">Rejected</option>
                                             </select>
                                         </div>
                                     </div>
@@ -486,7 +486,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                             </svg>
                                         </div>
                                         <div>
-                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Rol</p>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Role</p>
                                             <p class="text-xs font-semibold text-gray-800">{{ ev.pivot?.assigned_role || 'volunteer' }}</p>
                                         </div>
                                     </div>
@@ -502,7 +502,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                             </svg>
                                         </div>
                                         <div>
-                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Área</p>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Area</p>
                                             <p class="text-xs font-semibold text-gray-800">{{ ev.pivot.area }}</p>
                                         </div>
                                     </div>
@@ -513,7 +513,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                             </svg>
                                         </div>
                                         <div>
-                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Pase</p>
+                                            <p class="text-[10px] text-gray-400 leading-none mb-0.5">Pass</p>
                                             <div class="flex items-center gap-1.5">
                                                 <span class="font-mono text-[10px] text-gray-500">{{ getPassForEvent(selectedVol, ev.id).qr_code }}</span>
                                                 <span :class="passStatusClass(getPassForEvent(selectedVol, ev.id).status)"
@@ -537,7 +537,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                         </div>
                                         <div class="flex-1 min-w-0">
                                             <p class="text-[10px] text-blue-500 leading-none mb-0.5">
-                                                {{ sch.event_day?.date ? new Date(sch.event_day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Día' }}
+                                                {{ sch.event_day?.date ? new Date(sch.event_day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Day' }}
                                             </p>
                                             <p class="text-xs font-semibold text-blue-700">
                                                 {{ formatTime(sch.start_time) }} — {{ formatTime(sch.end_time) }}
@@ -545,7 +545,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                                         </div>
                                     </div>
                                 </div>
-                                <p v-else class="text-xs text-gray-400 italic border-t border-gray-100 pt-3">Sin horarios asignados</p>
+                                <p v-else class="text-xs text-gray-400 italic border-t border-gray-100 pt-3">No schedules assigned</p>
 
                             </div>
                         </div>
@@ -554,11 +554,11 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                         <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
                             <Link :href="`/admin/operations/volunteers/${selectedVol.id}`"
                                 class="text-sm font-semibold text-black hover:underline underline-offset-2">
-                                Ver perfil completo →
+                                View full profile →
                             </Link>
                             <button @click="selectedVol = null"
                                 class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-                                Cerrar
+                                Close
                             </button>
                         </div>
 
@@ -578,14 +578,14 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
                         </svg>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">No se puede cambiar a Pendiente</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Cannot change to Pending</h3>
                     <p class="text-sm text-gray-600 mb-5">
-                        El voluntario <span class="font-medium">{{ statusAlertVol.first_name }} {{ statusAlertVol.last_name }}</span>
+                        Volunteer <span class="font-medium">{{ statusAlertVol.first_name }} {{ statusAlertVol.last_name }}</span>
                         {{ statusAlertReason }}
                     </p>
                     <button @click="statusAlertVol = null"
                         class="px-5 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors">
-                        Entendido
+                        Got it
                     </button>
                 </div>
             </div>
@@ -598,7 +598,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                 <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
                     <!-- Header -->
                     <div class="flex items-center justify-between mb-5">
-                        <h3 class="text-lg font-bold text-gray-900">Importar Voluntarios desde Excel</h3>
+                        <h3 class="text-lg font-bold text-gray-900">Import Volunteers from Excel</h3>
                         <button @click="showImportModal = false" class="text-gray-400 hover:text-gray-600">
                             <XMarkIcon class="w-5 h-5" />
                         </button>
@@ -634,25 +634,25 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                             <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">resume_link</span></span>
                             <span><span class="font-mono bg-white border border-gray-200 px-1 rounded">notes</span></span>
                         </div>
-                        <p class="mt-2 text-gray-500">Solo <strong>email</strong> es obligatorio. Formats: <strong>.xlsx, .xls, .csv</strong></p>
+                        <p class="mt-2 text-gray-500">Only <strong>email</strong> is required. Formats: <strong>.xlsx, .xls, .csv</strong></p>
                     </div>
 
                     <!-- Selector de evento -->
                     <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Asignar a un evento <span class="text-gray-400 font-normal">(opcional)</span></label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1.5">Assign to an event <span class="text-gray-400 font-normal">(optional)</span></label>
                         <select v-model="importForm.event_id"
                             class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-gray-400 bg-white">
-                            <option value="">— Sin asignar a evento —</option>
+                            <option value="">— Unassigned —</option>
                             <option v-for="ev in events" :key="ev.id" :value="ev.id">{{ ev.name }}</option>
                         </select>
                         <p class="mt-1.5 text-xs text-gray-400">
-                            Si no seleccionas un evento, los voluntarios se crean sin asignación.
+                            If you do not select an event, volunteers are created without assignment.
                         </p>
                     </div>
 
                     <!-- Input archivo -->
                     <div class="mb-5">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar archivo</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Select file</label>
                         <input ref="fileInput" type="file" accept=".xlsx,.xls,.csv"
                             @change="handleFileChange"
                             class="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800 cursor-pointer" />
@@ -663,12 +663,12 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <div class="flex gap-3">
                         <button @click="showImportModal = false"
                             class="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                            Cancelar
+                            Cancel
                         </button>
                         <button @click="submitImport"
                             :disabled="!importForm.file || importForm.processing"
                             class="flex-1 py-2.5 bg-black text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                            {{ importForm.processing ? 'Importando...' : 'Importar' }}
+                            {{ importForm.processing ? 'Importing...' : 'Import' }}
                         </button>
                     </div>
                 </div>
@@ -685,7 +685,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                             <div class="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
                                 <EnvelopeIcon class="w-5 h-5 text-amber-600" />
                             </div>
-                            <h3 class="text-base font-semibold text-gray-900">¿Cómo funciona el envío masivo de emails?</h3>
+                            <h3 class="text-base font-semibold text-gray-900">How does bulk email sending work?</h3>
                         </div>
                         <button @click="showEmailInfoModal = false" class="text-gray-400 hover:text-gray-600 ml-2">
                             <XMarkIcon class="w-5 h-5" />
@@ -694,24 +694,24 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <ul class="space-y-3 text-sm text-gray-600">
                         <li class="flex items-start gap-2">
                             <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                            <span>Solo se envía a voluntarios con estado Pendiente que no hayan recibido email de onboarding anteriormente.</span>
+                            <span>Only sent to volunteers with Pending status who have not received an onboarding email before.</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                            <span>El email incluye todos los eventos asignados del voluntario donde su estado en el evento es Agendado.</span>
+                            <span>The email includes all events assigned to the volunteer where their event status is Scheduled.</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                            <span>Si un voluntario tiene 2 eventos, el email muestra ambos con su área y horarios correspondientes.</span>
+                            <span>If a volunteer has 2 events, the email displays both with their corresponding area and schedules.</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <span class="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                            <span>El envío se procesa en cola — puede tardar unos segundos dependiendo del volumen.</span>
+                            <span>Sending is processed in a queue — may take a few seconds depending on volume.</span>
                         </li>
                     </ul>
                     <button @click="showEmailInfoModal = false"
                         class="mt-5 w-full py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
-                        Entendido
+                        Got it
                     </button>
                 </div>
             </div>
@@ -727,7 +727,7 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                             <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
                                 <DevicePhoneMobileIcon class="w-5 h-5 text-green-600" />
                             </div>
-                            <h3 class="text-base font-semibold text-gray-900">¿Cómo funciona el envío masivo de SMS?</h3>
+                            <h3 class="text-base font-semibold text-gray-900">How does bulk SMS sending work?</h3>
                         </div>
                         <button @click="showSmsInfoModal = false" class="text-gray-400 hover:text-gray-600 ml-2">
                             <XMarkIcon class="w-5 h-5" />
@@ -736,24 +736,24 @@ onUnmounted(() => window.removeEventListener('notification:received', onNotifica
                     <ul class="space-y-3 text-sm text-gray-600">
                         <li class="flex items-start gap-2">
                             <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                            <span>Solo se envía a voluntarios con estado Pendiente que tengan teléfono con código de país (+1...) y no hayan recibido SMS anteriormente.</span>
+                            <span>Only sent to volunteers with Pending status who have a phone with country code (+1...) and have not received SMS before.</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                            <span>El SMS menciona todos los eventos asignados del voluntario donde su estado en el evento es Agendado.</span>
+                            <span>The SMS mentions all events assigned to the volunteer where their event status is Scheduled.</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                            <span>El mensaje incluye las credenciales de acceso a la app y los enlaces de descarga.</span>
+                            <span>The message includes app access credentials and download links.</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <span class="w-1.5 h-1.5 bg-green-400 rounded-full mt-1.5 flex-shrink-0"></span>
-                            <span>Requiere saldo disponible en Twilio. Si no hay saldo el envío fallará.</span>
+                            <span>Requires available balance on Twilio. If there is no balance, sending will fail.</span>
                         </li>
                     </ul>
                     <button @click="showSmsInfoModal = false"
                         class="mt-5 w-full py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
-                        Entendido
+                        Got it
                     </button>
                 </div>
             </div>
