@@ -88,6 +88,7 @@ class CalendarEventAggregator
     private function fetchSalesLeadEvents(Request $request, User $user, ?array $visibleUserIds): Collection
     {
         $q = \App\Models\LeadActivity::whereNotNull('scheduled_at')
+            ->whereIn('status', ['pending', 'not_completed'])
             ->with(['lead:id,first_name,last_name,company_name', 'user:id,first_name,last_name']);
 
         if ($visibleUserIds !== null) {
@@ -121,6 +122,7 @@ class CalendarEventAggregator
     private function fetchSponsorshipLeadEvents(Request $request, User $user, ?array $visibleUserIds): Collection
     {
         $q = \App\Models\Sponsorship\LeadActivity::whereNotNull('scheduled_at')
+            ->whereIn('status', ['pending', 'not_completed'])
             ->with([
                 'lead:id,first_name,last_name,company_id',
                 'lead.company:id,name',
@@ -171,6 +173,7 @@ class CalendarEventAggregator
             ->where(function ($qq) use ($area) {
                 $qq->where('area', $area)->orWhereNull('area');
             })
+            ->whereIn('status', ['pending', 'not_completed'])
             ->whereNotNull('scheduled_at')
             ->with(['user:id,first_name,last_name', 'creator:id,first_name,last_name']);
 

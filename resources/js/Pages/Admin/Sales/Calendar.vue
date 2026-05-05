@@ -94,6 +94,12 @@ function goToday() {
     currentDate.value = new Date();
 }
 
+// Saltar a vista de día desde un cell del mes (para abrir +N more).
+function goToDayView(date) {
+    currentDate.value = new Date(date);
+    currentView.value = 'day';
+}
+
 // ── Date ranges ────────────────────────────────────────────────────
 function getWeekday(d) {
     return (d.getDay() + 6) % 7; // Mon=0
@@ -191,6 +197,15 @@ const TYPE_COLORS = {
 
 function typeStyle(type) {
     return TYPE_COLORS[type] || { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-300', dot: 'bg-orange-500' };
+}
+
+// Override visual: actividades not_completed siempre se pintan en rojo suave
+// para que se distingan a primera vista (el resto sigue por tipo).
+function eventStyle(evt) {
+    if (evt?.status === 'not_completed') {
+        return { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300', dot: 'bg-red-500' };
+    }
+    return typeStyle(evt?.type);
 }
 
 function typeLabel(type) {
@@ -472,16 +487,18 @@ function submitCreate() {
                                 :key="evt.id"
                                 @click="openEvent(evt)"
                                 class="w-full text-left px-1.5 py-0.5 rounded text-[10px] font-medium truncate block border transition-opacity hover:opacity-80"
-                                :class="[typeStyle(evt.type).bg, typeStyle(evt.type).text, typeStyle(evt.type).border]"
+                                :class="[eventStyle(evt).bg, eventStyle(evt).text, eventStyle(evt).border]"
                             >
-                                <span v-if="evt.area === 'sponsorship'" class="inline-block bg-white px-1 mr-0.5 rounded text-[9px] font-bold border" :class="typeStyle(evt.type).border">{{ areaLabel(evt) }}</span>{{ evt.title || typeLabel(evt.type) }}
+                                <span v-if="evt.area === 'sponsorship'" class="inline-block bg-white px-1 mr-0.5 rounded text-[9px] font-bold border" :class="eventStyle(evt).border">{{ areaLabel(evt) }}</span>{{ evt.title || typeLabel(evt.type) }}
                             </button>
-                            <span
+                            <button
+                                type="button"
                                 v-if="eventsForDay(cell.date).length > 3"
-                                class="text-[10px] text-gray-400 font-medium px-1"
+                                @click="goToDayView(cell.date)"
+                                class="text-[10px] text-gray-500 font-medium px-1 hover:text-black hover:underline cursor-pointer"
                             >
                                 +{{ eventsForDay(cell.date).length - 3 }} more
-                            </span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -522,10 +539,10 @@ function submitCreate() {
                                 :key="evt.id"
                                 @click="openEvent(evt)"
                                 class="w-full text-left px-2 py-1 rounded border mb-0.5 transition-opacity hover:opacity-80"
-                                :class="[typeStyle(evt.type).bg, typeStyle(evt.type).text, typeStyle(evt.type).border]"
+                                :class="[eventStyle(evt).bg, eventStyle(evt).text, eventStyle(evt).border]"
                             >
                                 <div class="text-[11px] font-semibold truncate flex items-center gap-1">
-                                    <span v-if="evt.area === 'sponsorship'" class="bg-white px-1 rounded text-[9px] border" :class="typeStyle(evt.type).border">{{ areaLabel(evt) }}</span>
+                                    <span v-if="evt.area === 'sponsorship'" class="bg-white px-1 rounded text-[9px] border" :class="eventStyle(evt).border">{{ areaLabel(evt) }}</span>
                                     {{ evt.title || typeLabel(evt.type) }}
                                 </div>
                                 <div v-if="evt.lead_name" class="text-[10px] opacity-70 truncate">{{ evt.lead_name }}</div>
@@ -549,12 +566,12 @@ function submitCreate() {
                                     :key="evt.id"
                                     @click="openEvent(evt)"
                                     class="rounded-lg border p-3 cursor-pointer transition-all hover:shadow-sm"
-                                    :class="[typeStyle(evt.type).bg, typeStyle(evt.type).border]"
+                                    :class="[eventStyle(evt).bg, eventStyle(evt).border]"
                                 >
                                     <div class="flex items-center justify-between mb-1">
                                         <div class="flex items-center gap-2">
                                             <span v-if="evt.area === 'sponsorship'" class="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-200 text-gray-700">{{ areaLabel(evt) }}</span>
-                                            <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full" :class="[typeStyle(evt.type).bg, typeStyle(evt.type).text]">
+                                            <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full" :class="[eventStyle(evt).bg, eventStyle(evt).text]">
                                                 <span v-if="typeIcon(evt.type)" v-text="typeIcon(evt.type)"></span>
                                                 {{ typeLabel(evt.type) }}
                                             </span>
@@ -616,7 +633,7 @@ function submitCreate() {
                     <div class="mb-4">
                         <span
                             class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border"
-                            :class="[typeStyle(selectedEvent.type).bg, typeStyle(selectedEvent.type).text, typeStyle(selectedEvent.type).border]"
+                            :class="[eventStyle(selectedEvent).bg, eventStyle(selectedEvent).text, eventStyle(selectedEvent).border]"
                         >
                             <span v-if="typeIcon(selectedEvent.type)" v-text="typeIcon(selectedEvent.type)"></span>
                             {{ typeLabel(selectedEvent.type) }}

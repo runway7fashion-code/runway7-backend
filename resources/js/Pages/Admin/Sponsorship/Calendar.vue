@@ -23,6 +23,13 @@ const AREA_STYLES = {
 };
 function areaStyle(ev) { return AREA_STYLES[ev?.area] || AREA_STYLES.sponsorship; }
 
+// Color del chip según estado: not_completed pinta rojo suave; el resto usa el
+// color por tipo (call/email/meeting) que viene en activityTypes desde backend.
+function chipStyle(ev) {
+    if (ev?.status === 'not_completed') return { backgroundColor: '#fecaca' }; // red-200
+    return { backgroundColor: props.activityTypes?.[ev?.type]?.color ?? '#9CA3AF' };
+}
+
 // El user puede ACTUAR (editar/completar/borrar/ir al lead) sobre un evento si:
 //  - es cross-area (acceso a las dos áreas), o
 //  - el evento pertenece a su home area (sponsorship aquí), o
@@ -108,6 +115,11 @@ function navigate(dir) {
 
 function goToday() {
     currentDate.value = new Date();
+}
+
+function goToDayView(date) {
+    currentDate.value = new Date(date);
+    currentView.value = 'day';
 }
 
 const fetchRange = computed(() => {
@@ -411,11 +423,12 @@ function eventsAtHour(date, hour) {
                             <button v-for="ev in eventsOn(cell).slice(0, 3)" :key="ev.id"
                                 @click="openEvent(ev)"
                                 class="w-full text-left text-xs truncate px-1.5 py-0.5 rounded text-white"
-                                :style="{ backgroundColor: activityTypes[ev.type]?.color }"
+                                :style="chipStyle(ev)"
                                 :class="[ev.status === 'completed' ? 'opacity-60 line-through' : '', ev.source === 'personal' ? 'ring-2 ring-white/50 ring-inset' : '']">
                                 <span v-if="ev.area === 'sales'" class="inline-block bg-white/30 px-1 mr-0.5 rounded text-[9px] font-bold align-middle">{{ areaStyle(ev).label }}</span>{{ formatTime(ev.start) }} {{ ev.title }}
                             </button>
-                            <p v-if="eventsOn(cell).length > 3" class="text-xs text-gray-400 px-1">+{{ eventsOn(cell).length - 3 }} more</p>
+                            <button type="button" v-if="eventsOn(cell).length > 3" @click="goToDayView(cell)"
+                                class="text-xs text-gray-500 px-1 hover:text-black hover:underline cursor-pointer">+{{ eventsOn(cell).length - 3 }} more</button>
                         </div>
                     </div>
                 </div>
@@ -435,7 +448,7 @@ function eventsAtHour(date, hour) {
                             <button v-for="ev in eventsOn(new Date(weekRange.start.getTime() + (i-1)*86400000))" :key="ev.id"
                                 @click="openEvent(ev)"
                                 class="w-full text-left text-xs p-1.5 rounded text-white"
-                                :style="{ backgroundColor: activityTypes[ev.type]?.color }"
+                                :style="chipStyle(ev)"
                                 :class="[ev.status === 'completed' ? 'opacity-60 line-through' : '', ev.source === 'personal' ? 'ring-2 ring-white/50 ring-inset' : '']">
                                 <p class="font-semibold flex items-center gap-1">
                                     <span v-if="ev.area === 'sales'" class="bg-white/30 px-1 rounded text-[9px]">{{ areaStyle(ev).label }}</span>
@@ -457,7 +470,7 @@ function eventsAtHour(date, hour) {
                             <button v-for="ev in eventsAtHour(currentDate, h)" :key="ev.id"
                                 @click="openEvent(ev)"
                                 class="w-full text-left text-sm p-2 rounded text-white flex items-start gap-2"
-                                :style="{ backgroundColor: activityTypes[ev.type]?.color }"
+                                :style="chipStyle(ev)"
                                 :class="[ev.status === 'completed' ? 'opacity-60 line-through' : '', ev.source === 'personal' ? 'ring-2 ring-white/50 ring-inset' : '']">
                                 <span v-if="ev.area === 'sales'" class="bg-white/30 px-1 rounded text-[9px] font-bold">{{ areaStyle(ev).label }}</span>
                                 <span class="text-xs font-semibold">{{ formatTime(ev.start) }}</span>
