@@ -189,63 +189,64 @@ const activityForm = useForm({
     type: 'note',
     title: '',
     description: '',
-    scheduled_at: '',
+    scheduled_date: '',     // "YYYY-MM-DD"
+    scheduled_time: '',     // "HH:MM" — opcional. Vacío = all_day.
     has_end_time: false,
-    ends_at_time: '',  // "HH:MM" del mismo día que scheduled_at
-    user_id: null,  // assignee — null = me
+    ends_at_time: '',
+    user_id: null,
 });
 
 function openActivityModal() {
     activityForm.reset();
     activityForm.type = 'note';
     activityForm.user_id = null;
+    activityForm.scheduled_date = '';
+    activityForm.scheduled_time = '';
     activityForm.has_end_time = false;
     activityForm.ends_at_time = '';
     availabilityConflicts.value = [];
     showActivityModal.value = true;
 }
 
-function localDatetimeToUtcIso(localStr) {
-    if (!localStr) return null;
-    const d = new Date(localStr);
-    return isNaN(d) ? null : d.toISOString();
-}
-
-function combineEndTimeIso(scheduledLocal, endTimeStr) {
-    if (!endTimeStr || !scheduledLocal) return null;
-    const datePart = scheduledLocal.split('T')[0];
-    const d = new Date(`${datePart}T${endTimeStr}`);
+function combineDateTimeIso(dateStr, timeStr) {
+    if (!dateStr) return null;
+    const d = new Date(`${dateStr}T${timeStr || '12:00'}`);
     return isNaN(d) ? null : d.toISOString();
 }
 
 function submitActivity() {
-    activityForm.transform(d => ({
-        ...d,
-        scheduled_at: localDatetimeToUtcIso(d.scheduled_at),
-        ends_at: d.has_end_time ? combineEndTimeIso(d.scheduled_at, d.ends_at_time) : null,
-    })).post(`/admin/sales/leads/${props.lead.id}/activity`, {
+    activityForm.transform(d => {
+        const allDay = !!d.scheduled_date && !d.scheduled_time;
+        const scheduledIso = d.scheduled_date ? combineDateTimeIso(d.scheduled_date, d.scheduled_time) : null;
+        const endsIso = (!allDay && d.has_end_time && d.scheduled_time)
+            ? combineDateTimeIso(d.scheduled_date, d.ends_at_time)
+            : null;
+        return { ...d, scheduled_at: scheduledIso, ends_at: endsIso, all_day: allDay };
+    }).post(`/admin/sales/leads/${props.lead.id}/activity`, {
         preserveScroll: true,
         onSuccess: () => { activityForm.reset(); showActivityModal.value = false; },
     });
 }
 
-// ── Availability check (debounced) — solo aplica a call/meeting agendados.
-// Hard-block: si hay conflicto, el botón Save queda deshabilitado y backend rechaza.
+// ── Availability check (debounced) — solo aplica a call/meeting con hora.
+// Hard-block: si hay conflicto, el Save queda deshabilitado y backend rechaza.
+// All-day NO consulta porque no genera bloqueo.
 const availabilityConflicts = ref([]);
 let availabilityTimer = null;
 function checkAvailability() {
     clearTimeout(availabilityTimer);
     availabilityTimer = setTimeout(async () => {
         const userId = activityForm.user_id;
-        const scheduled = activityForm.scheduled_at;
+        const date = activityForm.scheduled_date;
+        const time = activityForm.scheduled_time;
         const type = activityForm.type;
-        if (!['call', 'meeting'].includes(type) || !userId || !scheduled) {
+        if (!['call', 'meeting'].includes(type) || !userId || !date || !time) {
             availabilityConflicts.value = [];
             return;
         }
-        const startIso = localDatetimeToUtcIso(scheduled);
+        const startIso = combineDateTimeIso(date, time);
         if (!startIso) return;
-        const endIso = activityForm.has_end_time ? combineEndTimeIso(scheduled, activityForm.ends_at_time) : null;
+        const endIso = activityForm.has_end_time ? combineDateTimeIso(date, activityForm.ends_at_time) : null;
         try {
             const res = await axios.get('/admin/sales/calendar/availability', {
                 params: { user_id: userId, scheduled_at: startIso, ends_at: endIso || undefined },
@@ -257,7 +258,7 @@ function checkAvailability() {
     }, 350);
 }
 watch(
-    [() => activityForm.user_id, () => activityForm.scheduled_at, () => activityForm.type, () => activityForm.has_end_time, () => activityForm.ends_at_time],
+    [() => activityForm.user_id, () => activityForm.scheduled_date, () => activityForm.scheduled_time, () => activityForm.type, () => activityForm.has_end_time, () => activityForm.ends_at_time],
     checkAvailability,
 );
 
@@ -800,7 +801,8 @@ function isActivityExpanded(id) {
                                         <span>{{ relativeTime(activity.created_at) }}</span>
                                         <span v-if="activity.scheduled_at" class="flex items-center gap-0.5">
                                             <ClockIcon class="w-3 h-3" />
-                                            {{ formatDateTime(activity.scheduled_at) }}
+                                            <template v-if="activity.all_day">{{ new Date(activity.scheduled_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) }} <span class="text-gray-400">(All day)</span></template>
+                                            <template v-else>{{ formatDateTime(activity.scheduled_at) }}<template v-if="activity.ends_at"> – {{ new Date(activity.ends_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) }}</template></template>
                                         </span>
                                     </div>
                                 </div>
@@ -922,12 +924,18 @@ function isActivityExpanded(id) {
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black focus:border-black"></textarea>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Schedule for <span class="text-gray-400">(optional)</span></label>
-                            <input v-model="activityForm.scheduled_at" type="datetime-local"
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Schedule date <span class="text-gray-400">(optional)</span></label>
+                            <input v-model="activityForm.scheduled_date" type="date"
                                 class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-black focus:border-black" />
                             <p v-if="activityForm.errors.scheduled_at" class="text-xs text-red-500 mt-1">{{ activityForm.errors.scheduled_at }}</p>
                         </div>
-                        <div v-if="(activityForm.type === 'call' || activityForm.type === 'meeting') && activityForm.scheduled_at" class="flex items-center gap-2">
+                        <div v-if="activityForm.scheduled_date" class="flex items-center gap-2 flex-wrap">
+                            <label class="block text-xs font-medium text-gray-500">Time <span class="text-gray-400 font-normal">(optional)</span></label>
+                            <input v-model="activityForm.scheduled_time" type="time"
+                                class="border border-gray-300 rounded-lg px-2 py-1 text-sm" />
+                            <span v-if="!activityForm.scheduled_time" class="text-[11px] text-gray-500 italic">Empty = all day, no conflict block</span>
+                        </div>
+                        <div v-if="(activityForm.type === 'call' || activityForm.type === 'meeting') && activityForm.scheduled_date && activityForm.scheduled_time" class="flex items-center gap-2">
                             <label class="inline-flex items-center gap-2 text-xs text-gray-600">
                                 <input v-model="activityForm.has_end_time" type="checkbox" class="rounded" />
                                 Specify end time

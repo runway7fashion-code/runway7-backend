@@ -588,7 +588,7 @@ function submitCreate() {
                                                 <span v-if="typeIcon(evt.type)" v-text="typeIcon(evt.type)"></span>
                                                 {{ typeLabel(evt.type) }}
                                             </span>
-                                            <span class="text-xs text-gray-500">{{ formatTime(evt.start) }}</span>
+                                            <span class="text-xs text-gray-500">{{ evt.all_day ? 'All day' : formatTime(evt.start) }}</span>
                                         </div>
                                         <span
                                             v-if="evt.status === 'pending'"
@@ -670,7 +670,8 @@ function submitCreate() {
 
                         <div class="flex items-center gap-2 text-gray-500">
                             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            {{ formatDateTime(selectedEvent.start) }}<template v-if="selectedEvent.ends_at"> – {{ new Date(selectedEvent.ends_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) }}</template>
+                            <template v-if="selectedEvent.all_day">{{ new Date(selectedEvent.start).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) }} <span class="text-gray-400">(All day)</span></template>
+                            <template v-else>{{ formatDateTime(selectedEvent.start) }}<template v-if="selectedEvent.ends_at"> – {{ new Date(selectedEvent.ends_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) }}</template></template>
                         </div>
 
                         <div v-if="selectedEvent.lead_name" class="flex items-center gap-2 text-gray-500">
@@ -814,7 +815,8 @@ function submitCreate() {
                                     <p class="font-semibold text-gray-900 text-sm truncate">{{ evt.title || typeLabel(evt.type) }}</p>
                                 </div>
                                 <p class="text-xs text-gray-600 mt-0.5">
-                                    {{ formatTime(evt.start) }}<template v-if="evt.ends_at"> – {{ new Date(evt.ends_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) }}</template>
+                                    <template v-if="evt.all_day">All day</template>
+                                    <template v-else>{{ formatTime(evt.start) }}<template v-if="evt.ends_at"> – {{ new Date(evt.ends_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) }}</template></template>
                                 </p>
                                 <p v-if="evt.advisor" class="text-xs text-gray-500 mt-0.5">→ {{ evt.advisor }}</p>
                                 <p v-if="evt.lead_name" class="text-xs text-gray-500 truncate">{{ evt.lead_name }}<span v-if="evt.company" class="text-gray-400"> · {{ evt.company }}</span></p>

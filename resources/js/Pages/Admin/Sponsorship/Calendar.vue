@@ -439,7 +439,7 @@ function eventsAtHour(date, hour) {
                                 class="w-full text-left text-xs truncate px-1.5 py-0.5 rounded text-white"
                                 :style="chipStyle(ev)"
                                 :class="[ev.status === 'completed' ? 'opacity-60 line-through' : '', ev.source === 'personal' ? 'ring-2 ring-white/50 ring-inset' : '']">
-                                <span v-if="ev.area === 'sales'" class="inline-block bg-white/30 px-1 mr-0.5 rounded text-[9px] font-bold align-middle">{{ areaStyle(ev).label }}</span>{{ formatTime(ev.start) }} {{ ev.title }}
+                                <span v-if="ev.area === 'sales'" class="inline-block bg-white/30 px-1 mr-0.5 rounded text-[9px] font-bold align-middle">{{ areaStyle(ev).label }}</span>{{ ev.all_day ? '' : formatTime(ev.start) + ' ' }}{{ ev.title }}
                             </button>
                             <button type="button" v-if="eventsOn(cell).length > 3" @click="openMoreModal(cell)"
                                 class="text-xs text-gray-500 px-1 hover:text-black hover:underline cursor-pointer">+{{ eventsOn(cell).length - 3 }} more</button>
@@ -466,7 +466,7 @@ function eventsAtHour(date, hour) {
                                 :class="[ev.status === 'completed' ? 'opacity-60 line-through' : '', ev.source === 'personal' ? 'ring-2 ring-white/50 ring-inset' : '']">
                                 <p class="font-semibold flex items-center gap-1">
                                     <span v-if="ev.area === 'sales'" class="bg-white/30 px-1 rounded text-[9px]">{{ areaStyle(ev).label }}</span>
-                                    {{ formatTime(ev.start) }}
+                                    {{ ev.all_day ? 'All day' : formatTime(ev.start) }}
                                 </p>
                                 <p class="truncate">{{ ev.title }}</p>
                             </button>
@@ -487,7 +487,7 @@ function eventsAtHour(date, hour) {
                                 :style="chipStyle(ev)"
                                 :class="[ev.status === 'completed' ? 'opacity-60 line-through' : '', ev.source === 'personal' ? 'ring-2 ring-white/50 ring-inset' : '']">
                                 <span v-if="ev.area === 'sales'" class="bg-white/30 px-1 rounded text-[9px] font-bold">{{ areaStyle(ev).label }}</span>
-                                <span class="text-xs font-semibold">{{ formatTime(ev.start) }}</span>
+                                <span class="text-xs font-semibold">{{ ev.all_day ? 'All day' : formatTime(ev.start) }}</span>
                                 <span class="flex-1">{{ ev.title }}</span>
                                 <span v-if="ev.lead_name" class="text-xs opacity-80">{{ ev.lead_name }}</span>
                             </button>
@@ -518,7 +518,7 @@ function eventsAtHour(date, hour) {
                         <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ selectedEvent.title }}</h3>
                         <div v-if="selectedEvent.description" class="sponsorship-email-preview text-sm text-gray-600 mb-3 break-words" v-html="selectedEvent.description"></div>
                         <div class="space-y-1 text-sm text-gray-600 mb-5">
-                            <p>⏰ {{ new Date(selectedEvent.start).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}<template v-if="selectedEvent.ends_at"> – {{ new Date(selectedEvent.ends_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) }}</template></p>
+                            <p>⏰ <template v-if="selectedEvent.all_day">{{ new Date(selectedEvent.start).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) }} <span class="text-gray-400">(All day)</span></template><template v-else>{{ new Date(selectedEvent.start).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}<template v-if="selectedEvent.ends_at"> – {{ new Date(selectedEvent.ends_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) }}</template></template></p>
                             <p v-if="selectedEvent.lead_name">👤 {{ selectedEvent.lead_name }} <span v-if="selectedEvent.company">— {{ selectedEvent.company }}</span></p>
                             <p v-if="selectedEvent.advisor">→ {{ selectedEvent.advisor }}</p>
                         </div>
@@ -683,7 +683,8 @@ function eventsAtHour(date, hour) {
                                     <p class="font-semibold text-sm truncate">{{ ev.title }}</p>
                                 </div>
                                 <p class="text-xs opacity-90 mt-0.5">
-                                    {{ formatTime(ev.start) }}<template v-if="ev.ends_at"> – {{ new Date(ev.ends_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) }}</template>
+                                    <template v-if="ev.all_day">All day</template>
+                                    <template v-else>{{ formatTime(ev.start) }}<template v-if="ev.ends_at"> – {{ new Date(ev.ends_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) }}</template></template>
                                 </p>
                                 <p v-if="ev.advisor" class="text-xs opacity-80 mt-0.5">→ {{ ev.advisor }}</p>
                                 <p v-if="ev.lead_name" class="text-xs opacity-80 truncate">{{ ev.lead_name }}<span v-if="ev.company" class="opacity-70"> · {{ ev.company }}</span></p>

@@ -660,6 +660,7 @@ class LeadController extends Controller
             'description'         => 'nullable|string',
             'scheduled_at'        => 'nullable|date',
             'ends_at'             => 'nullable|date|after:scheduled_at',
+            'all_day'             => 'nullable|boolean',
             'assigned_to_user_id' => 'nullable|exists:users,id',
             'is_contract'         => 'nullable|boolean',
             'files'               => 'nullable|array',
@@ -667,13 +668,16 @@ class LeadController extends Controller
         ]);
 
         $isScheduled = !empty($validated['scheduled_at']);
+        $allDay = !empty($validated['all_day']);
+        // En all_day no hay rango: forzamos ends_at a null para coherencia.
+        $endsAt = $allDay ? null : ($validated['ends_at'] ?? null);
 
-        // Hard-block por overlap real (rangos). Solo aplica a call/meeting agendados.
-        if ($isScheduled && in_array($validated['type'], ['call', 'meeting'], true)) {
+        // Hard-block solo aplica a call/meeting agendadas con hora; all_day no genera conflicto.
+        if ($isScheduled && !$allDay && in_array($validated['type'], ['call', 'meeting'], true)) {
             $checker->assertNoConflict(
                 $validated['assigned_to_user_id'] ?? auth()->id(),
                 $validated['scheduled_at'],
-                $validated['ends_at'] ?? null,
+                $endsAt,
             );
         }
 
@@ -685,7 +689,8 @@ class LeadController extends Controller
             'title'               => $validated['title'],
             'description'         => $validated['description'] ?? null,
             'scheduled_at'        => $validated['scheduled_at'] ?? null,
-            'ends_at'             => $validated['ends_at'] ?? null,
+            'ends_at'             => $endsAt,
+            'all_day'             => $allDay,
             'completed_at'        => $isScheduled ? null : now(),
             'status'              => $isScheduled ? 'pending' : 'completed',
             'is_contract'         => ($validated['type'] === 'email' && !empty($validated['is_contract'])),
@@ -780,6 +785,7 @@ class LeadController extends Controller
             'description'         => 'nullable|string',
             'scheduled_at'        => 'nullable|date',
             'ends_at'             => 'nullable|date|after:scheduled_at',
+            'all_day'             => 'nullable|boolean',
             'assigned_to_user_id' => 'nullable|exists:users,id',
             'files'               => 'nullable|array',
             'files.*'             => 'file|max:20480',
@@ -802,18 +808,22 @@ class LeadController extends Controller
             if (empty(trim($validated['title'] ?? ''))) {
                 throw ValidationException::withMessages(['title' => 'Title is required.']);
             }
-            // Hard-block: si cambia user/horario, validar disponibilidad excluyendo
-            // esta misma activity (no choca consigo misma).
-            $checker->assertNoConflict(
-                $validated['assigned_to_user_id'] ?? $activity->assigned_to_user_id,
-                $validated['scheduled_at'] ?? null,
-                $validated['ends_at'] ?? null,
-                ['sponsorship_lead' => $activity->id],
-            );
+            $allDay = !empty($validated['all_day']);
+            $endsAt = $allDay ? null : ($validated['ends_at'] ?? null);
+            // All-day no genera conflicto; hora específica sí.
+            if (!$allDay) {
+                $checker->assertNoConflict(
+                    $validated['assigned_to_user_id'] ?? $activity->assigned_to_user_id,
+                    $validated['scheduled_at'] ?? null,
+                    $endsAt,
+                    ['sponsorship_lead' => $activity->id],
+                );
+            }
             $updates['title']               = $validated['title'];
             $updates['description']         = $validated['description'] ?? null;
             $updates['scheduled_at']        = $validated['scheduled_at'] ?? null;
-            $updates['ends_at']             = $validated['ends_at'] ?? null;
+            $updates['ends_at']             = $endsAt;
+            $updates['all_day']             = $allDay;
             $updates['assigned_to_user_id'] = $validated['assigned_to_user_id'] ?? $activity->assigned_to_user_id;
         }
 

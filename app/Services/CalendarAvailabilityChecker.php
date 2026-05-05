@@ -37,7 +37,8 @@ class CalendarAvailabilityChecker
         $sponsorshipLead = $this->queryRangeOverlap(
             \App\Models\Sponsorship\LeadActivity::query()
                 ->where('assigned_to_user_id', $userId)
-                ->where('status', 'pending'),
+                ->where('status', 'pending')
+                ->where('all_day', false),  // all-day no genera conflicto
             $start,
             $end,
             !empty($excludes['sponsorship_lead']) ? (int) $excludes['sponsorship_lead'] : null,
@@ -47,7 +48,8 @@ class CalendarAvailabilityChecker
         $salesLead = $this->queryRangeOverlap(
             \App\Models\LeadActivity::query()
                 ->where('user_id', $userId)
-                ->where('status', 'pending'),
+                ->where('status', 'pending')
+                ->where('all_day', false),
             $start,
             $end,
             !empty($excludes['sales_lead']) ? (int) $excludes['sales_lead'] : null,

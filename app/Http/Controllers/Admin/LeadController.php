@@ -638,16 +638,19 @@ class LeadController extends Controller
             'description'  => 'nullable|string',
             'scheduled_at' => 'nullable|date',
             'ends_at'      => 'nullable|date|after:scheduled_at',
+            'all_day'      => 'nullable|boolean',
             'user_id'      => 'nullable|exists:users,id',
             'files'        => 'nullable|array',
             'files.*'      => 'file|max:10240',
         ]);
 
         $assigneeId = $validated['user_id'] ?? auth()->id();
+        $allDay = !empty($validated['all_day']);
+        $endsAt = $allDay ? null : ($validated['ends_at'] ?? null);
 
-        // Hard-block por overlap real. Sin ends_at → no bloquea.
-        if (!empty($validated['scheduled_at']) && in_array($validated['type'], ['call', 'meeting'], true)) {
-            $checker->assertNoConflict($assigneeId, $validated['scheduled_at'], $validated['ends_at'] ?? null);
+        // Hard-block: solo cuando hay hora específica. all_day no bloquea.
+        if (!empty($validated['scheduled_at']) && !$allDay && in_array($validated['type'], ['call', 'meeting'], true)) {
+            $checker->assertNoConflict($assigneeId, $validated['scheduled_at'], $endsAt);
         }
 
         $activity = LeadActivity::create([
@@ -657,7 +660,8 @@ class LeadController extends Controller
             'title'        => $validated['title'],
             'description'  => $validated['description'] ?? null,
             'scheduled_at' => $validated['scheduled_at'] ?? null,
-            'ends_at'      => $validated['ends_at'] ?? null,
+            'ends_at'      => $endsAt,
+            'all_day'      => $allDay,
             'status'       => ($validated['scheduled_at'] ?? null) ? 'pending' : 'completed',
             'completed_at' => ($validated['scheduled_at'] ?? null) ? null : now(),
         ]);

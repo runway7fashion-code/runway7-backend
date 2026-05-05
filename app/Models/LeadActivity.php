@@ -17,6 +17,7 @@ class LeadActivity extends Model
         'description',
         'scheduled_at',
         'ends_at',
+        'all_day',
         'completed_at',
         'status',
         'file_path',
@@ -26,6 +27,7 @@ class LeadActivity extends Model
     protected $casts = [
         'scheduled_at' => 'datetime',
         'ends_at'      => 'datetime',
+        'all_day'      => 'boolean',
         'completed_at' => 'datetime',
     ];
 
