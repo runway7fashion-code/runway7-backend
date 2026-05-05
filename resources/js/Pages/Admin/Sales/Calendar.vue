@@ -212,13 +212,18 @@ function typeStyle(type) {
     return TYPE_COLORS[type] || { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-300', dot: 'bg-orange-500' };
 }
 
-// Override visual: actividades not_completed siempre se pintan en rojo suave
-// para que se distingan a primera vista (el resto sigue por tipo).
+// Color del chip según status:
+//  - completed     → verde
+//  - pending       → amarillo (amber)
+//  - not_completed → rojo
+// El resto (status raros, defensa) cae al color por tipo.
 function eventStyle(evt) {
-    if (evt?.status === 'not_completed') {
-        return { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300', dot: 'bg-red-500' };
-    }
-    return typeStyle(evt?.type);
+    const STATUS_COLORS = {
+        completed:     { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300', dot: 'bg-green-500' },
+        pending:       { bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-300', dot: 'bg-amber-500' },
+        not_completed: { bg: 'bg-red-100',   text: 'text-red-700',   border: 'border-red-300',   dot: 'bg-red-500'   },
+    };
+    return STATUS_COLORS[evt?.status] || typeStyle(evt?.type);
 }
 
 function typeLabel(type) {

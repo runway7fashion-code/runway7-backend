@@ -23,10 +23,20 @@ const AREA_STYLES = {
 };
 function areaStyle(ev) { return AREA_STYLES[ev?.area] || AREA_STYLES.sponsorship; }
 
-// Color del chip según estado: not_completed pinta rojo suave; el resto usa el
-// color por tipo (call/email/meeting) que viene en activityTypes desde backend.
+// Color del chip según status:
+//  - completed     → verde
+//  - pending       → amarillo (amber)
+//  - not_completed → rojo
+// Los chips usan texto blanco sobre el bg, así que elegimos saturaciones medias.
 function chipStyle(ev) {
-    if (ev?.status === 'not_completed') return { backgroundColor: '#fecaca' }; // red-200
+    const STATUS_COLORS = {
+        completed:     '#22c55e',  // green-500
+        pending:       '#f59e0b',  // amber-500
+        not_completed: '#ef4444',  // red-500
+    };
+    if (ev?.status && STATUS_COLORS[ev.status]) {
+        return { backgroundColor: STATUS_COLORS[ev.status] };
+    }
     return { backgroundColor: props.activityTypes?.[ev?.type]?.color ?? '#9CA3AF' };
 }
 
