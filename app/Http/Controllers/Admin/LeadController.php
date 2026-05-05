@@ -742,6 +742,15 @@ class LeadController extends Controller
             }
             $updates['title']       = $validated['title'] ?: 'Note';
             $updates['description'] = $validated['description'];
+            // Las notas también pueden tener fecha (recordatorio). Si el form
+            // manda scheduled_date, persistimos schedule + all_day. No hay
+            // conflict-check para notas (todas son all-day por convención).
+            if (array_key_exists('scheduled_at', $validated)) {
+                $allDay = !empty($validated['all_day']);
+                $updates['scheduled_at'] = $validated['scheduled_at'];
+                $updates['ends_at']      = $allDay ? null : ($validated['ends_at'] ?? null);
+                $updates['all_day']      = $allDay;
+            }
         } else {
             // call / meeting
             if (empty(trim($validated['title'] ?? ''))) {
