@@ -148,6 +148,17 @@ class MediaRegistrationController extends Controller
             ], 422);
         }
 
+        // Reject if phone is already taken by a different user (the users.phone column is UNIQUE)
+        if (!$existingUser) {
+            $phoneOwner = User::where('phone', $validated['phone'])->first();
+            if ($phoneOwner) {
+                return response()->json([
+                    'message' => 'This phone number is already registered with another account.',
+                    'errors' => ['phone' => ['This phone number is already registered. Please use a different phone or contact us at operations@runway7fashion.com']],
+                ], 422);
+            }
+        }
+
         // Check duplicate event registration (only block if it was already paid)
         if ($existingUser) {
             $alreadyInEvent = DB::table('event_media')
