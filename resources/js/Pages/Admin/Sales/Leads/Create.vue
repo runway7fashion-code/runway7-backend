@@ -1,7 +1,7 @@
 <script setup>
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { Link, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -53,6 +53,12 @@ function removeNoteFile(index) {
 }
 
 const countryOptions = props.phoneCodes.map(c => c.name);
+
+watch(() => form.country, (newCountry) => {
+    if (!newCountry) return;
+    const entry = props.phoneCodes.find(c => c.name === newCountry);
+    if (entry) phoneCode.value = entry.phone;
+});
 const retailCategoryOptions = props.categories.map(c => c.name);
 const designsReadyOptions = ['Under 10', 'Under 25', 'Over 25'];
 const budgetOptions = ['$5,000 to $10,000', '$10,000 to $25,000', '$25,000 to $75,000', '$75,000+'];

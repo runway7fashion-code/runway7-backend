@@ -55,6 +55,13 @@ function fmt(val) {
     return formatMoney(val);
 }
 
+function shortName(fullName) {
+    if (!fullName) return '';
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length < 2) return parts[0];
+    return `${parts.slice(0, -1).join(' ')} ${parts[parts.length - 1].charAt(0)}.`;
+}
+
 // Podium
 const podium = computed(() => {
     const top = (props.repRanking || []).slice(0, 3);
@@ -64,7 +71,7 @@ const podium = computed(() => {
     return [top[1], top[0], top[2]];
 });
 const podiumColors = ['#94a3b8', '#D4AF37', '#cd7f32'];
-const podiumHeights = ['h-20', 'h-28', 'h-14'];
+const podiumHeights = ['h-14', 'h-20', 'h-10'];
 const podiumMedals  = ['🥈', '🥇', '🥉'];
 const podiumLabels  = ['2nd', '1st', '3rd'];
 </script>
@@ -111,6 +118,27 @@ const podiumLabels  = ['2nd', '1st', '3rd'];
                             <p class="text-2xl font-bold text-gray-900">{{ financeStats.conversion_rate }}%</p>
                         </div>
                     </div>
+
+                    <!-- Quick Actions (asesor) -->
+                    <div class="pt-2">
+                        <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-3">Quick Actions</h4>
+                        <div class="grid grid-cols-2 gap-3">
+                            <Link href="/admin/sales/leads/create" class="block p-5 bg-white rounded-xl border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all group">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-semibold text-gray-900">Create Lead</h4>
+                                    <span class="text-xl group-hover:scale-110 transition-transform">+</span>
+                                </div>
+                                <p class="text-gray-500 text-sm">Add a new lead to the pipeline</p>
+                            </Link>
+                            <Link href="/admin/sales/leads" class="block p-5 bg-white rounded-xl border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all group">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-semibold text-gray-900">View Leads</h4>
+                                    <span class="text-xl group-hover:scale-110 transition-transform">&rarr;</span>
+                                </div>
+                                <p class="text-gray-500 text-sm">View and manage all sales leads</p>
+                            </Link>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Right: Sales Rep Ranking -->
@@ -128,13 +156,11 @@ const podiumLabels  = ['2nd', '1st', '3rd'];
                                     {{ person.name.charAt(0) }}
                                 </div>
                                 <p class="text-[10px] font-semibold text-center text-gray-800 leading-tight">{{ person.name }}</p>
-                                <p class="text-[10px] text-gray-400">{{ person.total }} deals</p>
                                 <div class="w-full rounded-t-xl flex items-center justify-center text-xl"
                                     :class="podiumHeights[idx]"
                                     :style="{ backgroundColor: podiumColors[idx] + '22', border: `2px solid ${podiumColors[idx]}` }">
                                     <span>{{ podiumMedals[idx] }}</span>
                                 </div>
-                                <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">{{ podiumLabels[idx] }}</p>
                             </template>
                             <template v-else><div class="w-24 h-14"></div></template>
                         </div>
@@ -164,7 +190,7 @@ const podiumLabels  = ['2nd', '1st', '3rd'];
                                         <div class="w-6 h-6 rounded-full bg-gray-900 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
                                             {{ r.name.charAt(0) }}
                                         </div>
-                                        <p class="font-semibold text-gray-900 text-xs leading-none truncate">{{ r.name }}</p>
+                                        <p class="font-semibold text-gray-900 text-xs leading-none truncate">{{ shortName(r.name) }}</p>
                                     </div>
                                 </td>
                                 <td class="py-2 text-right font-bold text-gray-900">{{ r.total }}</td>
@@ -333,27 +359,27 @@ const podiumLabels  = ['2nd', '1st', '3rd'];
 
             <!-- Quick actions + recent -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Quick actions -->
-                <div class="space-y-4">
+                <!-- Quick actions: solo lider/admin (asesor los tiene en su columna derecha arriba) -->
+                <div v-if="isLider" class="space-y-4">
                     <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-2">Quick Actions</h4>
-                    <Link href="/admin/sales/designers/create" class="block p-5 bg-white rounded-xl border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all group">
+                    <Link href="/admin/sales/leads/create" class="block p-5 bg-white rounded-xl border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all group">
                         <div class="flex items-center justify-between mb-2">
-                            <h4 class="font-semibold text-gray-900">Register Designer</h4>
+                            <h4 class="font-semibold text-gray-900">Create Lead</h4>
                             <span class="text-xl group-hover:scale-110 transition-transform">+</span>
                         </div>
-                        <p class="text-gray-500 text-sm">Register a new designer for an event</p>
+                        <p class="text-gray-500 text-sm">Add a new lead to the pipeline</p>
                     </Link>
-                    <Link href="/admin/sales/designers" class="block p-5 bg-white rounded-xl border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all group">
+                    <Link href="/admin/sales/leads" class="block p-5 bg-white rounded-xl border border-gray-200 hover:border-yellow-400 hover:shadow-md transition-all group">
                         <div class="flex items-center justify-between mb-2">
-                            <h4 class="font-semibold text-gray-900">View Registrations</h4>
+                            <h4 class="font-semibold text-gray-900">View Leads</h4>
                             <span class="text-xl group-hover:scale-110 transition-transform">&rarr;</span>
                         </div>
-                        <p class="text-gray-500 text-sm">View and manage all designer registrations</p>
+                        <p class="text-gray-500 text-sm">View and manage all sales leads</p>
                     </Link>
                 </div>
 
                 <!-- Recent registrations -->
-                <div class="md:col-span-2">
+                <div :class="isLider ? 'md:col-span-2' : 'md:col-span-3'">
                     <h4 class="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-4">Recent Registrations</h4>
                     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
                         <div v-if="!recentRegistrations.length" class="p-6 text-center text-gray-400 text-sm">
